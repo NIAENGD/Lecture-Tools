@@ -64,7 +64,7 @@ def overview(style: UIStyle = style_option) -> None:
 
     repository = LectureRepository(config)
     if style is UIStyle.DESKTOP:
-        ui = DesktopUI(repository)
+        ui = DesktopUI(repository, config=config)
     elif style is UIStyle.MODERN:
         ui = ModernUI(repository)
     else:
