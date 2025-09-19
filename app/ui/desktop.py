@@ -1,7 +1,5 @@
 """Tkinter-powered desktop interface for browsing and managing stored lectures."""
 
-"""Tkinter desktop interface offering modern styling and asset management tools."""
-
 from __future__ import annotations
 
 import os
@@ -921,8 +919,7 @@ class DesktopUI:
         except Exception as error:  # pragma: no cover - depends on optional packages
             messagebox.showerror(
                 "Transcribe audio",
-                f"Unable to initialise transcription engine:
-{error}",
+                f"Unable to initialise transcription engine:\n{error}",
                 parent=self._root,
             )
             return
@@ -932,8 +929,7 @@ class DesktopUI:
         except Exception as error:  # pragma: no cover - depends on optional packages
             messagebox.showerror(
                 "Transcribe audio",
-                f"Transcription failed:
-{error}",
+                f"Transcription failed:\n{error}",
                 parent=self._root,
             )
             return
@@ -985,8 +981,7 @@ class DesktopUI:
         except Exception as error:  # pragma: no cover - optional dependency
             messagebox.showerror(
                 "Render slides",
-                f"Unable to initialise slide converter:
-{error}",
+                f"Unable to initialise slide converter:\n{error}",
                 parent=self._root,
             )
             return
@@ -996,8 +991,7 @@ class DesktopUI:
         except Exception as error:  # pragma: no cover - optional dependency
             messagebox.showerror(
                 "Render slides",
-                f"Slide conversion failed:
-{error}",
+                f"Slide conversion failed:\n{error}",
                 parent=self._root,
             )
             return
@@ -1055,8 +1049,11 @@ class DesktopUI:
             else:
                 subprocess.check_call(["xdg-open", str(target)])
         except Exception as error:
-            messagebox.showerror("Open asset", f"Failed to open asset:
-{error}", parent=self._root)
+            messagebox.showerror(
+                "Open asset",
+                f"Failed to open asset:\n{error}",
+                parent=self._root,
+            )
 
     # ------------------------------------------------------------------
     # Settings and theming
@@ -1235,8 +1232,7 @@ class DesktopUI:
                 f"{ASSET_LABELS[key]}: {snapshot.asset_totals.get(key, 0)}"
                 for key in ("audio", "slides", "transcript", "slide_images")
             ]
-            self._asset_text_var.set("
-".join(asset_texts))
+            self._asset_text_var.set("\n".join(asset_texts))
 
         preferred = None
         if self._selected_lecture_id is not None:
