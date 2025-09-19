@@ -1,0 +1,15 @@
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+
+[project]
+name = "lecture-tools"
+version = "0.1.0"
+description = "Prototype scaffolding for the Lecture Tools application"
+requires-python = ">=3.11"
+dependencies = [
+    "typer>=0.9",
+    "Pillow>=10.0",
+    "PyMuPDF>=1.23",
+    "faster-whisper>=0.10",
+]
