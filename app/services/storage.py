@@ -34,6 +34,7 @@ class LectureRecord:
     audio_path: Optional[str]
     slide_path: Optional[str]
     transcript_path: Optional[str]
+    notes_path: Optional[str]
     slide_image_dir: Optional[str]
 
 
@@ -95,14 +96,15 @@ class LectureRepository:
         audio_path: Optional[str] = None,
         slide_path: Optional[str] = None,
         transcript_path: Optional[str] = None,
+        notes_path: Optional[str] = None,
         slide_image_dir: Optional[str] = None,
     ) -> int:
         with self._connect() as connection:
             cursor = connection.execute(
                 """
                 INSERT INTO lectures(
-                    module_id, name, description, audio_path, slide_path, transcript_path, slide_image_dir
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    module_id, name, description, audio_path, slide_path, transcript_path, notes_path, slide_image_dir
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     module_id,
@@ -111,6 +113,7 @@ class LectureRepository:
                     audio_path,
                     slide_path,
                     transcript_path,
+                    notes_path,
                     slide_image_dir,
                 ),
             )
@@ -120,7 +123,7 @@ class LectureRepository:
         with self._connect() as connection:
             cursor = connection.execute(
                 """
-                SELECT id, module_id, name, description, audio_path, slide_path, transcript_path, slide_image_dir
+                SELECT id, module_id, name, description, audio_path, slide_path, transcript_path, notes_path, slide_image_dir
                 FROM lectures
                 WHERE module_id = ? AND name = ?
                 """,
@@ -151,7 +154,7 @@ class LectureRepository:
         with self._connect() as connection:
             cursor = connection.execute(
                 """
-                SELECT id, module_id, name, description, audio_path, slide_path, transcript_path, slide_image_dir
+                SELECT id, module_id, name, description, audio_path, slide_path, transcript_path, notes_path, slide_image_dir
                 FROM lectures
                 WHERE module_id = ?
                 ORDER BY name
@@ -183,7 +186,7 @@ class LectureRepository:
         with self._connect() as connection:
             cursor = connection.execute(
                 """
-                SELECT id, module_id, name, description, audio_path, slide_path, transcript_path, slide_image_dir
+                SELECT id, module_id, name, description, audio_path, slide_path, transcript_path, notes_path, slide_image_dir
                 FROM lectures WHERE id = ?
                 """,
                 (lecture_id,),
@@ -205,6 +208,7 @@ class LectureRepository:
         audio_path: Optional[str] | object = _MISSING,
         slide_path: Optional[str] | object = _MISSING,
         transcript_path: Optional[str] | object = _MISSING,
+        notes_path: Optional[str] | object = _MISSING,
         slide_image_dir: Optional[str] | object = _MISSING,
     ) -> None:
         """Update asset paths for a lecture.
@@ -223,6 +227,9 @@ class LectureRepository:
         if transcript_path is not _MISSING:
             assignments.append("transcript_path = ?")
             params.append(transcript_path)
+        if notes_path is not _MISSING:
+            assignments.append("notes_path = ?")
+            params.append(notes_path)
         if slide_image_dir is not _MISSING:
             assignments.append("slide_image_dir = ?")
             params.append(slide_image_dir)

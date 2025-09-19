@@ -13,5 +13,7 @@ dependencies = [
     "Pillow>=10.0",
     "PyMuPDF>=1.23",
     "faster-whisper>=0.10",
+    "numpy>=1.26",
+    "sounddevice>=0.4",
     "rich>=13.7",
 ]

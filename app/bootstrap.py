@@ -69,6 +69,7 @@ class Bootstrapper:
                     audio_path TEXT,
                     slide_path TEXT,
                     transcript_path TEXT,
+                    notes_path TEXT,
                     slide_image_dir TEXT,
                     UNIQUE(module_id, name),
                     FOREIGN KEY(module_id) REFERENCES modules(id) ON DELETE CASCADE
@@ -76,6 +77,13 @@ class Bootstrapper:
                 """
             )
             connection.commit()
+
+            try:
+                cursor.execute("ALTER TABLE lectures ADD COLUMN notes_path TEXT")
+            except sqlite3.OperationalError as error:
+                message = str(error).lower()
+                if "duplicate column name" not in message:
+                    raise
         finally:
             connection.close()
 
