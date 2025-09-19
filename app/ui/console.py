@@ -73,6 +73,8 @@ class ConsoleUI:
             parts.append("slides")
         if lecture.transcript_path:
             parts.append("transcript")
+        if lecture.notes_path:
+            parts.append("notes")
         if lecture.slide_image_dir:
             parts.append("slide images")
 

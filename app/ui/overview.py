@@ -12,6 +12,7 @@ ASSET_LABELS: Dict[str, str] = {
     "audio": "🎧 Audio",
     "slides": "📑 Slides",
     "transcript": "📝 Transcript",
+    "notes": "📄 Notes",
     "slide_images": "🖼️ Slide Images",
 }
 
@@ -88,6 +89,9 @@ def _extract_assets(
     if lecture_record.transcript_path:
         assets.append(ASSET_LABELS["transcript"])
         asset_totals["transcript"] += 1
+    if lecture_record.notes_path:
+        assets.append(ASSET_LABELS["notes"])
+        asset_totals["notes"] += 1
     if lecture_record.slide_image_dir:
         assets.append(ASSET_LABELS["slide_images"])
         asset_totals["slide_images"] += 1

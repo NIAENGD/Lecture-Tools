@@ -4,18 +4,27 @@ from __future__ import annotations
 
 import os
 import platform
+import re
 import shutil
 import subprocess
 import tkinter as tk
 from datetime import datetime
 from pathlib import Path
-from tkinter import filedialog, messagebox, ttk
+from tkinter import filedialog, messagebox, simpledialog, ttk
 from typing import Callable, Dict, List, Optional, Tuple
+
+import threading
 
 from PIL import Image, ImageTk
 
 from ..config import AppConfig
-from ..processing import FasterWhisperTranscription, PyMuPDFSlideConverter
+from ..processing import (
+    AudioRecorder,
+    FasterWhisperTranscription,
+    PyMuPDFSlideConverter,
+    preprocess_audio,
+    save_preprocessed_wav,
+)
 from ..services.ingestion import LecturePaths
 from ..services.settings import SettingsStore, ThemeName, UISettings
 from ..services.storage import ClassRecord, LectureRecord, LectureRepository, ModuleRecord
@@ -42,6 +51,8 @@ class DesktopUI:
         self._root: tk.Tk | None = None
         self._tree_items: Dict[str, Tuple[str, object | None, ModuleOverview | None, ClassOverview | None]] = {}
         self._asset_container: ttk.Frame | None = None
+        self._asset_canvas: tk.Canvas | None = None
+        self._asset_window_id: int | None = None
 
         self._title_var: tk.StringVar | None = None
         self._subtitle_var: tk.StringVar | None = None
@@ -317,7 +328,7 @@ class DesktopUI:
         ttk.Label(asset_card, text="Assets", style="CardTitle.TLabel").pack(anchor="w")
         asset_texts = [
             f"{ASSET_LABELS[key]}: {snapshot.asset_totals.get(key, 0)}"
-            for key in ("audio", "slides", "transcript", "slide_images")
+            for key in ("audio", "slides", "transcript", "notes", "slide_images")
         ]
         self._asset_text_var = tk.StringVar(value="\n".join(asset_texts))
         ttk.Label(
@@ -354,8 +365,36 @@ class DesktopUI:
             fill=tk.X,
         )
 
-        self._asset_container = ttk.Frame(detail_panel, style="PanelBody.TFrame")
-        self._asset_container.pack(anchor="w", fill=tk.BOTH, expand=True, pady=(16, 0))
+        asset_shell = ttk.Frame(detail_panel, style="PanelBody.TFrame")
+        asset_shell.pack(anchor="w", fill=tk.BOTH, expand=True, pady=(16, 0))
+        asset_shell.columnconfigure(0, weight=1)
+        asset_shell.rowconfigure(0, weight=1)
+
+        palette = self._get_palette(self._current_theme)
+        canvas = tk.Canvas(
+            asset_shell,
+            borderwidth=0,
+            highlightthickness=0,
+            background=palette["surface"],
+        )
+        scrollbar = ttk.Scrollbar(asset_shell, orient=tk.VERTICAL, command=canvas.yview)
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.grid(row=0, column=0, sticky="nsew")
+        scrollbar.grid(row=0, column=1, sticky="ns")
+
+        self._asset_container = ttk.Frame(canvas, style="PanelBody.TFrame")
+        window_id = canvas.create_window((0, 0), window=self._asset_container, anchor="nw")
+        self._asset_canvas = canvas
+        self._asset_window_id = window_id
+
+        def _sync_scrollregion(_: tk.Event) -> None:
+            canvas.configure(scrollregion=canvas.bbox("all"))
+
+        def _expand_container(event: tk.Event) -> None:
+            canvas.itemconfigure(window_id, width=event.width)
+
+        self._asset_container.bind("<Configure>", _sync_scrollregion)
+        canvas.bind("<Configure>", _expand_container)
 
         if snapshot.class_count == 0:
             self._show_empty_state()
@@ -464,7 +503,7 @@ class DesktopUI:
             title_var.set("Nothing to show")
             subtitle_var.set("")
             description_var.set("This section is waiting for new content.")
-            self._render_assets([])
+            self._render_message_panel("No digital assets linked yet.")
 
     def _show_empty_state(self) -> None:
         title_var, subtitle_var, description_var = self._require_detail_vars()
@@ -473,7 +512,7 @@ class DesktopUI:
         description_var.set(
             "Use the Add lecture button to quickly create a class, module, and lecture entry."
         )
-        self._render_assets([])
+        self._render_message_panel("No digital assets linked yet.")
 
     # ------------------------------------------------------------------
     # Detail rendering
@@ -485,7 +524,7 @@ class DesktopUI:
         title_var.set(overview.record.name)
         subtitle_var.set(f"Class · {modules} modules · {lectures} lectures")
         description_var.set(overview.record.description or "No description provided yet.")
-        self._render_assets([])
+        self._render_class_panel(overview)
 
     def _show_module_details(self, overview: ModuleOverview) -> None:
         lectures = len(overview.lectures)
@@ -493,7 +532,7 @@ class DesktopUI:
         title_var.set(overview.record.name)
         subtitle_var.set(f"Module · {lectures} lectures")
         description_var.set(overview.record.description or "No description provided yet.")
-        self._render_assets([])
+        self._render_module_panel(overview, self._active_class)
 
     def _show_lecture_details(
         self,
@@ -513,30 +552,64 @@ class DesktopUI:
             raise RuntimeError("Detail variables must be initialized before use.")
         return self._title_var, self._subtitle_var, self._description_var
 
-    def _render_assets(self, assets: List[str]) -> None:
+    def _clear_asset_container(self) -> None:
         if not self._asset_container:
             return
-
         for child in self._asset_container.winfo_children():
             child.destroy()
 
-        if not assets:
-            ttk.Label(
-                self._asset_container,
-                text="No digital assets linked yet.",
-                style="DetailSubtitle.TLabel",
-            ).pack(anchor="w")
+    def _render_message_panel(self, message: str) -> None:
+        if not self._asset_container:
+            return
+        self._clear_asset_container()
+        ttk.Label(self._asset_container, text=message, style="DetailSubtitle.TLabel").pack(anchor="w")
+
+    def _render_class_panel(self, overview: ClassOverview) -> None:
+        if not self._asset_container:
             return
 
-        ttk.Label(self._asset_container, text="Available assets", style="PanelHeading.TLabel").pack(anchor="w")
+        self._clear_asset_container()
+        module_count = len(overview.modules)
+        lecture_count = sum(len(module.lectures) for module in overview.modules)
 
-        for asset in assets:
-            bubble = ttk.Label(
-                self._asset_container,
-                text=asset,
-                style="DetailText.TLabel",
-            )
-            bubble.pack(anchor="w", pady=4)
+        ttk.Label(self._asset_container, text="Class actions", style="PanelHeading.TLabel").pack(anchor="w")
+        ttk.Label(
+            self._asset_container,
+            text=f"Includes {module_count} modules and {lecture_count} lectures.",
+            style="DetailSubtitle.TLabel",
+        ).pack(anchor="w", pady=(4, 12))
+
+        action_bar = ttk.Frame(self._asset_container, style="PanelBody.TFrame")
+        action_bar.pack(anchor="w")
+        ttk.Button(
+            action_bar,
+            text="Delete class",
+            command=lambda: self._delete_class(overview),
+            style="Danger.TButton",
+        ).pack(side=tk.LEFT)
+
+    def _render_module_panel(self, overview: ModuleOverview, class_overview: ClassOverview | None) -> None:
+        if not self._asset_container:
+            return
+
+        self._clear_asset_container()
+        lecture_count = len(overview.lectures)
+
+        ttk.Label(self._asset_container, text="Module actions", style="PanelHeading.TLabel").pack(anchor="w")
+        ttk.Label(
+            self._asset_container,
+            text=f"Contains {lecture_count} lectures.",
+            style="DetailSubtitle.TLabel",
+        ).pack(anchor="w", pady=(4, 12))
+
+        action_bar = ttk.Frame(self._asset_container, style="PanelBody.TFrame")
+        action_bar.pack(anchor="w")
+        ttk.Button(
+            action_bar,
+            text="Delete module",
+            command=lambda: self._delete_module(overview, class_overview),
+            style="Danger.TButton",
+        ).pack(side=tk.LEFT)
 
     def _render_asset_panel(
         self,
@@ -547,20 +620,30 @@ class DesktopUI:
         if not self._asset_container:
             return
 
-        for child in self._asset_container.winfo_children():
-            child.destroy()
+        self._clear_asset_container()
 
         ttk.Label(self._asset_container, text="Lecture assets", style="PanelHeading.TLabel").pack(anchor="w")
+
+        manage_bar = ttk.Frame(self._asset_container, style="PanelBody.TFrame")
+        manage_bar.pack(anchor="w", pady=(8, 4))
+        ttk.Button(
+            manage_bar,
+            text="Delete lecture",
+            command=lambda: self._delete_lecture(overview, module_overview, class_overview),
+            style="Danger.TButton",
+        ).pack(side=tk.LEFT)
 
         record = overview.record
         audio_status = self._describe_asset(record.audio_path)
         slide_status = self._describe_asset(record.slide_path)
         transcript_status = self._describe_asset(record.transcript_path)
+        notes_status = self._describe_asset(record.notes_path)
         image_status = self._describe_image_asset(record.slide_image_dir)
 
         ttk.Frame(self._asset_container, height=8, style="PanelBody.TFrame").pack(fill=tk.X)
 
         audio_actions = [
+            ("Record audio", lambda: self._record_audio(record, module_overview, class_overview), "Primary.TButton"),
             ("Upload audio", lambda: self._upload_audio(record, module_overview, class_overview), "Pill.TButton"),
             ("Transcribe", lambda: self._transcribe_audio(record, module_overview, class_overview), "Neutral.TButton"),
             ("Open file", lambda: self._open_asset_path(record.audio_path), "Neutral.TButton"),
@@ -611,6 +694,24 @@ class DesktopUI:
                 )
             )
         self._create_asset_card("📝 Transcript", transcript_status, transcript_actions)
+
+        notes_actions = [
+            (
+                "Upload notes",
+                lambda: self._upload_notes(record, module_overview, class_overview),
+                "Pill.TButton",
+            ),
+            ("Open file", lambda: self._open_asset_path(record.notes_path), "Neutral.TButton"),
+        ]
+        if record.notes_path:
+            notes_actions.append(
+                (
+                    "Delete notes",
+                    lambda: self._delete_asset(record, "notes_path", "Lecture notes"),
+                    "Danger.TButton",
+                )
+            )
+        self._create_asset_card("📄 Lecture notes", notes_status, notes_actions)
 
         image_actions = [
             (
@@ -798,6 +899,104 @@ class DesktopUI:
             return
         self._store_file(record, Path(file_path), "audio_path", module_overview, class_overview)
 
+    def _record_audio(
+        self,
+        record: LectureRecord,
+        module_overview: ModuleOverview | None,
+        class_overview: ClassOverview | None,
+    ) -> None:
+        if not self._root:
+            return
+        if not self._config:
+            messagebox.showerror(
+                "Record audio",
+                "Asset storage is not configured.",
+                parent=self._root,
+            )
+            return
+
+        hierarchy = self._resolve_hierarchy(record, module_overview, class_overview)
+        if hierarchy is None:
+            return
+        class_record, module_record = hierarchy
+
+        duration = simpledialog.askfloat(
+            "Record audio",
+            "Duration in seconds (1-1800):",
+            minvalue=1.0,
+            maxvalue=1_800.0,
+            parent=self._root,
+        )
+        if not duration:
+            return
+
+        if record.audio_path:
+            overwrite = messagebox.askyesno(
+                "Record audio",
+                "An audio file already exists for this lecture. Replace it with the new recording?",
+                parent=self._root,
+            )
+            if not overwrite:
+                return
+
+        status_window = tk.Toplevel(self._root)
+        status_window.title("Record audio")
+        status_window.transient(self._root)
+        status_window.grab_set()
+        status_window.resizable(False, False)
+        ttk.Label(status_window, text="Recording...", style="PanelHeading.TLabel").grid(
+            row=0, column=0, padx=16, pady=(16, 8)
+        )
+        status_var = tk.StringVar(value="Capturing microphone input")
+        ttk.Label(status_window, textvariable=status_var, style="DetailText.TLabel").grid(
+            row=1, column=0, padx=16, pady=(0, 16)
+        )
+
+        lecture_paths = LecturePaths.build(
+            self._config.storage_root, class_record.name, module_record.name, record.name
+        )
+        lecture_paths.ensure()
+
+        def worker() -> None:
+            try:
+                recorder = AudioRecorder()
+                raw_audio = recorder.record(duration)
+                if self._root:
+                    self._root.after(0, lambda: status_var.set("Balancing audio for Whisper..."))
+                processed = preprocess_audio(raw_audio, recorder.sample_rate)
+                timestamp = datetime.now().strftime("recording-%Y%m%d-%H%M%S.wav")
+                destination = lecture_paths.raw_dir / timestamp
+                if self._root:
+                    self._root.after(0, lambda: status_var.set("Saving optimised mono WAV"))
+                save_preprocessed_wav(destination, processed, recorder.sample_rate)
+            except Exception as error:  # pragma: no cover - depends on optional audio backend
+                def on_error() -> None:
+                    status_window.grab_release()
+                    status_window.destroy()
+                    messagebox.showerror("Record audio", str(error), parent=self._root)
+
+                if self._root:
+                    self._root.after(0, on_error)
+                return
+
+            def on_success() -> None:
+                status_window.grab_release()
+                status_window.destroy()
+                relative = destination.relative_to(self._config.storage_root).as_posix()
+                self._repository.update_lecture_assets(record.id, audio_path=relative)
+                self._refresh_ui()
+                messagebox.showinfo(
+                    "Record audio",
+                    "Recording saved and prepared for Whisper transcription.",
+                    parent=self._root,
+                )
+
+            if self._root:
+                self._root.after(0, on_success)
+
+        thread = threading.Thread(target=worker, daemon=True)
+        thread.start()
+
     def _upload_slides(
         self,
         record: LectureRecord,
@@ -831,6 +1030,27 @@ class DesktopUI:
             module_overview,
             class_overview,
             destination="transcript",
+        )
+
+    def _upload_notes(
+        self,
+        record: LectureRecord,
+        module_overview: ModuleOverview | None,
+        class_overview: ClassOverview | None,
+    ) -> None:
+        file_path = filedialog.askopenfilename(
+            title="Select lecture notes",
+            filetypes=[("Word documents", "*.docx *.doc"), ("All files", "*.*")],
+        )
+        if not file_path:
+            return
+        self._store_file(
+            record,
+            Path(file_path),
+            "notes_path",
+            module_overview,
+            class_overview,
+            destination="notes",
         )
 
     def _upload_slide_images(
@@ -882,6 +1102,7 @@ class DesktopUI:
             "raw": lecture_paths.raw_dir,
             "transcript": lecture_paths.transcript_dir,
             "slides": lecture_paths.slide_dir,
+            "notes": lecture_paths.notes_dir,
         }.get(destination, lecture_paths.raw_dir)
 
         destination_dir.mkdir(parents=True, exist_ok=True)
@@ -1079,35 +1300,61 @@ class DesktopUI:
             )
             return
 
-        try:
-            engine = FasterWhisperTranscription(
-                self._settings.whisper_model,
-                download_root=self._config.assets_root,
-                compute_type=self._settings.whisper_compute_type,
-                beam_size=int(self._settings.whisper_beam_size),
-            )
-        except Exception as error:  # pragma: no cover - depends on optional packages
-            messagebox.showerror(
-                "Transcribe audio",
-                f"Unable to initialise transcription engine:\n{error}",
-                parent=self._root,
-            )
-            return
+        status_window = tk.Toplevel(self._root)
+        status_window.title("Transcribe audio")
+        status_window.transient(self._root)
+        status_window.grab_set()
+        status_window.resizable(False, False)
+        ttk.Label(status_window, text="Transcribing", style="PanelHeading.TLabel").grid(
+            row=0, column=0, padx=16, pady=(16, 8)
+        )
+        status_var = tk.StringVar(value="Whisper is working on your transcript...")
+        ttk.Label(status_window, textvariable=status_var, style="DetailText.TLabel").grid(
+            row=1, column=0, padx=16, pady=(0, 16)
+        )
 
-        try:
-            result = engine.transcribe(audio_file, lecture_paths.transcript_dir)
-        except Exception as error:  # pragma: no cover - depends on optional packages
-            messagebox.showerror(
-                "Transcribe audio",
-                f"Transcription failed:\n{error}",
-                parent=self._root,
-            )
-            return
+        def worker() -> None:
+            try:
+                engine = FasterWhisperTranscription(
+                    self._settings.whisper_model,
+                    download_root=self._config.assets_root,
+                    compute_type=self._settings.whisper_compute_type,
+                    beam_size=int(self._settings.whisper_beam_size),
+                )
+                status = "Decoding audio with Whisper..."
+                if self._root:
+                    self._root.after(0, lambda: status_var.set(status))
+                result = engine.transcribe(audio_file, lecture_paths.transcript_dir)
+            except Exception as error:  # pragma: no cover - depends on optional packages
+                def on_error() -> None:
+                    status_window.grab_release()
+                    status_window.destroy()
+                    messagebox.showerror(
+                        "Transcribe audio",
+                        f"Whisper could not finish the transcript:\n{error}",
+                        parent=self._root,
+                    )
 
-        relative = result.text_path.relative_to(self._config.storage_root).as_posix()
-        self._repository.update_lecture_assets(lecture_record.id, transcript_path=relative)
-        self._refresh_ui()
-        messagebox.showinfo("Transcribe audio", "Transcript generated successfully.", parent=self._root)
+                if self._root:
+                    self._root.after(0, on_error)
+                return
+
+            def on_success() -> None:
+                status_window.grab_release()
+                status_window.destroy()
+                relative = result.text_path.relative_to(self._config.storage_root).as_posix()
+                self._repository.update_lecture_assets(lecture_record.id, transcript_path=relative)
+                self._refresh_ui()
+                messagebox.showinfo(
+                    "Transcribe audio",
+                    "Whisper is working great – transcript generated successfully.",
+                    parent=self._root,
+                )
+
+            if self._root:
+                self._root.after(0, on_success)
+
+        threading.Thread(target=worker, daemon=True).start()
 
     def _render_slide_images(
         self,
@@ -1241,6 +1488,100 @@ class DesktopUI:
             parent=self._root,
         )
 
+    def _delete_class(self, overview: ClassOverview) -> None:
+        if not self._root:
+            return
+
+        module_count = len(overview.modules)
+        lecture_count = sum(len(module.lectures) for module in overview.modules)
+        if not messagebox.askyesno(
+            "Delete class",
+            (
+                f"Delete class '{overview.record.name}'?\n\n"
+                f"This will remove {module_count} modules and {lecture_count} lectures."
+            ),
+            parent=self._root,
+        ):
+            return
+
+        if self._config:
+            class_dir = self._config.storage_root / self._slugify(overview.record.name)
+            self._delete_storage_path(class_dir, "Delete class")
+
+        self._selected_lecture_id = None
+        self._active_class = None
+        self._active_module = None
+        self._repository.remove_class(overview.record.id)
+        self._refresh_ui()
+        messagebox.showinfo("Delete class", "Class removed successfully.", parent=self._root)
+
+    def _delete_module(self, overview: ModuleOverview, class_overview: ClassOverview | None) -> None:
+        if not self._root:
+            return
+
+        class_record = class_overview.record if class_overview else self._repository.get_class(overview.record.class_id)
+        if class_record is None:
+            messagebox.showerror("Delete module", "Class information is unavailable.", parent=self._root)
+            return
+
+        lecture_count = len(overview.lectures)
+        if not messagebox.askyesno(
+            "Delete module",
+            (
+                f"Delete module '{overview.record.name}' from '{class_record.name}'?\n\n"
+                f"This will remove {lecture_count} lectures."
+            ),
+            parent=self._root,
+        ):
+            return
+
+        if self._config:
+            module_dir = (
+                self._config.storage_root
+                / self._slugify(class_record.name)
+                / self._slugify(overview.record.name)
+            )
+            self._delete_storage_path(module_dir, "Delete module")
+
+        self._selected_lecture_id = None
+        self._active_module = None
+        self._repository.remove_module(overview.record.id)
+        self._refresh_ui()
+        messagebox.showinfo("Delete module", "Module removed successfully.", parent=self._root)
+
+    def _delete_lecture(
+        self,
+        overview: LectureOverview,
+        module_overview: ModuleOverview | None,
+        class_overview: ClassOverview | None,
+    ) -> None:
+        if not self._root:
+            return
+
+        if not messagebox.askyesno(
+            "Delete lecture",
+            f"Delete lecture '{overview.record.name}' and all associated assets?",
+            parent=self._root,
+        ):
+            return
+
+        if self._config:
+            hierarchy = self._resolve_hierarchy(overview.record, module_overview, class_overview)
+            if hierarchy is not None:
+                class_record, module_record = hierarchy
+                lecture_paths = LecturePaths.build(
+                    self._config.storage_root,
+                    class_record.name,
+                    module_record.name,
+                    overview.record.name,
+                )
+                self._delete_storage_path(lecture_paths.lecture_root, "Delete lecture")
+
+        self._selected_lecture_id = None
+        self._repository.remove_lecture(overview.record.id)
+        self._refresh_ui()
+        messagebox.showinfo("Delete lecture", "Lecture removed successfully.", parent=self._root)
+
     def _resolve_hierarchy(
         self,
         lecture_record: LectureRecord,
@@ -1304,6 +1645,40 @@ class DesktopUI:
             target = path.resolve()
         return target.is_relative_to(storage_root)
 
+    def _delete_storage_path(self, path: Path, context: str) -> None:
+        if not self._config or not self._root:
+            return
+
+        if not self._is_within_storage(path):
+            messagebox.showwarning(
+                context,
+                "Associated files are stored outside the configured storage directory and were left untouched.",
+                parent=self._root,
+            )
+            return
+
+        if not path.exists():
+            return
+
+        try:
+            if path.is_dir():
+                shutil.rmtree(path)
+            else:
+                path.unlink()
+        except Exception as error:
+            messagebox.showwarning(
+                context,
+                f"Failed to remove associated files:\n{error}",
+                parent=self._root,
+            )
+
+    @staticmethod
+    def _slugify(value: str) -> str:
+        value = value.strip().lower()
+        value = re.sub(r"[^a-z0-9]+", "-", value)
+        value = re.sub(r"-+", "-", value).strip("-")
+        return value or "item"
+
     # ------------------------------------------------------------------
     # Settings and theming
     # ------------------------------------------------------------------
@@ -1323,6 +1698,8 @@ class DesktopUI:
         self._configure_styles(style, palette)
         self._root.configure(background=palette["background"])
         self._update_theme_button()
+        if self._asset_canvas is not None:
+            self._asset_canvas.configure(background=palette["surface"])
 
     def _update_theme_button(self) -> None:
         if self._theme_button_text is None:
@@ -1485,7 +1862,7 @@ class DesktopUI:
         if self._asset_text_var is not None:
             asset_texts = [
                 f"{ASSET_LABELS[key]}: {snapshot.asset_totals.get(key, 0)}"
-                for key in ("audio", "slides", "transcript", "slide_images")
+                for key in ("audio", "slides", "transcript", "notes", "slide_images")
             ]
             self._asset_text_var.set("\n".join(asset_texts))
 

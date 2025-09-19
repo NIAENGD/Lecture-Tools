@@ -15,12 +15,14 @@ def test_repository_crud_cycle(temp_config: AppConfig) -> None:
         description="Overview of Newtonian mechanics",
         audio_path="raw/audio.mp3",
         slide_path="raw/slides.pdf",
+        notes_path="processed/notes.docx",
     )
 
     retrieved_lecture = repository.get_lecture(lecture_id)
     assert retrieved_lecture is not None
     assert retrieved_lecture.name == "Newton's Laws"
     assert retrieved_lecture.audio_path == "raw/audio.mp3"
+    assert retrieved_lecture.notes_path == "processed/notes.docx"
 
     modules = list(repository.iter_modules(class_id))
     assert len(modules) == 1
@@ -57,6 +59,7 @@ def test_repository_lookup_helpers(temp_config: AppConfig) -> None:
         audio_path="raw/derivatives.mp3",
         slide_path="raw/derivatives.pdf",
         transcript_path="processed/transcript.txt",
+        notes_path="processed/notes.docx",
         slide_image_dir="processed/slides",
     )
 
@@ -65,3 +68,4 @@ def test_repository_lookup_helpers(temp_config: AppConfig) -> None:
     assert lecture.description == "Differential calculus"
     assert lecture.audio_path == "raw/derivatives.mp3"
     assert lecture.slide_image_dir == "processed/slides"
+    assert lecture.notes_path == "processed/notes.docx"

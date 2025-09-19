@@ -46,6 +46,7 @@ class LecturePaths:
     processed_dir: Path
     transcript_dir: Path
     slide_dir: Path
+    notes_dir: Path
 
     @classmethod
     def build(
@@ -60,16 +61,25 @@ class LecturePaths:
         processed_dir = lecture_root / "processed"
         transcript_dir = processed_dir / "transcripts"
         slide_dir = processed_dir / "slides"
+        notes_dir = processed_dir / "notes"
         return cls(
             lecture_root=lecture_root,
             raw_dir=raw_dir,
             processed_dir=processed_dir,
             transcript_dir=transcript_dir,
             slide_dir=slide_dir,
+            notes_dir=notes_dir,
         )
 
     def ensure(self) -> None:
-        for path in (self.lecture_root, self.raw_dir, self.processed_dir, self.transcript_dir, self.slide_dir):
+        for path in (
+            self.lecture_root,
+            self.raw_dir,
+            self.processed_dir,
+            self.transcript_dir,
+            self.slide_dir,
+            self.notes_dir,
+        ):
             path.mkdir(parents=True, exist_ok=True)
 
 
