@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Response
 from fastapi import status
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -314,13 +314,17 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
             raise HTTPException(status_code=500, detail="Lecture update failed")
         return {"lecture": _serialize_lecture(updated)}
 
-    @app.delete("/api/lectures/{lecture_id}", status_code=status.HTTP_204_NO_CONTENT)
-    async def delete_lecture(lecture_id: int) -> None:
+    @app.delete(
+        "/api/lectures/{lecture_id}",
+        status_code=status.HTTP_204_NO_CONTENT,
+        response_class=Response,
+    )
+    async def delete_lecture(lecture_id: int) -> Response:
         lecture = repository.get_lecture(lecture_id)
         if lecture is None:
             raise HTTPException(status_code=404, detail="Lecture not found")
         repository.remove_lecture(lecture_id)
-        return None
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     @app.post("/api/lectures/{lecture_id}/assets/{asset_type}")
     async def upload_asset(
@@ -500,8 +504,12 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
             "slide_image_dir": slide_image_relative,
         }
 
-    @app.post("/api/assets/reveal", status_code=status.HTTP_204_NO_CONTENT)
-    async def reveal_asset(payload: RevealRequest) -> None:
+    @app.post(
+        "/api/assets/reveal",
+        status_code=status.HTTP_204_NO_CONTENT,
+        response_class=Response,
+    )
+    async def reveal_asset(payload: RevealRequest) -> Response:
         try:
             target = _resolve_storage_path(config.storage_root, payload.path)
         except ValueError as error:
@@ -512,7 +520,7 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
         except RuntimeError as error:
             raise HTTPException(status_code=500, detail=str(error)) from error
 
-        return None
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     return app
 
