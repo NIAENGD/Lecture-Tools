@@ -36,7 +36,6 @@ class UIStyle(str, Enum):
     MODERN = "modern"
     CONSOLE = "console"
 
-
 style_option = typer.Option(
     UIStyle.MODERN,
     "--style",
