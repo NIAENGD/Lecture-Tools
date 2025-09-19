@@ -155,6 +155,36 @@ def test_upload_asset_updates_repository(temp_config):
     assert repository.get_lecture(lecture_id).notes_path.endswith("summary.docx")
 
 
+def test_upload_slides_auto_generates_archive(monkeypatch, temp_config):
+    repository, lecture_id, _module_id = _create_sample_data(temp_config)
+
+    class DummyConverter:
+        def convert(self, slide_path, output_dir, *, page_range=None):
+            output_dir.mkdir(parents=True, exist_ok=True)
+            archive = output_dir / "slides.zip"
+            archive.write_bytes(b"zip")
+            return [archive]
+
+    monkeypatch.setattr(web_server, "PyMuPDFSlideConverter", lambda: DummyConverter())
+
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    response = client.post(
+        f"/api/lectures/{lecture_id}/assets/slides",
+        files={"file": ("deck.pdf", b"%PDF-1.4", "application/pdf")},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["slide_path"].endswith("deck.pdf")
+    assert payload["slide_image_dir"].endswith("slides.zip")
+    slide_asset = temp_config.storage_root / payload["slide_image_dir"]
+    assert slide_asset.exists()
+    updated = repository.get_lecture(lecture_id)
+    assert updated.slide_path and updated.slide_path.endswith("deck.pdf")
+    assert updated.slide_image_dir and updated.slide_image_dir.endswith("slides.zip")
+
+
 def test_process_slides_generates_archive(monkeypatch, temp_config):
     repository, lecture_id, _module_id = _create_sample_data(temp_config)
 

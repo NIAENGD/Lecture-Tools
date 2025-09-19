@@ -208,6 +208,45 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
             raise HTTPException(status_code=404, detail="Class not found")
         return class_record, module
 
+    def _generate_slide_archive(
+        pdf_path: Path,
+        lecture_paths: LecturePaths,
+        *,
+        page_range: Optional[Tuple[int, int]] = None,
+    ) -> Optional[str]:
+        existing_items: List[Path] = []
+        if lecture_paths.slide_dir.exists():
+            existing_items = list(lecture_paths.slide_dir.iterdir())
+
+        converter = PyMuPDFSlideConverter()
+        try:
+            generated = list(
+                converter.convert(
+                    pdf_path,
+                    lecture_paths.slide_dir,
+                    page_range=page_range,
+                )
+            )
+        except Exception as error:  # noqa: BLE001 - propagate conversion errors
+            raise HTTPException(status_code=500, detail=str(error)) from error
+
+        slide_image_relative = None
+        if generated:
+            archive_path = generated[0]
+            slide_image_relative = archive_path.relative_to(config.storage_root).as_posix()
+            for leftover in existing_items:
+                if leftover.resolve() == archive_path.resolve():
+                    continue
+                try:
+                    if leftover.is_dir():
+                        shutil.rmtree(leftover)
+                    else:
+                        leftover.unlink()
+                except OSError:
+                    continue
+
+        return slide_image_relative
+
     @app.get("/", response_class=HTMLResponse)
     async def index() -> HTMLResponse:
         return HTMLResponse(index_html)
@@ -367,11 +406,20 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
             await file.close()
 
         relative = target.relative_to(config.storage_root).as_posix()
-        repository.update_lecture_assets(lecture_id, **{attribute: relative})
+        update_kwargs: Dict[str, Optional[str]] = {attribute: relative}
+
+        if asset_key == "slides":
+            slide_archive = _generate_slide_archive(target, lecture_paths)
+            update_kwargs["slide_image_dir"] = slide_archive
+
+        repository.update_lecture_assets(lecture_id, **update_kwargs)
         updated = repository.get_lecture(lecture_id)
         if updated is None:
             raise HTTPException(status_code=500, detail="Lecture update failed")
-        return {"lecture": _serialize_lecture(updated), attribute: relative}
+        response: Dict[str, Any] = {"lecture": _serialize_lecture(updated), attribute: relative}
+        if asset_key == "slides":
+            response["slide_image_dir"] = update_kwargs.get("slide_image_dir")
+        return response
 
     @app.get("/api/lectures/{lecture_id}/preview")
     async def get_lecture_preview(lecture_id: int) -> Dict[str, Any]:
@@ -471,22 +519,12 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
                 start, end = end, start
             selected_range = (start, end)
 
-        converter = PyMuPDFSlideConverter()
-        try:
-            generated = list(
-                converter.convert(
-                    slide_destination,
-                    lecture_paths.slide_dir,
-                    page_range=selected_range,
-                )
-            )
-        except Exception as error:  # noqa: BLE001 - propagate conversion errors
-            raise HTTPException(status_code=500, detail=str(error)) from error
-
         slide_relative = slide_destination.relative_to(config.storage_root).as_posix()
-        slide_image_relative = None
-        if generated:
-            slide_image_relative = generated[0].relative_to(config.storage_root).as_posix()
+        slide_image_relative = _generate_slide_archive(
+            slide_destination,
+            lecture_paths,
+            page_range=selected_range,
+        )
 
         repository.update_lecture_assets(
             lecture_id,
