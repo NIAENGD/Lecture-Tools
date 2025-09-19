@@ -5,37 +5,24 @@ REM Determine repository root based on the location of this script
 set "SCRIPT_DIR=%~dp0"
 pushd "%SCRIPT_DIR%" >nul
 
-REM Prefer an existing virtual environment if it already exists
-set "VENV_PY=.venv\Scripts\python.exe"
-if exist "%VENV_PY%" goto :use_venv
+REM Configure paths for the self-contained Python runtime
+set "PY_VERSION=3.11.9"
+set "PY_STORAGE=%SCRIPT_DIR%storage\python"
+set "LOCAL_PYTHON=%PY_STORAGE%\python.exe"
+set "PY_INSTALLER=%SCRIPT_DIR%assets\python-%PY_VERSION%-amd64.exe"
+set "PY_DOWNLOAD_URL=https://www.python.org/ftp/python/%PY_VERSION%/python-%PY_VERSION%-amd64.exe"
 
-REM Locate a suitable system Python interpreter (3.11+)
-set "PYTHON_BASE="
-for /f "usebackq delims=" %%I in (`py -3.11 -c "import sys; print(sys.executable)" 2^>nul`) do set "PYTHON_BASE=%%I"
-if not defined PYTHON_BASE (
-    for /f "usebackq delims=" %%I in (`py -3 -c "import sys; print(sys.executable)" 2^>nul`) do set "PYTHON_BASE=%%I"
-)
-if not defined PYTHON_BASE (
-    for /f "usebackq delims=" %%I in (`python -c "import sys; print(sys.executable)" 2^>nul`) do set "PYTHON_BASE=%%I"
-)
-if not defined PYTHON_BASE (
-    echo Could not find a Python interpreter. Please install Python 3.11 or later.
-    goto :error
+REM Bootstrap a local copy of Python if it does not exist yet
+if not exist "%LOCAL_PYTHON%" (
+    call :setup_python || goto :error
 )
 
-for /f "usebackq tokens=1-3 delims=." %%A in (`"%PYTHON_BASE%" -c "import sys; print('.'.join(map(str, sys.version_info[:3])))"`) do (
-    set "PY_MAJOR=%%A"
-    set "PY_MINOR=%%B"
-)
-if NOT "!PY_MAJOR!"=="3" goto :bad_version
-for %%V in (!PY_MINOR!) do if %%V LSS 11 goto :bad_version
-
+REM Ensure the virtual environment exists and is based on the local runtime
 if not exist ".venv" (
     echo Creating virtual environment...
-    "%PYTHON_BASE%" -m venv .venv || goto :error
+    "%LOCAL_PYTHON%" -m venv .venv || goto :error
 )
 
-:use_venv
 set "VENV_PY=.venv\Scripts\python.exe"
 if not exist "%VENV_PY%" (
     echo Virtual environment is missing the Python executable.
@@ -64,15 +51,34 @@ if "%~1"=="" (
 )
 "%VENV_PY%" "%SCRIPT_DIR%run.py" %*
 set "EXIT_CODE=%ERRORLEVEL%"
+if not "%EXIT_CODE%"=="0" goto :error
 
 :cleanup
 popd >nul
 endlocal & exit /b %EXIT_CODE%
 
-:bad_version
-echo Python 3.11 or newer is required. Found version !PY_MAJOR!.!PY_MINOR!.
-goto :error
-
 :error
-set "EXIT_CODE=1"
+if not defined EXIT_CODE set "EXIT_CODE=1"
+echo.
+echo An error occurred while preparing or running Lecture Tools.
+echo Exit code: %EXIT_CODE%
+echo.
+echo Press any key to close this window...
+pause >nul
 goto :cleanup
+
+:setup_python
+if not exist "%SCRIPT_DIR%assets" mkdir "%SCRIPT_DIR%assets" >nul
+if not exist "%PY_STORAGE%" mkdir "%PY_STORAGE%" >nul
+echo Local Python runtime not found. Downloading Python %PY_VERSION%...
+powershell -NoLogo -NoProfile -Command "try { $ProgressPreference = 'SilentlyContinue'; Invoke-WebRequest -Uri '%PY_DOWNLOAD_URL%' -OutFile '%PY_INSTALLER%' -UseBasicParsing } catch { Write-Error $_; exit 1 }" || goto :setup_error
+echo Installing Python %PY_VERSION% into storage\python...
+"%PY_INSTALLER%" /quiet InstallAllUsers=0 PrependPath=0 Include_test=0 SimpleInstall=1 TargetDir="%PY_STORAGE%" || goto :setup_error
+if exist "%PY_INSTALLER%" del "%PY_INSTALLER%" >nul 2>nul
+if not exist "%LOCAL_PYTHON%" goto :setup_error
+exit /b 0
+
+:setup_error
+if exist "%PY_INSTALLER%" del "%PY_INSTALLER%" >nul 2>nul
+echo Failed to provision a local Python runtime.
+exit /b 1
