@@ -8,7 +8,8 @@ version = "0.1.0"
 description = "Prototype scaffolding for the Lecture Tools application"
 requires-python = ">=3.11"
 dependencies = [
-    "typer>=0.9",
+    "typer==0.12.5",
+    "click==8.1.7",
     "Pillow>=10.0",
     "PyMuPDF>=1.23",
     "faster-whisper>=0.10",
