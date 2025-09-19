@@ -306,8 +306,7 @@ class DesktopUI:
             f"{ASSET_LABELS[key]}: {snapshot.asset_totals.get(key, 0)}"
             for key in ("audio", "slides", "transcript", "slide_images")
         ]
-        self._asset_text_var = tk.StringVar(value="
-".join(asset_texts))
+        self._asset_text_var = tk.StringVar(value="\n".join(asset_texts))
         ttk.Label(
             asset_card,
             textvariable=self._asset_text_var,
