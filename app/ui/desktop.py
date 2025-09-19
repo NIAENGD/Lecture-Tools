@@ -8,6 +8,7 @@ import re
 import shutil
 import subprocess
 import tkinter as tk
+import zipfile
 from datetime import datetime
 from pathlib import Path
 from tkinter import filedialog, messagebox, simpledialog, ttk
@@ -775,10 +776,22 @@ class DesktopUI:
         if not self._config:
             return f"Images stored at {directory}"
         absolute = self._config.storage_root / directory
-        count = 0
         if absolute.exists():
-            count = sum(1 for item in absolute.iterdir() if item.is_file())
-        return f"{count} images available in {absolute.name}"
+            if absolute.is_dir():
+                count = sum(1 for item in absolute.iterdir() if item.is_file())
+                return f"{count} images available in {absolute.name}"
+            if absolute.is_file() and absolute.suffix.lower() == ".zip":
+                try:
+                    with zipfile.ZipFile(absolute, "r") as archive:
+                        count = len(
+                            [name for name in archive.namelist() if not name.endswith("/")]
+                        )
+                except Exception:
+                    count = 0
+                if count:
+                    return f"{count} images archived in {absolute.name}"
+                return f"Archive stored in {absolute.name}"
+        return f"Images stored at {absolute.name}"
 
     # ------------------------------------------------------------------
     # Creation workflow
@@ -1173,6 +1186,14 @@ class DesktopUI:
             )
             return
 
+        if directory.is_file() and directory.suffix.lower() == ".zip":
+            messagebox.showinfo(
+                "Slide images",
+                "Slide images are stored in a ZIP archive. Use the open option to inspect the files.",
+                parent=self._root,
+            )
+            return
+
         valid_extensions = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif"}
         image_files = sorted(
             path for path in directory.rglob("*") if path.is_file() and path.suffix.lower() in valid_extensions
@@ -1467,7 +1488,12 @@ class DesktopUI:
 
         try:
             if path.exists():
-                if directory or path.is_dir():
+                if directory:
+                    if path.is_dir():
+                        shutil.rmtree(path)
+                    else:
+                        path.unlink()
+                elif path.is_dir():
                     shutil.rmtree(path)
                 else:
                     path.unlink()
@@ -1616,13 +1642,25 @@ class DesktopUI:
             messagebox.showerror("Open asset", f"Path not found: {path}", parent=self._root)
             return
 
-        target = path if directory or path.is_dir() else path
+        if directory:
+            target = path if path.is_dir() else path.parent
+            select_file = path.is_file()
+        else:
+            target = path
+            select_file = False
 
         try:
-            if platform.system() == "Windows":
-                os.startfile(target)  # type: ignore[attr-defined]
-            elif platform.system() == "Darwin":
-                subprocess.check_call(["open", str(target)])
+            system = platform.system()
+            if system == "Windows":
+                if select_file:
+                    subprocess.check_call(["explorer", f"/select,{path}"])
+                else:
+                    os.startfile(target)  # type: ignore[attr-defined]
+            elif system == "Darwin":
+                if select_file:
+                    subprocess.check_call(["open", "-R", str(path)])
+                else:
+                    subprocess.check_call(["open", str(target)])
             else:
                 subprocess.check_call(["xdg-open", str(target)])
         except Exception as error:

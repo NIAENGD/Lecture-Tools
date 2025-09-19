@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from io import BytesIO
 from pathlib import Path
-from typing import Iterable, List
+from typing import Iterable, Optional, Tuple
+from zipfile import ZIP_DEFLATED, ZipFile
 
 from PIL import Image
 
@@ -16,7 +18,13 @@ class PyMuPDFSlideConverter(SlideConverter):
     def __init__(self, dpi: int = 200) -> None:
         self._dpi = dpi
 
-    def convert(self, slide_path: Path, output_dir: Path) -> Iterable[Path]:
+    def convert(
+        self,
+        slide_path: Path,
+        output_dir: Path,
+        *,
+        page_range: Optional[Tuple[int, int]] = None,
+    ) -> Iterable[Path]:
         try:
             import fitz  # type: ignore
         except ImportError as exc:  # pragma: no cover - runtime check
@@ -26,45 +34,43 @@ class PyMuPDFSlideConverter(SlideConverter):
         scale = self._dpi / 72
         matrix = fitz.Matrix(scale, scale)
 
-        slides: List[Path] = []
         with fitz.open(slide_path) as document:
             page_count = document.page_count
-            for index in range(0, page_count, 2):
-                pages = []
-                for offset in range(2):
-                    page_number = index + offset
-                    if page_number >= page_count:
-                        break
+            if page_range is None:
+                start_index = 0
+                end_index = page_count - 1
+            else:
+                start, end = page_range
+                # Convert to zero-based indices and clamp to bounds.
+                start_index = max(0, min(page_count - 1, start - 1))
+                end_index = max(start_index, min(page_count - 1, end - 1))
+
+            if page_count == 0 or start_index > end_index:
+                return []
+
+            stem = slide_path.stem or "slides"
+            zip_path = self._prepare_destination(output_dir, stem)
+
+            with ZipFile(zip_path, "w", compression=ZIP_DEFLATED) as archive:
+                for page_number in range(start_index, end_index + 1):
                     pix = document.load_page(page_number).get_pixmap(matrix=matrix, alpha=False)
                     image = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-                    pages.append(image)
-                if not pages:
-                    continue
-                combined = self._combine_pages(pages)
-                filename = output_dir / f"slide_{index // 2 + 1:03d}.png"
-                combined.save(filename, format="PNG")
-                slides.append(filename)
-        return slides
+                    buffer = BytesIO()
+                    image.save(buffer, format="PNG")
+                    buffer.seek(0)
+                    archive.writestr(f"page_{page_number + 1:03d}.png", buffer.read())
+
+        return [zip_path]
 
     @staticmethod
-    def _combine_pages(pages: List[Image.Image]) -> Image.Image:
-        if len(pages) == 1:
-            return pages[0]
-
-        width = max(image.width for image in pages)
-        total_height = sum(image.height for image in pages)
-        canvas = Image.new("RGB", (width, total_height), color=(255, 255, 255))
-
-        offset = 0
-        for image in pages:
-            if image.width != width:
-                background = Image.new("RGB", (width, image.height), color=(255, 255, 255))
-                background.paste(image, ((width - image.width) // 2, 0))
-                image = background
-            canvas.paste(image, (0, offset))
-            offset += image.height
-
-        return canvas
+    def _prepare_destination(output_dir: Path, stem: str) -> Path:
+        base_name = f"{stem}.zip"
+        candidate = output_dir / base_name
+        counter = 1
+        while candidate.exists():
+            candidate = output_dir / f"{stem}-{counter}.zip"
+            counter += 1
+        return candidate
 
 
 __all__ = ["PyMuPDFSlideConverter"]

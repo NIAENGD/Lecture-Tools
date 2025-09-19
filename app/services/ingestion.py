@@ -33,8 +33,14 @@ class TranscriptionEngine(Protocol):
 class SlideConverter(Protocol):
     """Protocol describing a slide conversion backend."""
 
-    def convert(self, slide_path: Path, output_dir: Path) -> Iterable[Path]:
-        """Convert the slideshow at *slide_path* into image files inside *output_dir*."""
+    def convert(
+        self,
+        slide_path: Path,
+        output_dir: Path,
+        *,
+        page_range: Optional[tuple[int, int]] = None,
+    ) -> Iterable[Path]:
+        """Convert *slide_path* into processed artefacts stored in *output_dir*."""
 
 
 @dataclass
@@ -165,7 +171,8 @@ class LectureIngestor:
                 )
             )
             if generated:
-                slide_image_relative = lecture_paths.slide_dir.relative_to(self._config.storage_root).as_posix()
+                first_asset = generated[0]
+                slide_image_relative = first_asset.relative_to(self._config.storage_root).as_posix()
             slide_relative = (lecture_paths.raw_dir / slide_relative).relative_to(self._config.storage_root).as_posix()
 
         self._repository.update_lecture_assets(
