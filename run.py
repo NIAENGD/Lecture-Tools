@@ -36,17 +36,25 @@ class UIStyle(str, Enum):
     MODERN = "modern"
     CONSOLE = "console"
 
+style_option = typer.Option(
+    UIStyle.MODERN,
+    "--style",
+    "-s",
+    help="Select the overview presentation style.",
+    show_default=True,
+)
+
+
+@cli.callback(invoke_without_command=True)
+def main(ctx: typer.Context, style: UIStyle = style_option) -> None:
+    """Run the overview when no explicit command is provided."""
+
+    if ctx.invoked_subcommand is None:
+        ctx.invoke(overview, style=style)
+
 
 @cli.command()
-def overview(
-    style: UIStyle = typer.Option(
-        UIStyle.MODERN,
-        "--style",
-        "-s",
-        help="Select the overview presentation style.",
-        show_default=True,
-    ),
-) -> None:
+def overview(style: UIStyle = style_option) -> None:
     """Render an overview of stored lectures using the chosen UI style."""
 
     config = initialize_app()
