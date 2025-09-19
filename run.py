@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import Literal, Optional
 
 import typer
 
@@ -14,6 +14,7 @@ from app.processing import FasterWhisperTranscription, PyMuPDFSlideConverter
 from app.services.ingestion import LectureIngestor
 from app.services.storage import LectureRepository
 from app.ui.console import ConsoleUI
+from app.ui.modern import ModernUI
 
 
 cli = typer.Typer(add_completion=False, help="Lecture Tools management commands")
@@ -30,14 +31,22 @@ def _prepare_logging(storage_root: Path) -> None:
 
 
 @cli.command()
-def overview() -> None:
-    """Render a console overview of stored lectures."""
+def overview(
+    style: Literal["modern", "console"] = typer.Option(
+        "modern",
+        "--style",
+        "-s",
+        help="Select the overview presentation style.",
+        show_default=True,
+    ),
+) -> None:
+    """Render an overview of stored lectures using the chosen UI style."""
 
     config = initialize_app()
     _prepare_logging(config.storage_root)
 
     repository = LectureRepository(config)
-    ui = ConsoleUI(repository)
+    ui = ModernUI(repository) if style == "modern" else ConsoleUI(repository)
     ui.run()
 
 
