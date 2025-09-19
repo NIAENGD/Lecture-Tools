@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import logging
+from enum import Enum
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Optional
 
 import typer
 
@@ -30,23 +31,38 @@ def _prepare_logging(storage_root: Path) -> None:
     configure_logging(handlers=[file_handler, stream_handler])
 
 
+
+class UIStyle(str, Enum):
+    MODERN = "modern"
+    CONSOLE = "console"
+
+
+style_option = typer.Option(
+    UIStyle.MODERN,
+    "--style",
+    "-s",
+    help="Select the overview presentation style.",
+    show_default=True,
+)
+
+
+@cli.callback(invoke_without_command=True)
+def main(ctx: typer.Context, style: UIStyle = style_option) -> None:
+    """Run the overview when no explicit command is provided."""
+
+    if ctx.invoked_subcommand is None:
+        ctx.invoke(overview, style=style)
+
+
 @cli.command()
-def overview(
-    style: Literal["modern", "console"] = typer.Option(
-        "modern",
-        "--style",
-        "-s",
-        help="Select the overview presentation style.",
-        show_default=True,
-    ),
-) -> None:
+def overview(style: UIStyle = style_option) -> None:
     """Render an overview of stored lectures using the chosen UI style."""
 
     config = initialize_app()
     _prepare_logging(config.storage_root)
 
     repository = LectureRepository(config)
-    ui = ModernUI(repository) if style == "modern" else ConsoleUI(repository)
+    ui = ModernUI(repository) if style is UIStyle.MODERN else ConsoleUI(repository)
     ui.run()
 
 
