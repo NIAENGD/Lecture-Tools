@@ -39,17 +39,25 @@ Key capabilities include:
    `Pillow`, and `typer`. The first transcription run downloads the selected
    Whisper model into `assets/` automatically.
 
-4. Review the stored hierarchy at any time:
+4. Launch the new web experience:
 
    ```bash
-   python run.py overview
+   python run.py  # or: python run.py serve --host 0.0.0.0 --port 9000
    ```
 
-   Launching `python run.py` (with or without the `overview` command) opens the
-   full desktop experience: a main screen with curriculum navigation on the
-   left, rich statistics across the top, and lecture details—descriptions plus
-   linked assets—on the right. Pass `--style modern` for the terminal-based Rich
-   dashboard or `--style console` for the original plain-text output.
+   The command starts a lightweight FastAPI server that serves a responsive
+   dashboard at `http://127.0.0.1:8000/`. The page combines shimmering cards for
+   high-level statistics with an interactive tree that lets you drill down from
+   classes to modules and individual lectures. Asset links open directly from
+   the browser, so transcripts, audio, and slide images are always one click
+   away.
+
+   Prefer the original terminal styles? They are still available:
+
+   ```bash
+   python run.py overview --style modern
+   python run.py overview --style console
+   ```
 
 5. Ingest a lecture by providing an audio/video file and (optionally) a PDF deck:
 

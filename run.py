@@ -7,6 +7,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
+import uvicorn
 import typer
 
 from app.bootstrap import initialize_app
@@ -17,6 +18,7 @@ from app.services.storage import LectureRepository
 from app.ui.console import ConsoleUI
 from app.ui.desktop import DesktopUI
 from app.ui.modern import ModernUI
+from app.web import create_app
 
 
 cli = typer.Typer(add_completion=False, help="Lecture Tools management commands")
@@ -48,11 +50,26 @@ style_option = typer.Option(
 
 
 @cli.callback(invoke_without_command=True)
-def main(ctx: typer.Context, style: UIStyle = style_option) -> None:
-    """Run the overview when no explicit command is provided."""
+def main(ctx: typer.Context) -> None:
+    """Launch the web server when no explicit command is provided."""
 
     if ctx.invoked_subcommand is None:
-        ctx.invoke(overview, style=style)
+        ctx.invoke(serve)
+
+
+@cli.command()
+def serve(
+    host: str = typer.Option("127.0.0.1", help="Host interface for the web server"),
+    port: int = typer.Option(8000, help="Port for the web server"),
+) -> None:
+    """Run the FastAPI-powered web experience."""
+
+    config = initialize_app()
+    _prepare_logging(config.storage_root)
+
+    repository = LectureRepository(config)
+    app = create_app(repository, config=config)
+    uvicorn.run(app, host=host, port=port, log_config=None)
 
 
 @cli.command()

@@ -44,8 +44,8 @@ if exist requirements-dev.txt (
 echo.
 echo Launching Lecture Tools CLI...
 if "%~1"=="" (
-    echo Hint: pass commands such as "overview" or "ingest" after start.bat.
-    echo Example: start.bat overview
+    echo Hint: pass commands such as "serve", "overview" or "ingest" after start.bat.
+    echo Example: start.bat serve
     echo Example: start.bat ingest --help
     echo.
 )

@@ -16,4 +16,7 @@ dependencies = [
     "numpy>=1.26",
     "sounddevice>=0.4",
     "rich>=13.7",
+    "fastapi>=0.111",
+    "uvicorn[standard]>=0.29",
+    "jinja2>=3.1",
 ]
