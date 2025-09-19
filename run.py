@@ -15,6 +15,7 @@ from app.processing import FasterWhisperTranscription, PyMuPDFSlideConverter
 from app.services.ingestion import LectureIngestor
 from app.services.storage import LectureRepository
 from app.ui.console import ConsoleUI
+from app.ui.desktop import DesktopUI
 from app.ui.modern import ModernUI
 
 
@@ -33,11 +34,12 @@ def _prepare_logging(storage_root: Path) -> None:
 
 
 class UIStyle(str, Enum):
+    DESKTOP = "desktop"
     MODERN = "modern"
     CONSOLE = "console"
 
 style_option = typer.Option(
-    UIStyle.MODERN,
+    UIStyle.DESKTOP,
     "--style",
     "-s",
     help="Select the overview presentation style.",
@@ -61,7 +63,12 @@ def overview(style: UIStyle = style_option) -> None:
     _prepare_logging(config.storage_root)
 
     repository = LectureRepository(config)
-    ui = ModernUI(repository) if style is UIStyle.MODERN else ConsoleUI(repository)
+    if style is UIStyle.DESKTOP:
+        ui = DesktopUI(repository)
+    elif style is UIStyle.MODERN:
+        ui = ModernUI(repository)
+    else:
+        ui = ConsoleUI(repository)
     ui.run()
 
 
