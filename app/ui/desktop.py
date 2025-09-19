@@ -12,6 +12,8 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 from typing import Callable, Dict, List, Optional, Tuple
 
+from PIL import Image, ImageTk
+
 from ..config import AppConfig
 from ..processing import FasterWhisperTranscription, PyMuPDFSlideConverter
 from ..services.ingestion import LecturePaths
@@ -206,6 +208,19 @@ class DesktopUI:
             borderwidth=0,
         )
         style.map("Neutral.TButton", background=[("active", surface)], foreground=[("active", accent)])
+        style.configure(
+            "Danger.TButton",
+            background=palette["danger"],
+            foreground=background,
+            font=("Segoe UI", 10, "bold"),
+            padding=(12, 6),
+            borderwidth=0,
+        )
+        style.map(
+            "Danger.TButton",
+            background=[("active", palette["danger_active"]), ("pressed", palette["danger_pressed"])],
+            foreground=[("disabled", muted)],
+        )
 
         style.configure(
             "Treeview",
@@ -545,43 +560,85 @@ class DesktopUI:
 
         ttk.Frame(self._asset_container, height=8, style="PanelBody.TFrame").pack(fill=tk.X)
 
-        self._create_asset_card(
-            "🎧 Audio",
-            audio_status,
-            [
-                ("Upload audio", lambda: self._upload_audio(record, module_overview, class_overview), "Pill.TButton"),
-                ("Transcribe", lambda: self._transcribe_audio(record, module_overview, class_overview), "Neutral.TButton"),
-                ("Open file", lambda: self._open_asset_path(record.audio_path), "Neutral.TButton"),
-            ],
-        )
+        audio_actions = [
+            ("Upload audio", lambda: self._upload_audio(record, module_overview, class_overview), "Pill.TButton"),
+            ("Transcribe", lambda: self._transcribe_audio(record, module_overview, class_overview), "Neutral.TButton"),
+            ("Open file", lambda: self._open_asset_path(record.audio_path), "Neutral.TButton"),
+        ]
+        if record.audio_path:
+            audio_actions.append(
+                (
+                    "Delete audio",
+                    lambda: self._delete_asset(record, "audio_path", "Audio file"),
+                    "Danger.TButton",
+                )
+            )
+        self._create_asset_card("🎧 Audio", audio_status, audio_actions)
 
-        self._create_asset_card(
-            "📑 Slides",
-            slide_status,
-            [
-                ("Upload PDF", lambda: self._upload_slides(record, module_overview, class_overview), "Pill.TButton"),
-                ("Render images", lambda: self._render_slide_images(record, module_overview, class_overview), "Neutral.TButton"),
-                ("Open file", lambda: self._open_asset_path(record.slide_path), "Neutral.TButton"),
-            ],
-        )
+        slide_actions = [
+            ("Upload PDF", lambda: self._upload_slides(record, module_overview, class_overview), "Pill.TButton"),
+            (
+                "Render images",
+                lambda: self._render_slide_images(record, module_overview, class_overview),
+                "Neutral.TButton",
+            ),
+            ("Open file", lambda: self._open_asset_path(record.slide_path), "Neutral.TButton"),
+        ]
+        if record.slide_path:
+            slide_actions.append(
+                (
+                    "Delete PDF",
+                    lambda: self._delete_asset(record, "slide_path", "Slide deck"),
+                    "Danger.TButton",
+                )
+            )
+        self._create_asset_card("📑 Slides", slide_status, slide_actions)
 
-        self._create_asset_card(
-            "📝 Transcript",
-            transcript_status,
-            [
-                ("Upload transcript", lambda: self._upload_transcript(record, module_overview, class_overview), "Pill.TButton"),
-                ("Open file", lambda: self._open_asset_path(record.transcript_path), "Neutral.TButton"),
-            ],
-        )
+        transcript_actions = [
+            (
+                "Upload transcript",
+                lambda: self._upload_transcript(record, module_overview, class_overview),
+                "Pill.TButton",
+            ),
+            ("Open file", lambda: self._open_asset_path(record.transcript_path), "Neutral.TButton"),
+        ]
+        if record.transcript_path:
+            transcript_actions.append(
+                (
+                    "Delete transcript",
+                    lambda: self._delete_asset(record, "transcript_path", "Transcript"),
+                    "Danger.TButton",
+                )
+            )
+        self._create_asset_card("📝 Transcript", transcript_status, transcript_actions)
 
-        self._create_asset_card(
-            "🖼️ Slide images",
-            image_status,
-            [
-                ("Upload images", lambda: self._upload_slide_images(record, module_overview, class_overview), "Pill.TButton"),
-                ("Open folder", lambda: self._open_asset_path(record.slide_image_dir, directory=True), "Neutral.TButton"),
-            ],
+        image_actions = [
+            (
+                "Upload images",
+                lambda: self._upload_slide_images(record, module_overview, class_overview),
+                "Pill.TButton",
+            ),
+        ]
+        if record.slide_image_dir:
+            image_actions.append(
+                ("View images", lambda: self._view_slide_images(record), "Neutral.TButton")
+            )
+        image_actions.append(
+            (
+                "Open folder",
+                lambda: self._open_asset_path(record.slide_image_dir, directory=True),
+                "Neutral.TButton",
+            )
         )
+        if record.slide_image_dir:
+            image_actions.append(
+                (
+                    "Delete images",
+                    lambda: self._delete_asset(record, "slide_image_dir", "Slide images", directory=True),
+                    "Danger.TButton",
+                )
+            )
+        self._create_asset_card("🖼️ Slide images", image_status, image_actions)
 
     def _create_asset_card(
         self,
@@ -872,6 +929,119 @@ class DesktopUI:
         self._repository.update_lecture_assets(lecture_record.id, slide_image_dir=relative)
         self._refresh_ui()
 
+    def _view_slide_images(self, lecture_record: LectureRecord) -> None:
+        if not self._root:
+            return
+        if not self._config:
+            messagebox.showerror(
+                "Slide images",
+                "Asset storage is not configured.",
+                parent=self._root,
+            )
+            return
+        if not lecture_record.slide_image_dir:
+            messagebox.showinfo("Slide images", "No slide images available yet.", parent=self._root)
+            return
+
+        directory = self._config.storage_root / lecture_record.slide_image_dir
+        if not directory.exists():
+            messagebox.showerror(
+                "Slide images",
+                f"The slide image folder could not be found at {directory}.",
+                parent=self._root,
+            )
+            return
+
+        valid_extensions = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif"}
+        image_files = sorted(
+            path for path in directory.rglob("*") if path.is_file() and path.suffix.lower() in valid_extensions
+        )
+        if not image_files:
+            messagebox.showinfo("Slide images", "No image files were found in this folder.", parent=self._root)
+            return
+
+        viewer = tk.Toplevel(self._root)
+        viewer.title("Slide images")
+        viewer.transient(self._root)
+        viewer.grab_set()
+        viewer.minsize(720, 520)
+
+        container = ttk.Frame(viewer, padding=16, style="Panel.TFrame")
+        container.grid(row=0, column=0, sticky="nsew")
+        viewer.columnconfigure(0, weight=1)
+        viewer.rowconfigure(0, weight=1)
+
+        list_var = tk.StringVar(value=[path.relative_to(directory).as_posix() for path in image_files])
+        listbox = tk.Listbox(container, listvariable=list_var, exportselection=False, width=30)
+        listbox.grid(row=0, column=0, sticky="nsw")
+        scrollbar = ttk.Scrollbar(container, orient=tk.VERTICAL, command=listbox.yview)
+        scrollbar.grid(row=0, column=1, sticky="ns")
+        listbox.configure(yscrollcommand=scrollbar.set)
+
+        preview_frame = ttk.Frame(container, padding=(16, 0), style="PanelBody.TFrame")
+        preview_frame.grid(row=0, column=2, sticky="nsew")
+        container.columnconfigure(2, weight=1)
+        container.rowconfigure(0, weight=1)
+
+        preview_label = ttk.Label(preview_frame)
+        preview_label.pack(fill=tk.BOTH, expand=True)
+
+        caption_var = tk.StringVar()
+        ttk.Label(preview_frame, textvariable=caption_var, style="DetailSubtitle.TLabel").pack(
+            anchor="w", pady=(12, 0)
+        )
+
+        button_bar = ttk.Frame(preview_frame, style="PanelBody.TFrame")
+        button_bar.pack(anchor="e", pady=(12, 0))
+
+        def open_selected() -> None:
+            selection = listbox.curselection()
+            if not selection:
+                return
+            relative = image_files[selection[0]].relative_to(self._config.storage_root).as_posix()
+            self._open_asset_path(relative)
+
+        ttk.Button(button_bar, text="Open image", command=open_selected, style="Neutral.TButton").pack(side=tk.RIGHT)
+        ttk.Button(button_bar, text="Close", command=viewer.destroy, style="Ghost.TButton").pack(
+            side=tk.RIGHT, padx=(0, 12)
+        )
+
+        def show_preview(index: int) -> None:
+            image_path = image_files[index]
+            try:
+                with Image.open(image_path) as pil_image:
+                    width, height = pil_image.size
+                    max_width = 640
+                    max_height = 440
+                    scale = min(max_width / width, max_height / height, 1.0)
+                    if scale < 1.0:
+                        new_size = (max(1, int(width * scale)), max(1, int(height * scale)))
+                        pil_image = pil_image.resize(new_size, Image.LANCZOS)
+                    photo = ImageTk.PhotoImage(pil_image)
+            except Exception as error:  # pragma: no cover - depends on optional imaging libs
+                messagebox.showerror(
+                    "Slide images",
+                    f"Unable to preview the selected image:\n{error}",
+                    parent=viewer,
+                )
+                return
+
+            preview_label.configure(image=photo)
+            preview_label.image = photo
+            caption_var.set(image_path.name)
+
+        def on_select(event: tk.Event | None = None) -> None:
+            selection = listbox.curselection()
+            if not selection:
+                return
+            show_preview(selection[0])
+
+        listbox.bind("<<ListboxSelect>>", on_select)
+        listbox.selection_set(0)
+        show_preview(0)
+
+        viewer.wait_window()
+
     def _transcribe_audio(
         self,
         lecture_record: LectureRecord,
@@ -1005,6 +1175,72 @@ class DesktopUI:
         self._refresh_ui()
         messagebox.showinfo("Render slides", "Slide images generated successfully.", parent=self._root)
 
+    def _delete_asset(
+        self,
+        lecture_record: LectureRecord,
+        attribute: str,
+        label: str,
+        *,
+        directory: bool = False,
+    ) -> None:
+        if not self._root:
+            return
+        if not self._config:
+            messagebox.showerror(
+                f"Delete {label}",
+                "Asset storage is not configured.",
+                parent=self._root,
+            )
+            return
+
+        relative: Optional[str] = getattr(lecture_record, attribute, None)
+        if not relative:
+            messagebox.showinfo(
+                f"Delete {label}",
+                f"No {label.lower()} linked to this lecture.",
+                parent=self._root,
+            )
+            return
+
+        if not messagebox.askyesno(
+            f"Delete {label}",
+            f"Remove the {label.lower()} from this lecture?",
+            parent=self._root,
+        ):
+            return
+
+        path = self._config.storage_root / relative
+        if not self._is_within_storage(path):
+            messagebox.showerror(
+                f"Delete {label}",
+                "The asset is stored outside the configured storage directory.",
+                parent=self._root,
+            )
+            return
+
+        try:
+            if path.exists():
+                if directory or path.is_dir():
+                    shutil.rmtree(path)
+                else:
+                    path.unlink()
+        except Exception as error:
+            messagebox.showerror(
+                f"Delete {label}",
+                f"Failed to delete the {label.lower()}:\n{error}",
+                parent=self._root,
+            )
+            return
+
+        self._selected_lecture_id = lecture_record.id
+        self._repository.update_lecture_assets(lecture_record.id, **{attribute: None})
+        self._refresh_ui()
+        messagebox.showinfo(
+            f"Delete {label}",
+            f"{label} removed successfully.",
+            parent=self._root,
+        )
+
     def _resolve_hierarchy(
         self,
         lecture_record: LectureRecord,
@@ -1055,6 +1291,19 @@ class DesktopUI:
                 parent=self._root,
             )
 
+    def _is_within_storage(self, path: Path) -> bool:
+        if not self._config:
+            return False
+        try:
+            storage_root = self._config.storage_root.resolve(strict=False)
+        except Exception:
+            storage_root = self._config.storage_root.resolve()
+        try:
+            target = path.resolve(strict=False)
+        except Exception:
+            target = path.resolve()
+        return target.is_relative_to(storage_root)
+
     # ------------------------------------------------------------------
     # Settings and theming
     # ------------------------------------------------------------------
@@ -1094,6 +1343,9 @@ class DesktopUI:
                 "subtle": "#475569",
                 "text": "#0f172a",
                 "muted": "#94a3b8",
+                "danger": "#dc2626",
+                "danger_active": "#b91c1c",
+                "danger_pressed": "#991b1b",
             }
         return {
             "background": "#0f172a",
@@ -1104,6 +1356,9 @@ class DesktopUI:
             "subtle": "#94a3b8",
             "text": "#f8fafc",
             "muted": "#64748b",
+            "danger": "#f87171",
+            "danger_active": "#ef4444",
+            "danger_pressed": "#dc2626",
         }
 
     def _open_settings_dialog(self) -> None:
