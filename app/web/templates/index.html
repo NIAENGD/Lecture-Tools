@@ -35,13 +35,13 @@
       }
 
       main.container {
-        margin-top: 2rem;
-        margin-bottom: 2rem;
+        margin: 2rem auto;
         padding: 2.5rem;
-        background: rgba(255, 255, 255, 0.8);
-        backdrop-filter: blur(12px);
+        background: rgba(255, 255, 255, 0.82);
+        backdrop-filter: blur(14px);
         border-radius: 28px;
         box-shadow: 0 20px 45px rgba(15, 23, 42, 0.18);
+        max-width: 1200px;
       }
 
       header h1 {
@@ -51,30 +51,32 @@
       }
 
       header p {
-        max-width: 60ch;
+        max-width: 65ch;
         color: #475569;
       }
 
       .stats-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
         gap: 1.25rem;
         margin: 2rem 0 2.5rem;
       }
 
       .stat-card {
-        padding: 1.75rem;
+        padding: 1.5rem;
         border-radius: 20px;
         background: linear-gradient(135deg, #6366f1, #8b5cf6);
         color: white;
         box-shadow: 0 12px 25px rgba(99, 102, 241, 0.35);
         transition: transform 0.2s ease, box-shadow 0.2s ease;
+        position: relative;
+        overflow: hidden;
       }
 
       .stat-card span {
         display: block;
         font-size: 0.9rem;
-        opacity: 0.8;
+        opacity: 0.85;
         letter-spacing: 0.08em;
         text-transform: uppercase;
       }
@@ -86,9 +88,109 @@
         font-weight: 700;
       }
 
+      .stat-card small {
+        display: block;
+        margin-top: 0.45rem;
+        font-size: 0.85rem;
+        opacity: 0.9;
+      }
+
       .stat-card:hover {
         transform: translateY(-4px);
         box-shadow: 0 18px 35px rgba(99, 102, 241, 0.4);
+      }
+
+      .control-panel {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        align-items: end;
+        margin-bottom: 2rem;
+      }
+
+      .control-panel .control-block label,
+      .control-panel .control-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #334155;
+        display: block;
+        margin-bottom: 0.45rem;
+      }
+
+      .control-panel input[type='search'] {
+        border-radius: 14px;
+        border: 1px solid rgba(99, 102, 241, 0.28);
+        padding: 0.75rem 1rem;
+        font-size: 1rem;
+        box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.05);
+        background-color: rgba(255, 255, 255, 0.95);
+      }
+
+      .control-panel select {
+        border-radius: 14px;
+        border: 1px solid rgba(99, 102, 241, 0.28);
+        padding: 0.65rem 1rem;
+        font-size: 1rem;
+        background-color: rgba(255, 255, 255, 0.95);
+      }
+
+      .chip-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.65rem;
+      }
+
+      .chip {
+        border-radius: 999px;
+        padding: 0.4rem 0.95rem;
+        border: 1px solid rgba(79, 70, 229, 0.35);
+        background: rgba(79, 70, 229, 0.08);
+        color: #312e81;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-size: 0.9rem;
+      }
+
+      .chip[aria-pressed='true'] {
+        background: linear-gradient(135deg, #4338ca, #6366f1);
+        color: white;
+        box-shadow: 0 10px 18px rgba(79, 70, 229, 0.28);
+      }
+
+      .chip.chip-static {
+        cursor: default;
+        border-color: rgba(14, 116, 144, 0.2);
+        background: rgba(125, 211, 252, 0.18);
+        color: #0f172a;
+      }
+
+      .chip.chip-warning {
+        border-color: rgba(234, 179, 8, 0.35);
+        background: rgba(250, 204, 21, 0.18);
+        color: #854d0e;
+      }
+
+      .chip.chip-success {
+        border-color: rgba(34, 197, 94, 0.35);
+        background: rgba(34, 197, 94, 0.18);
+        color: #166534;
+      }
+
+      .chip.chip-muted {
+        border-color: rgba(148, 163, 184, 0.4);
+        background: rgba(226, 232, 240, 0.55);
+        color: #475569;
+      }
+
+      .chip svg {
+        width: 1rem;
+        height: 1rem;
       }
 
       .layout {
@@ -100,6 +202,14 @@
         .layout {
           grid-template-columns: 320px 1fr;
         }
+      }
+
+      .class-meta,
+      .module-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
       }
 
       .tree-panel,
@@ -176,6 +286,7 @@
         cursor: pointer;
         font-weight: 500;
         transition: transform 0.15s ease, box-shadow 0.15s ease;
+        gap: 0.65rem;
       }
 
       .lecture-button:hover,
@@ -191,6 +302,37 @@
         box-shadow: 0 12px 24px rgba(49, 46, 129, 0.35);
       }
 
+      .lecture-label {
+        flex: 1 1 auto;
+        text-align: left;
+      }
+
+      .lecture-badges {
+        display: inline-flex;
+        gap: 0.35rem;
+      }
+
+      .lecture-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 1.8rem;
+        padding: 0.2rem 0.45rem;
+        border-radius: 999px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        background: rgba(148, 163, 184, 0.35);
+        color: inherit;
+        border: 1px solid rgba(148, 163, 184, 0.45);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .lecture-button.active .lecture-badge {
+        border-color: rgba(255, 255, 255, 0.65);
+        background: rgba(255, 255, 255, 0.25);
+      }
+
       .detail-panel p {
         color: #475569;
         line-height: 1.6;
@@ -201,14 +343,20 @@
         flex-wrap: wrap;
         gap: 0.75rem;
         margin: 1rem 0 1.5rem;
-        color: #334155;
-        font-size: 0.95rem;
       }
 
-      .detail-panel .meta span {
-        background: rgba(59, 130, 246, 0.12);
-        padding: 0.35rem 0.65rem;
-        border-radius: 999px;
+      .detail-panel .meta .chip {
+        cursor: default;
+        background: rgba(59, 130, 246, 0.15);
+        border-color: rgba(59, 130, 246, 0.3);
+        color: #1e293b;
+      }
+
+      .asset-summary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.55rem;
+        margin-top: 1.25rem;
       }
 
       .asset-links {
@@ -233,6 +381,100 @@
         background: rgba(34, 197, 94, 0.22);
       }
 
+      .detail-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.75rem;
+        margin-top: 1.5rem;
+      }
+
+      .detail-toolbar button {
+        border-radius: 12px;
+      }
+
+      .share-status {
+        font-size: 0.9rem;
+        color: #0f172a;
+      }
+
+      .share-status[data-variant='success'] {
+        color: #166534;
+      }
+
+      .share-status[data-variant='error'] {
+        color: #b91c1c;
+      }
+
+      .preview-section {
+        margin-top: 2rem;
+      }
+
+      .preview-section h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #1e293b;
+        margin-bottom: 1rem;
+      }
+
+      .preview-grid {
+        display: grid;
+        gap: 1.25rem;
+      }
+
+      .preview-card {
+        background: rgba(248, 250, 252, 0.9);
+        border-radius: 18px;
+        padding: 1.25rem;
+        border: 1px solid rgba(148, 163, 184, 0.4);
+        box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      .preview-card header h4 {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 600;
+        color: #0f172a;
+      }
+
+      .preview-meta {
+        display: block;
+        font-size: 0.85rem;
+        color: #475569;
+      }
+
+      .preview-card pre {
+        background: rgba(15, 23, 42, 0.05);
+        border-radius: 12px;
+        padding: 0.75rem;
+        max-height: 260px;
+        overflow: auto;
+        white-space: pre-wrap;
+        font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular,
+          Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+        font-size: 0.9rem;
+        color: #0f172a;
+      }
+
+      .preview-footnote {
+        font-size: 0.8rem;
+        color: #64748b;
+      }
+
+      label.chip input {
+        margin-right: 0.45rem;
+        accent-color: #4f46e5;
+      }
+
+      @media (min-width: 960px) {
+        .preview-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
       .empty-state {
         text-align: center;
         color: #64748b;
@@ -255,16 +497,96 @@
       <section class="stats-grid" id="stats">
         <article class="stat-card">
           <span>Classes</span>
-          <strong id="stat-classes">0</strong>
+          <strong id="stat-classes-visible">0</strong>
+          <small id="stat-classes-total">of 0 total</small>
         </article>
         <article class="stat-card">
           <span>Modules</span>
-          <strong id="stat-modules">0</strong>
+          <strong id="stat-modules-visible">0</strong>
+          <small id="stat-modules-total">of 0 total</small>
         </article>
         <article class="stat-card">
           <span>Lectures</span>
-          <strong id="stat-lectures">0</strong>
+          <strong id="stat-lectures-visible">0</strong>
+          <small id="stat-lectures-total">of 0 total</small>
         </article>
+        <article class="stat-card">
+          <span>Transcripts</span>
+          <strong id="stat-transcripts-visible">0</strong>
+          <small id="stat-transcripts-total">of 0 total</small>
+        </article>
+        <article class="stat-card">
+          <span>Slide Decks</span>
+          <strong id="stat-slides-visible">0</strong>
+          <small id="stat-slides-total">of 0 total</small>
+        </article>
+        <article class="stat-card">
+          <span>Audio &amp; Video</span>
+          <strong id="stat-audio-visible">0</strong>
+          <small id="stat-audio-total">of 0 total</small>
+        </article>
+        <article class="stat-card">
+          <span>Notes</span>
+          <strong id="stat-notes-visible">0</strong>
+          <small id="stat-notes-total">of 0 total</small>
+        </article>
+        <article class="stat-card">
+          <span>Slide Images</span>
+          <strong id="stat-slide-images-visible">0</strong>
+          <small id="stat-slide-images-total">of 0 total</small>
+        </article>
+      </section>
+
+      <section class="control-panel" aria-label="Filters and quick actions">
+        <div class="control-block">
+          <label for="search-input">Search catalogue</label>
+          <input
+            type="search"
+            id="search-input"
+            placeholder="Search classes, modules, lectures, or descriptions"
+            autocomplete="off"
+          />
+        </div>
+        <div class="control-block">
+          <span class="control-label">Asset filters</span>
+          <div class="chip-row" id="asset-filter-row">
+            <button type="button" class="chip" data-filter="transcript" aria-pressed="false">
+              Transcript
+            </button>
+            <button type="button" class="chip" data-filter="slides" aria-pressed="false">
+              Slide deck
+            </button>
+            <button type="button" class="chip" data-filter="audio" aria-pressed="false">
+              Audio/Video
+            </button>
+            <button type="button" class="chip" data-filter="notes" aria-pressed="false">
+              Notes
+            </button>
+            <button type="button" class="chip" data-filter="slideImages" aria-pressed="false">
+              Slide images
+            </button>
+          </div>
+        </div>
+        <div class="control-block">
+          <label for="sort-select">Sort classes</label>
+          <select id="sort-select">
+            <option value="name">A → Z</option>
+            <option value="lectures">Most lectures</option>
+            <option value="recent">Recently added</option>
+          </select>
+        </div>
+        <div class="control-block">
+          <span class="control-label">Display options</span>
+          <div class="chip-row">
+            <label class="chip chip-muted" for="toggle-empty">
+              <input type="checkbox" id="toggle-empty" />
+              Show empty modules
+            </label>
+            <button type="button" class="chip chip-muted" id="reset-filters">
+              Reset filters
+            </button>
+          </div>
+        </div>
       </section>
 
       <section class="layout">
@@ -274,6 +596,10 @@
           <div class="empty-state" id="empty-tree" hidden>
             Upload lectures to see them appear in this navigation tree.
           </div>
+          <div class="empty-state" id="filter-empty" hidden>
+            No lectures match your current filters. Try a broader search or reset the
+            filters above to see everything again.
+          </div>
         </aside>
         <article class="detail-panel" id="detail-panel">
           <h2 id="lecture-title">Select a lecture</h2>
@@ -282,7 +608,39 @@
             quick links to transcripts, slides, and audio.
           </p>
           <div class="meta" id="lecture-meta" hidden></div>
+          <div class="asset-summary" id="asset-summary" hidden></div>
           <div class="asset-links" id="asset-links" hidden></div>
+          <div class="detail-toolbar" id="detail-toolbar" hidden>
+            <button type="button" id="share-button" class="secondary outline" disabled>
+              Copy share link
+            </button>
+            <span id="share-status" class="share-status" hidden></span>
+          </div>
+          <section class="preview-section" id="lecture-preview" hidden>
+            <h3>Quick preview</h3>
+            <div class="preview-grid">
+              <article class="preview-card" id="transcript-preview" hidden>
+                <header>
+                  <h4>Transcript</h4>
+                  <span class="preview-meta" id="transcript-preview-meta"></span>
+                </header>
+                <pre id="transcript-preview-text"></pre>
+                <footer>
+                  <span class="preview-footnote" id="transcript-preview-footnote"></span>
+                </footer>
+              </article>
+              <article class="preview-card" id="notes-preview" hidden>
+                <header>
+                  <h4>Notes</h4>
+                  <span class="preview-meta" id="notes-preview-meta"></span>
+                </header>
+                <pre id="notes-preview-text"></pre>
+                <footer>
+                  <span class="preview-footnote" id="notes-preview-footnote"></span>
+                </footer>
+              </article>
+            </div>
+          </section>
         </article>
       </section>
     </main>
@@ -290,22 +648,382 @@
     <script>
       const classListEl = document.getElementById('class-list');
       const emptyTreeEl = document.getElementById('empty-tree');
+      const filterEmptyEl = document.getElementById('filter-empty');
+
       const statsEls = {
-        classes: document.getElementById('stat-classes'),
-        modules: document.getElementById('stat-modules'),
-        lectures: document.getElementById('stat-lectures'),
+        classes: buildStatElements('classes'),
+        modules: buildStatElements('modules'),
+        lectures: buildStatElements('lectures'),
+        transcripts: buildStatElements('transcripts'),
+        slides: buildStatElements('slides'),
+        audio: buildStatElements('audio'),
+        notes: buildStatElements('notes'),
+        slideImages: buildStatElements('slide-images'),
       };
+
+      function buildStatElements(name) {
+        return {
+          visible: document.getElementById(`stat-${name}-visible`),
+          total: document.getElementById(`stat-${name}-total`),
+        };
+      }
+
       const detailPanel = {
         title: document.getElementById('lecture-title'),
         description: document.getElementById('lecture-description'),
         meta: document.getElementById('lecture-meta'),
+        assetSummary: document.getElementById('asset-summary'),
         assets: document.getElementById('asset-links'),
+        toolbar: document.getElementById('detail-toolbar'),
+        shareButton: document.getElementById('share-button'),
+        shareStatus: document.getElementById('share-status'),
+        previewSection: document.getElementById('lecture-preview'),
+        transcriptCard: document.getElementById('transcript-preview'),
+        transcriptMeta: document.getElementById('transcript-preview-meta'),
+        transcriptText: document.getElementById('transcript-preview-text'),
+        transcriptFootnote: document.getElementById('transcript-preview-footnote'),
+        notesCard: document.getElementById('notes-preview'),
+        notesMeta: document.getElementById('notes-preview-meta'),
+        notesText: document.getElementById('notes-preview-text'),
+        notesFootnote: document.getElementById('notes-preview-footnote'),
       };
 
-      function updateStats(stats) {
-        statsEls.classes.textContent = stats.class_count ?? 0;
-        statsEls.modules.textContent = stats.module_count ?? 0;
-        statsEls.lectures.textContent = stats.lecture_count ?? 0;
+      const searchInput = document.getElementById('search-input');
+      const sortSelect = document.getElementById('sort-select');
+      const toggleEmptyCheckbox = document.getElementById('toggle-empty');
+      const resetFiltersButton = document.getElementById('reset-filters');
+      const assetFilterRow = document.getElementById('asset-filter-row');
+      const assetFilterButtons = Array.from(
+        assetFilterRow.querySelectorAll('button[data-filter]'),
+      );
+
+      const assetKeyMap = {
+        transcript: 'transcript_path',
+        slides: 'slide_path',
+        audio: 'audio_path',
+        notes: 'notes_path',
+        slideImages: 'slide_image_dir',
+      };
+
+      const numberFormatter = new Intl.NumberFormat();
+      const preciseNumberFormatter = new Intl.NumberFormat(undefined, {
+        maximumFractionDigits: 1,
+      });
+      const dateFormatter = new Intl.DateTimeFormat(undefined, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      });
+
+      const state = {
+        classes: [],
+        originalStats: {},
+        filteredClasses: [],
+        filters: {
+          query: '',
+          assets: {
+            transcript: false,
+            slides: false,
+            audio: false,
+            notes: false,
+            slideImages: false,
+          },
+          includeEmpty: false,
+        },
+        sort: 'name',
+        lectureButtons: new Map(),
+        selectedLectureId: null,
+        pendingLectureRequest: null,
+      };
+
+      let shareStatusTimeout = null;
+      let ignoreNextHashChange = false;
+
+      assetFilterButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          const key = button.dataset.filter;
+          const nextState = !state.filters.assets[key];
+          state.filters.assets[key] = nextState;
+          button.setAttribute('aria-pressed', String(nextState));
+          applyFilters();
+        });
+      });
+
+      searchInput.addEventListener('input', (event) => {
+        state.filters.query = event.target.value;
+        applyFilters();
+      });
+
+      sortSelect.addEventListener('change', (event) => {
+        state.sort = event.target.value;
+        applyFilters();
+      });
+
+      toggleEmptyCheckbox.addEventListener('change', (event) => {
+        state.filters.includeEmpty = event.target.checked;
+        applyFilters();
+      });
+
+      resetFiltersButton.addEventListener('click', () => {
+        resetFilters();
+      });
+
+      detailPanel.shareButton.addEventListener('click', async () => {
+        if (!state.selectedLectureId) {
+          return;
+        }
+
+        const shareUrl = new URL(window.location.href);
+        shareUrl.hash = `lecture-${state.selectedLectureId}`;
+
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(shareUrl.toString());
+            showShareStatus('Link copied to your clipboard.', 'success');
+          } else {
+            showShareStatus(
+              'Clipboard access is unavailable. Copy the link from the address bar.',
+              'error',
+            );
+          }
+        } catch (error) {
+          console.error(error);
+          showShareStatus(
+            'Could not copy the share link automatically. Copy it manually instead.',
+            'error',
+          );
+        }
+      });
+
+      window.addEventListener('hashchange', () => {
+        if (ignoreNextHashChange) {
+          ignoreNextHashChange = false;
+          return;
+        }
+        attemptSelectFromHash();
+      });
+
+      function formatNumber(value) {
+        return numberFormatter.format(value ?? 0);
+      }
+
+      function formatBytes(bytes) {
+        if (typeof bytes !== 'number' || Number.isNaN(bytes)) {
+          return '';
+        }
+        if (bytes < 1024) {
+          return `${bytes} B`;
+        }
+        const units = ['KB', 'MB', 'GB', 'TB'];
+        let index = 0;
+        let value = bytes / 1024;
+        while (value >= 1024 && index < units.length - 1) {
+          value /= 1024;
+          index += 1;
+        }
+        const formatted = value >= 100 ? Math.round(value) : preciseNumberFormatter.format(value);
+        return `${formatted} ${units[index]}`;
+      }
+
+      function pluralize(value, singular, plural = `${singular}s`) {
+        return value === 1 ? singular : plural;
+      }
+
+      function filtersActive() {
+        return (
+          state.filters.query.trim().length > 0 ||
+          Object.values(state.filters.assets).some((active) => active)
+        );
+      }
+
+      function buildMetaChip(label, variant = 'static') {
+        const chip = document.createElement('span');
+        chip.className = `chip chip-${variant}`;
+        chip.textContent = label;
+        return chip;
+      }
+
+      function buildLectureBadge(label) {
+        const badge = document.createElement('span');
+        badge.className = 'lecture-badge';
+        badge.textContent = label;
+        return badge;
+      }
+
+      function assetsMatchFilters(lecture) {
+        return Object.entries(state.filters.assets).every(([key, enabled]) => {
+          if (!enabled) {
+            return true;
+          }
+          const field = assetKeyMap[key];
+          return Boolean(lecture[field]);
+        });
+      }
+
+      function matchesQuery(values, query) {
+        if (!query) {
+          return false;
+        }
+        const needle = query.toLowerCase();
+        return values.some(
+          (value) => typeof value === 'string' && value.toLowerCase().includes(needle),
+        );
+      }
+
+      function computeAssetCounts(lectures) {
+        return {
+          transcripts: lectures.filter((lecture) => lecture.transcript_path).length,
+          slides: lectures.filter((lecture) => lecture.slide_path).length,
+          audio: lectures.filter((lecture) => lecture.audio_path).length,
+          notes: lectures.filter((lecture) => lecture.notes_path).length,
+          slide_images: lectures.filter((lecture) => lecture.slide_image_dir).length,
+        };
+      }
+
+      function computeStats(classes) {
+        const stats = {
+          class_count: classes.length,
+          module_count: 0,
+          lecture_count: 0,
+          transcript_count: 0,
+          slide_count: 0,
+          audio_count: 0,
+          notes_count: 0,
+          slide_image_count: 0,
+        };
+
+        classes.forEach((klass) => {
+          stats.module_count += klass.modules.length;
+          klass.modules.forEach((module) => {
+            stats.lecture_count += module.lectures.length;
+            module.lectures.forEach((lecture) => {
+              if (lecture.transcript_path) stats.transcript_count += 1;
+              if (lecture.slide_path) stats.slide_count += 1;
+              if (lecture.audio_path) stats.audio_count += 1;
+              if (lecture.notes_path) stats.notes_count += 1;
+              if (lecture.slide_image_dir) stats.slide_image_count += 1;
+            });
+          });
+        });
+
+        return stats;
+      }
+
+      function cloneLecture(lecture) {
+        return { ...lecture };
+      }
+
+      function buildFilteredClasses(classes) {
+        const query = state.filters.query.trim();
+        const includeEmpty = state.filters.includeEmpty;
+        const filtered = [];
+
+        classes.forEach((klass) => {
+          const classMatches = matchesQuery([klass.name, klass.description], query);
+          const modules = [];
+
+          klass.modules.forEach((module) => {
+            const moduleMatches = matchesQuery([module.name, module.description], query);
+            const lectures = module.lectures
+              .filter((lecture) => assetsMatchFilters(lecture))
+              .filter((lecture) => {
+                if (!query) {
+                  return true;
+                }
+                return (
+                  matchesQuery([lecture.name, lecture.description], query) ||
+                  moduleMatches ||
+                  classMatches
+                );
+              })
+              .map(cloneLecture);
+
+            if (lectures.length > 0 || (includeEmpty && (moduleMatches || classMatches))) {
+              const moduleClone = { ...module, lectures };
+              moduleClone.lecture_count = lectures.length;
+              moduleClone.asset_counts = computeAssetCounts(lectures);
+              modules.push(moduleClone);
+            }
+          });
+
+          if (modules.length > 0 || (includeEmpty && classMatches)) {
+            const classClone = { ...klass, modules };
+            classClone.module_count = modules.length;
+            const lectureCollection = modules.reduce(
+              (accumulator, module) => accumulator.concat(module.lectures),
+              [],
+            );
+            classClone.asset_counts = computeAssetCounts(lectureCollection);
+            filtered.push(classClone);
+          }
+        });
+
+        return filtered;
+      }
+
+      function sortClasses(classes) {
+        const sorted = [...classes];
+        if (state.sort === 'name') {
+          sorted.sort((a, b) => a.name.localeCompare(b.name));
+          return sorted;
+        }
+
+        if (state.sort === 'lectures') {
+          const lectureCount = (klass) =>
+            klass.modules.reduce((total, module) => total + module.lectures.length, 0);
+          sorted.sort((a, b) => {
+            const diff = lectureCount(b) - lectureCount(a);
+            return diff !== 0 ? diff : a.name.localeCompare(b.name);
+          });
+          return sorted;
+        }
+
+        if (state.sort === 'recent') {
+          const latestLectureId = (klass) => {
+            let maxId = 0;
+            klass.modules.forEach((module) => {
+              module.lectures.forEach((lecture) => {
+                if (lecture.id > maxId) {
+                  maxId = lecture.id;
+                }
+              });
+            });
+            return maxId;
+          };
+          sorted.sort((a, b) => {
+            const diff = latestLectureId(b) - latestLectureId(a);
+            return diff !== 0 ? diff : a.name.localeCompare(b.name);
+          });
+          return sorted;
+        }
+
+        return sorted;
+      }
+
+      function updateStats(totalStats, visibleStats) {
+        const totals = totalStats ?? {};
+        const visible = visibleStats ?? totals;
+
+        const mapping = {
+          classes: 'class_count',
+          modules: 'module_count',
+          lectures: 'lecture_count',
+          transcripts: 'transcript_count',
+          slides: 'slide_count',
+          audio: 'audio_count',
+          notes: 'notes_count',
+          slideImages: 'slide_image_count',
+        };
+
+        Object.entries(mapping).forEach(([key, statKey]) => {
+          const elements = statsEls[key];
+          if (!elements) {
+            return;
+          }
+          const visibleValue = visible[statKey] ?? 0;
+          const totalValue = totals[statKey] ?? 0;
+          elements.visible.textContent = formatNumber(visibleValue);
+          elements.total.textContent = `of ${formatNumber(totalValue)} total`;
+        });
       }
 
       function buildLectureLink(label, path) {
@@ -317,81 +1035,9 @@
         return anchor;
       }
 
-      function selectLecture(lectureId, buttons) {
-        buttons.forEach((button) => button.classList.remove('active'));
-      }
-
-      async function showLectureDetail(lectureId, button, buttons) {
-        try {
-          const response = await fetch(`/api/lectures/${lectureId}`);
-          if (!response.ok) {
-            throw new Error('Failed to load lecture details');
-          }
-          const payload = await response.json();
-          selectLecture(lectureId, buttons);
-          button.classList.add('active');
-          const { lecture, module, class: klass } = payload;
-
-          detailPanel.title.textContent = lecture.name;
-          detailPanel.description.textContent = lecture.description ||
-            'No description has been provided for this lecture yet.';
-
-          detailPanel.meta.innerHTML = '';
-          detailPanel.meta.hidden = false;
-
-          const classTag = document.createElement('span');
-          classTag.textContent = `Class · ${klass.name}`;
-          detailPanel.meta.appendChild(classTag);
-
-          const moduleTag = document.createElement('span');
-          moduleTag.textContent = `Module · ${module.name}`;
-          detailPanel.meta.appendChild(moduleTag);
-
-          if (lecture.slide_image_dir) {
-            const slidesTag = document.createElement('span');
-            slidesTag.textContent = 'Slides converted';
-            detailPanel.meta.appendChild(slidesTag);
-          }
-
-          detailPanel.assets.innerHTML = '';
-          const links = [];
-          if (lecture.transcript_path) {
-            links.push(buildLectureLink('Transcript', lecture.transcript_path));
-          }
-          if (lecture.slide_path) {
-            links.push(buildLectureLink('Slides PDF', lecture.slide_path));
-          }
-          if (lecture.slide_image_dir) {
-            links.push(buildLectureLink('Slide Images', lecture.slide_image_dir));
-          }
-          if (lecture.audio_path) {
-            links.push(buildLectureLink('Audio / Video', lecture.audio_path));
-          }
-          if (lecture.notes_path) {
-            links.push(buildLectureLink('Notes', lecture.notes_path));
-          }
-
-          if (links.length > 0) {
-            detailPanel.assets.hidden = false;
-            links.forEach((link) => detailPanel.assets.appendChild(link));
-          } else {
-            detailPanel.assets.hidden = true;
-          }
-        } catch (error) {
-          console.error(error);
-        }
-      }
-
       function renderTree(classes) {
         classListEl.innerHTML = '';
-        const lectureButtons = [];
-
-        if (!classes.length) {
-          emptyTreeEl.hidden = false;
-          return;
-        }
-
-        emptyTreeEl.hidden = true;
+        state.lectureButtons = new Map();
 
         classes.forEach((klass) => {
           const classItem = document.createElement('li');
@@ -408,6 +1054,27 @@
             classDescription.style.color = '#475569';
             classItem.appendChild(classDescription);
           }
+
+          const classMeta = document.createElement('div');
+          classMeta.className = 'class-meta';
+          const moduleCount = klass.module_count ?? klass.modules.length;
+          const lectureCount = klass.modules.reduce(
+            (total, module) => total + module.lectures.length,
+            0,
+          );
+          classMeta.appendChild(
+            buildMetaChip(`${moduleCount} ${pluralize(moduleCount, 'module')}`),
+          );
+          classMeta.appendChild(
+            buildMetaChip(`${lectureCount} ${pluralize(lectureCount, 'lecture')}`),
+          );
+          if (klass.asset_counts && klass.asset_counts.transcripts) {
+            const value = klass.asset_counts.transcripts;
+            classMeta.appendChild(
+              buildMetaChip(`${value} ${pluralize(value, 'transcript')}`, 'success'),
+            );
+          }
+          classItem.appendChild(classMeta);
 
           const moduleList = document.createElement('ul');
           moduleList.className = 'module-list';
@@ -428,6 +1095,35 @@
               moduleItem.appendChild(moduleDescription);
             }
 
+            const moduleMeta = document.createElement('div');
+            moduleMeta.className = 'module-meta';
+            const moduleLectureCount = module.lectures.length;
+            moduleMeta.appendChild(
+              buildMetaChip(
+                `${moduleLectureCount} ${pluralize(moduleLectureCount, 'lecture')}`,
+                moduleLectureCount ? 'static' : 'muted',
+              ),
+            );
+
+            const moduleAssets = module.asset_counts ?? computeAssetCounts(module.lectures);
+            if (moduleAssets.transcripts) {
+              moduleMeta.appendChild(
+                buildMetaChip(
+                  `${moduleAssets.transcripts} ${pluralize(moduleAssets.transcripts, 'transcript')}`,
+                  'success',
+                ),
+              );
+            }
+            if (moduleAssets.slides) {
+              moduleMeta.appendChild(
+                buildMetaChip(
+                  `${moduleAssets.slides} ${pluralize(moduleAssets.slides, 'slide deck', 'slide decks')}`,
+                  'success',
+                ),
+              );
+            }
+            moduleItem.appendChild(moduleMeta);
+
             const lectureList = document.createElement('ul');
             lectureList.className = 'lecture-list';
 
@@ -436,18 +1132,38 @@
               const lectureButton = document.createElement('button');
               lectureButton.type = 'button';
               lectureButton.className = 'lecture-button';
-              lectureButton.textContent = lecture.name;
-              lectureButton.addEventListener('click', () =>
-                showLectureDetail(lecture.id, lectureButton, lectureButtons)
-              );
+              lectureButton.dataset.lectureId = String(lecture.id);
+
+              const label = document.createElement('span');
+              label.className = 'lecture-label';
+              label.textContent = lecture.name;
+              lectureButton.appendChild(label);
+
+              const badges = document.createElement('span');
+              badges.className = 'lecture-badges';
+              if (lecture.transcript_path) badges.appendChild(buildLectureBadge('TXT'));
+              if (lecture.slide_path) badges.appendChild(buildLectureBadge('PDF'));
+              if (lecture.audio_path) badges.appendChild(buildLectureBadge('AV'));
+              if (lecture.notes_path) badges.appendChild(buildLectureBadge('NOTE'));
+              if (lecture.slide_image_dir) badges.appendChild(buildLectureBadge('IMG'));
+              if (badges.childElementCount > 0) {
+                lectureButton.appendChild(badges);
+              }
+
+              lectureButton.addEventListener('click', () => {
+                showLectureDetail(lecture.id);
+              });
+
               lectureItem.appendChild(lectureButton);
               lectureList.appendChild(lectureItem);
-              lectureButtons.push(lectureButton);
+              state.lectureButtons.set(String(lecture.id), lectureButton);
             });
 
             if (module.lectures.length === 0) {
               const emptyLecture = document.createElement('p');
-              emptyLecture.textContent = 'No lectures yet';
+              emptyLecture.textContent = filtersActive()
+                ? 'No lectures match the current filters.'
+                : 'No lectures yet.';
               emptyLecture.style.color = '#64748b';
               emptyLecture.style.margin = '0.5rem 0 0';
               lectureList.appendChild(emptyLecture);
@@ -462,6 +1178,393 @@
         });
       }
 
+      function selectLecture(lectureId, { scrollIntoView = false } = {}) {
+        let targetButton = null;
+        state.lectureButtons.forEach((button, id) => {
+          if (Number(id) === lectureId) {
+            button.classList.add('active');
+            targetButton = button;
+          } else {
+            button.classList.remove('active');
+          }
+        });
+
+        if (scrollIntoView && targetButton) {
+          targetButton.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      }
+
+      function ensureSelectedLectureVisibility() {
+        if (!state.selectedLectureId) {
+          return;
+        }
+        const button = state.lectureButtons.get(String(state.selectedLectureId));
+        if (!button) {
+          resetDetailPanel();
+          return;
+        }
+        selectLecture(state.selectedLectureId);
+      }
+
+      function findLectureContext(lectureId) {
+        for (const klass of state.classes) {
+          for (const module of klass.modules) {
+            const lecture = module.lectures.find((item) => item.id === lectureId);
+            if (lecture) {
+              return { klass, module, lecture };
+            }
+          }
+        }
+        return null;
+      }
+
+      function updateAssetLinks(lecture) {
+        detailPanel.assets.innerHTML = '';
+        const links = [];
+        if (lecture.transcript_path) {
+          links.push(buildLectureLink('Transcript', lecture.transcript_path));
+        }
+        if (lecture.slide_path) {
+          links.push(buildLectureLink('Slides PDF', lecture.slide_path));
+        }
+        if (lecture.slide_image_dir) {
+          links.push(buildLectureLink('Slide Images', lecture.slide_image_dir));
+        }
+        if (lecture.audio_path) {
+          links.push(buildLectureLink('Audio / Video', lecture.audio_path));
+        }
+        if (lecture.notes_path) {
+          links.push(buildLectureLink('Notes', lecture.notes_path));
+        }
+
+        if (links.length > 0) {
+          detailPanel.assets.hidden = false;
+          links.forEach((link) => detailPanel.assets.appendChild(link));
+        } else {
+          detailPanel.assets.hidden = true;
+        }
+      }
+
+      function renderAssetSummary(lecture) {
+        const summary = [
+          {
+            available: Boolean(lecture.transcript_path),
+            label: lecture.transcript_path ? 'Transcript ready' : 'No transcript yet',
+          },
+          {
+            available: Boolean(lecture.slide_path),
+            label: lecture.slide_path ? 'Slide deck attached' : 'No slide deck',
+          },
+          {
+            available: Boolean(lecture.audio_path),
+            label: lecture.audio_path ? 'Audio/Video ready' : 'No audio yet',
+          },
+          {
+            available: Boolean(lecture.notes_path),
+            label: lecture.notes_path ? 'Notes uploaded' : 'No notes yet',
+          },
+          {
+            available: Boolean(lecture.slide_image_dir),
+            label: lecture.slide_image_dir ? 'Slide images generated' : 'No slide images',
+          },
+        ];
+
+        detailPanel.assetSummary.innerHTML = '';
+        summary.forEach((item) => {
+          const chip = buildMetaChip(
+            item.label,
+            item.available ? 'success' : 'muted',
+          );
+          detailPanel.assetSummary.appendChild(chip);
+        });
+        detailPanel.assetSummary.hidden = false;
+      }
+
+      function clearAssetSummary() {
+        detailPanel.assetSummary.innerHTML = '';
+        detailPanel.assetSummary.hidden = true;
+      }
+
+      function clearPreview() {
+        detailPanel.previewSection.hidden = true;
+        detailPanel.transcriptCard.hidden = true;
+        detailPanel.notesCard.hidden = true;
+        detailPanel.transcriptText.textContent = '';
+        detailPanel.notesText.textContent = '';
+        detailPanel.transcriptMeta.textContent = '';
+        detailPanel.notesMeta.textContent = '';
+        detailPanel.transcriptFootnote.textContent = '';
+        detailPanel.notesFootnote.textContent = '';
+      }
+
+      function formatPreviewMeta(preview) {
+        const parts = [];
+        if (typeof preview.byte_size === 'number') {
+          const size = formatBytes(preview.byte_size);
+          if (size) {
+            parts.push(size);
+          }
+        }
+        if (typeof preview.line_count === 'number' && preview.line_count > 0) {
+          parts.push(`${preview.line_count} ${pluralize(preview.line_count, 'line')}`);
+        }
+        if (preview.modified) {
+          const date = new Date(preview.modified);
+          if (!Number.isNaN(date.getTime())) {
+            parts.push(dateFormatter.format(date));
+          }
+        }
+        return parts.join(' · ');
+      }
+
+      function renderPreview(preview) {
+        clearPreview();
+        if (!preview) {
+          return;
+        }
+
+        const transcript = preview.transcript;
+        const notes = preview.notes;
+        let hasContent = false;
+
+        if (transcript && transcript.text) {
+          detailPanel.transcriptCard.hidden = false;
+          detailPanel.transcriptText.textContent = transcript.text;
+          detailPanel.transcriptMeta.textContent = formatPreviewMeta(transcript);
+          detailPanel.transcriptFootnote.textContent = transcript.truncated
+            ? 'Showing a preview. Open the transcript to read the full content.'
+            : 'Full transcript displayed.';
+          hasContent = true;
+        }
+
+        if (notes && notes.text) {
+          detailPanel.notesCard.hidden = false;
+          detailPanel.notesText.textContent = notes.text;
+          detailPanel.notesMeta.textContent = formatPreviewMeta(notes);
+          detailPanel.notesFootnote.textContent = notes.truncated
+            ? 'Showing a preview. Open the notes file to read everything.'
+            : 'Full notes displayed.';
+          hasContent = true;
+        }
+
+        detailPanel.previewSection.hidden = !hasContent;
+      }
+
+      function showShareStatus(message, variant = 'success') {
+        if (shareStatusTimeout) {
+          window.clearTimeout(shareStatusTimeout);
+          shareStatusTimeout = null;
+        }
+        detailPanel.shareStatus.textContent = message;
+        detailPanel.shareStatus.dataset.variant = variant;
+        detailPanel.shareStatus.hidden = false;
+        shareStatusTimeout = window.setTimeout(() => {
+          detailPanel.shareStatus.hidden = true;
+        }, 4000);
+      }
+
+      function clearShareStatus() {
+        if (shareStatusTimeout) {
+          window.clearTimeout(shareStatusTimeout);
+          shareStatusTimeout = null;
+        }
+        detailPanel.shareStatus.hidden = true;
+      }
+
+      function resetDetailPanel() {
+        detailPanel.title.textContent = 'Select a lecture';
+        detailPanel.description.textContent =
+          'Choose a lecture from the curriculum tree to preview its description and quick links to transcripts, slides, and audio.';
+        detailPanel.meta.innerHTML = '';
+        detailPanel.meta.hidden = true;
+        detailPanel.assets.innerHTML = '';
+        detailPanel.assets.hidden = true;
+        detailPanel.toolbar.hidden = true;
+        detailPanel.shareButton.disabled = true;
+        clearShareStatus();
+        clearAssetSummary();
+        clearPreview();
+        state.selectedLectureId = null;
+        state.pendingLectureRequest = null;
+        state.lectureButtons.forEach((button) => button.classList.remove('active'));
+      }
+
+      function updateMetaChips(payload) {
+        detailPanel.meta.innerHTML = '';
+        const metaChips = [
+          `Class · ${payload.class.name}`,
+          `Module · ${payload.module.name}`,
+        ];
+        metaChips.forEach((label) => {
+          const chip = buildMetaChip(label, 'static');
+          detailPanel.meta.appendChild(chip);
+        });
+        detailPanel.meta.hidden = false;
+      }
+
+      async function loadLecturePreview(lectureId, requestToken) {
+        try {
+          const response = await fetch(`/api/lectures/${lectureId}/preview`);
+          if (!response.ok) {
+            throw new Error('Failed to load lecture preview');
+          }
+          const preview = await response.json();
+          if (state.pendingLectureRequest !== requestToken) {
+            return;
+          }
+          renderPreview(preview);
+        } catch (error) {
+          console.error(error);
+          if (state.pendingLectureRequest === requestToken) {
+            clearPreview();
+          }
+        }
+      }
+
+      async function showLectureDetail(lectureId, { updateHash = true, scrollIntoView = false } = {}) {
+        const buttonExists = state.lectureButtons.has(String(lectureId));
+        if (!buttonExists) {
+          return;
+        }
+
+        state.selectedLectureId = lectureId;
+        selectLecture(lectureId, { scrollIntoView });
+        detailPanel.toolbar.hidden = true;
+        detailPanel.shareButton.disabled = true;
+        clearShareStatus();
+        clearAssetSummary();
+        clearPreview();
+
+        const requestToken = Symbol('lecture-request');
+        state.pendingLectureRequest = requestToken;
+
+        try {
+          const response = await fetch(`/api/lectures/${lectureId}`);
+          if (!response.ok) {
+            throw new Error('Failed to load lecture details');
+          }
+          const payload = await response.json();
+          if (state.pendingLectureRequest !== requestToken) {
+            return;
+          }
+
+          const { lecture } = payload;
+          detailPanel.title.textContent = lecture.name;
+          detailPanel.description.textContent =
+            lecture.description || 'No description has been provided for this lecture yet.';
+
+          updateMetaChips(payload);
+          renderAssetSummary(lecture);
+          updateAssetLinks(lecture);
+
+          detailPanel.toolbar.hidden = false;
+          detailPanel.shareButton.disabled = false;
+
+          if (updateHash) {
+            ignoreNextHashChange = true;
+            window.location.hash = `lecture-${lectureId}`;
+          }
+
+          await loadLecturePreview(lectureId, requestToken);
+        } catch (error) {
+          console.error(error);
+          if (state.pendingLectureRequest === requestToken) {
+            detailPanel.title.textContent = 'Unable to load lecture';
+            detailPanel.description.textContent =
+              'An unexpected error occurred while loading this lecture. Please try again in a moment.';
+            detailPanel.meta.hidden = true;
+            detailPanel.assets.hidden = true;
+            detailPanel.toolbar.hidden = true;
+            clearAssetSummary();
+            clearPreview();
+          }
+        } finally {
+          if (state.pendingLectureRequest === requestToken) {
+            state.pendingLectureRequest = null;
+          }
+        }
+      }
+
+      function applyFilters() {
+        if (!state.classes.length) {
+          classListEl.innerHTML = '';
+          emptyTreeEl.hidden = false;
+          filterEmptyEl.hidden = true;
+          updateStats(state.originalStats, state.originalStats);
+          resetDetailPanel();
+          return;
+        }
+
+        const filteredClasses = sortClasses(buildFilteredClasses(state.classes));
+        state.filteredClasses = filteredClasses;
+        const viewStats = computeStats(filteredClasses);
+
+        renderTree(filteredClasses);
+        updateStats(state.originalStats, viewStats);
+
+        const hasVisibleLectures = viewStats.lecture_count > 0;
+        const totalLectures = state.originalStats.lecture_count ?? 0;
+        if (!hasVisibleLectures) {
+          let message;
+          if (filtersActive()) {
+            message =
+              'No lectures match your current filters. Try a broader search or reset the filters above to see everything again.';
+          } else if (totalLectures === 0) {
+            message = 'Lectures will appear here once you ingest your first recording.';
+          } else {
+            message = 'There are no lectures available in the selected modules yet.';
+          }
+          filterEmptyEl.textContent = message;
+          filterEmptyEl.hidden = false;
+          resetDetailPanel();
+        } else {
+          filterEmptyEl.hidden = true;
+          ensureSelectedLectureVisibility();
+        }
+        emptyTreeEl.hidden = true;
+      }
+
+      function resetFilters() {
+        state.filters.query = '';
+        state.filters.includeEmpty = false;
+        state.sort = 'name';
+        searchInput.value = '';
+        sortSelect.value = 'name';
+        toggleEmptyCheckbox.checked = false;
+        Object.keys(state.filters.assets).forEach((key) => {
+          state.filters.assets[key] = false;
+        });
+        assetFilterButtons.forEach((button) => button.setAttribute('aria-pressed', 'false'));
+        applyFilters();
+      }
+
+      function parseLectureIdFromHash(hash) {
+        const match = /^#?lecture-(\d+)$/.exec(hash);
+        return match ? Number.parseInt(match[1], 10) : null;
+      }
+
+      function attemptSelectFromHash() {
+        const lectureId = parseLectureIdFromHash(window.location.hash);
+        if (!lectureId) {
+          return;
+        }
+
+        if (state.lectureButtons.has(String(lectureId))) {
+          showLectureDetail(lectureId, { updateHash: false, scrollIntoView: true });
+          return;
+        }
+
+        const existsInCatalog = Boolean(findLectureContext(lectureId));
+        if (existsInCatalog) {
+          resetFilters();
+          requestAnimationFrame(() => {
+            if (state.lectureButtons.has(String(lectureId))) {
+              showLectureDetail(lectureId, { updateHash: false, scrollIntoView: true });
+            }
+          });
+        }
+      }
+
       async function bootstrap() {
         try {
           const response = await fetch('/api/classes');
@@ -469,15 +1572,21 @@
             throw new Error('Unable to load classes');
           }
           const payload = await response.json();
-          updateStats(payload.stats ?? {});
-          renderTree(payload.classes ?? []);
+          state.classes = payload.classes ?? [];
+          state.originalStats = payload.stats ?? {};
+          applyFilters();
+          attemptSelectFromHash();
         } catch (error) {
           emptyTreeEl.hidden = false;
           emptyTreeEl.textContent = 'Could not load data from the server.';
+          filterEmptyEl.hidden = true;
+          classListEl.innerHTML = '';
+          updateStats({}, {});
           console.error(error);
         }
       }
 
+      resetDetailPanel();
       bootstrap();
     </script>
   </body>
