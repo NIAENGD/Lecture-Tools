@@ -12,4 +12,5 @@ dependencies = [
     "Pillow>=10.0",
     "PyMuPDF>=1.23",
     "faster-whisper>=0.10",
+    "rich>=13.7",
 ]
