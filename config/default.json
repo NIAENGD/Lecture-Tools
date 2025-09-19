@@ -1,0 +1,5 @@
+{
+  "storage_root": "storage",
+  "database_file": "storage/lectures.db",
+  "assets_root": "assets"
+}
