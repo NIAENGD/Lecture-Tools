@@ -54,13 +54,17 @@ def main(ctx: typer.Context) -> None:
     """Launch the web server when no explicit command is provided."""
 
     if ctx.invoked_subcommand is None:
-        ctx.invoke(serve)
+        ctx.invoke(serve, host=DEFAULT_HOST, port=DEFAULT_PORT)
+
+
+DEFAULT_HOST = "127.0.0.1"
+DEFAULT_PORT = 8000
 
 
 @cli.command()
 def serve(
-    host: str = typer.Option("127.0.0.1", help="Host interface for the web server"),
-    port: int = typer.Option(8000, help="Port for the web server"),
+    host: str = typer.Option(DEFAULT_HOST, help="Host interface for the web server"),
+    port: int = typer.Option(DEFAULT_PORT, help="Port for the web server"),
 ) -> None:
     """Run the FastAPI-powered web experience."""
 
