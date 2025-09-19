@@ -27,9 +27,9 @@ class DesktopUI:
         self._tree_items: Dict[str, Tuple[str, object]] = {}
         self._asset_container: ttk.Frame | None = None
 
-        self._title_var = tk.StringVar(value="Browse your classes")
-        self._subtitle_var = tk.StringVar(value="Select a class, module, or lecture to see details.")
-        self._description_var = tk.StringVar(value="")
+        self._title_var: tk.StringVar | None = None
+        self._subtitle_var: tk.StringVar | None = None
+        self._description_var: tk.StringVar | None = None
 
     # ------------------------------------------------------------------
     # Public API
@@ -54,6 +54,12 @@ class DesktopUI:
         root.title("Lecture Tools Overview")
         root.geometry("1100x700")
         root.minsize(900, 600)
+
+        self._title_var = tk.StringVar(master=root, value="Browse your classes")
+        self._subtitle_var = tk.StringVar(
+            master=root, value="Select a class, module, or lecture to see details."
+        )
+        self._description_var = tk.StringVar(master=root, value="")
 
         style = ttk.Style(root)
         try:
@@ -161,11 +167,13 @@ class DesktopUI:
 
         self._populate_tree(tree, snapshot)
 
-        ttk.Label(detail_panel, textvariable=self._title_var, style="DetailTitle.TLabel").pack(anchor="w")
-        ttk.Label(detail_panel, textvariable=self._subtitle_var, style="DetailSubtitle.TLabel").pack(
+        title_var, subtitle_var, description_var = self._require_detail_vars()
+
+        ttk.Label(detail_panel, textvariable=title_var, style="DetailTitle.TLabel").pack(anchor="w")
+        ttk.Label(detail_panel, textvariable=subtitle_var, style="DetailSubtitle.TLabel").pack(
             anchor="w", pady=(6, 16)
         )
-        ttk.Label(detail_panel, textvariable=self._description_var, style="DetailText.TLabel", justify="left").pack(
+        ttk.Label(detail_panel, textvariable=description_var, style="DetailText.TLabel", justify="left").pack(
             anchor="w",
             fill=tk.X,
         )
@@ -229,6 +237,8 @@ class DesktopUI:
         item_id = selection[0]
         kind, payload = self._tree_items.get(item_id, ("empty", None))
 
+        title_var, subtitle_var, description_var = self._require_detail_vars()
+
         if kind == "class":
             self._show_class_details(payload)
         elif kind == "module":
@@ -236,9 +246,9 @@ class DesktopUI:
         elif kind == "lecture":
             self._show_lecture_details(payload)
         else:
-            self._title_var.set("Nothing to show")
-            self._subtitle_var.set("")
-            self._description_var.set("This section is waiting for new content.")
+            title_var.set("Nothing to show")
+            subtitle_var.set("")
+            description_var.set("This section is waiting for new content.")
             self._render_assets([])
 
     # ------------------------------------------------------------------
@@ -247,23 +257,31 @@ class DesktopUI:
     def _show_class_details(self, overview: ClassOverview) -> None:
         modules = len(overview.modules)
         lectures = sum(len(module.lectures) for module in overview.modules)
-        self._title_var.set(overview.record.name)
-        self._subtitle_var.set(f"Class · {modules} modules · {lectures} lectures")
-        self._description_var.set(overview.record.description or "No description provided yet.")
+        title_var, subtitle_var, description_var = self._require_detail_vars()
+        title_var.set(overview.record.name)
+        subtitle_var.set(f"Class · {modules} modules · {lectures} lectures")
+        description_var.set(overview.record.description or "No description provided yet.")
         self._render_assets([])
 
     def _show_module_details(self, overview: ModuleOverview) -> None:
         lectures = len(overview.lectures)
-        self._title_var.set(overview.record.name)
-        self._subtitle_var.set(f"Module · {lectures} lectures")
-        self._description_var.set(overview.record.description or "No description provided yet.")
+        title_var, subtitle_var, description_var = self._require_detail_vars()
+        title_var.set(overview.record.name)
+        subtitle_var.set(f"Module · {lectures} lectures")
+        description_var.set(overview.record.description or "No description provided yet.")
         self._render_assets([])
 
     def _show_lecture_details(self, overview: LectureOverview) -> None:
-        self._title_var.set(overview.record.name)
-        self._subtitle_var.set("Lecture")
-        self._description_var.set(overview.record.description or "No description provided yet.")
+        title_var, subtitle_var, description_var = self._require_detail_vars()
+        title_var.set(overview.record.name)
+        subtitle_var.set("Lecture")
+        description_var.set(overview.record.description or "No description provided yet.")
         self._render_assets(overview.assets)
+
+    def _require_detail_vars(self) -> tuple[tk.StringVar, tk.StringVar, tk.StringVar]:
+        if self._title_var is None or self._subtitle_var is None or self._description_var is None:
+            raise RuntimeError("Detail variables must be initialized before use.")
+        return self._title_var, self._subtitle_var, self._description_var
 
     def _render_assets(self, assets: list[str]) -> None:
         if not self._asset_container:
