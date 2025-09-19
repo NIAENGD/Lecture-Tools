@@ -4,1590 +4,1216 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Lecture Tools</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
-    />
-    <link
-      rel="preconnect"
-      href="https://fonts.googleapis.com"
-    />
-    <link
-      rel="preconnect"
-      href="https://fonts.gstatic.com"
-      crossorigin
-    />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
     <style>
       :root {
-        color-scheme: light dark;
+        color-scheme: light;
+      }
+
+      * {
+        box-sizing: border-box;
       }
 
       body {
+        margin: 0;
         font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
           sans-serif;
-        background: radial-gradient(circle at top, #f9fafb 0%, #e8ecf5 45%, #d9e4f5 100%);
-        min-height: 100vh;
-        color: #0f172a;
+        font-size: 15px;
+        background: #f5f6f8;
+        color: #1f2933;
       }
 
-      main.container {
-        margin: 2rem auto;
-        padding: 2.5rem;
-        background: rgba(255, 255, 255, 0.82);
-        backdrop-filter: blur(14px);
-        border-radius: 28px;
-        box-shadow: 0 20px 45px rgba(15, 23, 42, 0.18);
+      main.layout {
         max-width: 1200px;
+        margin: 0 auto;
+        padding: 24px;
+        display: flex;
+        gap: 24px;
+        align-items: flex-start;
       }
 
-      header h1 {
-        font-size: 2.75rem;
-        font-weight: 700;
-        margin-bottom: 0.5rem;
+      .sidebar {
+        width: 320px;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
       }
 
-      header p {
-        max-width: 65ch;
-        color: #475569;
+      .content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .panel {
+        background: #ffffff;
+        border: 1px solid #d2d6dc;
+        border-radius: 8px;
+        padding: 18px 20px;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+      }
+
+      h1 {
+        font-size: 1.6rem;
+        margin: 0 0 8px;
+      }
+
+      h2 {
+        font-size: 1.2rem;
+        margin: 0 0 12px;
+      }
+
+      h3 {
+        font-size: 1rem;
+        margin: 16px 0 8px;
+      }
+
+      p {
+        margin: 0 0 12px;
+        line-height: 1.5;
+      }
+
+      label {
+        font-weight: 600;
+        display: block;
+        margin-bottom: 4px;
+        font-size: 0.9rem;
+      }
+
+      input[type='text'],
+      input[type='search'],
+      input[type='number'],
+      textarea,
+      select {
+        width: 100%;
+        padding: 8px 10px;
+        border-radius: 6px;
+        border: 1px solid #cbd5e0;
+        font-family: inherit;
+        font-size: 0.95rem;
+        background: #ffffff;
+        color: inherit;
+      }
+
+      textarea {
+        resize: vertical;
+        min-height: 96px;
+      }
+
+      button {
+        border: 1px solid #2563eb;
+        background: #2563eb;
+        color: #ffffff;
+        border-radius: 6px;
+        padding: 8px 14px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      button.secondary {
+        background: #ffffff;
+        color: #2563eb;
+      }
+
+      button.danger {
+        background: #dc2626;
+        border-color: #dc2626;
+      }
+
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .status-bar {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 10px 14px;
+        border-radius: 6px;
+        font-size: 0.9rem;
+        display: none;
+      }
+
+      .status-bar[data-variant='error'] {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+      }
+
+      .status-bar[data-variant='success'] {
+        background: #dcfce7;
+        color: #166534;
+        border: 1px solid #bbf7d0;
+      }
+
+      .status-bar[data-variant='info'] {
+        background: #e0f2fe;
+        color: #075985;
+        border: 1px solid #bae6fd;
       }
 
       .stats-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-        gap: 1.25rem;
-        margin: 2rem 0 2.5rem;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 12px;
       }
 
-      .stat-card {
-        padding: 1.5rem;
-        border-radius: 20px;
-        background: linear-gradient(135deg, #6366f1, #8b5cf6);
-        color: white;
-        box-shadow: 0 12px 25px rgba(99, 102, 241, 0.35);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-        position: relative;
-        overflow: hidden;
+      .stats-grid div {
+        border: 1px solid #d8dee9;
+        border-radius: 6px;
+        padding: 10px;
+        background: #f8fafc;
       }
 
-      .stat-card span {
-        display: block;
-        font-size: 0.9rem;
-        opacity: 0.85;
-        letter-spacing: 0.08em;
+      .stats-grid dt {
+        margin: 0;
+        font-size: 0.75rem;
         text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6b7280;
       }
 
-      .stat-card strong {
-        display: block;
-        font-size: 2rem;
-        margin-top: 0.25rem;
-        font-weight: 700;
-      }
-
-      .stat-card small {
-        display: block;
-        margin-top: 0.45rem;
-        font-size: 0.85rem;
-        opacity: 0.9;
-      }
-
-      .stat-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 18px 35px rgba(99, 102, 241, 0.4);
-      }
-
-      .control-panel {
-        display: grid;
-        gap: 1rem;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        align-items: end;
-        margin-bottom: 2rem;
-      }
-
-      .control-panel .control-block label,
-      .control-panel .control-label {
-        font-size: 0.85rem;
+      .stats-grid dd {
+        margin: 4px 0 0;
+        font-size: 1.1rem;
         font-weight: 600;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-        color: #334155;
-        display: block;
-        margin-bottom: 0.45rem;
+        color: #1f2933;
       }
 
-      .control-panel input[type='search'] {
-        border-radius: 14px;
-        border: 1px solid rgba(99, 102, 241, 0.28);
-        padding: 0.75rem 1rem;
-        font-size: 1rem;
-        box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.05);
-        background-color: rgba(255, 255, 255, 0.95);
+      .curriculum {
+        margin-top: 12px;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        padding: 8px;
+        background: #fdfdfd;
+        max-height: calc(100vh - 260px);
+        overflow-y: auto;
+        font-size: 0.95rem;
       }
 
-      .control-panel select {
-        border-radius: 14px;
-        border: 1px solid rgba(99, 102, 241, 0.28);
-        padding: 0.65rem 1rem;
-        font-size: 1rem;
-        background-color: rgba(255, 255, 255, 0.95);
-      }
-
-      .chip-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.65rem;
-      }
-
-      .chip {
-        border-radius: 999px;
-        padding: 0.4rem 0.95rem;
-        border: 1px solid rgba(79, 70, 229, 0.35);
-        background: rgba(79, 70, 229, 0.08);
-        color: #312e81;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-        font-size: 0.9rem;
-      }
-
-      .chip[aria-pressed='true'] {
-        background: linear-gradient(135deg, #4338ca, #6366f1);
-        color: white;
-        box-shadow: 0 10px 18px rgba(79, 70, 229, 0.28);
-      }
-
-      .chip.chip-static {
-        cursor: default;
-        border-color: rgba(14, 116, 144, 0.2);
-        background: rgba(125, 211, 252, 0.18);
-        color: #0f172a;
-      }
-
-      .chip.chip-warning {
-        border-color: rgba(234, 179, 8, 0.35);
-        background: rgba(250, 204, 21, 0.18);
-        color: #854d0e;
-      }
-
-      .chip.chip-success {
-        border-color: rgba(34, 197, 94, 0.35);
-        background: rgba(34, 197, 94, 0.18);
-        color: #166534;
-      }
-
-      .chip.chip-muted {
-        border-color: rgba(148, 163, 184, 0.4);
-        background: rgba(226, 232, 240, 0.55);
-        color: #475569;
-      }
-
-      .chip svg {
-        width: 1rem;
-        height: 1rem;
-      }
-
-      .layout {
-        display: grid;
-        gap: 2rem;
-      }
-
-      @media (min-width: 960px) {
-        .layout {
-          grid-template-columns: 320px 1fr;
-        }
-      }
-
-      .class-meta,
-      .module-meta {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-        margin-top: 0.5rem;
-      }
-
-      .tree-panel,
-      .detail-panel {
-        background: rgba(255, 255, 255, 0.9);
-        border-radius: 22px;
-        box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.2);
-        padding: 1.75rem;
-      }
-
-      .tree-panel h2,
-      .detail-panel h2 {
-        font-size: 1.25rem;
-        font-weight: 600;
-        margin-bottom: 1rem;
-      }
-
-      .tree-list {
+      .curriculum ul {
         list-style: none;
         margin: 0;
-        padding: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
+        padding-left: 12px;
       }
 
-      .tree-item {
-        border-radius: 16px;
-        padding: 0.75rem 1rem;
-        background: rgba(99, 102, 241, 0.08);
-        border: 1px solid transparent;
+      .curriculum li {
+        margin-bottom: 6px;
       }
 
-      .tree-item > strong {
-        display: block;
+      .class-item {
         font-weight: 600;
-        margin-bottom: 0.25rem;
+        margin-top: 8px;
       }
 
-      .module-list {
-        list-style: none;
-        margin: 0.5rem 0 0;
-        padding-left: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-      }
-
-      .module-card {
-        background: rgba(79, 70, 229, 0.12);
-        border-radius: 14px;
-        padding: 0.75rem;
-        border: 1px solid rgba(99, 102, 241, 0.2);
-      }
-
-      .lecture-list {
-        list-style: none;
-        margin: 0.5rem 0 0;
-        padding-left: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 0.35rem;
+      .module-item {
+        margin-left: 6px;
+        font-weight: 500;
+        color: #1f2933;
       }
 
       .lecture-button {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background: white;
-        color: #312e81;
-        border: 1px solid rgba(99, 102, 241, 0.22);
-        border-radius: 12px;
-        padding: 0.55rem 0.75rem;
+        display: block;
+        width: 100%;
+        text-align: left;
+        padding: 6px 8px;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        background: transparent;
         cursor: pointer;
-        font-weight: 500;
-        transition: transform 0.15s ease, box-shadow 0.15s ease;
-        gap: 0.65rem;
+        font-size: 0.95rem;
       }
 
       .lecture-button:hover,
       .lecture-button:focus {
-        transform: translateX(4px);
-        box-shadow: 0 10px 18px rgba(99, 102, 241, 0.22);
+        border-color: #94a3b8;
+        background: #f1f5f9;
         outline: none;
       }
 
       .lecture-button.active {
-        background: linear-gradient(135deg, #312e81, #4338ca);
-        color: white;
-        box-shadow: 0 12px 24px rgba(49, 46, 129, 0.35);
+        border-color: #2563eb;
+        background: #e2e8f0;
       }
 
-      .lecture-label {
-        flex: 1 1 auto;
-        text-align: left;
+      .placeholder {
+        color: #64748b;
+        font-style: italic;
       }
 
-      .lecture-badges {
-        display: inline-flex;
-        gap: 0.35rem;
+      .field {
+        margin-bottom: 12px;
       }
 
-      .lecture-badge {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 1.8rem;
-        padding: 0.2rem 0.45rem;
-        border-radius: 999px;
-        font-size: 0.7rem;
-        font-weight: 600;
-        background: rgba(148, 163, 184, 0.35);
-        color: inherit;
-        border: 1px solid rgba(148, 163, 184, 0.45);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-      }
-
-      .lecture-button.active .lecture-badge {
-        border-color: rgba(255, 255, 255, 0.65);
-        background: rgba(255, 255, 255, 0.25);
-      }
-
-      .detail-panel p {
-        color: #475569;
-        line-height: 1.6;
-      }
-
-      .detail-panel .meta {
+      .form-actions {
         display: flex;
-        flex-wrap: wrap;
-        gap: 0.75rem;
-        margin: 1rem 0 1.5rem;
+        gap: 8px;
+        justify-content: flex-end;
+        margin-top: 12px;
       }
 
-      .detail-panel .meta .chip {
-        cursor: default;
-        background: rgba(59, 130, 246, 0.15);
-        border-color: rgba(59, 130, 246, 0.3);
-        color: #1e293b;
-      }
-
-      .asset-summary {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.55rem;
-        margin-top: 1.25rem;
-      }
-
-      .asset-links {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.75rem;
-        margin-top: 1.5rem;
-      }
-
-      .asset-links a {
-        border-radius: 999px;
-        padding: 0.5rem 0.95rem;
-        background: rgba(34, 197, 94, 0.12);
-        border: 1px solid rgba(34, 197, 94, 0.35);
-        font-weight: 500;
-        color: #166534;
-        text-decoration: none;
-        transition: background 0.15s ease;
-      }
-
-      .asset-links a:hover {
-        background: rgba(34, 197, 94, 0.22);
-      }
-
-      .detail-toolbar {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 0.75rem;
-        margin-top: 1.5rem;
-      }
-
-      .detail-toolbar button {
-        border-radius: 12px;
-      }
-
-      .share-status {
-        font-size: 0.9rem;
-        color: #0f172a;
-      }
-
-      .share-status[data-variant='success'] {
-        color: #166534;
-      }
-
-      .share-status[data-variant='error'] {
-        color: #b91c1c;
-      }
-
-      .preview-section {
-        margin-top: 2rem;
-      }
-
-      .preview-section h3 {
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: #1e293b;
-        margin-bottom: 1rem;
-      }
-
-      .preview-grid {
-        display: grid;
-        gap: 1.25rem;
-      }
-
-      .preview-card {
-        background: rgba(248, 250, 252, 0.9);
-        border-radius: 18px;
-        padding: 1.25rem;
-        border: 1px solid rgba(148, 163, 184, 0.4);
-        box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+      .asset-list {
+        list-style: none;
+        margin: 12px 0 0;
+        padding: 0;
         display: flex;
         flex-direction: column;
-        gap: 0.75rem;
+        gap: 12px;
       }
 
-      .preview-card header h4 {
-        margin: 0;
-        font-size: 1rem;
+      .asset-item {
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 10px 12px;
+        background: #f9fafb;
+      }
+
+      .asset-header {
         font-weight: 600;
-        color: #0f172a;
+        margin-bottom: 4px;
       }
 
-      .preview-meta {
-        display: block;
-        font-size: 0.85rem;
-        color: #475569;
-      }
-
-      .preview-card pre {
-        background: rgba(15, 23, 42, 0.05);
-        border-radius: 12px;
-        padding: 0.75rem;
-        max-height: 260px;
-        overflow: auto;
-        white-space: pre-wrap;
-        font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular,
-          Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+      .asset-status {
         font-size: 0.9rem;
-        color: #0f172a;
+        color: #475569;
+        margin-bottom: 6px;
       }
 
-      .preview-footnote {
-        font-size: 0.8rem;
-        color: #64748b;
+      .asset-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
       }
 
-      label.chip input {
-        margin-right: 0.45rem;
-        accent-color: #4f46e5;
+      .asset-actions a {
+        color: #2563eb;
+        text-decoration: none;
+        font-size: 0.9rem;
       }
 
-      @media (min-width: 960px) {
-        .preview-grid {
-          grid-template-columns: repeat(2, minmax(0, 1fr));
+      .asset-actions a[aria-disabled='true'] {
+        pointer-events: none;
+        color: #94a3b8;
+      }
+
+      .file-input {
+        position: relative;
+        overflow: hidden;
+        display: inline-flex;
+      }
+
+      .file-input span {
+        display: inline-block;
+        padding: 6px 10px;
+        border-radius: 4px;
+        border: 1px solid #2563eb;
+        color: #2563eb;
+        background: #ffffff;
+        font-size: 0.9rem;
+      }
+
+      .file-input input[type='file'] {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        cursor: pointer;
+      }
+
+      .actions-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: flex-end;
+        margin-top: 12px;
+      }
+
+      .actions-row label.inline {
+        display: inline-flex;
+        flex-direction: column;
+        font-weight: 500;
+        font-size: 0.85rem;
+        color: #334155;
+      }
+
+      .actions-row label.inline input {
+        margin-top: 4px;
+        width: 100px;
+      }
+
+      .preview-block {
+        border-top: 1px solid #e5e7eb;
+        padding-top: 12px;
+        margin-top: 12px;
+      }
+
+      .preview-block pre {
+        background: #f1f5f9;
+        border-radius: 4px;
+        padding: 8px;
+        max-height: 220px;
+        overflow: auto;
+        font-family: 'JetBrains Mono', SFMono-Regular, ui-monospace, monospace;
+        font-size: 0.85rem;
+        line-height: 1.45;
+        white-space: pre-wrap;
+      }
+
+      @media (max-width: 960px) {
+        main.layout {
+          flex-direction: column;
+          padding: 16px;
         }
-      }
 
-      .empty-state {
-        text-align: center;
-        color: #64748b;
-        padding: 2rem;
-        border: 2px dashed rgba(148, 163, 184, 0.4);
-        border-radius: 20px;
+        .sidebar {
+          width: auto;
+        }
+
+        .curriculum {
+          max-height: 320px;
+        }
       }
     </style>
   </head>
   <body>
-    <main class="container">
-      <header>
-        <h1>Lecture Tools</h1>
-        <p>
-          Explore your classes, modules, and lecture resources through a modern web
-          dashboard that works beautifully on desktops and tablets alike.
-        </p>
-      </header>
-
-      <section class="stats-grid" id="stats">
-        <article class="stat-card">
-          <span>Classes</span>
-          <strong id="stat-classes-visible">0</strong>
-          <small id="stat-classes-total">of 0 total</small>
-        </article>
-        <article class="stat-card">
-          <span>Modules</span>
-          <strong id="stat-modules-visible">0</strong>
-          <small id="stat-modules-total">of 0 total</small>
-        </article>
-        <article class="stat-card">
-          <span>Lectures</span>
-          <strong id="stat-lectures-visible">0</strong>
-          <small id="stat-lectures-total">of 0 total</small>
-        </article>
-        <article class="stat-card">
-          <span>Transcripts</span>
-          <strong id="stat-transcripts-visible">0</strong>
-          <small id="stat-transcripts-total">of 0 total</small>
-        </article>
-        <article class="stat-card">
-          <span>Slide Decks</span>
-          <strong id="stat-slides-visible">0</strong>
-          <small id="stat-slides-total">of 0 total</small>
-        </article>
-        <article class="stat-card">
-          <span>Audio &amp; Video</span>
-          <strong id="stat-audio-visible">0</strong>
-          <small id="stat-audio-total">of 0 total</small>
-        </article>
-        <article class="stat-card">
-          <span>Notes</span>
-          <strong id="stat-notes-visible">0</strong>
-          <small id="stat-notes-total">of 0 total</small>
-        </article>
-        <article class="stat-card">
-          <span>Slide Images</span>
-          <strong id="stat-slide-images-visible">0</strong>
-          <small id="stat-slide-images-total">of 0 total</small>
-        </article>
-      </section>
-
-      <section class="control-panel" aria-label="Filters and quick actions">
-        <div class="control-block">
-          <label for="search-input">Search catalogue</label>
+    <div id="status-bar" class="status-bar" role="status"></div>
+    <main class="layout">
+      <aside class="sidebar">
+        <section class="panel">
+          <h1>Lecture Tools</h1>
+          <p>Review, organise, and process lecture resources quickly.</p>
+        </section>
+        <section class="panel">
+          <h2>Overview</h2>
+          <dl id="stats" class="stats-grid"></dl>
+        </section>
+        <section class="panel">
+          <label for="search-input">Filter curriculum</label>
           <input
-            type="search"
             id="search-input"
-            placeholder="Search classes, modules, lectures, or descriptions"
+            type="search"
+            placeholder="Search by name"
             autocomplete="off"
           />
-        </div>
-        <div class="control-block">
-          <span class="control-label">Asset filters</span>
-          <div class="chip-row" id="asset-filter-row">
-            <button type="button" class="chip" data-filter="transcript" aria-pressed="false">
-              Transcript
+          <div id="curriculum" class="curriculum placeholder">Loading…</div>
+        </section>
+      </aside>
+      <section class="content">
+        <section class="panel" id="detail-panel">
+          <header style="display: flex; justify-content: space-between; align-items: center;">
+            <h2>Lecture details</h2>
+            <button id="delete-lecture" class="danger" type="button" hidden>
+              Delete lecture
             </button>
-            <button type="button" class="chip" data-filter="slides" aria-pressed="false">
-              Slide deck
-            </button>
-            <button type="button" class="chip" data-filter="audio" aria-pressed="false">
-              Audio/Video
-            </button>
-            <button type="button" class="chip" data-filter="notes" aria-pressed="false">
-              Notes
-            </button>
-            <button type="button" class="chip" data-filter="slideImages" aria-pressed="false">
-              Slide images
-            </button>
+          </header>
+          <div id="lecture-summary" class="placeholder">
+            Select a lecture from the curriculum.
           </div>
-        </div>
-        <div class="control-block">
-          <label for="sort-select">Sort classes</label>
-          <select id="sort-select">
-            <option value="name">A → Z</option>
-            <option value="lectures">Most lectures</option>
-            <option value="recent">Recently added</option>
-          </select>
-        </div>
-        <div class="control-block">
-          <span class="control-label">Display options</span>
-          <div class="chip-row">
-            <label class="chip chip-muted" for="toggle-empty">
-              <input type="checkbox" id="toggle-empty" />
-              Show empty modules
-            </label>
-            <button type="button" class="chip chip-muted" id="reset-filters">
-              Reset filters
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <section class="layout">
-        <aside class="tree-panel">
-          <h2>Curriculum</h2>
-          <ul class="tree-list" id="class-list"></ul>
-          <div class="empty-state" id="empty-tree" hidden>
-            Upload lectures to see them appear in this navigation tree.
-          </div>
-          <div class="empty-state" id="filter-empty" hidden>
-            No lectures match your current filters. Try a broader search or reset the
-            filters above to see everything again.
-          </div>
-        </aside>
-        <article class="detail-panel" id="detail-panel">
-          <h2 id="lecture-title">Select a lecture</h2>
-          <p id="lecture-description">
-            Choose a lecture from the curriculum tree to preview its description and
-            quick links to transcripts, slides, and audio.
-          </p>
-          <div class="meta" id="lecture-meta" hidden></div>
-          <div class="asset-summary" id="asset-summary" hidden></div>
-          <div class="asset-links" id="asset-links" hidden></div>
-          <div class="detail-toolbar" id="detail-toolbar" hidden>
-            <button type="button" id="share-button" class="secondary outline" disabled>
-              Copy share link
-            </button>
-            <span id="share-status" class="share-status" hidden></span>
-          </div>
-          <section class="preview-section" id="lecture-preview" hidden>
-            <h3>Quick preview</h3>
-            <div class="preview-grid">
-              <article class="preview-card" id="transcript-preview" hidden>
-                <header>
-                  <h4>Transcript</h4>
-                  <span class="preview-meta" id="transcript-preview-meta"></span>
-                </header>
-                <pre id="transcript-preview-text"></pre>
-                <footer>
-                  <span class="preview-footnote" id="transcript-preview-footnote"></span>
-                </footer>
-              </article>
-              <article class="preview-card" id="notes-preview" hidden>
-                <header>
-                  <h4>Notes</h4>
-                  <span class="preview-meta" id="notes-preview-meta"></span>
-                </header>
-                <pre id="notes-preview-text"></pre>
-                <footer>
-                  <span class="preview-footnote" id="notes-preview-footnote"></span>
-                </footer>
-              </article>
+          <form id="lecture-edit-form" hidden>
+            <div class="field">
+              <label for="edit-lecture-name">Title</label>
+              <input id="edit-lecture-name" name="name" type="text" required />
             </div>
+            <div class="field">
+              <label for="edit-lecture-module">Module</label>
+              <select id="edit-lecture-module" name="module" required></select>
+            </div>
+            <div class="field">
+              <label for="edit-lecture-description">Description</label>
+              <textarea
+                id="edit-lecture-description"
+                name="description"
+                rows="4"
+              ></textarea>
+            </div>
+            <div class="form-actions">
+              <button type="submit">Save changes</button>
+            </div>
+          </form>
+          <section id="asset-section" hidden>
+            <h3>Assets</h3>
+            <ul id="asset-list" class="asset-list"></ul>
+            <div class="actions-row">
+              <button id="transcribe-button" type="button">Transcribe audio</button>
+              <label class="inline" for="transcribe-model" style="margin-left: auto;">
+                Model
+                <select id="transcribe-model">
+                  <option value="tiny">tiny</option>
+                  <option value="base" selected>base</option>
+                  <option value="small">small</option>
+                  <option value="medium">medium</option>
+                  <option value="large">large</option>
+                </select>
+              </label>
+            </div>
+            <form id="process-slides-form" class="actions-row">
+              <label class="file-input">
+                <span>Choose PDF</span>
+                <input id="process-slides-file" type="file" accept="application/pdf" required />
+              </label>
+              <label class="inline">
+                Start page
+                <input id="process-page-start" type="number" min="1" placeholder="1" />
+              </label>
+              <label class="inline">
+                End page
+                <input id="process-page-end" type="number" min="1" placeholder="last" />
+              </label>
+              <button type="submit">Process slides</button>
+            </form>
           </section>
-        </article>
+        </section>
+        <section class="panel">
+          <h2>Create lecture</h2>
+          <form id="lecture-create-form">
+            <div class="field">
+              <label for="create-module">Module</label>
+              <select id="create-module" required></select>
+            </div>
+            <div class="field">
+              <label for="create-name">Title</label>
+              <input id="create-name" type="text" required />
+            </div>
+            <div class="field">
+              <label for="create-description">Description</label>
+              <textarea id="create-description" rows="4"></textarea>
+            </div>
+            <div class="form-actions">
+              <button id="create-submit" type="submit">Add lecture</button>
+            </div>
+          </form>
+        </section>
+        <section class="panel">
+          <h2>Preview</h2>
+          <div id="preview-content" class="placeholder">
+            Transcript and notes preview will appear here.
+          </div>
+        </section>
       </section>
     </main>
-
     <script>
-      const classListEl = document.getElementById('class-list');
-      const emptyTreeEl = document.getElementById('empty-tree');
-      const filterEmptyEl = document.getElementById('filter-empty');
-
-      const statsEls = {
-        classes: buildStatElements('classes'),
-        modules: buildStatElements('modules'),
-        lectures: buildStatElements('lectures'),
-        transcripts: buildStatElements('transcripts'),
-        slides: buildStatElements('slides'),
-        audio: buildStatElements('audio'),
-        notes: buildStatElements('notes'),
-        slideImages: buildStatElements('slide-images'),
-      };
-
-      function buildStatElements(name) {
-        return {
-          visible: document.getElementById(`stat-${name}-visible`),
-          total: document.getElementById(`stat-${name}-total`),
-        };
-      }
-
-      const detailPanel = {
-        title: document.getElementById('lecture-title'),
-        description: document.getElementById('lecture-description'),
-        meta: document.getElementById('lecture-meta'),
-        assetSummary: document.getElementById('asset-summary'),
-        assets: document.getElementById('asset-links'),
-        toolbar: document.getElementById('detail-toolbar'),
-        shareButton: document.getElementById('share-button'),
-        shareStatus: document.getElementById('share-status'),
-        previewSection: document.getElementById('lecture-preview'),
-        transcriptCard: document.getElementById('transcript-preview'),
-        transcriptMeta: document.getElementById('transcript-preview-meta'),
-        transcriptText: document.getElementById('transcript-preview-text'),
-        transcriptFootnote: document.getElementById('transcript-preview-footnote'),
-        notesCard: document.getElementById('notes-preview'),
-        notesMeta: document.getElementById('notes-preview-meta'),
-        notesText: document.getElementById('notes-preview-text'),
-        notesFootnote: document.getElementById('notes-preview-footnote'),
-      };
-
-      const searchInput = document.getElementById('search-input');
-      const sortSelect = document.getElementById('sort-select');
-      const toggleEmptyCheckbox = document.getElementById('toggle-empty');
-      const resetFiltersButton = document.getElementById('reset-filters');
-      const assetFilterRow = document.getElementById('asset-filter-row');
-      const assetFilterButtons = Array.from(
-        assetFilterRow.querySelectorAll('button[data-filter]'),
-      );
-
-      const assetKeyMap = {
-        transcript: 'transcript_path',
-        slides: 'slide_path',
-        audio: 'audio_path',
-        notes: 'notes_path',
-        slideImages: 'slide_image_dir',
-      };
-
-      const numberFormatter = new Intl.NumberFormat();
-      const preciseNumberFormatter = new Intl.NumberFormat(undefined, {
-        maximumFractionDigits: 1,
-      });
-      const dateFormatter = new Intl.DateTimeFormat(undefined, {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-      });
-
-      const state = {
-        classes: [],
-        originalStats: {},
-        filteredClasses: [],
-        filters: {
+      (function () {
+        const state = {
+          classes: [],
+          stats: {},
           query: '',
-          assets: {
-            transcript: false,
-            slides: false,
-            audio: false,
-            notes: false,
-            slideImages: false,
+          selectedLectureId: null,
+          buttonMap: new Map(),
+        };
+
+        const dom = {
+          status: document.getElementById('status-bar'),
+          stats: document.getElementById('stats'),
+          curriculum: document.getElementById('curriculum'),
+          search: document.getElementById('search-input'),
+          summary: document.getElementById('lecture-summary'),
+          editForm: document.getElementById('lecture-edit-form'),
+          editName: document.getElementById('edit-lecture-name'),
+          editModule: document.getElementById('edit-lecture-module'),
+          editDescription: document.getElementById('edit-lecture-description'),
+          deleteButton: document.getElementById('delete-lecture'),
+          assetSection: document.getElementById('asset-section'),
+          assetList: document.getElementById('asset-list'),
+          transcribeButton: document.getElementById('transcribe-button'),
+          transcribeModel: document.getElementById('transcribe-model'),
+          processForm: document.getElementById('process-slides-form'),
+          processFile: document.getElementById('process-slides-file'),
+          processStart: document.getElementById('process-page-start'),
+          processEnd: document.getElementById('process-page-end'),
+          createForm: document.getElementById('lecture-create-form'),
+          createModule: document.getElementById('create-module'),
+          createName: document.getElementById('create-name'),
+          createDescription: document.getElementById('create-description'),
+          createSubmit: document.getElementById('create-submit'),
+          preview: document.getElementById('preview-content'),
+        };
+
+        const assetDefinitions = [
+          {
+            key: 'audio_path',
+            label: 'Audio',
+            accept: 'audio/*,video/*',
+            type: 'audio',
           },
-          includeEmpty: false,
-        },
-        sort: 'name',
-        lectureButtons: new Map(),
-        selectedLectureId: null,
-        pendingLectureRequest: null,
-      };
+          {
+            key: 'slide_path',
+            label: 'Slides (PDF)',
+            accept: 'application/pdf',
+            type: 'slides',
+          },
+          {
+            key: 'transcript_path',
+            label: 'Transcript',
+            accept: '.txt,.md,text/plain',
+            type: 'transcript',
+          },
+          {
+            key: 'notes_path',
+            label: 'Notes',
+            accept:
+              '.txt,.md,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            type: 'notes',
+          },
+          {
+            key: 'slide_image_dir',
+            label: 'Slide images (ZIP)',
+            accept: null,
+            type: 'slide_images',
+          },
+        ];
 
-      let shareStatusTimeout = null;
-      let ignoreNextHashChange = false;
-
-      assetFilterButtons.forEach((button) => {
-        button.addEventListener('click', () => {
-          const key = button.dataset.filter;
-          const nextState = !state.filters.assets[key];
-          state.filters.assets[key] = nextState;
-          button.setAttribute('aria-pressed', String(nextState));
-          applyFilters();
-        });
-      });
-
-      searchInput.addEventListener('input', (event) => {
-        state.filters.query = event.target.value;
-        applyFilters();
-      });
-
-      sortSelect.addEventListener('change', (event) => {
-        state.sort = event.target.value;
-        applyFilters();
-      });
-
-      toggleEmptyCheckbox.addEventListener('change', (event) => {
-        state.filters.includeEmpty = event.target.checked;
-        applyFilters();
-      });
-
-      resetFiltersButton.addEventListener('click', () => {
-        resetFilters();
-      });
-
-      detailPanel.shareButton.addEventListener('click', async () => {
-        if (!state.selectedLectureId) {
-          return;
-        }
-
-        const shareUrl = new URL(window.location.href);
-        shareUrl.hash = `lecture-${state.selectedLectureId}`;
-
-        try {
-          if (navigator.clipboard && navigator.clipboard.writeText) {
-            await navigator.clipboard.writeText(shareUrl.toString());
-            showShareStatus('Link copied to your clipboard.', 'success');
-          } else {
-            showShareStatus(
-              'Clipboard access is unavailable. Copy the link from the address bar.',
-              'error',
-            );
-          }
-        } catch (error) {
-          console.error(error);
-          showShareStatus(
-            'Could not copy the share link automatically. Copy it manually instead.',
-            'error',
-          );
-        }
-      });
-
-      window.addEventListener('hashchange', () => {
-        if (ignoreNextHashChange) {
-          ignoreNextHashChange = false;
-          return;
-        }
-        attemptSelectFromHash();
-      });
-
-      function formatNumber(value) {
-        return numberFormatter.format(value ?? 0);
-      }
-
-      function formatBytes(bytes) {
-        if (typeof bytes !== 'number' || Number.isNaN(bytes)) {
-          return '';
-        }
-        if (bytes < 1024) {
-          return `${bytes} B`;
-        }
-        const units = ['KB', 'MB', 'GB', 'TB'];
-        let index = 0;
-        let value = bytes / 1024;
-        while (value >= 1024 && index < units.length - 1) {
-          value /= 1024;
-          index += 1;
-        }
-        const formatted = value >= 100 ? Math.round(value) : preciseNumberFormatter.format(value);
-        return `${formatted} ${units[index]}`;
-      }
-
-      function pluralize(value, singular, plural = `${singular}s`) {
-        return value === 1 ? singular : plural;
-      }
-
-      function filtersActive() {
-        return (
-          state.filters.query.trim().length > 0 ||
-          Object.values(state.filters.assets).some((active) => active)
-        );
-      }
-
-      function buildMetaChip(label, variant = 'static') {
-        const chip = document.createElement('span');
-        chip.className = `chip chip-${variant}`;
-        chip.textContent = label;
-        return chip;
-      }
-
-      function buildLectureBadge(label) {
-        const badge = document.createElement('span');
-        badge.className = 'lecture-badge';
-        badge.textContent = label;
-        return badge;
-      }
-
-      function assetsMatchFilters(lecture) {
-        return Object.entries(state.filters.assets).every(([key, enabled]) => {
-          if (!enabled) {
-            return true;
-          }
-          const field = assetKeyMap[key];
-          return Boolean(lecture[field]);
-        });
-      }
-
-      function matchesQuery(values, query) {
-        if (!query) {
-          return false;
-        }
-        const needle = query.toLowerCase();
-        return values.some(
-          (value) => typeof value === 'string' && value.toLowerCase().includes(needle),
-        );
-      }
-
-      function computeAssetCounts(lectures) {
-        return {
-          transcripts: lectures.filter((lecture) => lecture.transcript_path).length,
-          slides: lectures.filter((lecture) => lecture.slide_path).length,
-          audio: lectures.filter((lecture) => lecture.audio_path).length,
-          notes: lectures.filter((lecture) => lecture.notes_path).length,
-          slide_images: lectures.filter((lecture) => lecture.slide_image_dir).length,
-        };
-      }
-
-      function computeStats(classes) {
-        const stats = {
-          class_count: classes.length,
-          module_count: 0,
-          lecture_count: 0,
-          transcript_count: 0,
-          slide_count: 0,
-          audio_count: 0,
-          notes_count: 0,
-          slide_image_count: 0,
-        };
-
-        classes.forEach((klass) => {
-          stats.module_count += klass.modules.length;
-          klass.modules.forEach((module) => {
-            stats.lecture_count += module.lectures.length;
-            module.lectures.forEach((lecture) => {
-              if (lecture.transcript_path) stats.transcript_count += 1;
-              if (lecture.slide_path) stats.slide_count += 1;
-              if (lecture.audio_path) stats.audio_count += 1;
-              if (lecture.notes_path) stats.notes_count += 1;
-              if (lecture.slide_image_dir) stats.slide_image_count += 1;
-            });
-          });
-        });
-
-        return stats;
-      }
-
-      function cloneLecture(lecture) {
-        return { ...lecture };
-      }
-
-      function buildFilteredClasses(classes) {
-        const query = state.filters.query.trim();
-        const includeEmpty = state.filters.includeEmpty;
-        const filtered = [];
-
-        classes.forEach((klass) => {
-          const classMatches = matchesQuery([klass.name, klass.description], query);
-          const modules = [];
-
-          klass.modules.forEach((module) => {
-            const moduleMatches = matchesQuery([module.name, module.description], query);
-            const lectures = module.lectures
-              .filter((lecture) => assetsMatchFilters(lecture))
-              .filter((lecture) => {
-                if (!query) {
-                  return true;
-                }
-                return (
-                  matchesQuery([lecture.name, lecture.description], query) ||
-                  moduleMatches ||
-                  classMatches
-                );
-              })
-              .map(cloneLecture);
-
-            if (lectures.length > 0 || (includeEmpty && (moduleMatches || classMatches))) {
-              const moduleClone = { ...module, lectures };
-              moduleClone.lecture_count = lectures.length;
-              moduleClone.asset_counts = computeAssetCounts(lectures);
-              modules.push(moduleClone);
-            }
-          });
-
-          if (modules.length > 0 || (includeEmpty && classMatches)) {
-            const classClone = { ...klass, modules };
-            classClone.module_count = modules.length;
-            const lectureCollection = modules.reduce(
-              (accumulator, module) => accumulator.concat(module.lectures),
-              [],
-            );
-            classClone.asset_counts = computeAssetCounts(lectureCollection);
-            filtered.push(classClone);
-          }
-        });
-
-        return filtered;
-      }
-
-      function sortClasses(classes) {
-        const sorted = [...classes];
-        if (state.sort === 'name') {
-          sorted.sort((a, b) => a.name.localeCompare(b.name));
-          return sorted;
-        }
-
-        if (state.sort === 'lectures') {
-          const lectureCount = (klass) =>
-            klass.modules.reduce((total, module) => total + module.lectures.length, 0);
-          sorted.sort((a, b) => {
-            const diff = lectureCount(b) - lectureCount(a);
-            return diff !== 0 ? diff : a.name.localeCompare(b.name);
-          });
-          return sorted;
-        }
-
-        if (state.sort === 'recent') {
-          const latestLectureId = (klass) => {
-            let maxId = 0;
-            klass.modules.forEach((module) => {
-              module.lectures.forEach((lecture) => {
-                if (lecture.id > maxId) {
-                  maxId = lecture.id;
-                }
-              });
-            });
-            return maxId;
-          };
-          sorted.sort((a, b) => {
-            const diff = latestLectureId(b) - latestLectureId(a);
-            return diff !== 0 ? diff : a.name.localeCompare(b.name);
-          });
-          return sorted;
-        }
-
-        return sorted;
-      }
-
-      function updateStats(totalStats, visibleStats) {
-        const totals = totalStats ?? {};
-        const visible = visibleStats ?? totals;
-
-        const mapping = {
-          classes: 'class_count',
-          modules: 'module_count',
-          lectures: 'lecture_count',
-          transcripts: 'transcript_count',
-          slides: 'slide_count',
-          audio: 'audio_count',
-          notes: 'notes_count',
-          slideImages: 'slide_image_count',
-        };
-
-        Object.entries(mapping).forEach(([key, statKey]) => {
-          const elements = statsEls[key];
-          if (!elements) {
+        function showStatus(message, variant = 'info') {
+          if (!message) {
+            dom.status.style.display = 'none';
+            dom.status.textContent = '';
+            dom.status.removeAttribute('data-variant');
             return;
           }
-          const visibleValue = visible[statKey] ?? 0;
-          const totalValue = totals[statKey] ?? 0;
-          elements.visible.textContent = formatNumber(visibleValue);
-          elements.total.textContent = `of ${formatNumber(totalValue)} total`;
-        });
-      }
+          dom.status.textContent = message;
+          dom.status.dataset.variant = variant;
+          dom.status.style.display = 'block';
+        }
 
-      function buildLectureLink(label, path) {
-        const anchor = document.createElement('a');
-        anchor.href = `/storage/${path}`;
-        anchor.target = '_blank';
-        anchor.rel = 'noopener noreferrer';
-        anchor.textContent = label;
-        return anchor;
-      }
+        function formatNumber(value) {
+          return new Intl.NumberFormat().format(value ?? 0);
+        }
 
-      function renderTree(classes) {
-        classListEl.innerHTML = '';
-        state.lectureButtons = new Map();
+        function formatBytes(bytes) {
+          if (typeof bytes !== 'number' || Number.isNaN(bytes)) {
+            return '';
+          }
+          if (bytes < 1024) {
+            return `${bytes} B`;
+          }
+          const units = ['KB', 'MB', 'GB', 'TB'];
+          let value = bytes / 1024;
+          let unitIndex = 0;
+          while (value >= 1024 && unitIndex < units.length - 1) {
+            value /= 1024;
+            unitIndex += 1;
+          }
+          return `${value >= 100 ? Math.round(value) : value.toFixed(1)} ${units[unitIndex]}`;
+        }
 
-        classes.forEach((klass) => {
-          const classItem = document.createElement('li');
-          classItem.className = 'tree-item';
+        function formatDate(isoString) {
+          if (!isoString) {
+            return '';
+          }
+          const formatter = new Intl.DateTimeFormat(undefined, {
+            dateStyle: 'medium',
+            timeStyle: 'short',
+          });
+          return formatter.format(new Date(isoString));
+        }
 
-          const classTitle = document.createElement('strong');
-          classTitle.textContent = klass.name;
-          classItem.appendChild(classTitle);
+        function buildStorageURL(path) {
+          if (!path) {
+            return '#';
+          }
+          return `/storage/${path
+            .split('/')
+            .map((segment) => encodeURIComponent(segment))
+            .join('/')}`;
+        }
 
-          if (klass.description) {
-            const classDescription = document.createElement('p');
-            classDescription.textContent = klass.description;
-            classDescription.style.marginBottom = '0.5rem';
-            classDescription.style.color = '#475569';
-            classItem.appendChild(classDescription);
+        async function request(url, options = {}) {
+          const response = await fetch(url, options);
+          if (!response.ok) {
+            let detail = `${response.status} ${response.statusText}`;
+            try {
+              const payload = await response.json();
+              if (payload && payload.detail) {
+                detail = payload.detail;
+              }
+            } catch (error) {
+              // Ignore JSON parsing errors.
+            }
+            throw new Error(detail);
+          }
+          if (response.status === 204) {
+            return null;
+          }
+          const contentType = response.headers.get('content-type') || '';
+          if (contentType.includes('application/json')) {
+            return await response.json();
+          }
+          return null;
+        }
+
+        function clearDetailPanel() {
+          dom.summary.textContent = 'Select a lecture from the curriculum.';
+          dom.summary.classList.add('placeholder');
+          dom.editForm.hidden = true;
+          dom.deleteButton.hidden = true;
+          dom.assetSection.hidden = true;
+          dom.transcribeButton.disabled = true;
+          dom.processForm.reset();
+          dom.preview.textContent = 'Transcript and notes preview will appear here.';
+          dom.preview.classList.add('placeholder');
+        }
+
+        function updateStats() {
+          const stats = state.stats;
+          const entries = [
+            ['Classes', stats.class_count],
+            ['Modules', stats.module_count],
+            ['Lectures', stats.lecture_count],
+            ['Transcripts', stats.transcript_count],
+            ['Slide decks', stats.slide_count],
+            ['Audio files', stats.audio_count],
+            ['Notes', stats.notes_count],
+            ['Slide archives', stats.slide_image_count],
+          ];
+          dom.stats.innerHTML = '';
+          entries.forEach(([label, value]) => {
+            const block = document.createElement('div');
+            const term = document.createElement('dt');
+            term.textContent = label;
+            const data = document.createElement('dd');
+            data.textContent = formatNumber(value);
+            block.appendChild(term);
+            block.appendChild(data);
+            dom.stats.appendChild(block);
+          });
+        }
+
+        function updateModuleOptions() {
+          const modules = [];
+          state.classes.forEach((klass) => {
+            (klass.modules || []).forEach((module) => {
+              modules.push({
+                id: module.id,
+                label: `${klass.name} • ${module.name}`,
+              });
+            });
+          });
+          modules.sort((a, b) => a.label.localeCompare(b.label));
+
+          dom.createModule.innerHTML = '';
+          dom.editModule.innerHTML = '';
+
+          const createPlaceholder = document.createElement('option');
+          createPlaceholder.value = '';
+          createPlaceholder.textContent = modules.length
+            ? 'Select module…'
+            : 'No modules available';
+          createPlaceholder.disabled = modules.length === 0;
+          createPlaceholder.selected = true;
+          dom.createModule.appendChild(createPlaceholder);
+
+          modules.forEach((module) => {
+            const option = document.createElement('option');
+            option.value = String(module.id);
+            option.textContent = module.label;
+            dom.createModule.appendChild(option.cloneNode(true));
+            dom.editModule.appendChild(option);
+          });
+
+          dom.createModule.disabled = modules.length === 0;
+          dom.createSubmit.disabled = modules.length === 0;
+        }
+
+        function matchQuery(text, query) {
+          return typeof text === 'string' && text.toLowerCase().includes(query);
+        }
+
+        function computeFilteredClasses() {
+          const query = state.query.trim().toLowerCase();
+          if (!query) {
+            return state.classes.map((klass) => ({
+              class: klass,
+              modules: (klass.modules || []).map((module) => ({
+                module,
+                lectures: module.lectures || [],
+              })),
+            }));
           }
 
-          const classMeta = document.createElement('div');
-          classMeta.className = 'class-meta';
-          const moduleCount = klass.module_count ?? klass.modules.length;
-          const lectureCount = klass.modules.reduce(
-            (total, module) => total + module.lectures.length,
-            0,
-          );
-          classMeta.appendChild(
-            buildMetaChip(`${moduleCount} ${pluralize(moduleCount, 'module')}`),
-          );
-          classMeta.appendChild(
-            buildMetaChip(`${lectureCount} ${pluralize(lectureCount, 'lecture')}`),
-          );
-          if (klass.asset_counts && klass.asset_counts.transcripts) {
-            const value = klass.asset_counts.transcripts;
-            classMeta.appendChild(
-              buildMetaChip(`${value} ${pluralize(value, 'transcript')}`, 'success'),
-            );
+          const filtered = [];
+          state.classes.forEach((klass) => {
+            const classMatch = matchQuery(klass.name, query) || matchQuery(klass.description, query);
+            const modules = [];
+            (klass.modules || []).forEach((module) => {
+              const moduleMatch =
+                classMatch || matchQuery(module.name, query) || matchQuery(module.description, query);
+              let lectures = module.lectures || [];
+              if (!moduleMatch) {
+                lectures = (module.lectures || []).filter(
+                  (lecture) =>
+                    matchQuery(lecture.name, query) || matchQuery(lecture.description, query),
+                );
+              }
+              if (moduleMatch && lectures.length === 0) {
+                lectures = module.lectures || [];
+              }
+              if (lectures.length > 0) {
+                modules.push({ module, lectures });
+              }
+            });
+            if (modules.length > 0) {
+              filtered.push({ class: klass, modules });
+            }
+          });
+          return filtered;
+        }
+
+        function highlightSelected() {
+          state.buttonMap.forEach((button, lectureId) => {
+            if (lectureId === state.selectedLectureId) {
+              button.classList.add('active');
+              button.setAttribute('aria-current', 'true');
+            } else {
+              button.classList.remove('active');
+              button.removeAttribute('aria-current');
+            }
+          });
+        }
+
+        function renderCurriculum() {
+          state.buttonMap.clear();
+          const filtered = computeFilteredClasses();
+          dom.curriculum.innerHTML = '';
+          if (filtered.length === 0) {
+            dom.curriculum.textContent = state.classes.length
+              ? 'No lectures match the current filter.'
+              : 'No classes available yet.';
+            dom.curriculum.classList.add('placeholder');
+            return;
           }
-          classItem.appendChild(classMeta);
+          dom.curriculum.classList.remove('placeholder');
 
-          const moduleList = document.createElement('ul');
-          moduleList.className = 'module-list';
+          const list = document.createElement('ul');
+          filtered.forEach((entry) => {
+            const classItem = document.createElement('li');
+            const classTitle = document.createElement('div');
+            classTitle.className = 'class-item';
+            classTitle.textContent = entry.class.name;
+            classItem.appendChild(classTitle);
 
-          klass.modules.forEach((module) => {
-            const moduleItem = document.createElement('li');
-            moduleItem.className = 'module-card';
+            const moduleList = document.createElement('ul');
+            entry.modules.forEach((moduleEntry) => {
+              const moduleItem = document.createElement('li');
+              const moduleTitle = document.createElement('div');
+              moduleTitle.className = 'module-item';
+              moduleTitle.textContent = moduleEntry.module.name;
+              moduleItem.appendChild(moduleTitle);
 
-            const moduleTitle = document.createElement('strong');
-            moduleTitle.textContent = module.name;
-            moduleItem.appendChild(moduleTitle);
+              const lectureList = document.createElement('ul');
+              moduleEntry.lectures.forEach((lecture) => {
+                const lectureItem = document.createElement('li');
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'lecture-button';
+                button.textContent = lecture.name;
+                button.addEventListener('click', () => selectLecture(lecture.id));
+                lectureItem.appendChild(button);
+                lectureList.appendChild(lectureItem);
+                state.buttonMap.set(lecture.id, button);
+              });
 
-            if (module.description) {
-              const moduleDescription = document.createElement('p');
-              moduleDescription.textContent = module.description;
-              moduleDescription.style.margin = '0.25rem 0 0';
-              moduleDescription.style.color = '#475569';
-              moduleItem.appendChild(moduleDescription);
-            }
-
-            const moduleMeta = document.createElement('div');
-            moduleMeta.className = 'module-meta';
-            const moduleLectureCount = module.lectures.length;
-            moduleMeta.appendChild(
-              buildMetaChip(
-                `${moduleLectureCount} ${pluralize(moduleLectureCount, 'lecture')}`,
-                moduleLectureCount ? 'static' : 'muted',
-              ),
-            );
-
-            const moduleAssets = module.asset_counts ?? computeAssetCounts(module.lectures);
-            if (moduleAssets.transcripts) {
-              moduleMeta.appendChild(
-                buildMetaChip(
-                  `${moduleAssets.transcripts} ${pluralize(moduleAssets.transcripts, 'transcript')}`,
-                  'success',
-                ),
-              );
-            }
-            if (moduleAssets.slides) {
-              moduleMeta.appendChild(
-                buildMetaChip(
-                  `${moduleAssets.slides} ${pluralize(moduleAssets.slides, 'slide deck', 'slide decks')}`,
-                  'success',
-                ),
-              );
-            }
-            moduleItem.appendChild(moduleMeta);
-
-            const lectureList = document.createElement('ul');
-            lectureList.className = 'lecture-list';
-
-            module.lectures.forEach((lecture) => {
-              const lectureItem = document.createElement('li');
-              const lectureButton = document.createElement('button');
-              lectureButton.type = 'button';
-              lectureButton.className = 'lecture-button';
-              lectureButton.dataset.lectureId = String(lecture.id);
-
-              const label = document.createElement('span');
-              label.className = 'lecture-label';
-              label.textContent = lecture.name;
-              lectureButton.appendChild(label);
-
-              const badges = document.createElement('span');
-              badges.className = 'lecture-badges';
-              if (lecture.transcript_path) badges.appendChild(buildLectureBadge('TXT'));
-              if (lecture.slide_path) badges.appendChild(buildLectureBadge('PDF'));
-              if (lecture.audio_path) badges.appendChild(buildLectureBadge('AV'));
-              if (lecture.notes_path) badges.appendChild(buildLectureBadge('NOTE'));
-              if (lecture.slide_image_dir) badges.appendChild(buildLectureBadge('IMG'));
-              if (badges.childElementCount > 0) {
-                lectureButton.appendChild(badges);
+              if (moduleEntry.lectures.length === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'placeholder';
+                empty.textContent = 'No lectures';
+                lectureList.appendChild(empty);
               }
 
-              lectureButton.addEventListener('click', () => {
-                showLectureDetail(lecture.id);
-              });
-
-              lectureItem.appendChild(lectureButton);
-              lectureList.appendChild(lectureItem);
-              state.lectureButtons.set(String(lecture.id), lectureButton);
+              moduleItem.appendChild(lectureList);
+              moduleList.appendChild(moduleItem);
             });
 
-            if (module.lectures.length === 0) {
-              const emptyLecture = document.createElement('p');
-              emptyLecture.textContent = filtersActive()
-                ? 'No lectures match the current filters.'
-                : 'No lectures yet.';
-              emptyLecture.style.color = '#64748b';
-              emptyLecture.style.margin = '0.5rem 0 0';
-              lectureList.appendChild(emptyLecture);
-            }
-
-            moduleItem.appendChild(lectureList);
-            moduleList.appendChild(moduleItem);
+            classItem.appendChild(moduleList);
+            list.appendChild(classItem);
           });
 
-          classItem.appendChild(moduleList);
-          classListEl.appendChild(classItem);
-        });
-      }
-
-      function selectLecture(lectureId, { scrollIntoView = false } = {}) {
-        let targetButton = null;
-        state.lectureButtons.forEach((button, id) => {
-          if (Number(id) === lectureId) {
-            button.classList.add('active');
-            targetButton = button;
-          } else {
-            button.classList.remove('active');
-          }
-        });
-
-        if (scrollIntoView && targetButton) {
-          targetButton.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          dom.curriculum.appendChild(list);
+          highlightSelected();
         }
-      }
 
-      function ensureSelectedLectureVisibility() {
-        if (!state.selectedLectureId) {
-          return;
-        }
-        const button = state.lectureButtons.get(String(state.selectedLectureId));
-        if (!button) {
-          resetDetailPanel();
-          return;
-        }
-        selectLecture(state.selectedLectureId);
-      }
+        function renderAssets(lecture) {
+          dom.assetList.innerHTML = '';
+          assetDefinitions.forEach((definition) => {
+            const value = lecture[definition.key];
+            const item = document.createElement('li');
+            item.className = 'asset-item';
+            const header = document.createElement('div');
+            header.className = 'asset-header';
+            header.textContent = definition.label;
+            item.appendChild(header);
 
-      function findLectureContext(lectureId) {
-        for (const klass of state.classes) {
-          for (const module of klass.modules) {
-            const lecture = module.lectures.find((item) => item.id === lectureId);
-            if (lecture) {
-              return { klass, module, lecture };
+            const status = document.createElement('div');
+            status.className = 'asset-status';
+            status.textContent = value ? `Linked: ${value.split('/').pop()}` : 'Not linked';
+            item.appendChild(status);
+
+            const actions = document.createElement('div');
+            actions.className = 'asset-actions';
+
+            if (definition.accept) {
+              const wrapper = document.createElement('label');
+              wrapper.className = 'file-input';
+              const span = document.createElement('span');
+              span.textContent = 'Upload';
+              const input = document.createElement('input');
+              input.type = 'file';
+              input.accept = definition.accept;
+              input.addEventListener('change', (event) => {
+                const target = event.target;
+                const file = target.files && target.files[0];
+                target.value = '';
+                if (file) {
+                  handleAssetUpload(definition.type, file);
+                }
+              });
+              wrapper.appendChild(span);
+              wrapper.appendChild(input);
+              actions.appendChild(wrapper);
             }
-          }
-        }
-        return null;
-      }
 
-      function updateAssetLinks(lecture) {
-        detailPanel.assets.innerHTML = '';
-        const links = [];
-        if (lecture.transcript_path) {
-          links.push(buildLectureLink('Transcript', lecture.transcript_path));
-        }
-        if (lecture.slide_path) {
-          links.push(buildLectureLink('Slides PDF', lecture.slide_path));
-        }
-        if (lecture.slide_image_dir) {
-          links.push(buildLectureLink('Slide Images', lecture.slide_image_dir));
-        }
-        if (lecture.audio_path) {
-          links.push(buildLectureLink('Audio / Video', lecture.audio_path));
-        }
-        if (lecture.notes_path) {
-          links.push(buildLectureLink('Notes', lecture.notes_path));
-        }
+            const link = document.createElement('a');
+            link.textContent = 'Open';
+            if (value) {
+              link.href = buildStorageURL(value);
+              link.target = '_blank';
+              link.rel = 'noopener';
+            } else {
+              link.href = '#';
+              link.setAttribute('aria-disabled', 'true');
+            }
+            actions.appendChild(link);
 
-        if (links.length > 0) {
-          detailPanel.assets.hidden = false;
-          links.forEach((link) => detailPanel.assets.appendChild(link));
-        } else {
-          detailPanel.assets.hidden = true;
-        }
-      }
+            if (definition.type === 'slide_images') {
+              const revealButton = document.createElement('button');
+              revealButton.type = 'button';
+              revealButton.className = 'secondary';
+              revealButton.textContent = 'Reveal archive';
+              revealButton.disabled = !value;
+              revealButton.addEventListener('click', () => {
+                if (value) {
+                  revealAsset(value);
+                }
+              });
+              actions.appendChild(revealButton);
+            }
 
-      function renderAssetSummary(lecture) {
-        const summary = [
-          {
-            available: Boolean(lecture.transcript_path),
-            label: lecture.transcript_path ? 'Transcript ready' : 'No transcript yet',
-          },
-          {
-            available: Boolean(lecture.slide_path),
-            label: lecture.slide_path ? 'Slide deck attached' : 'No slide deck',
-          },
-          {
-            available: Boolean(lecture.audio_path),
-            label: lecture.audio_path ? 'Audio/Video ready' : 'No audio yet',
-          },
-          {
-            available: Boolean(lecture.notes_path),
-            label: lecture.notes_path ? 'Notes uploaded' : 'No notes yet',
-          },
-          {
-            available: Boolean(lecture.slide_image_dir),
-            label: lecture.slide_image_dir ? 'Slide images generated' : 'No slide images',
-          },
-        ];
-
-        detailPanel.assetSummary.innerHTML = '';
-        summary.forEach((item) => {
-          const chip = buildMetaChip(
-            item.label,
-            item.available ? 'success' : 'muted',
-          );
-          detailPanel.assetSummary.appendChild(chip);
-        });
-        detailPanel.assetSummary.hidden = false;
-      }
-
-      function clearAssetSummary() {
-        detailPanel.assetSummary.innerHTML = '';
-        detailPanel.assetSummary.hidden = true;
-      }
-
-      function clearPreview() {
-        detailPanel.previewSection.hidden = true;
-        detailPanel.transcriptCard.hidden = true;
-        detailPanel.notesCard.hidden = true;
-        detailPanel.transcriptText.textContent = '';
-        detailPanel.notesText.textContent = '';
-        detailPanel.transcriptMeta.textContent = '';
-        detailPanel.notesMeta.textContent = '';
-        detailPanel.transcriptFootnote.textContent = '';
-        detailPanel.notesFootnote.textContent = '';
-      }
-
-      function formatPreviewMeta(preview) {
-        const parts = [];
-        if (typeof preview.byte_size === 'number') {
-          const size = formatBytes(preview.byte_size);
-          if (size) {
-            parts.push(size);
-          }
-        }
-        if (typeof preview.line_count === 'number' && preview.line_count > 0) {
-          parts.push(`${preview.line_count} ${pluralize(preview.line_count, 'line')}`);
-        }
-        if (preview.modified) {
-          const date = new Date(preview.modified);
-          if (!Number.isNaN(date.getTime())) {
-            parts.push(dateFormatter.format(date));
-          }
-        }
-        return parts.join(' · ');
-      }
-
-      function renderPreview(preview) {
-        clearPreview();
-        if (!preview) {
-          return;
+            item.appendChild(actions);
+            dom.assetList.appendChild(item);
+          });
         }
 
-        const transcript = preview.transcript;
-        const notes = preview.notes;
-        let hasContent = false;
+        function renderSummary(detail) {
+          const lecture = detail.lecture;
+          const module = detail.module;
+          const classRecord = detail.class;
 
-        if (transcript && transcript.text) {
-          detailPanel.transcriptCard.hidden = false;
-          detailPanel.transcriptText.textContent = transcript.text;
-          detailPanel.transcriptMeta.textContent = formatPreviewMeta(transcript);
-          detailPanel.transcriptFootnote.textContent = transcript.truncated
-            ? 'Showing a preview. Open the transcript to read the full content.'
-            : 'Full transcript displayed.';
-          hasContent = true;
+          dom.summary.classList.remove('placeholder');
+          dom.summary.innerHTML = '';
+
+          const title = document.createElement('h3');
+          title.textContent = lecture.name;
+          dom.summary.appendChild(title);
+
+          const context = document.createElement('div');
+          context.className = 'asset-status';
+          context.textContent = `${classRecord.name} • ${module.name}`;
+          dom.summary.appendChild(context);
+
+          const description = document.createElement('p');
+          description.textContent = lecture.description || 'No description recorded yet.';
+          dom.summary.appendChild(description);
         }
 
-        if (notes && notes.text) {
-          detailPanel.notesCard.hidden = false;
-          detailPanel.notesText.textContent = notes.text;
-          detailPanel.notesMeta.textContent = formatPreviewMeta(notes);
-          detailPanel.notesFootnote.textContent = notes.truncated
-            ? 'Showing a preview. Open the notes file to read everything.'
-            : 'Full notes displayed.';
-          hasContent = true;
-        }
-
-        detailPanel.previewSection.hidden = !hasContent;
-      }
-
-      function showShareStatus(message, variant = 'success') {
-        if (shareStatusTimeout) {
-          window.clearTimeout(shareStatusTimeout);
-          shareStatusTimeout = null;
-        }
-        detailPanel.shareStatus.textContent = message;
-        detailPanel.shareStatus.dataset.variant = variant;
-        detailPanel.shareStatus.hidden = false;
-        shareStatusTimeout = window.setTimeout(() => {
-          detailPanel.shareStatus.hidden = true;
-        }, 4000);
-      }
-
-      function clearShareStatus() {
-        if (shareStatusTimeout) {
-          window.clearTimeout(shareStatusTimeout);
-          shareStatusTimeout = null;
-        }
-        detailPanel.shareStatus.hidden = true;
-      }
-
-      function resetDetailPanel() {
-        detailPanel.title.textContent = 'Select a lecture';
-        detailPanel.description.textContent =
-          'Choose a lecture from the curriculum tree to preview its description and quick links to transcripts, slides, and audio.';
-        detailPanel.meta.innerHTML = '';
-        detailPanel.meta.hidden = true;
-        detailPanel.assets.innerHTML = '';
-        detailPanel.assets.hidden = true;
-        detailPanel.toolbar.hidden = true;
-        detailPanel.shareButton.disabled = true;
-        clearShareStatus();
-        clearAssetSummary();
-        clearPreview();
-        state.selectedLectureId = null;
-        state.pendingLectureRequest = null;
-        state.lectureButtons.forEach((button) => button.classList.remove('active'));
-      }
-
-      function updateMetaChips(payload) {
-        detailPanel.meta.innerHTML = '';
-        const metaChips = [
-          `Class · ${payload.class.name}`,
-          `Module · ${payload.module.name}`,
-        ];
-        metaChips.forEach((label) => {
-          const chip = buildMetaChip(label, 'static');
-          detailPanel.meta.appendChild(chip);
-        });
-        detailPanel.meta.hidden = false;
-      }
-
-      async function loadLecturePreview(lectureId, requestToken) {
-        try {
-          const response = await fetch(`/api/lectures/${lectureId}/preview`);
-          if (!response.ok) {
-            throw new Error('Failed to load lecture preview');
-          }
-          const preview = await response.json();
-          if (state.pendingLectureRequest !== requestToken) {
-            return;
-          }
-          renderPreview(preview);
-        } catch (error) {
-          console.error(error);
-          if (state.pendingLectureRequest === requestToken) {
-            clearPreview();
-          }
-        }
-      }
-
-      async function showLectureDetail(lectureId, { updateHash = true, scrollIntoView = false } = {}) {
-        const buttonExists = state.lectureButtons.has(String(lectureId));
-        if (!buttonExists) {
-          return;
-        }
-
-        state.selectedLectureId = lectureId;
-        selectLecture(lectureId, { scrollIntoView });
-        detailPanel.toolbar.hidden = true;
-        detailPanel.shareButton.disabled = true;
-        clearShareStatus();
-        clearAssetSummary();
-        clearPreview();
-
-        const requestToken = Symbol('lecture-request');
-        state.pendingLectureRequest = requestToken;
-
-        try {
-          const response = await fetch(`/api/lectures/${lectureId}`);
-          if (!response.ok) {
-            throw new Error('Failed to load lecture details');
-          }
-          const payload = await response.json();
-          if (state.pendingLectureRequest !== requestToken) {
+        function renderPreview(preview) {
+          if (!preview || (!preview.transcript && !preview.notes)) {
+            dom.preview.textContent = 'Transcript and notes preview will appear here.';
+            dom.preview.classList.add('placeholder');
             return;
           }
 
-          const { lecture } = payload;
-          detailPanel.title.textContent = lecture.name;
-          detailPanel.description.textContent =
-            lecture.description || 'No description has been provided for this lecture yet.';
+          dom.preview.innerHTML = '';
+          dom.preview.classList.remove('placeholder');
 
-          updateMetaChips(payload);
-          renderAssetSummary(lecture);
-          updateAssetLinks(lecture);
+          function makeBlock(title, data) {
+            const block = document.createElement('div');
+            block.className = 'preview-block';
+            const heading = document.createElement('h3');
+            heading.textContent = title;
+            block.appendChild(heading);
 
-          detailPanel.toolbar.hidden = false;
-          detailPanel.shareButton.disabled = false;
-
-          if (updateHash) {
-            ignoreNextHashChange = true;
-            window.location.hash = `lecture-${lectureId}`;
-          }
-
-          await loadLecturePreview(lectureId, requestToken);
-        } catch (error) {
-          console.error(error);
-          if (state.pendingLectureRequest === requestToken) {
-            detailPanel.title.textContent = 'Unable to load lecture';
-            detailPanel.description.textContent =
-              'An unexpected error occurred while loading this lecture. Please try again in a moment.';
-            detailPanel.meta.hidden = true;
-            detailPanel.assets.hidden = true;
-            detailPanel.toolbar.hidden = true;
-            clearAssetSummary();
-            clearPreview();
-          }
-        } finally {
-          if (state.pendingLectureRequest === requestToken) {
-            state.pendingLectureRequest = null;
-          }
-        }
-      }
-
-      function applyFilters() {
-        if (!state.classes.length) {
-          classListEl.innerHTML = '';
-          emptyTreeEl.hidden = false;
-          filterEmptyEl.hidden = true;
-          updateStats(state.originalStats, state.originalStats);
-          resetDetailPanel();
-          return;
-        }
-
-        const filteredClasses = sortClasses(buildFilteredClasses(state.classes));
-        state.filteredClasses = filteredClasses;
-        const viewStats = computeStats(filteredClasses);
-
-        renderTree(filteredClasses);
-        updateStats(state.originalStats, viewStats);
-
-        const hasVisibleLectures = viewStats.lecture_count > 0;
-        const totalLectures = state.originalStats.lecture_count ?? 0;
-        if (!hasVisibleLectures) {
-          let message;
-          if (filtersActive()) {
-            message =
-              'No lectures match your current filters. Try a broader search or reset the filters above to see everything again.';
-          } else if (totalLectures === 0) {
-            message = 'Lectures will appear here once you ingest your first recording.';
-          } else {
-            message = 'There are no lectures available in the selected modules yet.';
-          }
-          filterEmptyEl.textContent = message;
-          filterEmptyEl.hidden = false;
-          resetDetailPanel();
-        } else {
-          filterEmptyEl.hidden = true;
-          ensureSelectedLectureVisibility();
-        }
-        emptyTreeEl.hidden = true;
-      }
-
-      function resetFilters() {
-        state.filters.query = '';
-        state.filters.includeEmpty = false;
-        state.sort = 'name';
-        searchInput.value = '';
-        sortSelect.value = 'name';
-        toggleEmptyCheckbox.checked = false;
-        Object.keys(state.filters.assets).forEach((key) => {
-          state.filters.assets[key] = false;
-        });
-        assetFilterButtons.forEach((button) => button.setAttribute('aria-pressed', 'false'));
-        applyFilters();
-      }
-
-      function parseLectureIdFromHash(hash) {
-        const match = /^#?lecture-(\d+)$/.exec(hash);
-        return match ? Number.parseInt(match[1], 10) : null;
-      }
-
-      function attemptSelectFromHash() {
-        const lectureId = parseLectureIdFromHash(window.location.hash);
-        if (!lectureId) {
-          return;
-        }
-
-        if (state.lectureButtons.has(String(lectureId))) {
-          showLectureDetail(lectureId, { updateHash: false, scrollIntoView: true });
-          return;
-        }
-
-        const existsInCatalog = Boolean(findLectureContext(lectureId));
-        if (existsInCatalog) {
-          resetFilters();
-          requestAnimationFrame(() => {
-            if (state.lectureButtons.has(String(lectureId))) {
-              showLectureDetail(lectureId, { updateHash: false, scrollIntoView: true });
+            const metaPieces = [];
+            if (data.line_count) {
+              metaPieces.push(`${data.line_count} lines`);
             }
-          });
-        }
-      }
+            if (typeof data.byte_size === 'number') {
+              const formatted = formatBytes(data.byte_size);
+              if (formatted) {
+                metaPieces.push(formatted);
+              }
+            }
+            const formattedDate = formatDate(data.modified);
+            if (formattedDate) {
+              metaPieces.push(formattedDate);
+            }
+            if (metaPieces.length) {
+              const meta = document.createElement('div');
+              meta.className = 'asset-status';
+              meta.textContent = metaPieces.join(' • ');
+              block.appendChild(meta);
+            }
 
-      async function bootstrap() {
-        try {
-          const response = await fetch('/api/classes');
-          if (!response.ok) {
-            throw new Error('Unable to load classes');
+            const content = document.createElement('pre');
+            content.textContent = data.text || '';
+            block.appendChild(content);
+
+            if (data.truncated) {
+              const note = document.createElement('div');
+              note.className = 'asset-status';
+              note.textContent = 'Preview truncated to the first portion of the file.';
+              block.appendChild(note);
+            }
+
+            return block;
           }
-          const payload = await response.json();
-          state.classes = payload.classes ?? [];
-          state.originalStats = payload.stats ?? {};
-          applyFilters();
-          attemptSelectFromHash();
-        } catch (error) {
-          emptyTreeEl.hidden = false;
-          emptyTreeEl.textContent = 'Could not load data from the server.';
-          filterEmptyEl.hidden = true;
-          classListEl.innerHTML = '';
-          updateStats({}, {});
-          console.error(error);
-        }
-      }
 
-      resetDetailPanel();
-      bootstrap();
+          if (preview.transcript) {
+            dom.preview.appendChild(makeBlock('Transcript', preview.transcript));
+          }
+          if (preview.notes) {
+            dom.preview.appendChild(makeBlock('Notes', preview.notes));
+          }
+        }
+
+        async function refreshData() {
+          try {
+            const payload = await request('/api/classes');
+            state.classes = payload?.classes || [];
+            state.stats = payload?.stats || {};
+            updateStats();
+            updateModuleOptions();
+            renderCurriculum();
+
+            if (state.selectedLectureId) {
+              const exists = state.classes.some((klass) =>
+                (klass.modules || []).some((module) =>
+                  (module.lectures || []).some((lecture) => lecture.id === state.selectedLectureId),
+                ),
+              );
+              if (!exists) {
+                state.selectedLectureId = null;
+                clearDetailPanel();
+              }
+            }
+          } catch (error) {
+            showStatus(error.message, 'error');
+          }
+        }
+
+        async function selectLecture(lectureId) {
+          state.selectedLectureId = lectureId;
+          highlightSelected();
+          try {
+            const detail = await request(`/api/lectures/${lectureId}`);
+            if (!detail) {
+              return;
+            }
+            renderSummary(detail);
+            dom.editForm.hidden = false;
+            dom.deleteButton.hidden = false;
+            dom.assetSection.hidden = false;
+
+            dom.editName.value = detail.lecture.name;
+            dom.editDescription.value = detail.lecture.description || '';
+            dom.editModule.value = String(detail.lecture.module_id);
+
+            dom.transcribeButton.disabled = !detail.lecture.audio_path;
+
+            renderAssets(detail.lecture);
+
+            const preview = await request(`/api/lectures/${lectureId}/preview`);
+            renderPreview(preview);
+          } catch (error) {
+            showStatus(error.message, 'error');
+          }
+        }
+
+        async function handleAssetUpload(kind, file) {
+          if (!state.selectedLectureId) {
+            return;
+          }
+          const formData = new FormData();
+          formData.append('file', file);
+          try {
+            await request(`/api/lectures/${state.selectedLectureId}/assets/${kind}`, {
+              method: 'POST',
+              body: formData,
+            });
+            showStatus('Asset uploaded successfully.', 'success');
+            await refreshData();
+            await selectLecture(state.selectedLectureId);
+          } catch (error) {
+            showStatus(error.message, 'error');
+          }
+        }
+
+        async function revealAsset(relativePath) {
+          try {
+            await request('/api/assets/reveal', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ path: relativePath, select: true }),
+            });
+            showStatus('Opening archive location in your file manager.', 'info');
+          } catch (error) {
+            showStatus(error.message, 'error');
+          }
+        }
+
+        dom.search.addEventListener('input', (event) => {
+          state.query = event.target.value;
+          renderCurriculum();
+        });
+
+        dom.editForm.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          if (!state.selectedLectureId) {
+            return;
+          }
+          const payload = {
+            name: dom.editName.value.trim(),
+            description: dom.editDescription.value.trim(),
+          };
+          const moduleValue = dom.editModule.value;
+          if (moduleValue) {
+            payload.module_id = Number(moduleValue);
+          }
+          if (!payload.name) {
+            showStatus('Lecture title is required.', 'error');
+            return;
+          }
+          try {
+            await request(`/api/lectures/${state.selectedLectureId}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+            });
+            showStatus('Lecture updated.', 'success');
+            await refreshData();
+            await selectLecture(state.selectedLectureId);
+          } catch (error) {
+            showStatus(error.message, 'error');
+          }
+        });
+
+        dom.deleteButton.addEventListener('click', async () => {
+          if (!state.selectedLectureId) {
+            return;
+          }
+          const confirmed = window.confirm('Delete this lecture and all linked assets?');
+          if (!confirmed) {
+            return;
+          }
+          try {
+            await request(`/api/lectures/${state.selectedLectureId}`, { method: 'DELETE' });
+            showStatus('Lecture removed.', 'success');
+            state.selectedLectureId = null;
+            clearDetailPanel();
+            await refreshData();
+          } catch (error) {
+            showStatus(error.message, 'error');
+          }
+        });
+
+        dom.createForm.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          const moduleId = Number(dom.createModule.value);
+          const name = dom.createName.value.trim();
+          const description = dom.createDescription.value.trim();
+          if (!moduleId || !name) {
+            showStatus('Select a module and enter a title.', 'error');
+            return;
+          }
+          try {
+            const payload = await request('/api/lectures', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ module_id: moduleId, name, description }),
+            });
+            dom.createForm.reset();
+            showStatus('Lecture created.', 'success');
+            await refreshData();
+            const newLectureId = payload?.lecture?.id;
+            if (newLectureId) {
+              await selectLecture(newLectureId);
+            }
+          } catch (error) {
+            showStatus(error.message, 'error');
+          }
+        });
+
+        dom.transcribeButton.addEventListener('click', async () => {
+          if (!state.selectedLectureId) {
+            return;
+          }
+          dom.transcribeButton.disabled = true;
+          try {
+            await request(`/api/lectures/${state.selectedLectureId}/transcribe`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ model: dom.transcribeModel.value }),
+            });
+            showStatus('Transcription completed.', 'success');
+            await refreshData();
+            await selectLecture(state.selectedLectureId);
+          } catch (error) {
+            showStatus(error.message, 'error');
+          } finally {
+            dom.transcribeButton.disabled = false;
+          }
+        });
+
+        dom.processForm.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          if (!state.selectedLectureId) {
+            return;
+          }
+          const file = dom.processFile.files && dom.processFile.files[0];
+          if (!file) {
+            showStatus('Select a PDF file to process.', 'error');
+            return;
+          }
+          const formData = new FormData();
+          formData.append('file', file);
+          if (dom.processStart.value) {
+            formData.append('page_start', dom.processStart.value);
+          }
+          if (dom.processEnd.value) {
+            formData.append('page_end', dom.processEnd.value);
+          }
+          try {
+            await request(`/api/lectures/${state.selectedLectureId}/process-slides`, {
+              method: 'POST',
+              body: formData,
+            });
+            dom.processForm.reset();
+            showStatus('Slides processed into an image archive.', 'success');
+            await refreshData();
+            await selectLecture(state.selectedLectureId);
+          } catch (error) {
+            showStatus(error.message, 'error');
+          }
+        });
+
+        clearDetailPanel();
+        refreshData();
+      })();
     </script>
   </body>
 </html>

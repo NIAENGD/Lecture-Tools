@@ -194,6 +194,35 @@ class LectureRepository:
             row = cursor.fetchone()
             return LectureRecord(**row) if row else None
 
+    def update_lecture(
+        self,
+        lecture_id: int,
+        *,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+        module_id: Optional[int] = None,
+    ) -> None:
+        assignments: List[str] = []
+        params: List[object] = []
+
+        if name is not None:
+            assignments.append("name = ?")
+            params.append(name)
+        if description is not None:
+            assignments.append("description = ?")
+            params.append(description)
+        if module_id is not None:
+            assignments.append("module_id = ?")
+            params.append(module_id)
+
+        if not assignments:
+            return
+
+        params.append(lecture_id)
+        query = "UPDATE lectures SET " + ", ".join(assignments) + " WHERE id = ?"
+        with self._connect() as connection:
+            connection.execute(query, params)
+
     def update_lecture_description(self, lecture_id: int, description: str) -> None:
         with self._connect() as connection:
             connection.execute(

@@ -2,16 +2,28 @@
 
 from __future__ import annotations
 
+import platform
+import shutil
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi import status
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
 
 from ..config import AppConfig
+from ..processing import PyMuPDFSlideConverter
+from ..services.ingestion import LecturePaths
 from ..services.storage import ClassRecord, LectureRecord, LectureRepository, ModuleRecord
+
+try:  # pragma: no cover - optional dependency imported lazily
+    from ..processing import FasterWhisperTranscription
+except Exception:  # noqa: BLE001 - optional dependency may be absent
+    FasterWhisperTranscription = None  # type: ignore[assignment]
 
 _TEMPLATE_PATH = Path(__file__).parent / "templates" / "index.html"
 _PREVIEW_LIMIT = 1200
@@ -121,6 +133,59 @@ def _safe_preview_for_path(storage_root: Path, relative_path: Optional[str]) -> 
     }
 
 
+def _resolve_storage_path(storage_root: Path, relative_path: str) -> Path:
+    candidate = Path(relative_path)
+    storage_root = storage_root.resolve()
+    if not candidate.is_absolute():
+        candidate = (storage_root / candidate).resolve()
+    else:
+        candidate = candidate.resolve()
+    candidate.relative_to(storage_root)
+    return candidate
+
+
+def _open_in_file_manager(path: Path, *, select: bool = False) -> None:
+    system = platform.system()
+    try:
+        if system == "Windows":
+            if select and path.exists():
+                subprocess.Popen(["explorer", f"/select,{path}"])
+            else:
+                target = path if path.is_dir() else path.parent
+                subprocess.Popen(["explorer", str(target)])
+        elif system == "Darwin":
+            if select and path.exists():
+                subprocess.Popen(["open", "-R", str(path)])
+            else:
+                subprocess.Popen(["open", str(path)])
+        else:
+            target = path if path.is_dir() else (path.parent if select else path)
+            subprocess.Popen(["xdg-open", str(target)])
+    except Exception as error:  # pragma: no cover - depends on host platform
+        raise RuntimeError(f"Could not reveal path: {error}")
+
+
+class LectureCreatePayload(BaseModel):
+    module_id: int
+    name: str = Field(..., min_length=1)
+    description: str = ""
+
+
+class LectureUpdatePayload(BaseModel):
+    module_id: Optional[int] = None
+    name: Optional[str] = Field(None, min_length=1)
+    description: Optional[str] = None
+
+
+class TranscriptionRequest(BaseModel):
+    model: str = Field("base", min_length=1)
+
+
+class RevealRequest(BaseModel):
+    path: str
+    select: bool = False
+
+
 def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
     """Return a configured FastAPI application."""
 
@@ -133,6 +198,15 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
     )
 
     index_html = _TEMPLATE_PATH.read_text(encoding="utf-8")
+
+    def _require_hierarchy(lecture: LectureRecord) -> Tuple[ClassRecord, ModuleRecord]:
+        module = repository.get_module(lecture.module_id)
+        if module is None:
+            raise HTTPException(status_code=404, detail="Module not found")
+        class_record = repository.get_class(module.class_id)
+        if class_record is None:
+            raise HTTPException(status_code=404, detail="Class not found")
+        return class_record, module
 
     @app.get("/", response_class=HTMLResponse)
     async def index() -> HTMLResponse:
@@ -166,6 +240,27 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
             },
         }
 
+    @app.post("/api/lectures", status_code=status.HTTP_201_CREATED)
+    async def create_lecture(payload: LectureCreatePayload) -> Dict[str, Any]:
+        module = repository.get_module(payload.module_id)
+        if module is None:
+            raise HTTPException(status_code=404, detail="Module not found")
+
+        try:
+            lecture_id = repository.add_lecture(
+                payload.module_id,
+                payload.name.strip(),
+                payload.description.strip(),
+            )
+        except Exception as error:  # noqa: BLE001 - surface integrity errors
+            raise HTTPException(status_code=400, detail=str(error)) from error
+
+        lecture = repository.get_lecture(lecture_id)
+        if lecture is None:
+            raise HTTPException(status_code=500, detail="Lecture creation failed")
+
+        return {"lecture": _serialize_lecture(lecture)}
+
     @app.get("/api/lectures/{lecture_id}")
     async def get_lecture(lecture_id: int) -> Dict[str, Any]:
         lecture = repository.get_lecture(lecture_id)
@@ -194,6 +289,86 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
             },
         }
 
+    @app.put("/api/lectures/{lecture_id}")
+    async def update_lecture(lecture_id: int, payload: LectureUpdatePayload) -> Dict[str, Any]:
+        lecture = repository.get_lecture(lecture_id)
+        if lecture is None:
+            raise HTTPException(status_code=404, detail="Lecture not found")
+
+        module_id = payload.module_id if payload.module_id is not None else lecture.module_id
+        if repository.get_module(module_id) is None:
+            raise HTTPException(status_code=404, detail="Module not found")
+
+        try:
+            repository.update_lecture(
+                lecture_id,
+                name=payload.name.strip() if payload.name is not None else None,
+                description=payload.description.strip() if payload.description is not None else None,
+                module_id=payload.module_id,
+            )
+        except Exception as error:  # noqa: BLE001 - propagate integrity errors
+            raise HTTPException(status_code=400, detail=str(error)) from error
+
+        updated = repository.get_lecture(lecture_id)
+        if updated is None:
+            raise HTTPException(status_code=500, detail="Lecture update failed")
+        return {"lecture": _serialize_lecture(updated)}
+
+    @app.delete("/api/lectures/{lecture_id}", status_code=status.HTTP_204_NO_CONTENT)
+    async def delete_lecture(lecture_id: int) -> None:
+        lecture = repository.get_lecture(lecture_id)
+        if lecture is None:
+            raise HTTPException(status_code=404, detail="Lecture not found")
+        repository.remove_lecture(lecture_id)
+        return None
+
+    @app.post("/api/lectures/{lecture_id}/assets/{asset_type}")
+    async def upload_asset(
+        lecture_id: int,
+        asset_type: str,
+        file: UploadFile = File(...),
+    ) -> Dict[str, Any]:
+        lecture = repository.get_lecture(lecture_id)
+        if lecture is None:
+            raise HTTPException(status_code=404, detail="Lecture not found")
+
+        class_record, module = _require_hierarchy(lecture)
+        lecture_paths = LecturePaths.build(
+            config.storage_root,
+            class_record.name,
+            module.name,
+            lecture.name,
+        )
+        lecture_paths.ensure()
+
+        asset_key = asset_type.lower()
+        destinations = {
+            "audio": ("audio_path", lecture_paths.raw_dir),
+            "slides": ("slide_path", lecture_paths.raw_dir),
+            "transcript": ("transcript_path", lecture_paths.transcript_dir),
+            "notes": ("notes_path", lecture_paths.notes_dir),
+        }
+        if asset_key not in destinations:
+            raise HTTPException(status_code=400, detail="Unsupported asset type")
+
+        attribute, destination = destinations[asset_key]
+        destination.mkdir(parents=True, exist_ok=True)
+        filename = Path(file.filename or "asset").name
+        target = destination / filename
+
+        try:
+            with target.open("wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+        finally:
+            await file.close()
+
+        relative = target.relative_to(config.storage_root).as_posix()
+        repository.update_lecture_assets(lecture_id, **{attribute: relative})
+        updated = repository.get_lecture(lecture_id)
+        if updated is None:
+            raise HTTPException(status_code=500, detail="Lecture update failed")
+        return {"lecture": _serialize_lecture(updated), attribute: relative}
+
     @app.get("/api/lectures/{lecture_id}/preview")
     async def get_lecture_preview(lecture_id: int) -> Dict[str, Any]:
         lecture = repository.get_lecture(lecture_id)
@@ -208,6 +383,136 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
             "transcript": transcript_preview,
             "notes": notes_preview,
         }
+
+    @app.post("/api/lectures/{lecture_id}/transcribe")
+    async def transcribe_audio(lecture_id: int, payload: TranscriptionRequest) -> Dict[str, Any]:
+        lecture = repository.get_lecture(lecture_id)
+        if lecture is None:
+            raise HTTPException(status_code=404, detail="Lecture not found")
+        if not lecture.audio_path:
+            raise HTTPException(status_code=400, detail="Upload an audio file first")
+        if FasterWhisperTranscription is None:
+            raise HTTPException(
+                status_code=503,
+                detail="Transcription backend is unavailable. Install faster-whisper.",
+            )
+
+        class_record, module = _require_hierarchy(lecture)
+        audio_file = _resolve_storage_path(config.storage_root, lecture.audio_path)
+        if not audio_file.exists():
+            raise HTTPException(status_code=404, detail="Audio file not found")
+
+        lecture_paths = LecturePaths.build(
+            config.storage_root,
+            class_record.name,
+            module.name,
+            lecture.name,
+        )
+        lecture_paths.ensure()
+
+        try:
+            engine = FasterWhisperTranscription(
+                payload.model,
+                download_root=config.assets_root,
+            )
+            result = engine.transcribe(audio_file, lecture_paths.transcript_dir)
+        except Exception as error:  # noqa: BLE001 - backend may raise arbitrary errors
+            raise HTTPException(status_code=500, detail=str(error)) from error
+
+        transcript_relative = result.text_path.relative_to(config.storage_root).as_posix()
+        repository.update_lecture_assets(lecture_id, transcript_path=transcript_relative)
+        updated = repository.get_lecture(lecture_id)
+        if updated is None:
+            raise HTTPException(status_code=500, detail="Lecture update failed")
+        response = {"lecture": _serialize_lecture(updated), "transcript_path": transcript_relative}
+        if result.segments_path:
+            response["segments_path"] = result.segments_path.relative_to(config.storage_root).as_posix()
+        return response
+
+    @app.post("/api/lectures/{lecture_id}/process-slides")
+    async def process_slides(
+        lecture_id: int,
+        file: UploadFile = File(...),
+        page_start: Optional[int] = Form(None),
+        page_end: Optional[int] = Form(None),
+    ) -> Dict[str, Any]:
+        lecture = repository.get_lecture(lecture_id)
+        if lecture is None:
+            raise HTTPException(status_code=404, detail="Lecture not found")
+
+        class_record, module = _require_hierarchy(lecture)
+        lecture_paths = LecturePaths.build(
+            config.storage_root,
+            class_record.name,
+            module.name,
+            lecture.name,
+        )
+        lecture_paths.ensure()
+
+        slide_filename = Path(file.filename or "slides.pdf").with_suffix(".pdf")
+        slide_destination = lecture_paths.raw_dir / slide_filename.name
+        slide_destination.parent.mkdir(parents=True, exist_ok=True)
+
+        try:
+            with slide_destination.open("wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+        finally:
+            await file.close()
+
+        selected_range: Optional[Tuple[int, int]] = None
+        if page_start is not None or page_end is not None:
+            start = page_start if page_start and page_start > 0 else 1
+            end = page_end if page_end and page_end > 0 else start
+            if end < start:
+                start, end = end, start
+            selected_range = (start, end)
+
+        converter = PyMuPDFSlideConverter()
+        try:
+            generated = list(
+                converter.convert(
+                    slide_destination,
+                    lecture_paths.slide_dir,
+                    page_range=selected_range,
+                )
+            )
+        except Exception as error:  # noqa: BLE001 - propagate conversion errors
+            raise HTTPException(status_code=500, detail=str(error)) from error
+
+        slide_relative = slide_destination.relative_to(config.storage_root).as_posix()
+        slide_image_relative = None
+        if generated:
+            slide_image_relative = generated[0].relative_to(config.storage_root).as_posix()
+
+        repository.update_lecture_assets(
+            lecture_id,
+            slide_path=slide_relative,
+            slide_image_dir=slide_image_relative,
+        )
+
+        updated = repository.get_lecture(lecture_id)
+        if updated is None:
+            raise HTTPException(status_code=500, detail="Lecture update failed")
+
+        return {
+            "lecture": _serialize_lecture(updated),
+            "slide_path": slide_relative,
+            "slide_image_dir": slide_image_relative,
+        }
+
+    @app.post("/api/assets/reveal", status_code=status.HTTP_204_NO_CONTENT)
+    async def reveal_asset(payload: RevealRequest) -> None:
+        try:
+            target = _resolve_storage_path(config.storage_root, payload.path)
+        except ValueError as error:
+            raise HTTPException(status_code=400, detail="Path is outside storage root") from error
+
+        try:
+            _open_in_file_manager(target, select=payload.select)
+        except RuntimeError as error:
+            raise HTTPException(status_code=500, detail=str(error)) from error
+
+        return None
 
     return app
 

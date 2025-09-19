@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from io import BytesIO
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Optional
+import zipfile
 
 import pytest
 from PIL import Image
@@ -22,12 +24,22 @@ class DummyTranscriptionEngine(TranscriptionEngine):
 
 
 class DummySlideConverter(SlideConverter):
-    def convert(self, slide_path: Path, output_dir: Path) -> Iterable[Path]:
+    def convert(
+        self,
+        slide_path: Path,
+        output_dir: Path,
+        *,
+        page_range: Optional[tuple[int, int]] = None,
+    ) -> Iterable[Path]:
         output_dir.mkdir(parents=True, exist_ok=True)
-        image_path = output_dir / "slide_001.png"
+        archive_path = output_dir / "slides.zip"
         image = Image.new("RGB", (100, 200), color=(255, 255, 255))
-        image.save(image_path)
-        return [image_path]
+        buffer = BytesIO()
+        image.save(buffer, format="PNG")
+        buffer.seek(0)
+        with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+            archive.writestr("page_001.png", buffer.read())
+        return [archive_path]
 
 
 def test_ingestion_pipeline(temp_config: AppConfig, tmp_path: Path) -> None:
@@ -58,11 +70,13 @@ def test_ingestion_pipeline(temp_config: AppConfig, tmp_path: Path) -> None:
 
     audio_file = temp_config.storage_root / lecture.audio_path
     transcript_file = temp_config.storage_root / lecture.transcript_path
-    slide_dir = temp_config.storage_root / lecture.slide_image_dir
+    slide_asset = temp_config.storage_root / lecture.slide_image_dir
 
     assert audio_file.exists()
     assert transcript_file.exists()
-    assert (slide_dir / "slide_001.png").exists()
+    assert slide_asset.exists()
+    with zipfile.ZipFile(slide_asset, "r") as archive:
+        assert "page_001.png" in archive.namelist()
 
 
 def test_ingestion_requires_assets(temp_config: AppConfig) -> None:
