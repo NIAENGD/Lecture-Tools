@@ -37,6 +37,9 @@ class LectureRecord:
     slide_image_dir: Optional[str]
 
 
+_MISSING = object()
+
+
 class LectureRepository:
     """Simple repository exposing CRUD helpers."""
 
@@ -199,10 +202,10 @@ class LectureRepository:
         self,
         lecture_id: int,
         *,
-        audio_path: Optional[str] = None,
-        slide_path: Optional[str] = None,
-        transcript_path: Optional[str] = None,
-        slide_image_dir: Optional[str] = None,
+        audio_path: Optional[str] | object = _MISSING,
+        slide_path: Optional[str] | object = _MISSING,
+        transcript_path: Optional[str] | object = _MISSING,
+        slide_image_dir: Optional[str] | object = _MISSING,
     ) -> None:
         """Update asset paths for a lecture.
 
@@ -211,16 +214,16 @@ class LectureRepository:
 
         assignments: List[str] = []
         params: List[Optional[str]] = []
-        if audio_path is not None:
+        if audio_path is not _MISSING:
             assignments.append("audio_path = ?")
             params.append(audio_path)
-        if slide_path is not None:
+        if slide_path is not _MISSING:
             assignments.append("slide_path = ?")
             params.append(slide_path)
-        if transcript_path is not None:
+        if transcript_path is not _MISSING:
             assignments.append("transcript_path = ?")
             params.append(transcript_path)
-        if slide_image_dir is not None:
+        if slide_image_dir is not _MISSING:
             assignments.append("slide_image_dir = ?")
             params.append(slide_image_dir)
 
