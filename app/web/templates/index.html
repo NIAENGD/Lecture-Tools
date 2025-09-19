@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lecture Tools</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
+    />
+    <link
+      rel="preconnect"
+      href="https://fonts.googleapis.com"
+    />
+    <link
+      rel="preconnect"
+      href="https://fonts.gstatic.com"
+      crossorigin
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+
+      body {
+        font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+          sans-serif;
+        background: radial-gradient(circle at top, #f9fafb 0%, #e8ecf5 45%, #d9e4f5 100%);
+        min-height: 100vh;
+        color: #0f172a;
+      }
+
+      main.container {
+        margin-top: 2rem;
+        margin-bottom: 2rem;
+        padding: 2.5rem;
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(12px);
+        border-radius: 28px;
+        box-shadow: 0 20px 45px rgba(15, 23, 42, 0.18);
+      }
+
+      header h1 {
+        font-size: 2.75rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+      }
+
+      header p {
+        max-width: 60ch;
+        color: #475569;
+      }
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1.25rem;
+        margin: 2rem 0 2.5rem;
+      }
+
+      .stat-card {
+        padding: 1.75rem;
+        border-radius: 20px;
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        color: white;
+        box-shadow: 0 12px 25px rgba(99, 102, 241, 0.35);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .stat-card span {
+        display: block;
+        font-size: 0.9rem;
+        opacity: 0.8;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .stat-card strong {
+        display: block;
+        font-size: 2rem;
+        margin-top: 0.25rem;
+        font-weight: 700;
+      }
+
+      .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 18px 35px rgba(99, 102, 241, 0.4);
+      }
+
+      .layout {
+        display: grid;
+        gap: 2rem;
+      }
+
+      @media (min-width: 960px) {
+        .layout {
+          grid-template-columns: 320px 1fr;
+        }
+      }
+
+      .tree-panel,
+      .detail-panel {
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 22px;
+        box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.2);
+        padding: 1.75rem;
+      }
+
+      .tree-panel h2,
+      .detail-panel h2 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+      }
+
+      .tree-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      .tree-item {
+        border-radius: 16px;
+        padding: 0.75rem 1rem;
+        background: rgba(99, 102, 241, 0.08);
+        border: 1px solid transparent;
+      }
+
+      .tree-item > strong {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+      }
+
+      .module-list {
+        list-style: none;
+        margin: 0.5rem 0 0;
+        padding-left: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      .module-card {
+        background: rgba(79, 70, 229, 0.12);
+        border-radius: 14px;
+        padding: 0.75rem;
+        border: 1px solid rgba(99, 102, 241, 0.2);
+      }
+
+      .lecture-list {
+        list-style: none;
+        margin: 0.5rem 0 0;
+        padding-left: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+      }
+
+      .lecture-button {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: white;
+        color: #312e81;
+        border: 1px solid rgba(99, 102, 241, 0.22);
+        border-radius: 12px;
+        padding: 0.55rem 0.75rem;
+        cursor: pointer;
+        font-weight: 500;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+      }
+
+      .lecture-button:hover,
+      .lecture-button:focus {
+        transform: translateX(4px);
+        box-shadow: 0 10px 18px rgba(99, 102, 241, 0.22);
+        outline: none;
+      }
+
+      .lecture-button.active {
+        background: linear-gradient(135deg, #312e81, #4338ca);
+        color: white;
+        box-shadow: 0 12px 24px rgba(49, 46, 129, 0.35);
+      }
+
+      .detail-panel p {
+        color: #475569;
+        line-height: 1.6;
+      }
+
+      .detail-panel .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin: 1rem 0 1.5rem;
+        color: #334155;
+        font-size: 0.95rem;
+      }
+
+      .detail-panel .meta span {
+        background: rgba(59, 130, 246, 0.12);
+        padding: 0.35rem 0.65rem;
+        border-radius: 999px;
+      }
+
+      .asset-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-top: 1.5rem;
+      }
+
+      .asset-links a {
+        border-radius: 999px;
+        padding: 0.5rem 0.95rem;
+        background: rgba(34, 197, 94, 0.12);
+        border: 1px solid rgba(34, 197, 94, 0.35);
+        font-weight: 500;
+        color: #166534;
+        text-decoration: none;
+        transition: background 0.15s ease;
+      }
+
+      .asset-links a:hover {
+        background: rgba(34, 197, 94, 0.22);
+      }
+
+      .empty-state {
+        text-align: center;
+        color: #64748b;
+        padding: 2rem;
+        border: 2px dashed rgba(148, 163, 184, 0.4);
+        border-radius: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <header>
+        <h1>Lecture Tools</h1>
+        <p>
+          Explore your classes, modules, and lecture resources through a modern web
+          dashboard that works beautifully on desktops and tablets alike.
+        </p>
+      </header>
+
+      <section class="stats-grid" id="stats">
+        <article class="stat-card">
+          <span>Classes</span>
+          <strong id="stat-classes">0</strong>
+        </article>
+        <article class="stat-card">
+          <span>Modules</span>
+          <strong id="stat-modules">0</strong>
+        </article>
+        <article class="stat-card">
+          <span>Lectures</span>
+          <strong id="stat-lectures">0</strong>
+        </article>
+      </section>
+
+      <section class="layout">
+        <aside class="tree-panel">
+          <h2>Curriculum</h2>
+          <ul class="tree-list" id="class-list"></ul>
+          <div class="empty-state" id="empty-tree" hidden>
+            Upload lectures to see them appear in this navigation tree.
+          </div>
+        </aside>
+        <article class="detail-panel" id="detail-panel">
+          <h2 id="lecture-title">Select a lecture</h2>
+          <p id="lecture-description">
+            Choose a lecture from the curriculum tree to preview its description and
+            quick links to transcripts, slides, and audio.
+          </p>
+          <div class="meta" id="lecture-meta" hidden></div>
+          <div class="asset-links" id="asset-links" hidden></div>
+        </article>
+      </section>
+    </main>
+
+    <script>
+      const classListEl = document.getElementById('class-list');
+      const emptyTreeEl = document.getElementById('empty-tree');
+      const statsEls = {
+        classes: document.getElementById('stat-classes'),
+        modules: document.getElementById('stat-modules'),
+        lectures: document.getElementById('stat-lectures'),
+      };
+      const detailPanel = {
+        title: document.getElementById('lecture-title'),
+        description: document.getElementById('lecture-description'),
+        meta: document.getElementById('lecture-meta'),
+        assets: document.getElementById('asset-links'),
+      };
+
+      function updateStats(stats) {
+        statsEls.classes.textContent = stats.class_count ?? 0;
+        statsEls.modules.textContent = stats.module_count ?? 0;
+        statsEls.lectures.textContent = stats.lecture_count ?? 0;
+      }
+
+      function buildLectureLink(label, path) {
+        const anchor = document.createElement('a');
+        anchor.href = `/storage/${path}`;
+        anchor.target = '_blank';
+        anchor.rel = 'noopener noreferrer';
+        anchor.textContent = label;
+        return anchor;
+      }
+
+      function selectLecture(lectureId, buttons) {
+        buttons.forEach((button) => button.classList.remove('active'));
+      }
+
+      async function showLectureDetail(lectureId, button, buttons) {
+        try {
+          const response = await fetch(`/api/lectures/${lectureId}`);
+          if (!response.ok) {
+            throw new Error('Failed to load lecture details');
+          }
+          const payload = await response.json();
+          selectLecture(lectureId, buttons);
+          button.classList.add('active');
+          const { lecture, module, class: klass } = payload;
+
+          detailPanel.title.textContent = lecture.name;
+          detailPanel.description.textContent = lecture.description ||
+            'No description has been provided for this lecture yet.';
+
+          detailPanel.meta.innerHTML = '';
+          detailPanel.meta.hidden = false;
+
+          const classTag = document.createElement('span');
+          classTag.textContent = `Class · ${klass.name}`;
+          detailPanel.meta.appendChild(classTag);
+
+          const moduleTag = document.createElement('span');
+          moduleTag.textContent = `Module · ${module.name}`;
+          detailPanel.meta.appendChild(moduleTag);
+
+          if (lecture.slide_image_dir) {
+            const slidesTag = document.createElement('span');
+            slidesTag.textContent = 'Slides converted';
+            detailPanel.meta.appendChild(slidesTag);
+          }
+
+          detailPanel.assets.innerHTML = '';
+          const links = [];
+          if (lecture.transcript_path) {
+            links.push(buildLectureLink('Transcript', lecture.transcript_path));
+          }
+          if (lecture.slide_path) {
+            links.push(buildLectureLink('Slides PDF', lecture.slide_path));
+          }
+          if (lecture.slide_image_dir) {
+            links.push(buildLectureLink('Slide Images', lecture.slide_image_dir));
+          }
+          if (lecture.audio_path) {
+            links.push(buildLectureLink('Audio / Video', lecture.audio_path));
+          }
+          if (lecture.notes_path) {
+            links.push(buildLectureLink('Notes', lecture.notes_path));
+          }
+
+          if (links.length > 0) {
+            detailPanel.assets.hidden = false;
+            links.forEach((link) => detailPanel.assets.appendChild(link));
+          } else {
+            detailPanel.assets.hidden = true;
+          }
+        } catch (error) {
+          console.error(error);
+        }
+      }
+
+      function renderTree(classes) {
+        classListEl.innerHTML = '';
+        const lectureButtons = [];
+
+        if (!classes.length) {
+          emptyTreeEl.hidden = false;
+          return;
+        }
+
+        emptyTreeEl.hidden = true;
+
+        classes.forEach((klass) => {
+          const classItem = document.createElement('li');
+          classItem.className = 'tree-item';
+
+          const classTitle = document.createElement('strong');
+          classTitle.textContent = klass.name;
+          classItem.appendChild(classTitle);
+
+          if (klass.description) {
+            const classDescription = document.createElement('p');
+            classDescription.textContent = klass.description;
+            classDescription.style.marginBottom = '0.5rem';
+            classDescription.style.color = '#475569';
+            classItem.appendChild(classDescription);
+          }
+
+          const moduleList = document.createElement('ul');
+          moduleList.className = 'module-list';
+
+          klass.modules.forEach((module) => {
+            const moduleItem = document.createElement('li');
+            moduleItem.className = 'module-card';
+
+            const moduleTitle = document.createElement('strong');
+            moduleTitle.textContent = module.name;
+            moduleItem.appendChild(moduleTitle);
+
+            if (module.description) {
+              const moduleDescription = document.createElement('p');
+              moduleDescription.textContent = module.description;
+              moduleDescription.style.margin = '0.25rem 0 0';
+              moduleDescription.style.color = '#475569';
+              moduleItem.appendChild(moduleDescription);
+            }
+
+            const lectureList = document.createElement('ul');
+            lectureList.className = 'lecture-list';
+
+            module.lectures.forEach((lecture) => {
+              const lectureItem = document.createElement('li');
+              const lectureButton = document.createElement('button');
+              lectureButton.type = 'button';
+              lectureButton.className = 'lecture-button';
+              lectureButton.textContent = lecture.name;
+              lectureButton.addEventListener('click', () =>
+                showLectureDetail(lecture.id, lectureButton, lectureButtons)
+              );
+              lectureItem.appendChild(lectureButton);
+              lectureList.appendChild(lectureItem);
+              lectureButtons.push(lectureButton);
+            });
+
+            if (module.lectures.length === 0) {
+              const emptyLecture = document.createElement('p');
+              emptyLecture.textContent = 'No lectures yet';
+              emptyLecture.style.color = '#64748b';
+              emptyLecture.style.margin = '0.5rem 0 0';
+              lectureList.appendChild(emptyLecture);
+            }
+
+            moduleItem.appendChild(lectureList);
+            moduleList.appendChild(moduleItem);
+          });
+
+          classItem.appendChild(moduleList);
+          classListEl.appendChild(classItem);
+        });
+      }
+
+      async function bootstrap() {
+        try {
+          const response = await fetch('/api/classes');
+          if (!response.ok) {
+            throw new Error('Unable to load classes');
+          }
+          const payload = await response.json();
+          updateStats(payload.stats ?? {});
+          renderTree(payload.classes ?? []);
+        } catch (error) {
+          emptyTreeEl.hidden = false;
+          emptyTreeEl.textContent = 'Could not load data from the server.';
+          console.error(error);
+        }
+      }
+
+      bootstrap();
+    </script>
+  </body>
+</html>
