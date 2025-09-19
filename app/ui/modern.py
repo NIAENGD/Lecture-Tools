@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Dict, Iterable, List, Optional
+from typing import Iterable, Optional
 
 from rich import box
 from rich.columns import Columns
@@ -14,47 +13,15 @@ from rich.table import Table
 from rich.text import Text
 from rich.tree import Tree
 
-from ..services.storage import (
-    ClassRecord,
-    LectureRecord,
-    LectureRepository,
-    ModuleRecord,
+from ..services.storage import ClassRecord, LectureRepository, ModuleRecord
+from .overview import (
+    ASSET_LABELS,
+    ClassOverview,
+    LectureOverview,
+    ModuleOverview,
+    OverviewSnapshot,
+    collect_overview,
 )
-
-
-ASSET_LABELS: Dict[str, str] = {
-    "audio": "🎧 Audio",
-    "slides": "📑 Slides",
-    "transcript": "📝 Transcript",
-    "slide_images": "🖼️ Slide Images",
-}
-
-
-@dataclass
-class LectureOverview:
-    record: LectureRecord
-    assets: List[str]
-
-
-@dataclass
-class ModuleOverview:
-    record: ModuleRecord
-    lectures: List[LectureOverview]
-
-
-@dataclass
-class ClassOverview:
-    record: ClassRecord
-    modules: List[ModuleOverview]
-
-
-@dataclass
-class OverviewSnapshot:
-    classes: List[ClassOverview]
-    class_count: int
-    module_count: int
-    lecture_count: int
-    asset_totals: Dict[str, int]
 
 
 class ModernUI:
@@ -68,7 +35,7 @@ class ModernUI:
     # Public API
     # ------------------------------------------------------------------
     def run(self) -> None:
-        snapshot = self._collect_snapshot()
+        snapshot = collect_overview(self._repository)
         console = self._console
 
         console.clear()
@@ -176,58 +143,5 @@ class ModernUI:
 
         body = Group(metrics, Rule(style="magenta"), asset_table)
         return Panel(body, title="At a glance", border_style="magenta", box=box.ROUNDED)
-
-    # ------------------------------------------------------------------
-    # Data aggregation
-    # ------------------------------------------------------------------
-    def _collect_snapshot(self) -> OverviewSnapshot:
-        classes: List[ClassOverview] = []
-        module_count = 0
-        lecture_count = 0
-        asset_totals = {key: 0 for key in ASSET_LABELS.keys()}
-
-        for class_record in self._repository.iter_classes():
-            modules: List[ModuleOverview] = []
-            for module_record in self._repository.iter_modules(class_record.id):
-                module_count += 1
-                lectures: List[LectureOverview] = []
-                for lecture_record in self._repository.iter_lectures(module_record.id):
-                    lecture_count += 1
-                    assets = self._extract_assets(lecture_record, asset_totals)
-                    lectures.append(LectureOverview(record=lecture_record, assets=assets))
-
-                modules.append(ModuleOverview(record=module_record, lectures=lectures))
-
-            classes.append(ClassOverview(record=class_record, modules=modules))
-
-        return OverviewSnapshot(
-            classes=classes,
-            class_count=len(classes),
-            module_count=module_count,
-            lecture_count=lecture_count,
-            asset_totals=asset_totals,
-        )
-
-    @staticmethod
-    def _extract_assets(
-        lecture_record: LectureRecord, asset_totals: Dict[str, int]
-    ) -> List[str]:
-        assets: List[str] = []
-
-        if lecture_record.audio_path:
-            assets.append(ASSET_LABELS["audio"])
-            asset_totals["audio"] += 1
-        if lecture_record.slide_path:
-            assets.append(ASSET_LABELS["slides"])
-            asset_totals["slides"] += 1
-        if lecture_record.transcript_path:
-            assets.append(ASSET_LABELS["transcript"])
-            asset_totals["transcript"] += 1
-        if lecture_record.slide_image_dir:
-            assets.append(ASSET_LABELS["slide_images"])
-            asset_totals["slide_images"] += 1
-
-        return assets
-
 
 __all__ = ["ModernUI"]
