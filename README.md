@@ -7,6 +7,7 @@ inside the repository's `storage` and `assets` directories.
 
 Key capabilities include:
 
+- A polished desktop overview with a navigation tree, stats cards, and lecture detail panes that let you browse classes in a modern UI as soon as the app launches.
 - SQLite-backed storage for classes, modules, and lectures.
 - Automatic folder management for raw uploads and processed artefacts.
 - CPU-only transcription using [faster-whisper](https://github.com/SYSTRAN/faster-whisper) (models download to `assets`).
@@ -44,9 +45,11 @@ Key capabilities include:
    python run.py overview
    ```
 
-   The default view renders a Rich-powered modern UI with a collapsible tree and
-   metrics panel. Pass `--style console` if you prefer the original
-   plain-text output.
+   Launching `python run.py` (with or without the `overview` command) opens the
+   full desktop experience: a main screen with curriculum navigation on the
+   left, rich statistics across the top, and lecture details—descriptions plus
+   linked assets—on the right. Pass `--style modern` for the terminal-based Rich
+   dashboard or `--style console` for the original plain-text output.
 
 5. Ingest a lecture by providing an audio/video file and (optionally) a PDF deck:
 
