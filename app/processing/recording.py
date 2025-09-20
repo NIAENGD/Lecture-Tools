@@ -12,7 +12,7 @@ import numpy as np
 
 try:  # pragma: no cover - exercised only when optional dependency is present at runtime
     import sounddevice as _sounddevice
-except ImportError:  # pragma: no cover - importing module remains safe during tests
+except (ImportError, OSError):  # pragma: no cover - optional backend may be absent
     _sounddevice = None
 
 
