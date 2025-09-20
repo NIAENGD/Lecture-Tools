@@ -38,6 +38,34 @@ def test_repository_crud_cycle(temp_config: AppConfig) -> None:
     assert repository.get_class(class_id) is None
 
 
+def test_remove_class_cascades_to_modules_and_lectures(temp_config: AppConfig) -> None:
+    repository = LectureRepository(temp_config)
+
+    class_id = repository.add_class("Chemistry")
+    module_id = repository.add_module(class_id, "Organic Chemistry")
+    lecture_id = repository.add_lecture(module_id, "Hydrocarbons")
+
+    repository.remove_class(class_id)
+
+    # Ensure related records are deleted along with the class.
+    assert repository.get_class(class_id) is None
+    assert not list(repository.iter_modules(class_id))
+    assert repository.get_lecture(lecture_id) is None
+
+
+def test_remove_module_cascades_to_lectures(temp_config: AppConfig) -> None:
+    repository = LectureRepository(temp_config)
+
+    class_id = repository.add_class("Biology")
+    module_id = repository.add_module(class_id, "Genetics")
+    lecture_id = repository.add_lecture(module_id, "DNA Structure")
+
+    repository.remove_module(module_id)
+
+    assert repository.get_module(module_id) is None
+    assert repository.get_lecture(lecture_id) is None
+
+
 def test_repository_lookup_helpers(temp_config: AppConfig) -> None:
     repository = LectureRepository(temp_config)
 

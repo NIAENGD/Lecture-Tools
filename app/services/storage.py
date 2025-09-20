@@ -50,6 +50,12 @@ class LectureRepository:
     def _connect(self) -> sqlite3.Connection:
         connection = sqlite3.connect(self._db_path)
         connection.row_factory = sqlite3.Row
+        # SQLite requires enabling foreign key enforcement for each
+        # connection individually. Without this pragma, cascading deletes
+        # defined in the schema are ignored, which prevents removing
+        # classes, modules or lectures that still have dependent records.
+        # See https://sqlite.org/foreignkeys.html#fk_enable for details.
+        connection.execute("PRAGMA foreign_keys = ON")
         return connection
 
     # ---------------------------------------------------------------------
