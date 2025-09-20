@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Lecture Tools</title>
+    <title data-i18n="document.title">Lecture Tools</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -878,31 +878,39 @@
     <main class="layout">
       <aside class="sidebar">
         <section class="panel">
-          <h1>Lecture Tools</h1>
-          <p>Review, organise, and process lecture resources quickly.</p>
+          <h1 data-i18n="sidebar.heading">Lecture Tools</h1>
+          <p data-i18n="sidebar.tagline">Review, organise, and process lecture resources quickly.</p>
         </section>
         <section class="panel">
-          <h2>Overview</h2>
+          <h2 data-i18n="sidebar.overview">Overview</h2>
           <dl id="stats" class="stats-grid"></dl>
         </section>
         <section class="panel">
           <div class="panel-heading">
-            <label for="search-input">Filter curriculum</label>
+            <label for="search-input" data-i18n="sidebar.filterLabel">Filter curriculum</label>
           </div>
           <input
             id="search-input"
             type="search"
             placeholder="Search by name"
+            data-i18n="sidebar.searchPlaceholder"
+            data-i18n-attr="placeholder"
             autocomplete="off"
           />
-          <div id="curriculum" class="curriculum placeholder">Loading…</div>
+          <div id="curriculum" class="curriculum placeholder" data-i18n="sidebar.loading">Loading…</div>
         </section>
       </aside>
       <section class="content">
         <section class="panel content-panel">
           <div class="top-bar" role="tablist">
             <div class="top-bar-left">
-              <button type="button" class="active" data-view="details" aria-pressed="true">
+              <button
+                type="button"
+                class="active"
+                data-view="details"
+                aria-pressed="true"
+                data-i18n="topBar.details"
+              >
                 Details
               </button>
               <button
@@ -910,39 +918,65 @@
                 type="button"
                 class="ghost pill"
                 aria-pressed="false"
+                data-i18n="topBar.enableEdit"
               >
                 Enable edit mode
               </button>
             </div>
             <div class="top-bar-right">
-              <button type="button" data-view="create" aria-pressed="false">Create</button>
-              <button type="button" data-view="settings" aria-pressed="false">Settings</button>
+              <button
+                type="button"
+                data-view="create"
+                aria-pressed="false"
+                data-i18n="topBar.create"
+              >
+                Create
+              </button>
+              <button
+                type="button"
+                data-view="settings"
+                aria-pressed="false"
+                data-i18n="topBar.settings"
+              >
+                Settings
+              </button>
             </div>
           </div>
           <div id="view-details" class="view active" data-view="details">
             <header style="display: flex; justify-content: space-between; align-items: center;">
-              <h2>Lecture details</h2>
-              <button id="delete-lecture" class="danger" type="button" hidden>
+              <h2 data-i18n="details.title">Lecture details</h2>
+              <button
+                id="delete-lecture"
+                class="danger"
+                type="button"
+                hidden
+                data-i18n="details.deleteLecture"
+              >
                 Delete lecture
               </button>
             </header>
-            <div id="edit-mode-banner" class="edit-banner" hidden>
+            <div id="edit-mode-banner" class="edit-banner" hidden data-i18n="details.editModeBanner">
               Edit mode is enabled. Update lecture information or remove items while it is active.
             </div>
-            <div id="lecture-summary" class="placeholder">
+            <div id="lecture-summary" class="placeholder" data-i18n="details.summaryPlaceholder">
               Select a lecture from the curriculum.
             </div>
             <form id="lecture-edit-form" hidden>
               <div class="field">
-                <label for="edit-lecture-name">Title</label>
+                <label for="edit-lecture-name" data-i18n="details.edit.titleLabel">Title</label>
                 <input id="edit-lecture-name" name="name" type="text" required />
               </div>
               <div class="field">
-                <label for="edit-lecture-module">Module</label>
+                <label for="edit-lecture-module" data-i18n="details.edit.moduleLabel">Module</label>
                 <select id="edit-lecture-module" name="module" required></select>
               </div>
               <div class="field">
-                <label for="edit-lecture-description">Description</label>
+                <label
+                  for="edit-lecture-description"
+                  data-i18n="details.edit.descriptionLabel"
+                >
+                  Description
+                </label>
                 <textarea
                   id="edit-lecture-description"
                   name="description"
@@ -950,120 +984,154 @@
                 ></textarea>
               </div>
               <div class="form-actions">
-                <button type="submit">Save changes</button>
+                <button type="submit" data-i18n="details.edit.save">Save changes</button>
               </div>
             </form>
             <section id="asset-section" hidden>
-              <h3>Assets</h3>
+              <h3 data-i18n="assets.title">Assets</h3>
               <ul id="asset-list" class="asset-list"></ul>
               <div class="actions-row">
-                <button id="transcribe-button" type="button">Transcribe audio</button>
-                <label class="inline" for="transcribe-model" style="margin-left: auto;">
+                <button id="transcribe-button" type="button" data-i18n="assets.transcribe">
+                  Transcribe audio
+                </button>
+                <label class="inline" for="transcribe-model" style="margin-left: auto;" data-i18n="assets.modelLabel">
                   Model
                   <select id="transcribe-model">
-                    <option value="tiny">tiny</option>
-                    <option value="base" selected>base</option>
-                    <option value="small">small</option>
-                    <option value="medium">medium</option>
-                    <option value="large">large</option>
-                    <option value="gpu" class="gpu-only" disabled>GPU (hardware accelerated)</option>
+                    <option value="tiny" data-i18n="assets.model.tiny">tiny</option>
+                    <option value="base" selected data-i18n="assets.model.base">base</option>
+                    <option value="small" data-i18n="assets.model.small">small</option>
+                    <option value="medium" data-i18n="assets.model.medium">medium</option>
+                    <option value="large" data-i18n="assets.model.large">large</option>
+                    <option value="gpu" class="gpu-only" disabled data-i18n="assets.model.gpu">
+                      GPU (hardware accelerated)
+                    </option>
                   </select>
                 </label>
               </div>
             </section>
           </div>
           <div id="view-create" class="view" data-view="create" hidden>
-            <h2>Create lecture</h2>
+            <h2 data-i18n="create.title">Create lecture</h2>
             <form id="lecture-create-form">
               <div class="field">
-                <label for="create-module">Module</label>
+                <label for="create-module" data-i18n="create.moduleLabel">Module</label>
                 <select id="create-module" required></select>
               </div>
               <div class="field">
-                <label for="create-name">Title</label>
+                <label for="create-name" data-i18n="create.titleLabel">Title</label>
                 <input id="create-name" type="text" required />
               </div>
               <div class="field">
-                <label for="create-description">Description</label>
+                <label for="create-description" data-i18n="create.descriptionLabel">Description</label>
                 <textarea id="create-description" rows="4"></textarea>
               </div>
               <div class="form-actions">
-                <button id="create-submit" type="submit">Add lecture</button>
+                <button id="create-submit" type="submit" data-i18n="create.submit">
+                  Add lecture
+                </button>
               </div>
             </form>
           </div>
           <div id="view-settings" class="view" data-view="settings" hidden>
-            <h2>Settings</h2>
+            <h2 data-i18n="settings.title">Settings</h2>
             <form id="settings-form">
               <fieldset>
-                <legend>Appearance</legend>
+                <legend data-i18n="settings.appearance.legend">Appearance</legend>
                 <div class="field-inline">
-                  <label for="settings-theme">Theme</label>
+                  <label for="settings-theme" data-i18n="settings.appearance.themeLabel">Theme</label>
                   <select id="settings-theme">
-                    <option value="system">Follow system</option>
-                    <option value="light">Light</option>
-                    <option value="dark">Dark</option>
+                    <option value="system" data-i18n="settings.appearance.theme.system">Follow system</option>
+                    <option value="light" data-i18n="settings.appearance.theme.light">Light</option>
+                    <option value="dark" data-i18n="settings.appearance.theme.dark">Dark</option>
                   </select>
                 </div>
                 <div class="field-inline">
-                  <label for="settings-language">Language</label>
+                  <label for="settings-language" data-i18n="settings.language.label">Language</label>
                   <select id="settings-language">
-                    <option value="en">English</option>
-                    <option value="zh">中文 (Chinese)</option>
-                    <option value="es">Español (Spanish)</option>
-                    <option value="fr">Français (French)</option>
+                    <option value="en" data-i18n="settings.language.choices.en">English</option>
+                    <option value="zh" data-i18n="settings.language.choices.zh">中文 (Chinese)</option>
+                    <option value="es" data-i18n="settings.language.choices.es">Español (Spanish)</option>
+                    <option value="fr" data-i18n="settings.language.choices.fr">Français (French)</option>
                   </select>
                 </div>
               </fieldset>
               <fieldset>
-                <legend>Whisper transcription</legend>
+                <legend data-i18n="settings.whisper.legend">Whisper transcription</legend>
                 <div class="field-inline">
-                  <label for="settings-whisper-model">Default model</label>
+                  <label for="settings-whisper-model" data-i18n="settings.whisper.modelLabel">
+                    Default model
+                  </label>
                   <select id="settings-whisper-model" required>
-                    <option value="tiny">Tiny (fastest)</option>
-                    <option value="base" selected>Base (balanced)</option>
-                    <option value="small">Small (accurate)</option>
-                    <option value="medium">Medium (detailed)</option>
-                    <option value="large">Large (maximum accuracy)</option>
-                    <option value="gpu" class="gpu-only" disabled>GPU (hardware accelerated)</option>
+                    <option value="tiny" data-i18n="settings.whisper.model.tiny">Tiny (fastest)</option>
+                    <option value="base" selected data-i18n="settings.whisper.model.base">
+                      Base (balanced)
+                    </option>
+                    <option value="small" data-i18n="settings.whisper.model.small">
+                      Small (accurate)
+                    </option>
+                    <option value="medium" data-i18n="settings.whisper.model.medium">
+                      Medium (detailed)
+                    </option>
+                    <option value="large" data-i18n="settings.whisper.model.large">
+                      Large (maximum accuracy)
+                    </option>
+                    <option value="gpu" class="gpu-only" disabled data-i18n="settings.whisper.model.gpu">
+                      GPU (hardware accelerated)
+                    </option>
                   </select>
                 </div>
                 <div class="field-inline">
-                  <label for="settings-whisper-compute">Compute type</label>
+                  <label for="settings-whisper-compute" data-i18n="settings.whisper.computeLabel">
+                    Compute type
+                  </label>
                   <input id="settings-whisper-compute" type="text" required />
                 </div>
                 <div class="field-inline">
-                  <label for="settings-whisper-beam">Beam size</label>
+                  <label for="settings-whisper-beam" data-i18n="settings.whisper.beamLabel">
+                    Beam size
+                  </label>
                   <input id="settings-whisper-beam" type="number" min="1" max="10" required />
                 </div>
                 <div class="field-inline gpu-support">
                   <div class="gpu-support-info">
-                    <label>GPU support</label>
-                    <p id="settings-whisper-gpu-status">GPU acceleration not tested.</p>
+                    <label data-i18n="settings.whisper.gpu.label">GPU support</label>
+                    <p id="settings-whisper-gpu-status" data-i18n="settings.whisper.gpu.status">
+                      GPU acceleration not tested.
+                    </p>
                   </div>
                   <button id="settings-whisper-gpu-test" type="button" class="secondary">
-                    Test support
+                    <span data-i18n="settings.whisper.gpu.test">Test support</span>
                   </button>
                 </div>
               </fieldset>
               <fieldset>
-                <legend>Slides</legend>
+                <legend data-i18n="settings.slides.legend">Slides</legend>
                 <div class="field-inline">
-                  <label for="settings-slide-dpi">Rendering DPI</label>
+                  <label for="settings-slide-dpi" data-i18n="settings.slides.dpiLabel">
+                    Rendering DPI
+                  </label>
                   <select id="settings-slide-dpi" required>
-                    <option value="150">150 dpi (fastest)</option>
-                    <option value="200" selected>200 dpi (balanced)</option>
-                    <option value="300">300 dpi (detailed)</option>
-                    <option value="400">400 dpi (high detail)</option>
-                    <option value="600">600 dpi (maximum)</option>
+                    <option value="150" data-i18n="settings.slides.dpi.150">150 dpi (fastest)</option>
+                    <option value="200" selected data-i18n="settings.slides.dpi.200">
+                      200 dpi (balanced)
+                    </option>
+                    <option value="300" data-i18n="settings.slides.dpi.300">
+                      300 dpi (detailed)
+                    </option>
+                    <option value="400" data-i18n="settings.slides.dpi.400">
+                      400 dpi (high detail)
+                    </option>
+                    <option value="600" data-i18n="settings.slides.dpi.600">
+                      600 dpi (maximum)
+                    </option>
                   </select>
                 </div>
               </fieldset>
               <div class="form-actions">
-                <button type="submit">Save settings</button>
+                <button type="submit" data-i18n="settings.save">Save settings</button>
               </div>
               <div class="form-actions">
-                <button id="settings-exit-app" type="button" class="danger">
+                <button id="settings-exit-app" type="button" class="danger" data-i18n="settings.exit">
                   Exit application
                 </button>
               </div>
@@ -1090,13 +1158,1188 @@
           <input id="dialog-input" class="dialog-input" type="text" autocomplete="off" />
         </div>
         <div class="dialog-actions">
-          <button type="button" id="dialog-cancel" class="dialog-button secondary">Cancel</button>
-          <button type="button" id="dialog-confirm" class="dialog-button primary">Confirm</button>
+          <button
+            type="button"
+            id="dialog-cancel"
+            class="dialog-button secondary"
+            data-i18n="dialog.cancel"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            id="dialog-confirm"
+            class="dialog-button primary"
+            data-i18n="dialog.confirm"
+          >
+            Confirm
+          </button>
         </div>
       </div>
     </div>
     <script>
       (async function () {
+        const translations = {
+          en: {
+            document: {
+              title: 'Lecture Tools',
+            },
+            sidebar: {
+              heading: 'Lecture Tools',
+              tagline: 'Review, organise, and process lecture resources quickly.',
+              overview: 'Overview',
+              filterLabel: 'Filter curriculum',
+              searchPlaceholder: 'Search by name',
+              loading: 'Loading…',
+            },
+            topBar: {
+              details: 'Details',
+              enableEdit: 'Enable edit mode',
+              exitEdit: 'Exit edit mode',
+              create: 'Create',
+              settings: 'Settings',
+            },
+            details: {
+              title: 'Lecture details',
+              deleteLecture: 'Delete lecture',
+              editModeBanner:
+                'Edit mode is enabled. Update lecture information or remove items while it is active.',
+              summaryPlaceholder: 'Select a lecture from the curriculum.',
+              edit: {
+                titleLabel: 'Title',
+                moduleLabel: 'Module',
+                descriptionLabel: 'Description',
+                save: 'Save changes',
+              },
+              noDescription: 'No description recorded yet.',
+            },
+            assets: {
+              title: 'Assets',
+              transcribe: 'Transcribe audio',
+              modelLabel: 'Model',
+              model: {
+                tiny: 'tiny',
+                base: 'base',
+                small: 'small',
+                medium: 'medium',
+                large: 'large',
+                gpu: 'GPU (hardware accelerated)',
+              },
+              labels: {
+                audio: 'Audio',
+                slides: 'Slides (PDF)',
+                transcript: 'Transcript',
+                notes: 'Notes',
+                slideImages: 'Slide images (ZIP)',
+              },
+              status: {
+                notLinked: 'Not linked',
+                slidesHint: 'Upload a PDF to generate slide images automatically.',
+                noSlideImages: 'No slide images generated yet.',
+                linked: 'Linked: {{name}}',
+                linkedSlides: 'Linked: {{name}} (auto processed)',
+                archiveCreated: 'Archive created: {{name}}',
+              },
+              actions: {
+                upload: 'Upload',
+                open: 'Open',
+                revealFolder: 'Reveal folder',
+                revealLocation: 'Reveal location',
+              },
+            },
+            create: {
+              title: 'Create lecture',
+              moduleLabel: 'Module',
+              titleLabel: 'Title',
+              descriptionLabel: 'Description',
+              submit: 'Add lecture',
+            },
+            settings: {
+              title: 'Settings',
+              appearance: {
+                legend: 'Appearance',
+                themeLabel: 'Theme',
+                theme: {
+                  system: 'Follow system',
+                  light: 'Light',
+                  dark: 'Dark',
+                },
+              },
+              language: {
+                label: 'Language',
+                choices: {
+                  en: 'English',
+                  zh: '中文 (Chinese)',
+                  es: 'Español (Spanish)',
+                  fr: 'Français (French)',
+                },
+              },
+              whisper: {
+                legend: 'Whisper transcription',
+                modelLabel: 'Default model',
+                model: {
+                  tiny: 'Tiny (fastest)',
+                  base: 'Base (balanced)',
+                  small: 'Small (accurate)',
+                  medium: 'Medium (detailed)',
+                  large: 'Large (maximum accuracy)',
+                  gpu: 'GPU (hardware accelerated)',
+                },
+                computeLabel: 'Compute type',
+                beamLabel: 'Beam size',
+                gpu: {
+                  label: 'GPU support',
+                  status: 'GPU acceleration not tested.',
+                  test: 'Test support',
+                  retry: 'Re-run test',
+                },
+              },
+              slides: {
+                legend: 'Slides',
+                dpiLabel: 'Rendering DPI',
+                dpi: {
+                  150: '150 dpi (fastest)',
+                  200: '200 dpi (balanced)',
+                  300: '300 dpi (detailed)',
+                  400: '400 dpi (high detail)',
+                  600: '600 dpi (maximum)',
+                },
+              },
+              save: 'Save settings',
+              exit: 'Exit application',
+            },
+            dialog: {
+              cancel: 'Cancel',
+              confirm: 'Confirm',
+            },
+            stats: {
+              classes: 'Classes',
+              modules: 'Modules',
+              lectures: 'Lectures',
+              transcripts: 'Transcripts',
+              slideDecks: 'Slide decks',
+              audio: 'Audio files',
+              notes: 'Notes',
+              slideArchives: 'Slide archives',
+            },
+            dialogs: {
+              createClass: {
+                title: 'Create class',
+                message: 'Enter a class name.',
+                placeholder: 'Introduction to Astronomy',
+              },
+              classDescription: {
+                title: 'Class description',
+              },
+              createModule: {
+                title: 'Create module',
+                message: 'Module name for {{className}}',
+                placeholder: 'Foundations',
+              },
+              moduleDescription: {
+                title: 'Module description',
+              },
+              createLecture: {
+                title: 'Create lecture',
+                message: 'Lecture title for {{context}}',
+                placeholder: 'Lecture title',
+              },
+              lectureDescription: {
+                title: 'Lecture description',
+                placeholder: 'Add a short outline…',
+              },
+              deleteClass: {
+                title: 'Delete class',
+                message: 'Delete class "{{className}}"?',
+                cancel: 'Keep class',
+                summary: 'This will remove {{moduleCount}} {{moduleWord}} and {{lectureCount}} {{lectureWord}}.',
+              },
+              deleteModule: {
+                title: 'Delete module',
+                message: 'Delete module "{{moduleName}}"{{classContext}}?',
+                cancel: 'Keep module',
+                summary: 'This will remove {{lectureCount}} {{lectureWord}}.',
+                classContext: ' from "{{className}}"',
+              },
+              deleteLecture: {
+                title: 'Delete lecture',
+                message: 'Delete lecture "{{context}}" and all linked assets?',
+                cancel: 'Keep lecture',
+              },
+              confirmDeletion: {
+                title: 'Confirm deletion',
+                message: 'This action cannot be undone. Do you want to permanently remove it?',
+                confirm: 'Yes, delete it',
+              },
+              gpuWhisper: {
+                title: 'GPU Whisper',
+              },
+              exitApp: {
+                title: 'Exit application',
+                message: 'Stop the Lecture Tools server and close this tab?',
+              },
+              descriptionOptional: 'Description (optional)',
+              descriptionPlaceholder: 'Add a short summary…',
+            },
+            dropdowns: {
+              selectModule: 'Select module…',
+              noModules: 'No modules available',
+            },
+            placeholders: {
+              noLectures: 'No lectures',
+              noLecturesFilter: 'No lectures match the current filter.',
+              noClasses: 'No classes available yet.',
+            },
+            curriculum: {
+              addClass: 'Add class',
+              addModule: 'Add module',
+              addLecture: 'Add lecture',
+            },
+            common: {
+              actions: {
+                create: 'Create',
+                save: 'Save',
+                skip: 'Skip',
+                delete: 'Delete',
+                open: 'Open',
+                upload: 'Upload',
+                exit: 'Exit',
+                close: 'Close',
+                ok: 'OK',
+              },
+            },
+            status: {
+              requireEdit: 'Enable edit mode to manage the curriculum.',
+              requireEditLecture: 'Enable edit mode to update lecture details.',
+              classCreated: 'Class created.',
+              classRemoved: 'Class removed.',
+              moduleCreated: 'Module created.',
+              moduleRemoved: 'Module removed.',
+              lectureCreated: 'Lecture created.',
+              lectureRemoved: 'Lecture removed.',
+              lectureUpdated: 'Lecture updated.',
+              lectureTitleRequired: 'Lecture title is required.',
+              createLectureRequirements: 'Select a module and enter a title.',
+              slidesProcessed: 'Slides uploaded and processed into an image archive.',
+              assetUploaded: 'Asset uploaded successfully.',
+              openingFolder: 'Opening folder in your file manager.',
+              openingLocation: 'Opening asset location in your file manager.',
+              transcriptionPreparing: '====> Preparing transcription…',
+              transcriptionCompleted: 'Transcription completed.',
+              processing: 'Processing…',
+              gpuChecking: '====> Checking GPU Whisper support…',
+              gpuConfirmed: 'GPU Whisper support confirmed.',
+              gpuUnavailable: 'GPU acceleration is unavailable on this platform.',
+              gpuUnsupported: 'GPU Whisper is not supported on this platform.',
+              gpuNotAvailable: 'GPU acceleration is not available on this platform.',
+              shuttingDown: 'Shutting down application…',
+              settingsSaved: 'Settings saved.',
+              gpuFallback: 'Falling back to {{model}} model.',
+            },
+            counts: {
+              module: { one: 'module', other: 'modules' },
+              lecture: { one: 'lecture', other: 'lectures' },
+            },
+          },
+          zh: {
+            document: {
+              title: '课堂助手',
+            },
+            sidebar: {
+              heading: '课堂助手',
+              tagline: '快速审阅、整理并处理课程资源。',
+              overview: '概览',
+              filterLabel: '筛选课程表',
+              searchPlaceholder: '按名称搜索',
+              loading: '正在加载…',
+            },
+            topBar: {
+              details: '详情',
+              enableEdit: '开启编辑模式',
+              exitEdit: '退出编辑模式',
+              create: '新建',
+              settings: '设置',
+            },
+            details: {
+              title: '讲座详情',
+              deleteLecture: '删除讲座',
+              editModeBanner: '编辑模式已开启，可更新讲座信息或移除项目。',
+              summaryPlaceholder: '从课程表中选择一个讲座。',
+              edit: {
+                titleLabel: '标题',
+                moduleLabel: '模块',
+                descriptionLabel: '描述',
+                save: '保存更改',
+              },
+              noDescription: '尚未记录描述。',
+            },
+            assets: {
+              title: '资源',
+              transcribe: '转录音频',
+              modelLabel: '模型',
+              model: {
+                tiny: 'tiny',
+                base: 'base',
+                small: 'small',
+                medium: 'medium',
+                large: 'large',
+                gpu: 'GPU（硬件加速）',
+              },
+              labels: {
+                audio: '音频',
+                slides: '课件（PDF）',
+                transcript: '逐字稿',
+                notes: '笔记',
+                slideImages: '课件图像（ZIP）',
+              },
+              status: {
+                notLinked: '未关联',
+                slidesHint: '上传 PDF 可自动生成课件图像。',
+                noSlideImages: '尚未生成课件图像。',
+                linked: '已关联：{{name}}',
+                linkedSlides: '已关联：{{name}}（自动处理）',
+                archiveCreated: '已生成压缩包：{{name}}',
+              },
+              actions: {
+                upload: '上传',
+                open: '打开',
+                revealFolder: '在文件夹中显示',
+                revealLocation: '显示文件位置',
+              },
+            },
+            create: {
+              title: '创建讲座',
+              moduleLabel: '模块',
+              titleLabel: '标题',
+              descriptionLabel: '描述',
+              submit: '添加讲座',
+            },
+            settings: {
+              title: '设置',
+              appearance: {
+                legend: '外观',
+                themeLabel: '主题',
+                theme: {
+                  system: '跟随系统',
+                  light: '浅色',
+                  dark: '深色',
+                },
+              },
+              language: {
+                label: '语言',
+                choices: {
+                  en: 'English（英语）',
+                  zh: '中文（简体）',
+                  es: 'Español（西班牙语）',
+                  fr: 'Français（法语）',
+                },
+              },
+              whisper: {
+                legend: 'Whisper 转录',
+                modelLabel: '默认模型',
+                model: {
+                  tiny: 'Tiny（最快）',
+                  base: 'Base（均衡）',
+                  small: 'Small（更准）',
+                  medium: 'Medium（细致）',
+                  large: 'Large（最高准确度）',
+                  gpu: 'GPU（硬件加速）',
+                },
+                computeLabel: '计算类型',
+                beamLabel: '束搜索宽度',
+                gpu: {
+                  label: 'GPU 支持',
+                  status: '尚未测试 GPU 加速。',
+                  test: '测试支持',
+                  retry: '重新测试',
+                },
+              },
+              slides: {
+                legend: '课件',
+                dpiLabel: '渲染 DPI',
+                dpi: {
+                  150: '150 dpi（最快）',
+                  200: '200 dpi（均衡）',
+                  300: '300 dpi（更细致）',
+                  400: '400 dpi（高细节）',
+                  600: '600 dpi（最高）',
+                },
+              },
+              save: '保存设置',
+              exit: '退出应用',
+            },
+            dialog: {
+              cancel: '取消',
+              confirm: '确认',
+            },
+            stats: {
+              classes: '课程',
+              modules: '模块',
+              lectures: '讲座',
+              transcripts: '逐字稿',
+              slideDecks: '课件',
+              audio: '音频文件',
+              notes: '笔记',
+              slideArchives: '课件压缩包',
+            },
+            dialogs: {
+              createClass: {
+                title: '创建课程',
+                message: '输入课程名称。',
+                placeholder: '天文学导论',
+              },
+              classDescription: {
+                title: '课程描述',
+              },
+              createModule: {
+                title: '创建模块',
+                message: '为 {{className}} 输入模块名称',
+                placeholder: '基础内容',
+              },
+              moduleDescription: {
+                title: '模块描述',
+              },
+              createLecture: {
+                title: '创建讲座',
+                message: '为 {{context}} 输入讲座标题',
+                placeholder: '讲座标题',
+              },
+              lectureDescription: {
+                title: '讲座描述',
+                placeholder: '添加简短大纲…',
+              },
+              deleteClass: {
+                title: '删除课程',
+                message: '删除课程“{{className}}”？',
+                cancel: '保留课程',
+                summary: '此操作将移除 {{moduleCount}} 个{{moduleWord}}和 {{lectureCount}} 个{{lectureWord}}。',
+              },
+              deleteModule: {
+                title: '删除模块',
+                message: '删除模块“{{moduleName}}”{{classContext}}？',
+                cancel: '保留模块',
+                summary: '此操作将移除 {{lectureCount}} 个{{lectureWord}}。',
+                classContext: '（来自课程“{{className}}”）',
+              },
+              deleteLecture: {
+                title: '删除讲座',
+                message: '删除讲座“{{context}}”及其所有关联资源？',
+                cancel: '保留讲座',
+              },
+              confirmDeletion: {
+                title: '确认删除',
+                message: '该操作无法撤销，确定要永久删除吗？',
+                confirm: '是，删除',
+              },
+              gpuWhisper: {
+                title: 'GPU Whisper',
+              },
+              exitApp: {
+                title: '退出应用',
+                message: '停止 Lecture Tools 服务器并关闭此标签页？',
+              },
+              descriptionOptional: '描述（可选）',
+              descriptionPlaceholder: '添加简短摘要…',
+            },
+            dropdowns: {
+              selectModule: '选择模块…',
+              noModules: '暂无可用模块',
+            },
+            placeholders: {
+              noLectures: '暂无讲座',
+              noLecturesFilter: '没有符合当前筛选条件的讲座。',
+              noClasses: '尚未有课程。',
+            },
+            curriculum: {
+              addClass: '添加课程',
+              addModule: '添加模块',
+              addLecture: '添加讲座',
+            },
+            common: {
+              actions: {
+                create: '创建',
+                save: '保存',
+                skip: '跳过',
+                delete: '删除',
+                open: '打开',
+                upload: '上传',
+                exit: '退出',
+                close: '关闭',
+                ok: '好的',
+              },
+            },
+            status: {
+              requireEdit: '开启编辑模式以管理课程表。',
+              requireEditLecture: '开启编辑模式以更新讲座详情。',
+              classCreated: '课程已创建。',
+              classRemoved: '课程已删除。',
+              moduleCreated: '模块已创建。',
+              moduleRemoved: '模块已删除。',
+              lectureCreated: '讲座已创建。',
+              lectureRemoved: '讲座已删除。',
+              lectureUpdated: '讲座已更新。',
+              lectureTitleRequired: '需要填写讲座标题。',
+              createLectureRequirements: '请选择模块并输入标题。',
+              slidesProcessed: '课件已上传并转换为图像压缩包。',
+              assetUploaded: '资源上传成功。',
+              openingFolder: '正在文件管理器中打开文件夹。',
+              openingLocation: '正在文件管理器中显示资源位置。',
+              transcriptionPreparing: '====> 正在准备转录…',
+              transcriptionCompleted: '转录完成。',
+              processing: '处理中…',
+              gpuChecking: '====> 正在检查 GPU Whisper 支持…',
+              gpuConfirmed: 'GPU Whisper 支持已确认。',
+              gpuUnavailable: '此平台不支持 GPU 加速。',
+              gpuUnsupported: '此平台不支持 GPU Whisper。',
+              gpuNotAvailable: '此平台无法使用 GPU 加速。',
+              shuttingDown: '正在关闭应用…',
+              settingsSaved: '设置已保存。',
+              gpuFallback: '将回退到 {{model}} 模型。',
+            },
+            counts: {
+              module: { one: '模块', other: '模块' },
+              lecture: { one: '讲座', other: '讲座' },
+            },
+          },
+          es: {
+            document: {
+              title: 'Herramientas de clases',
+            },
+            sidebar: {
+              heading: 'Herramientas de clases',
+              tagline: 'Revisa, organiza y procesa recursos de clases rápidamente.',
+              overview: 'Resumen',
+              filterLabel: 'Filtrar plan de estudios',
+              searchPlaceholder: 'Buscar por nombre',
+              loading: 'Cargando…',
+            },
+            topBar: {
+              details: 'Detalles',
+              enableEdit: 'Activar modo edición',
+              exitEdit: 'Salir del modo edición',
+              create: 'Crear',
+              settings: 'Configuración',
+            },
+            details: {
+              title: 'Detalles de la clase',
+              deleteLecture: 'Eliminar clase',
+              editModeBanner: 'El modo edición está activo. Actualiza o elimina elementos mientras esté activo.',
+              summaryPlaceholder: 'Selecciona una clase del plan de estudios.',
+              edit: {
+                titleLabel: 'Título',
+                moduleLabel: 'Módulo',
+                descriptionLabel: 'Descripción',
+                save: 'Guardar cambios',
+              },
+              noDescription: 'Sin descripción registrada todavía.',
+            },
+            assets: {
+              title: 'Recursos',
+              transcribe: 'Transcribir audio',
+              modelLabel: 'Modelo',
+              model: {
+                tiny: 'tiny',
+                base: 'base',
+                small: 'small',
+                medium: 'medium',
+                large: 'large',
+                gpu: 'GPU (acelerado por hardware)',
+              },
+              labels: {
+                audio: 'Audio',
+                slides: 'Diapositivas (PDF)',
+                transcript: 'Transcripción',
+                notes: 'Notas',
+                slideImages: 'Imágenes de diapositivas (ZIP)',
+              },
+              status: {
+                notLinked: 'Sin vincular',
+                slidesHint: 'Carga un PDF para generar imágenes automáticamente.',
+                noSlideImages: 'Aún no se generan imágenes de diapositivas.',
+                linked: 'Vinculado: {{name}}',
+                linkedSlides: 'Vinculado: {{name}} (procesado automáticamente)',
+                archiveCreated: 'Archivo creado: {{name}}',
+              },
+              actions: {
+                upload: 'Subir',
+                open: 'Abrir',
+                revealFolder: 'Mostrar carpeta',
+                revealLocation: 'Mostrar ubicación',
+              },
+            },
+            create: {
+              title: 'Crear clase',
+              moduleLabel: 'Módulo',
+              titleLabel: 'Título',
+              descriptionLabel: 'Descripción',
+              submit: 'Agregar clase',
+            },
+            settings: {
+              title: 'Configuración',
+              appearance: {
+                legend: 'Apariencia',
+                themeLabel: 'Tema',
+                theme: {
+                  system: 'Seguir sistema',
+                  light: 'Claro',
+                  dark: 'Oscuro',
+                },
+              },
+              language: {
+                label: 'Idioma',
+                choices: {
+                  en: 'English (Inglés)',
+                  zh: '中文 (Chino)',
+                  es: 'Español',
+                  fr: 'Français (Francés)',
+                },
+              },
+              whisper: {
+                legend: 'Transcripción Whisper',
+                modelLabel: 'Modelo predeterminado',
+                model: {
+                  tiny: 'Tiny (más rápido)',
+                  base: 'Base (equilibrado)',
+                  small: 'Small (preciso)',
+                  medium: 'Medium (detallado)',
+                  large: 'Large (máxima precisión)',
+                  gpu: 'GPU (acelerado por hardware)',
+                },
+                computeLabel: 'Tipo de cómputo',
+                beamLabel: 'Tamaño de haz',
+                gpu: {
+                  label: 'Compatibilidad con GPU',
+                  status: 'Aceleración GPU no probada.',
+                  test: 'Probar compatibilidad',
+                  retry: 'Volver a probar',
+                },
+              },
+              slides: {
+                legend: 'Diapositivas',
+                dpiLabel: 'DPI de renderizado',
+                dpi: {
+                  150: '150 dpi (más rápido)',
+                  200: '200 dpi (equilibrado)',
+                  300: '300 dpi (detallado)',
+                  400: '400 dpi (alto detalle)',
+                  600: '600 dpi (máximo)',
+                },
+              },
+              save: 'Guardar configuración',
+              exit: 'Salir de la aplicación',
+            },
+            dialog: {
+              cancel: 'Cancelar',
+              confirm: 'Confirmar',
+            },
+            stats: {
+              classes: 'Cursos',
+              modules: 'Módulos',
+              lectures: 'Clases',
+              transcripts: 'Transcripciones',
+              slideDecks: 'Presentaciones',
+              audio: 'Archivos de audio',
+              notes: 'Notas',
+              slideArchives: 'Archivos de diapositivas',
+            },
+            dialogs: {
+              createClass: {
+                title: 'Crear curso',
+                message: 'Ingresa un nombre de curso.',
+                placeholder: 'Introducción a la astronomía',
+              },
+              classDescription: {
+                title: 'Descripción del curso',
+              },
+              createModule: {
+                title: 'Crear módulo',
+                message: 'Nombre del módulo para {{className}}',
+                placeholder: 'Fundamentos',
+              },
+              moduleDescription: {
+                title: 'Descripción del módulo',
+              },
+              createLecture: {
+                title: 'Crear clase',
+                message: 'Título de la clase para {{context}}',
+                placeholder: 'Título de la clase',
+              },
+              lectureDescription: {
+                title: 'Descripción de la clase',
+                placeholder: 'Agrega un esquema breve…',
+              },
+              deleteClass: {
+                title: 'Eliminar curso',
+                message: '¿Eliminar el curso "{{className}}"?',
+                cancel: 'Conservar curso',
+                summary: 'Esto eliminará {{moduleCount}} {{moduleWord}} y {{lectureCount}} {{lectureWord}}.',
+              },
+              deleteModule: {
+                title: 'Eliminar módulo',
+                message: '¿Eliminar el módulo "{{moduleName}}"{{classContext}}?',
+                cancel: 'Conservar módulo',
+                summary: 'Esto eliminará {{lectureCount}} {{lectureWord}}.',
+                classContext: ' del curso "{{className}}"',
+              },
+              deleteLecture: {
+                title: 'Eliminar clase',
+                message: '¿Eliminar la clase "{{context}}" y todos los recursos vinculados?',
+                cancel: 'Conservar clase',
+              },
+              confirmDeletion: {
+                title: 'Confirmar eliminación',
+                message: 'Esta acción no se puede deshacer. ¿Deseas eliminarla permanentemente?',
+                confirm: 'Sí, eliminar',
+              },
+              gpuWhisper: {
+                title: 'GPU Whisper',
+              },
+              exitApp: {
+                title: 'Salir de la aplicación',
+                message: '¿Detener el servidor de Lecture Tools y cerrar esta pestaña?',
+              },
+              descriptionOptional: 'Descripción (opcional)',
+              descriptionPlaceholder: 'Agrega un breve resumen…',
+            },
+            dropdowns: {
+              selectModule: 'Seleccionar módulo…',
+              noModules: 'No hay módulos disponibles',
+            },
+            placeholders: {
+              noLectures: 'Sin clases',
+              noLecturesFilter: 'Ninguna clase coincide con el filtro actual.',
+              noClasses: 'Aún no hay cursos disponibles.',
+            },
+            curriculum: {
+              addClass: 'Agregar curso',
+              addModule: 'Agregar módulo',
+              addLecture: 'Agregar clase',
+            },
+            common: {
+              actions: {
+                create: 'Crear',
+                save: 'Guardar',
+                skip: 'Omitir',
+                delete: 'Eliminar',
+                open: 'Abrir',
+                upload: 'Subir',
+                exit: 'Salir',
+                close: 'Cerrar',
+                ok: 'Aceptar',
+              },
+            },
+            status: {
+              requireEdit: 'Activa el modo edición para gestionar el plan de estudios.',
+              requireEditLecture: 'Activa el modo edición para actualizar los detalles.',
+              classCreated: 'Curso creado.',
+              classRemoved: 'Curso eliminado.',
+              moduleCreated: 'Módulo creado.',
+              moduleRemoved: 'Módulo eliminado.',
+              lectureCreated: 'Clase creada.',
+              lectureRemoved: 'Clase eliminada.',
+              lectureUpdated: 'Clase actualizada.',
+              lectureTitleRequired: 'El título de la clase es obligatorio.',
+              createLectureRequirements: 'Selecciona un módulo e ingresa un título.',
+              slidesProcessed: 'Diapositivas cargadas y convertidas en un archivo de imágenes.',
+              assetUploaded: 'Recurso subido correctamente.',
+              openingFolder: 'Abriendo carpeta en tu explorador de archivos.',
+              openingLocation: 'Mostrando ubicación del recurso en tu explorador.',
+              transcriptionPreparing: '====> Preparando transcripción…',
+              transcriptionCompleted: 'Transcripción completada.',
+              processing: 'Procesando…',
+              gpuChecking: '====> Comprobando compatibilidad con GPU Whisper…',
+              gpuConfirmed: 'Compatibilidad con GPU Whisper confirmada.',
+              gpuUnavailable: 'GPU no disponible en esta plataforma.',
+              gpuUnsupported: 'GPU Whisper no es compatible con esta plataforma.',
+              gpuNotAvailable: 'La aceleración GPU no está disponible en esta plataforma.',
+              shuttingDown: 'Cerrando la aplicación…',
+              settingsSaved: 'Configuración guardada.',
+              gpuFallback: 'Se usará el modelo {{model}}.',
+            },
+            counts: {
+              module: { one: 'módulo', other: 'módulos' },
+              lecture: { one: 'clase', other: 'clases' },
+            },
+          },
+          fr: {
+            document: {
+              title: 'Outils de cours',
+            },
+            sidebar: {
+              heading: 'Outils de cours',
+              tagline: 'Passez en revue, organisez et traitez rapidement les ressources de cours.',
+              overview: 'Vue d’ensemble',
+              filterLabel: 'Filtrer le programme',
+              searchPlaceholder: 'Rechercher par nom',
+              loading: 'Chargement…',
+            },
+            topBar: {
+              details: 'Détails',
+              enableEdit: 'Activer le mode édition',
+              exitEdit: 'Quitter le mode édition',
+              create: 'Créer',
+              settings: 'Paramètres',
+            },
+            details: {
+              title: 'Détails du cours',
+              deleteLecture: 'Supprimer le cours',
+              editModeBanner:
+                'Le mode édition est activé. Mettez à jour les informations ou supprimez des éléments pendant qu’il est actif.',
+              summaryPlaceholder: 'Sélectionnez un cours dans le programme.',
+              edit: {
+                titleLabel: 'Titre',
+                moduleLabel: 'Module',
+                descriptionLabel: 'Description',
+                save: 'Enregistrer les modifications',
+              },
+              noDescription: 'Aucune description enregistrée pour le moment.',
+            },
+            assets: {
+              title: 'Ressources',
+              transcribe: 'Transcrire l’audio',
+              modelLabel: 'Modèle',
+              model: {
+                tiny: 'tiny',
+                base: 'base',
+                small: 'small',
+                medium: 'medium',
+                large: 'large',
+                gpu: 'GPU (accélération matérielle)',
+              },
+              labels: {
+                audio: 'Audio',
+                slides: 'Diapositives (PDF)',
+                transcript: 'Transcription',
+                notes: 'Notes',
+                slideImages: 'Images de diapositives (ZIP)',
+              },
+              status: {
+                notLinked: 'Non lié',
+                slidesHint: 'Importez un PDF pour générer automatiquement des images.',
+                noSlideImages: 'Aucune image de diapositive générée pour le moment.',
+                linked: 'Lié : {{name}}',
+                linkedSlides: 'Lié : {{name}} (traitement automatique)',
+                archiveCreated: 'Archive créée : {{name}}',
+              },
+              actions: {
+                upload: 'Importer',
+                open: 'Ouvrir',
+                revealFolder: 'Afficher le dossier',
+                revealLocation: 'Afficher l’emplacement',
+              },
+            },
+            create: {
+              title: 'Créer un cours',
+              moduleLabel: 'Module',
+              titleLabel: 'Titre',
+              descriptionLabel: 'Description',
+              submit: 'Ajouter le cours',
+            },
+            settings: {
+              title: 'Paramètres',
+              appearance: {
+                legend: 'Apparence',
+                themeLabel: 'Thème',
+                theme: {
+                  system: 'Suivre le système',
+                  light: 'Clair',
+                  dark: 'Sombre',
+                },
+              },
+              language: {
+                label: 'Langue',
+                choices: {
+                  en: 'English (Anglais)',
+                  zh: '中文 (Chinois)',
+                  es: 'Español (Espagnol)',
+                  fr: 'Français',
+                },
+              },
+              whisper: {
+                legend: 'Transcription Whisper',
+                modelLabel: 'Modèle par défaut',
+                model: {
+                  tiny: 'Tiny (plus rapide)',
+                  base: 'Base (équilibré)',
+                  small: 'Small (précis)',
+                  medium: 'Medium (détaillé)',
+                  large: 'Large (précision maximale)',
+                  gpu: 'GPU (accélération matérielle)',
+                },
+                computeLabel: 'Type de calcul',
+                beamLabel: 'Taille du faisceau',
+                gpu: {
+                  label: 'Prise en charge GPU',
+                  status: 'Accélération GPU non testée.',
+                  test: 'Tester la prise en charge',
+                  retry: 'Relancer le test',
+                },
+              },
+              slides: {
+                legend: 'Diapositives',
+                dpiLabel: 'DPI de rendu',
+                dpi: {
+                  150: '150 dpi (plus rapide)',
+                  200: '200 dpi (équilibré)',
+                  300: '300 dpi (détaillé)',
+                  400: '400 dpi (très détaillé)',
+                  600: '600 dpi (maximum)',
+                },
+              },
+              save: 'Enregistrer les paramètres',
+              exit: 'Quitter l’application',
+            },
+            dialog: {
+              cancel: 'Annuler',
+              confirm: 'Confirmer',
+            },
+            stats: {
+              classes: 'Cours',
+              modules: 'Modules',
+              lectures: 'Leçons',
+              transcripts: 'Transcriptions',
+              slideDecks: 'Présentations',
+              audio: 'Fichiers audio',
+              notes: 'Notes',
+              slideArchives: 'Archives de diapositives',
+            },
+            dialogs: {
+              createClass: {
+                title: 'Créer un cours',
+                message: 'Saisissez le nom du cours.',
+                placeholder: 'Introduction à l’astronomie',
+              },
+              classDescription: {
+                title: 'Description du cours',
+              },
+              createModule: {
+                title: 'Créer un module',
+                message: 'Nom du module pour {{className}}',
+                placeholder: 'Fondements',
+              },
+              moduleDescription: {
+                title: 'Description du module',
+              },
+              createLecture: {
+                title: 'Créer une leçon',
+                message: 'Titre de la leçon pour {{context}}',
+                placeholder: 'Titre de la leçon',
+              },
+              lectureDescription: {
+                title: 'Description de la leçon',
+                placeholder: 'Ajoutez un court aperçu…',
+              },
+              deleteClass: {
+                title: 'Supprimer le cours',
+                message: 'Supprimer le cours « {{className}} » ?',
+                cancel: 'Conserver le cours',
+                summary: 'Cette action supprimera {{moduleCount}} {{moduleWord}} et {{lectureCount}} {{lectureWord}}.',
+              },
+              deleteModule: {
+                title: 'Supprimer le module',
+                message: 'Supprimer le module « {{moduleName}} »{{classContext}} ?',
+                cancel: 'Conserver le module',
+                summary: 'Cette action supprimera {{lectureCount}} {{lectureWord}}.',
+                classContext: ' du cours « {{className}} »',
+              },
+              deleteLecture: {
+                title: 'Supprimer la leçon',
+                message: 'Supprimer la leçon « {{context}} » et toutes les ressources associées ?',
+                cancel: 'Conserver la leçon',
+              },
+              confirmDeletion: {
+                title: 'Confirmer la suppression',
+                message: 'Cette action est irréversible. Souhaitez-vous la supprimer définitivement ?',
+                confirm: 'Oui, supprimer',
+              },
+              gpuWhisper: {
+                title: 'GPU Whisper',
+              },
+              exitApp: {
+                title: 'Quitter l’application',
+                message: 'Arrêter le serveur Lecture Tools et fermer cet onglet ?',
+              },
+              descriptionOptional: 'Description (optionnel)',
+              descriptionPlaceholder: 'Ajoutez un court résumé…',
+            },
+            dropdowns: {
+              selectModule: 'Sélectionner un module…',
+              noModules: 'Aucun module disponible',
+            },
+            placeholders: {
+              noLectures: 'Aucune leçon',
+              noLecturesFilter: 'Aucune leçon ne correspond au filtre actuel.',
+              noClasses: 'Aucun cours disponible pour le moment.',
+            },
+            curriculum: {
+              addClass: 'Ajouter un cours',
+              addModule: 'Ajouter un module',
+              addLecture: 'Ajouter une leçon',
+            },
+            common: {
+              actions: {
+                create: 'Créer',
+                save: 'Enregistrer',
+                skip: 'Ignorer',
+                delete: 'Supprimer',
+                open: 'Ouvrir',
+                upload: 'Importer',
+                exit: 'Quitter',
+                close: 'Fermer',
+                ok: 'OK',
+              },
+            },
+            status: {
+              requireEdit: 'Activez le mode édition pour gérer le programme.',
+              requireEditLecture: 'Activez le mode édition pour mettre à jour les détails.',
+              classCreated: 'Cours créé.',
+              classRemoved: 'Cours supprimé.',
+              moduleCreated: 'Module créé.',
+              moduleRemoved: 'Module supprimé.',
+              lectureCreated: 'Leçon créée.',
+              lectureRemoved: 'Leçon supprimée.',
+              lectureUpdated: 'Leçon mise à jour.',
+              lectureTitleRequired: 'Le titre de la leçon est requis.',
+              createLectureRequirements: 'Sélectionnez un module et saisissez un titre.',
+              slidesProcessed: 'Diapositives importées et converties en archive d’images.',
+              assetUploaded: 'Ressource importée avec succès.',
+              openingFolder: 'Ouverture du dossier dans votre explorateur de fichiers.',
+              openingLocation: 'Affichage de l’emplacement de la ressource dans votre explorateur.',
+              transcriptionPreparing: '====> Préparation de la transcription…',
+              transcriptionCompleted: 'Transcription terminée.',
+              processing: 'Traitement…',
+              gpuChecking: '====> Vérification de la compatibilité GPU Whisper…',
+              gpuConfirmed: 'Compatibilité GPU Whisper confirmée.',
+              gpuUnavailable: 'GPU indisponible sur cette plateforme.',
+              gpuUnsupported: 'GPU Whisper n’est pas pris en charge sur cette plateforme.',
+              gpuNotAvailable: 'L’accélération GPU n’est pas disponible sur cette plateforme.',
+              shuttingDown: 'Fermeture de l’application…',
+              settingsSaved: 'Paramètres enregistrés.',
+              gpuFallback: 'Bascule vers le modèle {{model}}.',
+            },
+            counts: {
+              module: { one: 'module', other: 'modules' },
+              lecture: { one: 'leçon', other: 'leçons' },
+            },
+          },
+        };
+
+        const DEFAULT_LANGUAGE = 'en';
+
+        function resolveTranslation(locale, key) {
+          if (!locale || !key) {
+            return undefined;
+          }
+          const segments = key.split('.');
+          let value = locale;
+          for (const segment of segments) {
+            if (value && Object.prototype.hasOwnProperty.call(value, segment)) {
+              value = value[segment];
+            } else {
+              return undefined;
+            }
+          }
+          return typeof value === 'string' || (typeof value === 'object' && value !== null)
+            ? value
+            : undefined;
+        }
+
+        function formatTemplate(template, params) {
+          if (!params) {
+            return template;
+          }
+          return template.replace(/\{\{(.*?)\}\}/g, (match, name) => {
+            const key = String(name).trim();
+            return Object.prototype.hasOwnProperty.call(params, key)
+              ? String(params[key])
+              : match;
+          });
+        }
+
+        function getLocale(language) {
+          return translations[language] ?? translations[DEFAULT_LANGUAGE];
+        }
+
+        let currentLanguage = DEFAULT_LANGUAGE;
+
+        function t(key, params = undefined) {
+          if (!key) {
+            return '';
+          }
+          const locale = getLocale(currentLanguage);
+          const fallback = translations[DEFAULT_LANGUAGE];
+          const template =
+            resolveTranslation(locale, key) ?? resolveTranslation(fallback, key) ?? key;
+          return formatTemplate(template, params);
+        }
+
+        const pluralRules = {
+          en: new Intl.PluralRules('en'),
+          zh: new Intl.PluralRules('zh'),
+          es: new Intl.PluralRules('es'),
+          fr: new Intl.PluralRules('fr'),
+        };
+
+        function pluralize(language, key, count) {
+          const locale = getLocale(language);
+          const fallback = translations[DEFAULT_LANGUAGE];
+          const rule = (pluralRules[language] ?? pluralRules[DEFAULT_LANGUAGE]).select(
+            Number(count),
+          );
+          const target = resolveTranslation(locale, key);
+          const fallbackTarget = resolveTranslation(fallback, key);
+          if (target && typeof target === 'string') {
+            return target;
+          }
+          if (target && typeof target === 'object' && target !== null) {
+            return target[rule] ?? target.other ?? target.one ?? String(count);
+          }
+          if (fallbackTarget && typeof fallbackTarget === 'object' && fallbackTarget !== null) {
+            return (
+              fallbackTarget[rule] ??
+              fallbackTarget.other ??
+              fallbackTarget.one ??
+              String(count)
+            );
+          }
+          return String(count);
+        }
+
+        function applyTranslations(language) {
+          currentLanguage = language && translations[language] ? language : DEFAULT_LANGUAGE;
+          const locale = getLocale(currentLanguage);
+          const fallback = translations[DEFAULT_LANGUAGE];
+          document.documentElement.lang = currentLanguage;
+
+          document.querySelectorAll('[data-i18n]').forEach((element) => {
+            const key = element.getAttribute('data-i18n');
+            if (!key) {
+              return;
+            }
+            const attr = element.getAttribute('data-i18n-attr');
+            const template = resolveTranslation(locale, key) ?? resolveTranslation(fallback, key);
+            if (typeof template !== 'string') {
+              return;
+            }
+            if (attr) {
+              attr.split(',').forEach((attributeName) => {
+                const name = attributeName.trim();
+                if (name) {
+                  element.setAttribute(name, formatTemplate(template, {}));
+                }
+              });
+            } else {
+              element.textContent = formatTemplate(template, {});
+            }
+          });
+
+          const titleTranslation = resolveTranslation(locale, 'document.title') ??
+            resolveTranslation(fallback, 'document.title');
+          if (typeof titleTranslation === 'string') {
+            document.title = titleTranslation;
+          }
+        }
+
         const WHISPER_MODEL_CHOICES = new Set([
           'tiny',
           'base',
@@ -1110,7 +2353,6 @@
         const SLIDE_DPI_CHOICES = new Set(['150', '200', '300', '400', '600']);
         const DEFAULT_SLIDE_DPI = '200';
         const LANGUAGE_CHOICES = new Set(['en', 'zh', 'es', 'fr']);
-        const DEFAULT_LANGUAGE = 'en';
 
         function normalizeWhisperModel(value) {
           const candidate =
@@ -1152,7 +2394,7 @@
           gpuWhisper: {
             supported: false,
             checked: false,
-            message: 'GPU acceleration not tested.',
+            message: t('settings.whisper.gpu.status'),
             output: '',
             lastChecked: null,
             unavailable: false,
@@ -1220,6 +2462,8 @@
           },
         };
 
+        applyTranslations(DEFAULT_LANGUAGE);
+
         const STATUS_DEFAULT_TIMEOUT = 5000;
 
         function resetStatusProgress() {
@@ -1255,32 +2499,32 @@
         const assetDefinitions = [
           {
             key: 'audio_path',
-            label: 'Audio',
+            labelKey: 'assets.labels.audio',
             accept: 'audio/*,video/*',
             type: 'audio',
           },
           {
             key: 'slide_path',
-            label: 'Slides (PDF)',
+            labelKey: 'assets.labels.slides',
             accept: 'application/pdf',
             type: 'slides',
           },
           {
             key: 'transcript_path',
-            label: 'Transcript',
+            labelKey: 'assets.labels.transcript',
             accept: '.txt,.md,text/plain',
             type: 'transcript',
           },
           {
             key: 'notes_path',
-            label: 'Notes',
+            labelKey: 'assets.labels.notes',
             accept:
               '.txt,.md,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
             type: 'notes',
           },
           {
             key: 'slide_image_dir',
-            label: 'Slide images (ZIP)',
+            labelKey: 'assets.labels.slideImages',
             accept: null,
             type: 'slide_images',
             reveal: 'folder',
@@ -1365,8 +2609,8 @@
             typeof status.message === 'string' && status.message.trim().length > 0
               ? status.message.trim()
               : checked
-              ? 'GPU acceleration is unavailable on this platform.'
-              : 'GPU acceleration not tested.';
+              ? t('status.gpuUnavailable')
+              : t('settings.whisper.gpu.status');
 
           state.gpuWhisper = {
             supported,
@@ -1390,7 +2634,9 @@
 
           if (dom.settingsWhisperGpuTest) {
             dom.settingsWhisperGpuTest.disabled = unavailable;
-            dom.settingsWhisperGpuTest.textContent = supported ? 'Re-run test' : 'Test support';
+            dom.settingsWhisperGpuTest.textContent = supported
+              ? t('settings.whisper.gpu.retry')
+              : t('settings.whisper.gpu.test');
           }
 
           if (dom.gpuModelOptions) {
@@ -1468,13 +2714,15 @@
 
           applyTheme(themeValue);
           updateGpuWhisperUI({ ...state.gpuWhisper });
+          applyTranslations(languageValue);
+          updateEditModeUI();
         }
 
         function showDialog({
           title = '',
           message = '',
-          confirmText = 'Confirm',
-          cancelText = 'Cancel',
+          confirmText = t('dialog.confirm'),
+          cancelText = t('dialog.cancel'),
           variant = 'primary',
           input = false,
           placeholder = '',
@@ -1766,7 +3014,7 @@
           const shouldUpdate =
             message !== state.lastProgressMessage || ratio !== state.lastProgressRatio;
           if (shouldUpdate) {
-            const displayMessage = message || state.lastProgressMessage || 'Processing…';
+            const displayMessage = message || state.lastProgressMessage || t('status.processing');
             showStatus(displayMessage, variant, {
               progressRatio: ratio,
               persist: !finished,
@@ -1796,7 +3044,7 @@
         }
 
         function clearDetailPanel() {
-          dom.summary.textContent = 'Select a lecture from the curriculum.';
+          dom.summary.textContent = t('details.summaryPlaceholder');
           dom.summary.classList.add('placeholder');
           if (dom.editForm) {
             dom.editForm.reset();
@@ -1817,7 +3065,9 @@
         function updateEditModeUI() {
           const isActive = state.editMode;
           if (dom.editToggle) {
-            dom.editToggle.textContent = isActive ? 'Exit edit mode' : 'Enable edit mode';
+            dom.editToggle.textContent = isActive
+              ? t('topBar.exitEdit')
+              : t('topBar.enableEdit');
             dom.editToggle.setAttribute('aria-pressed', isActive ? 'true' : 'false');
             dom.editToggle.classList.toggle('active', isActive);
           }
@@ -1851,14 +3101,14 @@
         function updateStats() {
           const stats = state.stats;
           const entries = [
-            ['Classes', stats.class_count],
-            ['Modules', stats.module_count],
-            ['Lectures', stats.lecture_count],
-            ['Transcripts', stats.transcript_count],
-            ['Slide decks', stats.slide_count],
-            ['Audio files', stats.audio_count],
-            ['Notes', stats.notes_count],
-            ['Slide archives', stats.slide_image_count],
+            [t('stats.classes'), stats.class_count],
+            [t('stats.modules'), stats.module_count],
+            [t('stats.lectures'), stats.lecture_count],
+            [t('stats.transcripts'), stats.transcript_count],
+            [t('stats.slideDecks'), stats.slide_count],
+            [t('stats.audio'), stats.audio_count],
+            [t('stats.notes'), stats.notes_count],
+            [t('stats.slideArchives'), stats.slide_image_count],
           ];
           dom.stats.innerHTML = '';
           entries.forEach(([label, value]) => {
@@ -1891,8 +3141,8 @@
           const createPlaceholder = document.createElement('option');
           createPlaceholder.value = '';
           createPlaceholder.textContent = modules.length
-            ? 'Select module…'
-            : 'No modules available';
+            ? t('dropdowns.selectModule')
+            : t('dropdowns.noModules');
           createPlaceholder.disabled = modules.length === 0;
           createPlaceholder.selected = true;
           dom.createModule.appendChild(createPlaceholder);
@@ -1977,7 +3227,7 @@
             const addClassButton = document.createElement('button');
             addClassButton.type = 'button';
             addClassButton.className = 'secondary pill';
-            addClassButton.textContent = 'Add class';
+            addClassButton.textContent = t('curriculum.addClass');
             addClassButton.addEventListener('click', handleAddClass);
             toolbar.appendChild(addClassButton);
             dom.curriculum.appendChild(toolbar);
@@ -1987,8 +3237,8 @@
             const message = document.createElement('div');
             message.className = 'placeholder';
             message.textContent = state.classes.length
-              ? 'No lectures match the current filter.'
-              : 'No classes available yet.';
+              ? t('placeholders.noLecturesFilter')
+              : t('placeholders.noClasses');
             dom.curriculum.appendChild(message);
             dom.curriculum.classList.add('placeholder');
             return;
@@ -2010,7 +3260,7 @@
               const addModuleButton = document.createElement('button');
               addModuleButton.type = 'button';
               addModuleButton.className = 'text-button';
-              addModuleButton.textContent = 'Add module';
+              addModuleButton.textContent = t('curriculum.addModule');
               addModuleButton.addEventListener('click', (event) => {
                 event.stopPropagation();
                 handleAddModule(entry.class);
@@ -2020,7 +3270,7 @@
               const deleteClassButton = document.createElement('button');
               deleteClassButton.type = 'button';
               deleteClassButton.className = 'text-button danger';
-              deleteClassButton.textContent = 'Delete';
+              deleteClassButton.textContent = t('common.actions.delete');
               deleteClassButton.addEventListener('click', (event) => {
                 event.stopPropagation();
                 handleDeleteClass(entry);
@@ -2048,7 +3298,7 @@
                 const addLectureButton = document.createElement('button');
                 addLectureButton.type = 'button';
                 addLectureButton.className = 'text-button';
-                addLectureButton.textContent = 'Add lecture';
+                addLectureButton.textContent = t('curriculum.addLecture');
                 addLectureButton.addEventListener('click', (event) => {
                   event.stopPropagation();
                   handleAddLecture(moduleEntry.module, entry.class);
@@ -2058,7 +3308,7 @@
                 const deleteModuleButton = document.createElement('button');
                 deleteModuleButton.type = 'button';
                 deleteModuleButton.className = 'text-button danger';
-                deleteModuleButton.textContent = 'Delete';
+                deleteModuleButton.textContent = t('common.actions.delete');
                 deleteModuleButton.addEventListener('click', (event) => {
                   event.stopPropagation();
                   handleDeleteModule(moduleEntry, entry.class);
@@ -2091,7 +3341,7 @@
                   const deleteLectureButton = document.createElement('button');
                   deleteLectureButton.type = 'button';
                   deleteLectureButton.className = 'text-button danger';
-                  deleteLectureButton.textContent = 'Delete';
+                  deleteLectureButton.textContent = t('common.actions.delete');
                   deleteLectureButton.addEventListener('click', (event) => {
                     event.stopPropagation();
                     handleDeleteLecture(lecture, moduleEntry.module, entry.class);
@@ -2108,7 +3358,7 @@
               if (moduleEntry.lectures.length === 0) {
                 const empty = document.createElement('div');
                 empty.className = 'placeholder';
-                empty.textContent = 'No lectures';
+                empty.textContent = t('placeholders.noLectures');
                 lectureList.appendChild(empty);
               }
 
@@ -2124,7 +3374,7 @@
           highlightSelected();
         }
 
-        function requireEditMode(message = 'Enable edit mode to manage the curriculum.') {
+        function requireEditMode(message = t('status.requireEdit')) {
           if (!state.editMode) {
             showStatus(message, 'info');
             return false;
@@ -2137,10 +3387,10 @@
             return;
           }
           const name = await promptDialog({
-            title: 'Create class',
-            message: 'Enter a class name.',
-            confirmText: 'Create',
-            placeholder: 'Introduction to Astronomy',
+            title: t('dialogs.createClass.title'),
+            message: t('dialogs.createClass.message'),
+            confirmText: t('common.actions.create'),
+            placeholder: t('dialogs.createClass.placeholder'),
             required: true,
           });
           if (!name || !name.trim()) {
@@ -2148,11 +3398,11 @@
           }
           const description =
             (await promptDialog({
-              title: 'Class description',
-              message: 'Description (optional)',
-              confirmText: 'Save',
-              cancelText: 'Skip',
-              placeholder: 'Add a short summary…',
+              title: t('dialogs.classDescription.title'),
+              message: t('dialogs.descriptionOptional'),
+              confirmText: t('common.actions.save'),
+              cancelText: t('common.actions.skip'),
+              placeholder: t('dialogs.descriptionPlaceholder'),
             })) ?? '';
           try {
             await request('/api/classes', {
@@ -2160,7 +3410,7 @@
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ name: name.trim(), description: description.trim() }),
             });
-            showStatus('Class created.', 'success');
+            showStatus(t('status.classCreated'), 'success');
             await refreshData();
           } catch (error) {
             showStatus(error.message, 'error');
@@ -2172,10 +3422,10 @@
             return;
           }
           const name = await promptDialog({
-            title: 'Create module',
-            message: `Module name for ${classRecord.name}`,
-            confirmText: 'Create',
-            placeholder: 'Foundations',
+            title: t('dialogs.createModule.title'),
+            message: t('dialogs.createModule.message', { className: classRecord.name }),
+            confirmText: t('common.actions.create'),
+            placeholder: t('dialogs.createModule.placeholder'),
             required: true,
           });
           if (!name || !name.trim()) {
@@ -2183,11 +3433,11 @@
           }
           const description =
             (await promptDialog({
-              title: 'Module description',
-              message: 'Description (optional)',
-              confirmText: 'Save',
-              cancelText: 'Skip',
-              placeholder: 'Add a short summary…',
+              title: t('dialogs.moduleDescription.title'),
+              message: t('dialogs.descriptionOptional'),
+              confirmText: t('common.actions.save'),
+              cancelText: t('common.actions.skip'),
+              placeholder: t('dialogs.descriptionPlaceholder'),
             })) ?? '';
           try {
             await request('/api/modules', {
@@ -2199,7 +3449,7 @@
                 description: description.trim(),
               }),
             });
-            showStatus('Module created.', 'success');
+            showStatus(t('status.moduleCreated'), 'success');
             await refreshData();
           } catch (error) {
             showStatus(error.message, 'error');
@@ -2215,15 +3465,22 @@
             (total, moduleEntry) => total + (moduleEntry.lectures?.length || 0),
             0,
           );
-          let message = `Delete class "${classEntry.class.name}"?`;
+          const moduleWord = pluralize(currentLanguage, 'counts.module', moduleCount);
+          const lectureWord = pluralize(currentLanguage, 'counts.lecture', lectureCount);
+          let message = t('dialogs.deleteClass.message', { className: classEntry.class.name });
           if (moduleCount || lectureCount) {
-            message += `\n\nThis will remove ${moduleCount} module${moduleCount === 1 ? '' : 's'} and ${lectureCount} lecture${lectureCount === 1 ? '' : 's'}.`;
+            message += `\n\n${t('dialogs.deleteClass.summary', {
+              moduleCount,
+              moduleWord,
+              lectureCount,
+              lectureWord,
+            })}`;
           }
           const confirmed = await confirmDialog({
-            title: 'Delete class',
+            title: t('dialogs.deleteClass.title'),
             message,
-            confirmText: 'Delete',
-            cancelText: 'Keep class',
+            confirmText: t('common.actions.delete'),
+            cancelText: t('dialogs.deleteClass.cancel'),
             variant: 'danger',
           });
           if (!confirmed) {
@@ -2242,7 +3499,7 @@
                 clearDetailPanel();
               }
             }
-            showStatus('Class removed.', 'success');
+            showStatus(t('status.classRemoved'), 'success');
             await refreshData();
           } catch (error) {
             showStatus(error.message, 'error');
@@ -2254,19 +3511,25 @@
             return;
           }
           const lectureCount = moduleEntry.lectures.length;
-          let message = `Delete module "${moduleEntry.module.name}"`;
-          if (classRecord) {
-            message += ` from "${classRecord.name}"`;
-          }
-          message += '?';
+          const classContext = classRecord
+            ? t('dialogs.deleteModule.classContext', { className: classRecord.name })
+            : '';
+          let message = t('dialogs.deleteModule.message', {
+            moduleName: moduleEntry.module.name,
+            classContext,
+          });
           if (lectureCount) {
-            message += `\n\nThis will remove ${lectureCount} lecture${lectureCount === 1 ? '' : 's'}.`;
+            const lectureWord = pluralize(currentLanguage, 'counts.lecture', lectureCount);
+            message += `\n\n${t('dialogs.deleteModule.summary', {
+              lectureCount,
+              lectureWord,
+            })}`;
           }
           const confirmed = await confirmDialog({
-            title: 'Delete module',
+            title: t('dialogs.deleteModule.title'),
             message,
-            confirmText: 'Delete',
-            cancelText: 'Keep module',
+            confirmText: t('common.actions.delete'),
+            cancelText: t('dialogs.deleteModule.cancel'),
             variant: 'danger',
           });
           if (!confirmed) {
@@ -2283,7 +3546,7 @@
                 clearDetailPanel();
               }
             }
-            showStatus('Module removed.', 'success');
+            showStatus(t('status.moduleRemoved'), 'success');
             await refreshData();
           } catch (error) {
             showStatus(error.message, 'error');
@@ -2294,14 +3557,15 @@
           if (!requireEditMode()) {
             return;
           }
-          const namePrompt = classRecord
-            ? `Lecture title for ${classRecord.name} • ${moduleRecord.name}`
-            : `Lecture title for ${moduleRecord.name}`;
+          const contextParts = classRecord
+            ? [classRecord.name, moduleRecord.name]
+            : [moduleRecord.name];
+          const namePrompt = contextParts.join(' • ');
           const name = await promptDialog({
-            title: 'Create lecture',
-            message: namePrompt,
-            confirmText: 'Create',
-            placeholder: 'Lecture title',
+            title: t('dialogs.createLecture.title'),
+            message: t('dialogs.createLecture.message', { context: namePrompt }),
+            confirmText: t('common.actions.create'),
+            placeholder: t('dialogs.createLecture.placeholder'),
             required: true,
           });
           if (!name || !name.trim()) {
@@ -2309,11 +3573,11 @@
           }
           const description =
             (await promptDialog({
-              title: 'Lecture description',
-              message: 'Description (optional)',
-              confirmText: 'Save',
-              cancelText: 'Skip',
-              placeholder: 'Add a short outline…',
+              title: t('dialogs.lectureDescription.title'),
+              message: t('dialogs.descriptionOptional'),
+              confirmText: t('common.actions.save'),
+              cancelText: t('common.actions.skip'),
+              placeholder: t('dialogs.lectureDescription.placeholder'),
             })) ?? '';
           try {
             const payload = await request('/api/lectures', {
@@ -2325,7 +3589,7 @@
                 description: description.trim(),
               }),
             });
-            showStatus('Lecture created.', 'success');
+            showStatus(t('status.lectureCreated'), 'success');
             await refreshData();
             const newLectureId = payload?.lecture?.id;
             if (newLectureId) {
@@ -2340,18 +3604,19 @@
           if (!requireEditMode()) {
             return;
           }
-          let context = lecture.name;
+          const contextParts = [lecture.name];
           if (moduleRecord) {
-            context += ` in ${moduleRecord.name}`;
+            contextParts.push(moduleRecord.name);
           }
           if (classRecord) {
-            context += ` (${classRecord.name})`;
+            contextParts.push(classRecord.name);
           }
+          const context = contextParts.join(' • ');
           const confirmed = await confirmDialog({
-            title: 'Delete lecture',
-            message: `Delete lecture "${context}"?`,
-            confirmText: 'Delete',
-            cancelText: 'Keep lecture',
+            title: t('dialogs.deleteLecture.title'),
+            message: t('dialogs.deleteLecture.message', { context }),
+            confirmText: t('common.actions.delete'),
+            cancelText: t('dialogs.deleteLecture.cancel'),
             variant: 'danger',
           });
           if (!confirmed) {
@@ -2363,7 +3628,7 @@
               state.selectedLectureId = null;
               clearDetailPanel();
             }
-            showStatus('Lecture removed.', 'success');
+            showStatus(t('status.lectureRemoved'), 'success');
             await refreshData();
           } catch (error) {
             showStatus(error.message, 'error');
@@ -2396,22 +3661,25 @@
             item.className = 'asset-item';
             const header = document.createElement('div');
             header.className = 'asset-header';
-            header.textContent = definition.label;
+            header.textContent = t(definition.labelKey);
             item.appendChild(header);
 
             const status = document.createElement('div');
             status.className = 'asset-status';
-            let statusText = 'Not linked';
-            if (definition.type === 'slides') {
-              statusText = value
-                ? `Linked: ${value.split('/').pop()} (auto processed)`
-                : 'Upload a PDF to generate slide images automatically.';
+            let statusText = t('assets.status.notLinked');
+            if (value) {
+              const fileName = value.split('/').pop();
+              if (definition.type === 'slides') {
+                statusText = t('assets.status.linkedSlides', { name: fileName });
+              } else if (definition.type === 'slide_images') {
+                statusText = t('assets.status.archiveCreated', { name: fileName });
+              } else {
+                statusText = t('assets.status.linked', { name: fileName });
+              }
+            } else if (definition.type === 'slides') {
+              statusText = t('assets.status.slidesHint');
             } else if (definition.type === 'slide_images') {
-              statusText = value
-                ? `Archive created: ${value.split('/').pop()}`
-                : 'No slide images generated yet.';
-            } else if (value) {
-              statusText = `Linked: ${value.split('/').pop()}`;
+              statusText = t('assets.status.noSlideImages');
             }
             status.textContent = statusText;
             item.appendChild(status);
@@ -2423,7 +3691,7 @@
               const wrapper = document.createElement('label');
               wrapper.className = 'file-input';
               const span = document.createElement('span');
-              span.textContent = 'Upload';
+              span.textContent = t('assets.actions.upload');
               const input = document.createElement('input');
               input.type = 'file';
               input.accept = definition.accept;
@@ -2441,7 +3709,7 @@
             }
 
             const link = document.createElement('a');
-            link.textContent = 'Open';
+            link.textContent = t('assets.actions.open');
             if (value) {
               link.href = buildStorageURL(value);
               link.target = '_blank';
@@ -2457,7 +3725,9 @@
               revealButton.type = 'button';
               revealButton.className = 'secondary';
               revealButton.textContent =
-                definition.reveal === 'folder' ? 'Reveal folder' : 'Reveal location';
+                definition.reveal === 'folder'
+                  ? t('assets.actions.revealFolder')
+                  : t('assets.actions.revealLocation');
               revealButton.disabled = !value;
               revealButton.addEventListener('click', () => {
                 if (value) {
@@ -2490,7 +3760,7 @@
           dom.summary.appendChild(context);
 
           const description = document.createElement('p');
-          description.textContent = lecture.description || 'No description recorded yet.';
+          description.textContent = lecture.description || t('details.noDescription');
           dom.summary.appendChild(description);
         }
 
@@ -2562,8 +3832,8 @@
             });
             const successMessage =
               kind === 'slides'
-                ? 'Slides uploaded and processed into an image archive.'
-                : 'Asset uploaded successfully.';
+                ? t('status.slidesProcessed')
+                : t('status.assetUploaded');
             showStatus(successMessage, 'success');
             await refreshData();
             await selectLecture(state.selectedLectureId);
@@ -2600,8 +3870,8 @@
             });
             const message =
               mode === 'folder'
-                ? 'Opening folder in your file manager.'
-                : 'Opening asset location in your file manager.';
+                ? t('status.openingFolder')
+                : t('status.openingLocation');
             showStatus(message, 'info');
           } catch (error) {
             showStatus(error.message, 'error');
@@ -2642,7 +3912,7 @@
         dom.editForm.addEventListener('submit', async (event) => {
           event.preventDefault();
           if (!state.editMode) {
-            showStatus('Enable edit mode to update lecture details.', 'info');
+            showStatus(t('status.requireEditLecture'), 'info');
             return;
           }
           if (!state.selectedLectureId) {
@@ -2657,7 +3927,7 @@
             payload.module_id = Number(moduleValue);
           }
           if (!payload.name) {
-            showStatus('Lecture title is required.', 'error');
+            showStatus(t('status.lectureTitleRequired'), 'error');
             return;
           }
           try {
@@ -2666,7 +3936,7 @@
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(payload),
             });
-            showStatus('Lecture updated.', 'success');
+            showStatus(t('status.lectureUpdated'), 'success');
             await refreshData();
             await selectLecture(state.selectedLectureId);
           } catch (error) {
@@ -2678,21 +3948,22 @@
           if (!state.selectedLectureId || !state.editMode) {
             return;
           }
+          const lectureName = dom.editName.value.trim() || dom.editName.placeholder || '';
           const confirmed = await confirmDialog({
-            title: 'Delete lecture',
-            message: 'Delete this lecture and all linked assets?',
-            confirmText: 'Delete',
-            cancelText: 'Keep lecture',
+            title: t('dialogs.deleteLecture.title'),
+            message: t('dialogs.deleteLecture.message', { context: lectureName }),
+            confirmText: t('common.actions.delete'),
+            cancelText: t('dialogs.deleteLecture.cancel'),
             variant: 'danger',
           });
           if (!confirmed) {
             return;
           }
           const secondCheck = await confirmDialog({
-            title: 'Confirm deletion',
-            message: 'This action cannot be undone. Do you want to permanently remove it?',
-            confirmText: 'Yes, delete it',
-            cancelText: 'Cancel',
+            title: t('dialogs.confirmDeletion.title'),
+            message: t('dialogs.confirmDeletion.message'),
+            confirmText: t('dialogs.confirmDeletion.confirm'),
+            cancelText: t('dialog.cancel'),
             variant: 'danger',
           });
           if (!secondCheck) {
@@ -2700,7 +3971,7 @@
           }
           try {
             await request(`/api/lectures/${state.selectedLectureId}`, { method: 'DELETE' });
-            showStatus('Lecture removed.', 'success');
+            showStatus(t('status.lectureRemoved'), 'success');
             state.selectedLectureId = null;
             clearDetailPanel();
             await refreshData();
@@ -2715,7 +3986,7 @@
           const name = dom.createName.value.trim();
           const description = dom.createDescription.value.trim();
           if (!moduleId || !name) {
-            showStatus('Select a module and enter a title.', 'error');
+            showStatus(t('status.createLectureRequirements'), 'error');
             return;
           }
           try {
@@ -2725,7 +3996,7 @@
               body: JSON.stringify({ module_id: moduleId, name, description }),
             });
             dom.createForm.reset();
-            showStatus('Lecture created.', 'success');
+            showStatus(t('status.lectureCreated'), 'success');
             await refreshData();
             const newLectureId = payload?.lecture?.id;
             if (newLectureId) {
@@ -2743,7 +4014,7 @@
           const lectureId = state.selectedLectureId;
           const selectedModel = dom.transcribeModel.value;
           dom.transcribeButton.disabled = true;
-          showStatus('====> Preparing transcription…', 'info', { persist: true });
+          showStatus(t('status.transcriptionPreparing'), 'info', { persist: true });
           startTranscriptionProgress(lectureId);
           try {
             const payload = await request(`/api/lectures/${lectureId}/transcribe`, {
@@ -2757,12 +4028,12 @@
               const fallbackReason =
                 typeof payload?.fallback_reason === 'string'
                   ? payload.fallback_reason
-                  : 'GPU acceleration is not available on this platform.';
+                  : t('status.gpuNotAvailable');
               await showDialog({
-                title: 'GPU Whisper',
-                message: `${fallbackReason} Falling back to ${fallbackModel} model.`,
-                confirmText: 'OK',
-                cancelText: 'Close',
+                title: t('dialogs.gpuWhisper.title'),
+                message: `${fallbackReason} ${t('status.gpuFallback', { model: fallbackModel })}`,
+                confirmText: t('common.actions.ok'),
+                cancelText: t('common.actions.close'),
                 variant: 'danger',
               });
               if (dom.transcribeModel) {
@@ -2779,7 +4050,7 @@
             } else if (selectedModel === GPU_MODEL) {
               await loadGpuWhisperStatus();
             }
-            showStatus('Transcription completed.', 'success', { progressRatio: 1 });
+            showStatus(t('status.transcriptionCompleted'), 'success', { progressRatio: 1 });
             await refreshData();
             await selectLecture(lectureId);
           } catch (error) {
@@ -2805,7 +4076,7 @@
               return;
             }
             dom.settingsWhisperGpuTest.disabled = true;
-            showStatus('====> Checking GPU Whisper support…', 'info');
+            showStatus(t('status.gpuChecking'), 'info');
             try {
               const payload = await request('/api/settings/whisper-gpu/test', {
                 method: 'POST',
@@ -2813,7 +4084,7 @@
               const status = payload?.status || {};
               updateGpuWhisperUI(status);
               if (status.supported) {
-                showStatus('GPU Whisper support confirmed.', 'success');
+                showStatus(t('status.gpuConfirmed'), 'success');
                 if (state.settings?.whisper_model_requested === GPU_MODEL) {
                   if (dom.settingsWhisperModel) {
                     dom.settingsWhisperModel.value = GPU_MODEL;
@@ -2827,12 +4098,12 @@
                 const failureMessage =
                   typeof status.message === 'string' && status.message
                     ? status.message
-                    : 'GPU Whisper is not supported on this platform.';
+                    : t('status.gpuUnsupported');
                 await showDialog({
-                  title: 'GPU Whisper',
+                  title: t('dialogs.gpuWhisper.title'),
                   message: failureMessage,
-                  confirmText: 'OK',
-                  cancelText: 'Close',
+                  confirmText: t('common.actions.ok'),
+                  cancelText: t('common.actions.close'),
                   variant: 'danger',
                 });
                 showStatus(failureMessage, 'error');
@@ -2849,10 +4120,10 @@
         if (dom.settingsExitApp) {
           dom.settingsExitApp.addEventListener('click', async () => {
             const { confirmed } = await showDialog({
-              title: 'Exit application',
-              message: 'Stop the Lecture Tools server and close this tab?',
-              confirmText: 'Exit',
-              cancelText: 'Cancel',
+              title: t('dialogs.exitApp.title'),
+              message: t('dialogs.exitApp.message'),
+              confirmText: t('common.actions.exit'),
+              cancelText: t('dialog.cancel'),
               variant: 'danger',
             });
             if (!confirmed) {
@@ -2860,7 +4131,7 @@
             }
 
             dom.settingsExitApp.disabled = true;
-            showStatus('Shutting down application…', 'info');
+            showStatus(t('status.shuttingDown'), 'info');
 
             try {
               await request('/api/system/shutdown', { method: 'POST' });
@@ -2881,6 +4152,14 @@
               const message = error instanceof Error ? error.message : String(error);
               showStatus(message, 'error');
             }
+          });
+        }
+
+        if (dom.settingsLanguage) {
+          dom.settingsLanguage.addEventListener('change', (event) => {
+            const value = normalizeLanguage(event.target.value);
+            applyTranslations(value);
+            updateEditModeUI();
           });
         }
 
@@ -2922,7 +4201,7 @@
               if (modelValue === GPU_MODEL) {
                 await loadGpuWhisperStatus();
               }
-              showStatus('Settings saved.', 'success');
+              showStatus(t('status.settingsSaved'), 'success');
             } catch (error) {
               showStatus(error.message, 'error');
             }
