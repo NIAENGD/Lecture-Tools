@@ -1,6 +1,6 @@
 <h1 align="center">Lecture Tools</h1>
 
-<p align="center"><strong>The luxurious companion for lecture capture, transcription, and course management.</strong></p>
+<p align="center"><strong>A comprehensive platform for lecture capture, transcription, and course management.</strong></p>
 
 <p align="center">
   <img alt="Python" src="https://img.shields.io/badge/Made%20with-Python%203.11-3776AB?style=for-the-badge&logo=python&logoColor=white" />
@@ -13,29 +13,30 @@
 
 ## Table of Contents
 
-1. [✨ Signature Highlights](#-signature-highlights)
-2. [🏁 Lightning-Fast Onboarding](#-lightning-fast-onboarding)
-3. [🧭 Project Tour](#-project-tour)
-4. [🎛️ Interface Personalisation](#-interface-personalisation)
+1. [✨ Key Features](#-key-features)
+2. [🏁 Quick Start](#-quick-start)
+3. [🧭 Project Structure](#-project-structure)
+4. [🎛️ Interface Customization](#-interface-customization)
 5. [🛠️ Core Workflows](#-core-workflows)
-6. [🧪 Quality Suite](#-quality-suite)
+6. [🧪 Testing](#-testing)
 7. [🤝 Contributing](#-contributing)
 
 ---
 
-## ✨ Signature Highlights
+## ✨ Key Features
 
-- **Opulent overview dashboard** – Navigate from class to module to lecture with silky-smooth transitions, shimmering stats, and contextual action panels that keep every asset one click away.
-- **Curated media pipeline** – Lecture audio, transcripts, and slides glide through a managed storage layout with automatic housekeeping for raw and processed artefacts.
-- **Transcription on your terms** – Run CPU-friendly [faster-whisper](https://github.com/SYSTRAN/faster-whisper) models locally or elevate to GPU-accelerated binaries when available.
-- **All-inclusive interface languages** – Effortlessly switch between **English**, **中文**, **Español**, and **Français** from the Settings screen for a globally polished experience.
-- **Cross-platform CLI** – A Typer-powered assistant for ingestion, metadata review, and automation-ready operations.
+- **Seamless setup** – No build steps or cross-platform workarounds required. Start the project with a single command on any major OS.
+- **Dashboard navigation** – Move from classes to modules to lectures with a unified interface that keeps relevant actions and statistics close at hand.
+- **Managed media pipeline** – Lecture audio, transcripts, and slides are automatically organized and maintained in a structured storage layout.
+- **Flexible transcription** – Run CPU-optimized [faster-whisper](https://github.com/SYSTRAN/faster-whisper) locally or enable GPU acceleration when available.
+- **Multi-language support** – Switch between **English**, **中文**, **Español**, and **Français** directly from the settings menu.
+- **Cross-platform CLI** – A Typer-powered assistant for ingestion, metadata review, and automation workflows.
 
 ---
 
 ## 🏁 Lightning-Fast Onboarding
 
-> 💡 **Prerequisite**: Python 3.11 or newer is recommended for the smoothest ride.
+> 💡 **Prerequisite**: Nothing! You just run my script and it's gonna set itself up.
 
 1. **Clone & (optionally) isolate dependencies**
    ```bash
@@ -43,7 +44,7 @@
    cd lecture-tools
    python -m venv .venv && source .venv/bin/activate  # PowerShell: .\.venv\\Scripts\\Activate.ps1
    ```
-2. **Bootstrap with the luxury launcher**
+2. **Bootstrap with my launcher**
    - Windows: `start.bat`
    - macOS/Linux: `./start.sh`
 
