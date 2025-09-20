@@ -5,7 +5,7 @@ from __future__ import annotations
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Optional, Protocol
+from typing import Callable, Iterable, Optional, Protocol
 
 from ..config import AppConfig
 from .naming import build_asset_stem, build_timestamped_name, slugify
@@ -27,7 +27,13 @@ class TranscriptResult:
 class TranscriptionEngine(Protocol):
     """Protocol describing a transcription backend."""
 
-    def transcribe(self, audio_path: Path, output_dir: Path) -> TranscriptResult:
+    def transcribe(
+        self,
+        audio_path: Path,
+        output_dir: Path,
+        *,
+        progress_callback: Optional[Callable[[float, Optional[float], str], None]] = None,
+    ) -> TranscriptResult:
         """Generate a transcript for *audio_path* into *output_dir*."""
 
 

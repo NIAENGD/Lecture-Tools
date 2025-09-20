@@ -88,12 +88,17 @@ GPU-enabled Whisper transcription. To enable it:
    [ggerganov/whisper.cpp](https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.en.bin)
    and place the file inside `assets/models/`.
 3. When running `python run.py ingest`, set `--whisper-model GPU`.
+4. In the web interface, open **Settings → Whisper transcription** and click
+   **Test support**. If the CLI prints diagnostic output the GPU option is
+   unlocked in both the default model selector and the lecture transcription
+   dropdown.
 
-During ingestion the application probes whether `cli/main.exe` can run on the
-current platform. If it produces output, the GPU path is used and real-time
-progress is displayed using a `====>` bar derived from the CLI timestamps. When
-the binary is unavailable or unsupported, the workflow automatically falls back
-to the standard CPU-based `faster-whisper` pipeline.
+During ingestion or web-driven transcription the application probes whether
+`cli/main.exe` can run on the current platform. If it produces output, the GPU
+path is used and real-time progress is displayed using a `====>` bar derived
+from the CLI timestamps (the web UI mirrors this progress in the status banner).
+When the binary is unavailable or unsupported, the workflow automatically falls
+back to the standard CPU-based `faster-whisper` pipeline.
 
 ## Running Tests
 
