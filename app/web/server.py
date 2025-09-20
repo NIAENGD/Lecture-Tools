@@ -589,10 +589,17 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
         )
         lecture_paths.ensure()
 
+        settings = _load_ui_settings()
+        default_settings = UISettings()
+        compute_type = settings.whisper_compute_type or default_settings.whisper_compute_type
+        beam_size = settings.whisper_beam_size or default_settings.whisper_beam_size
+
         try:
             engine = FasterWhisperTranscription(
                 payload.model,
                 download_root=config.assets_root,
+                compute_type=compute_type,
+                beam_size=beam_size,
             )
             result = engine.transcribe(audio_file, lecture_paths.transcript_dir)
         except Exception as error:  # noqa: BLE001 - backend may raise arbitrary errors
