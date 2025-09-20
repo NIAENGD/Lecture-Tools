@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import logging
+import threading
+import time
+import webbrowser
 from enum import Enum
 from pathlib import Path
 from typing import Optional
@@ -68,12 +71,31 @@ def serve(
 ) -> None:
     """Run the FastAPI-powered web experience."""
 
-    config = initialize_app()
-    _prepare_logging(config.storage_root)
+    app_config = initialize_app()
+    _prepare_logging(app_config.storage_root)
 
-    repository = LectureRepository(config)
-    app = create_app(repository, config=config)
-    uvicorn.run(app, host=host, port=port, log_config=None)
+    repository = LectureRepository(app_config)
+    app = create_app(repository, config=app_config)
+
+    server_config = uvicorn.Config(app, host=host, port=port, log_config=None)
+    server = uvicorn.Server(server_config)
+    app.state.server = server
+
+    browser_host = host
+    if not browser_host or browser_host in {"0.0.0.0", "::"}:
+        browser_host = "127.0.0.1"
+    url = f"http://{browser_host}:{port}/"
+
+    def _open_browser_later() -> None:
+        time.sleep(1.0)
+        try:
+            webbrowser.open(url, new=2, autoraise=True)
+        except Exception:
+            pass
+
+    threading.Thread(target=_open_browser_later, daemon=True).start()
+
+    server.run()
 
 
 @cli.command()

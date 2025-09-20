@@ -31,6 +31,7 @@
         --status-error-text: #b91c1c;
         --status-success-bg: #dcfce7;
         --status-success-text: #166534;
+        --status-progress-track: rgba(15, 23, 42, 0.16);
       }
 
       body[data-theme='light'] {
@@ -57,6 +58,7 @@
         --status-error-text: #fecaca;
         --status-success-bg: rgba(74, 222, 128, 0.22);
         --status-success-text: #bbf7d0;
+        --status-progress-track: rgba(255, 255, 255, 0.25);
       }
 
       body[data-theme='system'] {
@@ -84,6 +86,7 @@
           --status-error-text: #fecaca;
           --status-success-bg: rgba(74, 222, 128, 0.22);
           --status-success-text: #bbf7d0;
+          --status-progress-track: rgba(255, 255, 255, 0.25);
         }
       }
 
@@ -482,6 +485,48 @@
         display: none;
       }
 
+      .status-message {
+        margin: 0;
+        word-break: break-word;
+      }
+
+      .status-progress {
+        margin-top: 8px;
+        display: none;
+      }
+
+      .status-progress[hidden] {
+        display: none;
+      }
+
+      .status-progress:not([hidden]) {
+        display: block;
+      }
+
+      .status-progress-track {
+        width: 100%;
+        height: 6px;
+        border-radius: 999px;
+        background: var(--status-progress-track);
+        overflow: hidden;
+      }
+
+      .status-progress-fill {
+        width: 0%;
+        height: 100%;
+        background: currentColor;
+        opacity: 0.85;
+        transition: width 0.25s ease-out;
+      }
+
+      .status-progress-text {
+        display: block;
+        margin-top: 4px;
+        font-size: 0.75rem;
+        text-align: right;
+        opacity: 0.85;
+      }
+
       .status-bar[data-variant='error'] {
         background: var(--status-error-bg);
         color: var(--status-error-text);
@@ -821,7 +866,15 @@
     </style>
   </head>
   <body>
-    <div id="status-bar" class="status-bar" role="status"></div>
+    <div id="status-bar" class="status-bar" role="status">
+      <div id="status-bar-message" class="status-message"></div>
+      <div id="status-bar-progress" class="status-progress" hidden>
+        <div class="status-progress-track">
+          <div id="status-bar-progress-fill" class="status-progress-fill"></div>
+        </div>
+        <span id="status-bar-progress-text" class="status-progress-text"></span>
+      </div>
+    </div>
     <main class="layout">
       <aside class="sidebar">
         <section class="panel">
@@ -1000,6 +1053,11 @@
               <div class="form-actions">
                 <button type="submit">Save settings</button>
               </div>
+              <div class="form-actions">
+                <button id="settings-exit-app" type="button" class="danger">
+                  Exit application
+                </button>
+              </div>
             </form>
           </div>
         </section>
@@ -1083,10 +1141,16 @@
           transcriptionProgressTimer: null,
           transcriptionProgressLectureId: null,
           lastProgressMessage: '',
+          lastProgressRatio: null,
+          statusHideTimer: null,
         };
 
         const dom = {
           status: document.getElementById('status-bar'),
+          statusMessage: document.getElementById('status-bar-message'),
+          statusProgress: document.getElementById('status-bar-progress'),
+          statusProgressFill: document.getElementById('status-bar-progress-fill'),
+          statusProgressText: document.getElementById('status-bar-progress-text'),
           stats: document.getElementById('stats'),
           curriculum: document.getElementById('curriculum'),
           search: document.getElementById('search-input'),
@@ -1121,6 +1185,7 @@
           settingsWhisperGpuStatus: document.getElementById('settings-whisper-gpu-status'),
           settingsWhisperGpuTest: document.getElementById('settings-whisper-gpu-test'),
           settingsSlideDpi: document.getElementById('settings-slide-dpi'),
+          settingsExitApp: document.getElementById('settings-exit-app'),
           gpuModelOptions: Array.from(document.querySelectorAll('option.gpu-only')),
           dialog: {
             root: document.getElementById('dialog-root'),
@@ -1134,6 +1199,38 @@
             cancel: document.getElementById('dialog-cancel'),
           },
         };
+
+        const STATUS_DEFAULT_TIMEOUT = 5000;
+
+        function resetStatusProgress() {
+          if (dom.statusProgress) {
+            dom.statusProgress.hidden = true;
+          }
+          if (dom.statusProgressFill) {
+            dom.statusProgressFill.style.width = '0%';
+          }
+          if (dom.statusProgressText) {
+            dom.statusProgressText.textContent = '';
+          }
+        }
+
+        function hideStatus() {
+          if (state.statusHideTimer !== null) {
+            window.clearTimeout(state.statusHideTimer);
+            state.statusHideTimer = null;
+          }
+          if (!dom.status) {
+            return;
+          }
+          dom.status.style.display = 'none';
+          dom.status.removeAttribute('data-variant');
+          if (dom.statusMessage) {
+            dom.statusMessage.textContent = '';
+          } else {
+            dom.status.textContent = '';
+          }
+          resetStatusProgress();
+        }
 
         const assetDefinitions = [
           {
@@ -1170,16 +1267,72 @@
           },
         ];
 
-        function showStatus(message, variant = 'info') {
-          if (!message) {
-            dom.status.style.display = 'none';
-            dom.status.textContent = '';
-            dom.status.removeAttribute('data-variant');
+        function showStatus(message, variant = 'info', options = {}) {
+          if (!dom.status) {
             return;
           }
-          dom.status.textContent = message;
+
+          if (state.statusHideTimer !== null) {
+            window.clearTimeout(state.statusHideTimer);
+            state.statusHideTimer = null;
+          }
+
+          if (!message) {
+            hideStatus();
+            return;
+          }
+
+          const ratioValue =
+            options && typeof options.progressRatio === 'number'
+              ? options.progressRatio
+              : null;
+          const hasRatio = Number.isFinite(ratioValue);
+          const clampedRatio = hasRatio
+            ? Math.max(0, Math.min(Number(ratioValue), 1))
+            : null;
+
           dom.status.dataset.variant = variant;
           dom.status.style.display = 'block';
+          if (dom.statusMessage) {
+            dom.statusMessage.textContent = message;
+          } else {
+            dom.status.textContent = message;
+          }
+
+          if (clampedRatio !== null) {
+            const percentValue = Math.round(clampedRatio * 1000) / 10;
+            const label = Number.isInteger(percentValue)
+              ? `${percentValue}%`
+              : `${percentValue.toFixed(1)}%`;
+            if (dom.statusProgress) {
+              dom.statusProgress.hidden = false;
+            }
+            if (dom.statusProgressFill) {
+              dom.statusProgressFill.style.width = `${percentValue}%`;
+            }
+            if (dom.statusProgressText) {
+              dom.statusProgressText.textContent = label;
+            }
+          } else {
+            resetStatusProgress();
+          }
+
+          const progressActive = clampedRatio !== null && clampedRatio < 1;
+          const persistOption =
+            options && Object.prototype.hasOwnProperty.call(options, 'persist')
+              ? Boolean(options.persist)
+              : progressActive;
+          const timeoutMs =
+            options && typeof options.timeoutMs === 'number' && Number.isFinite(options.timeoutMs)
+              ? Math.max(0, options.timeoutMs)
+              : STATUS_DEFAULT_TIMEOUT;
+
+          if (!persistOption) {
+            state.statusHideTimer = window.setTimeout(() => {
+              state.statusHideTimer = null;
+              hideStatus();
+            }, timeoutMs);
+          }
         }
 
         function updateGpuWhisperUI(status = {}) {
@@ -1571,6 +1724,8 @@
           state.transcriptionProgressLectureId = null;
           if (!preserveMessage) {
             state.lastProgressMessage = '';
+            state.lastProgressRatio = null;
+            resetStatusProgress();
           }
         }
 
@@ -1580,11 +1735,23 @@
           }
           const message = progress.message || '';
           const variant = progress.error ? 'error' : 'info';
-          if (message && message !== state.lastProgressMessage) {
-            showStatus(message, variant);
+          const finished = Boolean(progress.finished);
+          const ratio =
+            typeof progress.ratio === 'number' && Number.isFinite(progress.ratio)
+              ? Math.max(0, Math.min(progress.ratio, 1))
+              : null;
+          const shouldUpdate =
+            message !== state.lastProgressMessage || ratio !== state.lastProgressRatio;
+          if (shouldUpdate) {
+            const displayMessage = message || state.lastProgressMessage || 'Processing…';
+            showStatus(displayMessage, variant, {
+              progressRatio: ratio,
+              persist: !finished,
+            });
             state.lastProgressMessage = message;
+            state.lastProgressRatio = ratio;
           }
-          if (progress.finished) {
+          if (finished) {
             stopTranscriptionProgress({ preserveMessage: true });
           }
         }
@@ -2553,7 +2720,7 @@
           const lectureId = state.selectedLectureId;
           const selectedModel = dom.transcribeModel.value;
           dom.transcribeButton.disabled = true;
-          showStatus('====> Preparing transcription…', 'info');
+          showStatus('====> Preparing transcription…', 'info', { persist: true });
           startTranscriptionProgress(lectureId);
           try {
             const payload = await request(`/api/lectures/${lectureId}/transcribe`, {
@@ -2589,7 +2756,7 @@
             } else if (selectedModel === GPU_MODEL) {
               await loadGpuWhisperStatus();
             }
-            showStatus('Transcription completed.', 'success');
+            showStatus('Transcription completed.', 'success', { progressRatio: 1 });
             await refreshData();
             await selectLecture(lectureId);
           } catch (error) {
@@ -2597,7 +2764,10 @@
             stopTranscriptionProgress();
             const progress = await fetchTranscriptionProgress(state.selectedLectureId);
             if (progress && progress.message) {
-              showStatus(progress.message, progress.error ? 'error' : 'info');
+              showStatus(progress.message, progress.error ? 'error' : 'info', {
+                progressRatio: progress.ratio,
+                persist: !progress.finished,
+              });
             } else {
               showStatus(message, 'error');
             }
@@ -2649,6 +2819,44 @@
               showStatus(message, 'error');
             } finally {
               dom.settingsWhisperGpuTest.disabled = state.gpuWhisper.unavailable;
+            }
+          });
+        }
+
+        if (dom.settingsExitApp) {
+          dom.settingsExitApp.addEventListener('click', async () => {
+            const { confirmed } = await showDialog({
+              title: 'Exit application',
+              message: 'Stop the Lecture Tools server and close this tab?',
+              confirmText: 'Exit',
+              cancelText: 'Cancel',
+              variant: 'danger',
+            });
+            if (!confirmed) {
+              return;
+            }
+
+            dom.settingsExitApp.disabled = true;
+            showStatus('Shutting down application…', 'info');
+
+            try {
+              await request('/api/system/shutdown', { method: 'POST' });
+              window.setTimeout(() => {
+                try {
+                  window.close();
+                } catch (error) {
+                  // Ignore inability to close the window.
+                }
+                try {
+                  window.location.replace('about:blank');
+                } catch (error) {
+                  // Ignore navigation failures.
+                }
+              }, 300);
+            } catch (error) {
+              dom.settingsExitApp.disabled = false;
+              const message = error instanceof Error ? error.message : String(error);
+              showStatus(message, 'error');
             }
           });
         }
