@@ -11,6 +11,7 @@ Key capabilities include:
 - SQLite-backed storage for classes, modules, and lectures.
 - Automatic folder management for raw uploads and processed artefacts.
 - CPU-only transcription using [faster-whisper](https://github.com/SYSTRAN/faster-whisper) (models download to `assets`).
+- Optional GPU-accelerated Whisper transcription via the bundled Windows CLI runner.
 - Slide conversion with PyMuPDF and Pillow that exports vertically stacked slide pairs.
 - A Typer-powered CLI for ingesting lectures and reviewing stored metadata.
 
@@ -37,7 +38,8 @@ Key capabilities include:
 
    The runtime stack relies on CPU-only builds of `faster-whisper`, `PyMuPDF`,
    `Pillow`, and `typer`. The first transcription run downloads the selected
-   Whisper model into `assets/` automatically.
+   Whisper model into `assets/` automatically. GPU acceleration is optional and
+   requires manual setup (see below).
 
 4. Launch the new web experience:
 
@@ -75,6 +77,23 @@ Key capabilities include:
    `processed/transcripts` and `processed/slides` folders. The SQLite database
    is updated with the relative paths so the information can be surfaced in the
    overview command or future graphical front-ends.
+
+### GPU-accelerated Whisper (optional)
+
+The repository ships with a Windows-only `cli/main.exe` binary that can drive a
+GPU-enabled Whisper transcription. To enable it:
+
+1. Create an `assets/models/` directory if it does not already exist.
+2. Download the `ggml-medium.en.bin` model from
+   [ggerganov/whisper.cpp](https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.en.bin)
+   and place the file inside `assets/models/`.
+3. When running `python run.py ingest`, set `--whisper-model GPU`.
+
+During ingestion the application probes whether `cli/main.exe` can run on the
+current platform. If it produces output, the GPU path is used and real-time
+progress is displayed using a `====>` bar derived from the CLI timestamps. When
+the binary is unavailable or unsupported, the workflow automatically falls back
+to the standard CPU-based `faster-whisper` pipeline.
 
 ## Running Tests
 

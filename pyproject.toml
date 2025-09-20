@@ -20,4 +20,5 @@ dependencies = [
     "uvicorn[standard]>=0.29",
     "jinja2>=3.1",
     "python-multipart>=0.0.9",
+    "mutagen>=1.47",
 ]
