@@ -7,6 +7,7 @@ from typing import Any
 import pytest
 
 pytest.importorskip("fastapi")
+pytest.importorskip("httpx")
 
 from fastapi.testclient import TestClient
 
@@ -325,10 +326,18 @@ def test_transcribe_audio_uses_backend(monkeypatch, temp_config):
             captured["compute_type"] = compute_type
             captured["beam_size"] = beam_size
 
-        def transcribe(self, audio_path: Path, output_dir: Path) -> TranscriptResult:
+        def transcribe(
+            self,
+            audio_path: Path,
+            output_dir: Path,
+            *,
+            progress_callback=None,
+        ) -> TranscriptResult:
             output_dir.mkdir(parents=True, exist_ok=True)
             transcript = output_dir / "auto.txt"
             transcript.write_text("auto", encoding="utf-8")
+            if progress_callback is not None:
+                progress_callback(1.0, 2.0, "====> mock progress")
             return TranscriptResult(text_path=transcript, segments_path=None)
 
     monkeypatch.setattr(web_server, "FasterWhisperTranscription", DummyEngine)
@@ -349,6 +358,120 @@ def test_transcribe_audio_uses_backend(monkeypatch, temp_config):
     assert captured["beam_size"] == 7
 
 
+def test_transcription_progress_endpoint_defaults(temp_config):
+    repository = LectureRepository(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    response = client.get("/api/lectures/999/transcription-progress")
+    assert response.status_code == 200
+    progress = response.json()["progress"]
+    assert progress["active"] is False
+    assert progress["finished"] is False
+
+
+def test_gpu_status_endpoint_handles_unavailable(monkeypatch, temp_config):
+    monkeypatch.setattr(web_server, "check_gpu_whisper_availability", None)
+    repository = LectureRepository(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    response = client.get("/api/settings/whisper-gpu/status")
+    assert response.status_code == 200
+    status = response.json()["status"]
+    assert status["unavailable"] is True
+    assert status["supported"] is False
+
+
+def test_gpu_test_endpoint_returns_probe(monkeypatch, temp_config):
+    def fake_probe(_root):
+        return {"supported": True, "message": "ready", "output": "Using GPU"}
+
+    monkeypatch.setattr(web_server, "check_gpu_whisper_availability", fake_probe)
+    repository = LectureRepository(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    response = client.post("/api/settings/whisper-gpu/test")
+    assert response.status_code == 200
+    status = response.json()["status"]
+    assert status["supported"] is True
+    assert status["message"] == "ready"
+
+
+def test_update_settings_rejects_gpu_without_support(monkeypatch, temp_config):
+    def fake_probe(_root):
+        return {"supported": False, "message": "unsupported", "output": ""}
+
+    monkeypatch.setattr(web_server, "check_gpu_whisper_availability", fake_probe)
+    repository = LectureRepository(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    response = client.put(
+        "/api/settings",
+        json={
+            "theme": "light",
+            "whisper_model": "gpu",
+            "whisper_compute_type": "float16",
+            "whisper_beam_size": 5,
+            "slide_dpi": 200,
+        },
+    )
+    assert response.status_code == 400
+
+
+def test_transcribe_audio_falls_back_when_gpu_unsupported(monkeypatch, temp_config):
+    repository, lecture_id, _module_id = _create_sample_data(temp_config)
+
+    store = web_server.SettingsStore(temp_config)
+    settings = web_server.UISettings()
+    settings.whisper_model = "gpu"
+    store.save(settings)
+
+    captured_models: list[str] = []
+
+    class DummyEngine:
+        def __init__(
+            self,
+            model: str,
+            *,
+            download_root: Path,
+            compute_type: str,
+            beam_size: int,
+        ) -> None:
+            captured_models.append(model)
+            if model == "gpu":
+                raise web_server.GPUWhisperUnsupportedError("unsupported")
+            self._model = model
+
+        def transcribe(
+            self,
+            audio_path: Path,
+            output_dir: Path,
+            *,
+            progress_callback=None,
+        ) -> TranscriptResult:
+            if progress_callback is not None:
+                progress_callback(0.5, 1.0, "====> halfway")
+            output_dir.mkdir(parents=True, exist_ok=True)
+            transcript = output_dir / "auto.txt"
+            transcript.write_text("auto", encoding="utf-8")
+            return TranscriptResult(text_path=transcript, segments_path=None)
+
+    monkeypatch.setattr(web_server, "FasterWhisperTranscription", DummyEngine)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    response = client.post(
+        f"/api/lectures/{lecture_id}/transcribe",
+        json={"model": "gpu"},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["fallback_model"] == "base"
+    assert "fallback_reason" in payload
+    assert captured_models == ["gpu", "base"]
 def test_get_settings_coerces_invalid_choices(temp_config):
     repository = LectureRepository(temp_config)
     settings_path = temp_config.storage_root / "settings.json"

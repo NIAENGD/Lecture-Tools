@@ -781,6 +781,29 @@
         margin-bottom: 0;
       }
 
+      #settings-form .field-inline.gpu-support {
+        flex-direction: row;
+        align-items: center;
+        gap: 16px;
+      }
+
+      .gpu-support-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        flex: 1;
+      }
+
+      #settings-whisper-gpu-status {
+        margin: 0;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      #settings-whisper-gpu-test {
+        white-space: nowrap;
+      }
+
       @media (max-width: 960px) {
         main.layout {
           flex-direction: column;
@@ -890,6 +913,7 @@
                     <option value="small">small</option>
                     <option value="medium">medium</option>
                     <option value="large">large</option>
+                    <option value="gpu" class="gpu-only" disabled>GPU (hardware accelerated)</option>
                   </select>
                 </label>
               </div>
@@ -939,6 +963,7 @@
                     <option value="small">Small (accurate)</option>
                     <option value="medium">Medium (detailed)</option>
                     <option value="large">Large (maximum accuracy)</option>
+                    <option value="gpu" class="gpu-only" disabled>GPU (hardware accelerated)</option>
                   </select>
                 </div>
                 <div class="field-inline">
@@ -948,6 +973,15 @@
                 <div class="field-inline">
                   <label for="settings-whisper-beam">Beam size</label>
                   <input id="settings-whisper-beam" type="number" min="1" max="10" required />
+                </div>
+                <div class="field-inline gpu-support">
+                  <div class="gpu-support-info">
+                    <label>GPU support</label>
+                    <p id="settings-whisper-gpu-status">GPU acceleration not tested.</p>
+                  </div>
+                  <button id="settings-whisper-gpu-test" type="button" class="secondary">
+                    Test support
+                  </button>
                 </div>
               </fieldset>
               <fieldset>
@@ -1002,7 +1036,9 @@
           'small',
           'medium',
           'large',
+          'gpu',
         ]);
+        const GPU_MODEL = 'gpu';
         const DEFAULT_WHISPER_MODEL = 'base';
         const SLIDE_DPI_CHOICES = new Set(['150', '200', '300', '400', '600']);
         const DEFAULT_SLIDE_DPI = '200';
@@ -1036,6 +1072,17 @@
           editMode: false,
           activeView: 'details',
           settings: null,
+          gpuWhisper: {
+            supported: false,
+            checked: false,
+            message: 'GPU acceleration not tested.',
+            output: '',
+            lastChecked: null,
+            unavailable: false,
+          },
+          transcriptionProgressTimer: null,
+          transcriptionProgressLectureId: null,
+          lastProgressMessage: '',
         };
 
         const dom = {
@@ -1071,7 +1118,10 @@
           settingsWhisperModel: document.getElementById('settings-whisper-model'),
           settingsWhisperCompute: document.getElementById('settings-whisper-compute'),
           settingsWhisperBeam: document.getElementById('settings-whisper-beam'),
+          settingsWhisperGpuStatus: document.getElementById('settings-whisper-gpu-status'),
+          settingsWhisperGpuTest: document.getElementById('settings-whisper-gpu-test'),
           settingsSlideDpi: document.getElementById('settings-slide-dpi'),
+          gpuModelOptions: Array.from(document.querySelectorAll('option.gpu-only')),
           dialog: {
             root: document.getElementById('dialog-root'),
             backdrop: document.getElementById('dialog-backdrop'),
@@ -1132,11 +1182,84 @@
           dom.status.style.display = 'block';
         }
 
+        function updateGpuWhisperUI(status = {}) {
+          const supported = Boolean(status.supported);
+          const checked = Boolean(status.checked);
+          const unavailable = Boolean(status.unavailable);
+          const output = typeof status.output === 'string' ? status.output : '';
+          const lastChecked = status.last_checked || null;
+          let message =
+            typeof status.message === 'string' && status.message.trim().length > 0
+              ? status.message.trim()
+              : checked
+              ? 'GPU acceleration is unavailable on this platform.'
+              : 'GPU acceleration not tested.';
+
+          state.gpuWhisper = {
+            supported,
+            checked,
+            message,
+            output,
+            lastChecked,
+            unavailable,
+          };
+
+          if (dom.settingsWhisperGpuStatus) {
+            let displayMessage = message;
+            if (output) {
+              const snippet = output.split('\n').slice(0, 5).join('\n').trim();
+              if (snippet && snippet !== message) {
+                displayMessage = `${message}\n${snippet}`;
+              }
+            }
+            dom.settingsWhisperGpuStatus.textContent = displayMessage;
+          }
+
+          if (dom.settingsWhisperGpuTest) {
+            dom.settingsWhisperGpuTest.disabled = unavailable;
+            dom.settingsWhisperGpuTest.textContent = supported ? 'Re-run test' : 'Test support';
+          }
+
+          if (dom.gpuModelOptions) {
+            dom.gpuModelOptions.forEach((option) => {
+              if (option instanceof HTMLOptionElement) {
+                option.disabled = !supported;
+              }
+            });
+          }
+
+          const requestedModel =
+            state.settings?.whisper_model_requested || state.settings?.whisper_model;
+          if (!supported) {
+            if (dom.settingsWhisperModel && dom.settingsWhisperModel.value === GPU_MODEL) {
+              dom.settingsWhisperModel.value = DEFAULT_WHISPER_MODEL;
+            }
+            if (dom.transcribeModel && dom.transcribeModel.value === GPU_MODEL) {
+              dom.transcribeModel.value = DEFAULT_WHISPER_MODEL;
+            }
+            if (state.settings) {
+              state.settings.whisper_model = dom.settingsWhisperModel
+                ? dom.settingsWhisperModel.value
+                : DEFAULT_WHISPER_MODEL;
+            }
+          } else if (requestedModel === GPU_MODEL) {
+            if (dom.settingsWhisperModel) {
+              dom.settingsWhisperModel.value = GPU_MODEL;
+            }
+            if (dom.transcribeModel) {
+              dom.transcribeModel.value = GPU_MODEL;
+            }
+            if (state.settings) {
+              state.settings.whisper_model = GPU_MODEL;
+            }
+          }
+        }
+
         const dialogState = { active: false };
 
         function syncSettingsForm(settings) {
           const themeValue = settings?.theme ?? 'system';
-          const modelValue = normalizeWhisperModel(settings?.whisper_model);
+          const requestedModel = normalizeWhisperModel(settings?.whisper_model);
           const computeRaw = settings?.whisper_compute_type ?? 'int8';
           const computeValue =
             typeof computeRaw === 'string' ? computeRaw.trim() || 'int8' : 'int8';
@@ -1146,22 +1269,29 @@
           );
           const dpiValue = normalizeSlideDpi(settings?.slide_dpi);
 
+          const effectiveModel =
+            requestedModel === GPU_MODEL && !state.gpuWhisper.supported
+              ? DEFAULT_WHISPER_MODEL
+              : requestedModel;
+
           dom.settingsTheme.value = themeValue;
-          dom.settingsWhisperModel.value = modelValue;
+          dom.settingsWhisperModel.value = effectiveModel;
           dom.settingsWhisperCompute.value = computeValue;
           dom.settingsWhisperBeam.value = String(beamNumber);
           dom.settingsSlideDpi.value = dpiValue;
-          dom.transcribeModel.value = modelValue;
+          dom.transcribeModel.value = effectiveModel;
 
           state.settings = {
             theme: themeValue,
-            whisper_model: modelValue,
+            whisper_model: effectiveModel,
+            whisper_model_requested: requestedModel,
             whisper_compute_type: computeValue,
             whisper_beam_size: beamNumber,
             slide_dpi: Number(dpiValue),
           };
 
           applyTheme(themeValue);
+          updateGpuWhisperUI({ ...state.gpuWhisper });
         }
 
         function showDialog({
@@ -1402,6 +1532,77 @@
             return await response.json();
           }
           return null;
+        }
+
+        async function loadGpuWhisperStatus() {
+          try {
+            const payload = await request('/api/settings/whisper-gpu/status');
+            const status = payload?.status || {};
+            updateGpuWhisperUI(status);
+          } catch (error) {
+            updateGpuWhisperUI({
+              supported: false,
+              checked: true,
+              message: error instanceof Error ? error.message : String(error),
+              unavailable: false,
+            });
+          }
+        }
+
+        async function fetchTranscriptionProgress(lectureId) {
+          if (!lectureId) {
+            return null;
+          }
+          try {
+            const payload = await request(
+              `/api/lectures/${lectureId}/transcription-progress`,
+            );
+            return payload?.progress || null;
+          } catch (error) {
+            return null;
+          }
+        }
+
+        function stopTranscriptionProgress({ preserveMessage = false } = {}) {
+          if (state.transcriptionProgressTimer !== null) {
+            window.clearInterval(state.transcriptionProgressTimer);
+          }
+          state.transcriptionProgressTimer = null;
+          state.transcriptionProgressLectureId = null;
+          if (!preserveMessage) {
+            state.lastProgressMessage = '';
+          }
+        }
+
+        function handleProgressUpdate(progress) {
+          if (!progress) {
+            return;
+          }
+          const message = progress.message || '';
+          const variant = progress.error ? 'error' : 'info';
+          if (message && message !== state.lastProgressMessage) {
+            showStatus(message, variant);
+            state.lastProgressMessage = message;
+          }
+          if (progress.finished) {
+            stopTranscriptionProgress({ preserveMessage: true });
+          }
+        }
+
+        function startTranscriptionProgress(lectureId) {
+          stopTranscriptionProgress();
+          if (!lectureId) {
+            return;
+          }
+          state.transcriptionProgressLectureId = lectureId;
+          const poll = async () => {
+            const progress = await fetchTranscriptionProgress(lectureId);
+            if (progress) {
+              handleProgressUpdate(progress);
+            }
+          };
+          poll();
+          state.transcriptionProgressTimer = window.setInterval(poll, 1200);
         }
 
         function clearDetailPanel() {
@@ -2349,22 +2550,108 @@
           if (!state.selectedLectureId) {
             return;
           }
+          const lectureId = state.selectedLectureId;
+          const selectedModel = dom.transcribeModel.value;
           dom.transcribeButton.disabled = true;
+          showStatus('====> Preparing transcription…', 'info');
+          startTranscriptionProgress(lectureId);
           try {
-            await request(`/api/lectures/${state.selectedLectureId}/transcribe`, {
+            const payload = await request(`/api/lectures/${lectureId}/transcribe`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ model: dom.transcribeModel.value }),
+              body: JSON.stringify({ model: selectedModel }),
             });
+            stopTranscriptionProgress();
+            const fallbackModel = payload?.fallback_model;
+            if (fallbackModel) {
+              const fallbackReason =
+                typeof payload?.fallback_reason === 'string'
+                  ? payload.fallback_reason
+                  : 'GPU acceleration is not available on this platform.';
+              await showDialog({
+                title: 'GPU Whisper',
+                message: `${fallbackReason} Falling back to ${fallbackModel} model.`,
+                confirmText: 'OK',
+                cancelText: 'Close',
+                variant: 'danger',
+              });
+              if (dom.transcribeModel) {
+                dom.transcribeModel.value = fallbackModel;
+              }
+              if (dom.settingsWhisperModel) {
+                dom.settingsWhisperModel.value = fallbackModel;
+              }
+              if (state.settings) {
+                state.settings.whisper_model = fallbackModel;
+                state.settings.whisper_model_requested = fallbackModel;
+              }
+              await loadGpuWhisperStatus();
+            } else if (selectedModel === GPU_MODEL) {
+              await loadGpuWhisperStatus();
+            }
             showStatus('Transcription completed.', 'success');
             await refreshData();
-            await selectLecture(state.selectedLectureId);
+            await selectLecture(lectureId);
           } catch (error) {
-            showStatus(error.message, 'error');
+            const message = error instanceof Error ? error.message : String(error);
+            stopTranscriptionProgress();
+            const progress = await fetchTranscriptionProgress(state.selectedLectureId);
+            if (progress && progress.message) {
+              showStatus(progress.message, progress.error ? 'error' : 'info');
+            } else {
+              showStatus(message, 'error');
+            }
           } finally {
             dom.transcribeButton.disabled = false;
           }
         });
+
+        if (dom.settingsWhisperGpuTest) {
+          dom.settingsWhisperGpuTest.addEventListener('click', async () => {
+            if (state.gpuWhisper.unavailable) {
+              return;
+            }
+            dom.settingsWhisperGpuTest.disabled = true;
+            showStatus('====> Checking GPU Whisper support…', 'info');
+            try {
+              const payload = await request('/api/settings/whisper-gpu/test', {
+                method: 'POST',
+              });
+              const status = payload?.status || {};
+              updateGpuWhisperUI(status);
+              if (status.supported) {
+                showStatus('GPU Whisper support confirmed.', 'success');
+                if (state.settings?.whisper_model_requested === GPU_MODEL) {
+                  if (dom.settingsWhisperModel) {
+                    dom.settingsWhisperModel.value = GPU_MODEL;
+                  }
+                  if (dom.transcribeModel) {
+                    dom.transcribeModel.value = GPU_MODEL;
+                  }
+                  state.settings.whisper_model = GPU_MODEL;
+                }
+              } else {
+                const failureMessage =
+                  typeof status.message === 'string' && status.message
+                    ? status.message
+                    : 'GPU Whisper is not supported on this platform.';
+                await showDialog({
+                  title: 'GPU Whisper',
+                  message: failureMessage,
+                  confirmText: 'OK',
+                  cancelText: 'Close',
+                  variant: 'danger',
+                });
+                showStatus(failureMessage, 'error');
+              }
+            } catch (error) {
+              const message = error instanceof Error ? error.message : String(error);
+              showStatus(message, 'error');
+            } finally {
+              dom.settingsWhisperGpuTest.disabled = state.gpuWhisper.unavailable;
+            }
+          });
+        }
 
         if (dom.settingsForm) {
           dom.settingsForm.addEventListener('submit', async (event) => {
@@ -2398,6 +2685,9 @@
                 slide_dpi: dpiValue,
               };
               syncSettingsForm(updatedSettings);
+              if (modelValue === GPU_MODEL) {
+                await loadGpuWhisperStatus();
+              }
               showStatus('Settings saved.', 'success');
             } catch (error) {
               showStatus(error.message, 'error');
@@ -2408,8 +2698,9 @@
         updateEditModeUI();
         clearDetailPanel();
         applyTheme('system');
-        loadSettings();
-        refreshData();
+        await loadGpuWhisperStatus();
+        await loadSettings();
+        await refreshData();
       })();
     </script>
   </body>

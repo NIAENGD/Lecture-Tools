@@ -5,6 +5,8 @@ from __future__ import annotations
 import platform
 import shutil
 import subprocess
+import threading
+import time
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -24,17 +26,120 @@ from ..services.settings import SettingsStore, UISettings
 from ..services.storage import ClassRecord, LectureRecord, LectureRepository, ModuleRecord
 
 try:  # pragma: no cover - optional dependency imported lazily
-    from ..processing import FasterWhisperTranscription
+    from ..processing import (
+        FasterWhisperTranscription,
+        GPUWhisperModelMissingError,
+        GPUWhisperUnsupportedError,
+        check_gpu_whisper_availability,
+    )
 except Exception:  # noqa: BLE001 - optional dependency may be absent
     FasterWhisperTranscription = None  # type: ignore[assignment]
+    GPUWhisperModelMissingError = RuntimeError  # type: ignore[assignment]
+    GPUWhisperUnsupportedError = RuntimeError  # type: ignore[assignment]
+    check_gpu_whisper_availability = None  # type: ignore[assignment]
 
 _TEMPLATE_PATH = Path(__file__).parent / "templates" / "index.html"
 _PREVIEW_LIMIT = 1200
-_WHISPER_MODEL_OPTIONS: Tuple[str, ...] = ("tiny", "base", "small", "medium", "large")
+_WHISPER_MODEL_OPTIONS: Tuple[str, ...] = ("tiny", "base", "small", "medium", "large", "gpu")
 _WHISPER_MODEL_SET = set(_WHISPER_MODEL_OPTIONS)
 _SLIDE_DPI_OPTIONS: Tuple[int, ...] = (150, 200, 300, 400, 600)
 _SLIDE_DPI_SET = set(_SLIDE_DPI_OPTIONS)
 _DEFAULT_UI_SETTINGS = UISettings()
+
+
+class TranscriptionProgressTracker:
+    """Track transcription status for UI polling."""
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._states: Dict[int, Dict[str, Any]] = {}
+
+    def _baseline(self) -> Dict[str, Any]:
+        return {
+            "active": False,
+            "current": None,
+            "total": None,
+            "ratio": None,
+            "message": "",
+            "finished": False,
+            "error": None,
+            "timestamp": None,
+        }
+
+    def start(self, lecture_id: int) -> None:
+        with self._lock:
+            state = self._baseline()
+            state.update(
+                {
+                    "active": True,
+                    "message": "====> Preparing transcription…",
+                    "timestamp": time.time(),
+                }
+            )
+            self._states[lecture_id] = state
+
+    def update(
+        self,
+        lecture_id: int,
+        current: Optional[float],
+        total: Optional[float],
+        message: str,
+    ) -> None:
+        with self._lock:
+            state = self._states.get(lecture_id, self._baseline())
+            ratio = None
+            if total and total > 0 and current is not None:
+                ratio = max(0.0, min(current / total, 1.0))
+            state.update(
+                {
+                    "active": True,
+                    "current": current,
+                    "total": total,
+                    "ratio": ratio,
+                    "message": message,
+                    "finished": False,
+                    "error": None,
+                    "timestamp": time.time(),
+                }
+            )
+            self._states[lecture_id] = state
+
+    def note(self, lecture_id: int, message: str) -> None:
+        self.update(lecture_id, None, None, message)
+
+    def finish(self, lecture_id: int, message: Optional[str] = None) -> None:
+        with self._lock:
+            state = self._states.get(lecture_id, self._baseline())
+            state.update(
+                {
+                    "active": False,
+                    "finished": True,
+                    "message": message or state.get("message", ""),
+                    "timestamp": time.time(),
+                }
+            )
+            self._states[lecture_id] = state
+
+    def fail(self, lecture_id: int, message: str) -> None:
+        with self._lock:
+            state = self._states.get(lecture_id, self._baseline())
+            state.update(
+                {
+                    "active": False,
+                    "finished": True,
+                    "message": message,
+                    "error": message,
+                    "timestamp": time.time(),
+                }
+            )
+            self._states[lecture_id] = state
+
+    def get(self, lecture_id: int) -> Dict[str, Any]:
+        with self._lock:
+            state = self._states.get(lecture_id)
+            if state is None:
+                return self._baseline()
+            return dict(state)
 
 
 def _normalize_whisper_model(value: Any) -> str:
@@ -238,6 +343,14 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
 
     app = FastAPI(title="Lecture Tools", description="Browse lectures from any device")
     settings_store = SettingsStore(config)
+    progress_tracker = TranscriptionProgressTracker()
+    gpu_support_state: Dict[str, Any] = {
+        "supported": False,
+        "checked": False,
+        "message": "GPU acceleration not tested.",
+        "output": "",
+        "last_checked": None,
+    }
 
     app.mount(
         "/storage",
@@ -255,6 +368,22 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
         settings.whisper_model = _normalize_whisper_model(settings.whisper_model)
         settings.slide_dpi = _normalize_slide_dpi(settings.slide_dpi)
         return settings
+
+    def _record_gpu_probe(probe: Dict[str, Any], *, checked: bool = True) -> Dict[str, Any]:
+        timestamp = datetime.now(timezone.utc).isoformat()
+        gpu_support_state.update(
+            {
+                "supported": bool(probe.get("supported")),
+                "message": str(probe.get("message") or ""),
+                "output": str(probe.get("output") or ""),
+                "checked": checked,
+                "last_checked": timestamp,
+                "binary": probe.get("binary"),
+                "model": probe.get("model"),
+                "unavailable": False,
+            }
+        )
+        return dict(gpu_support_state)
 
     def _make_slide_converter() -> PyMuPDFSlideConverter:
         settings = _load_ui_settings()
@@ -677,6 +806,34 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
             response["slide_image_dir"] = update_kwargs.get("slide_image_dir")
         return response
 
+    @app.get("/api/settings/whisper-gpu/status")
+    async def get_gpu_status() -> Dict[str, Any]:
+        if check_gpu_whisper_availability is None:
+            state = dict(gpu_support_state)
+            state.update(
+                {
+                    "supported": False,
+                    "checked": False,
+                    "message": "GPU detection is unavailable on this server.",
+                    "unavailable": True,
+                }
+            )
+            return {"status": state}
+        state = dict(gpu_support_state)
+        state.setdefault("unavailable", False)
+        return {"status": state}
+
+    @app.post("/api/settings/whisper-gpu/test")
+    async def test_gpu_status() -> Dict[str, Any]:
+        if check_gpu_whisper_availability is None:
+            raise HTTPException(
+                status_code=503,
+                detail="GPU detection is unavailable on this server.",
+            )
+        probe = check_gpu_whisper_availability(config.assets_root)
+        state = _record_gpu_probe(probe)
+        return {"status": state}
+
     @app.get("/api/settings")
     async def get_settings() -> Dict[str, Any]:
         settings = _load_ui_settings()
@@ -686,7 +843,19 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
     async def update_settings(payload: SettingsPayload) -> Dict[str, Any]:
         settings = _load_ui_settings()
         settings.theme = payload.theme
-        settings.whisper_model = _normalize_whisper_model(payload.whisper_model)
+        desired_model = _normalize_whisper_model(payload.whisper_model)
+        if desired_model == "gpu":
+            if check_gpu_whisper_availability is None:
+                raise HTTPException(
+                    status_code=503,
+                    detail="GPU detection is unavailable on this server.",
+                )
+            probe = check_gpu_whisper_availability(config.assets_root)
+            if not probe.get("supported"):
+                state = _record_gpu_probe(probe)
+                raise HTTPException(status_code=400, detail=str(state.get("message", "")))
+            _record_gpu_probe(probe)
+        settings.whisper_model = desired_model
         settings.whisper_compute_type = (
             payload.whisper_compute_type.strip() or settings.whisper_compute_type
         )
@@ -709,6 +878,11 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
             "transcript": transcript_preview,
             "notes": notes_preview,
         }
+
+    @app.get("/api/lectures/{lecture_id}/transcription-progress")
+    async def get_transcription_progress(lecture_id: int) -> Dict[str, Any]:
+        progress = progress_tracker.get(lecture_id)
+        return {"progress": progress}
 
     @app.post("/api/lectures/{lecture_id}/transcribe")
     async def transcribe_audio(lecture_id: int, payload: TranscriptionRequest) -> Dict[str, Any]:
@@ -741,16 +915,62 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
         compute_type = settings.whisper_compute_type or default_settings.whisper_compute_type
         beam_size = settings.whisper_beam_size or default_settings.whisper_beam_size
 
+        progress_tracker.start(lecture_id)
+        fallback_model: Optional[str] = None
+        fallback_reason: Optional[str] = None
+        error_reported = False
+
+        def handle_progress(current: float, total: Optional[float], message: str) -> None:
+            progress_tracker.update(lecture_id, current, total, message)
+
         try:
-            engine = FasterWhisperTranscription(
-                payload.model,
-                download_root=config.assets_root,
-                compute_type=compute_type,
-                beam_size=beam_size,
+            try:
+                engine = FasterWhisperTranscription(
+                    payload.model,
+                    download_root=config.assets_root,
+                    compute_type=compute_type,
+                    beam_size=beam_size,
+                )
+            except GPUWhisperUnsupportedError as error:
+                fallback_model = _DEFAULT_UI_SETTINGS.whisper_model
+                fallback_reason = str(error)
+                _record_gpu_probe({"supported": False, "message": str(error), "output": ""})
+                progress_tracker.note(
+                    lecture_id,
+                    f"====> {error} Falling back to {fallback_model} model.",
+                )
+                engine = FasterWhisperTranscription(
+                    fallback_model,
+                    download_root=config.assets_root,
+                    compute_type=compute_type,
+                    beam_size=beam_size,
+                )
+            except GPUWhisperModelMissingError as error:
+                message = f"====> {error}"
+                progress_tracker.fail(lecture_id, message)
+                _record_gpu_probe({"supported": False, "message": str(error), "output": ""})
+                error_reported = True
+                raise HTTPException(status_code=400, detail=str(error)) from error
+
+            result = engine.transcribe(
+                audio_file,
+                lecture_paths.transcript_dir,
+                progress_callback=handle_progress,
             )
-            result = engine.transcribe(audio_file, lecture_paths.transcript_dir)
+        except HTTPException as error:
+            if not error_reported:
+                detail = getattr(error, "detail", str(error))
+                progress_tracker.fail(lecture_id, f"====> {detail}")
+            raise
         except Exception as error:  # noqa: BLE001 - backend may raise arbitrary errors
+            progress_tracker.fail(lecture_id, f"====> {error}")
             raise HTTPException(status_code=500, detail=str(error)) from error
+        else:
+            if payload.model == "gpu" and fallback_model is None:
+                _record_gpu_probe(
+                    {"supported": True, "message": "GPU Whisper CLI active.", "output": ""}
+                )
+            progress_tracker.finish(lecture_id, "====> Transcription completed.")
 
         transcript_relative = result.text_path.relative_to(config.storage_root).as_posix()
         repository.update_lecture_assets(lecture_id, transcript_path=transcript_relative)
@@ -760,6 +980,10 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
         response = {"lecture": _serialize_lecture(updated), "transcript_path": transcript_relative}
         if result.segments_path:
             response["segments_path"] = result.segments_path.relative_to(config.storage_root).as_posix()
+        if fallback_model:
+            response["fallback_model"] = fallback_model
+            if fallback_reason:
+                response["fallback_reason"] = fallback_reason
         return response
 
     @app.post("/api/lectures/{lecture_id}/process-slides")
