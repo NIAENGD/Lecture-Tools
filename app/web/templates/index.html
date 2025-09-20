@@ -13,6 +13,78 @@
     <style>
       :root {
         color-scheme: light;
+        --background: #f5f6f8;
+        --text: #1f2933;
+        --muted: #475569;
+        --panel-bg: #ffffff;
+        --panel-border: #d2d6dc;
+        --panel-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        --accent: #2563eb;
+        --accent-contrast: #ffffff;
+        --accent-muted: #e2e8f0;
+        --danger: #dc2626;
+        --danger-contrast: #ffffff;
+        --placeholder: #64748b;
+        --status-info-bg: #e0f2fe;
+        --status-info-text: #0369a1;
+        --status-error-bg: #fee2e2;
+        --status-error-text: #b91c1c;
+        --status-success-bg: #dcfce7;
+        --status-success-text: #166534;
+      }
+
+      body[data-theme='light'] {
+        color-scheme: light;
+      }
+
+      body[data-theme='dark'] {
+        color-scheme: dark;
+        --background: #0f172a;
+        --text: #f8fafc;
+        --muted: #94a3b8;
+        --panel-bg: #1e293b;
+        --panel-border: #334155;
+        --panel-shadow: 0 1px 2px rgba(2, 6, 23, 0.5);
+        --accent: #38bdf8;
+        --accent-contrast: #0f172a;
+        --accent-muted: rgba(56, 189, 248, 0.18);
+        --danger: #f87171;
+        --danger-contrast: #0f172a;
+        --placeholder: #94a3b8;
+        --status-info-bg: rgba(14, 165, 233, 0.2);
+        --status-info-text: #bae6fd;
+        --status-error-bg: rgba(248, 113, 113, 0.24);
+        --status-error-text: #fecaca;
+        --status-success-bg: rgba(74, 222, 128, 0.22);
+        --status-success-text: #bbf7d0;
+      }
+
+      body[data-theme='system'] {
+        color-scheme: light;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        body[data-theme='system'] {
+          color-scheme: dark;
+          --background: #0f172a;
+          --text: #f8fafc;
+          --muted: #94a3b8;
+          --panel-bg: #1e293b;
+          --panel-border: #334155;
+          --panel-shadow: 0 1px 2px rgba(2, 6, 23, 0.5);
+          --accent: #38bdf8;
+          --accent-contrast: #0f172a;
+          --accent-muted: rgba(56, 189, 248, 0.18);
+          --danger: #f87171;
+          --danger-contrast: #0f172a;
+          --placeholder: #94a3b8;
+          --status-info-bg: rgba(14, 165, 233, 0.2);
+          --status-info-text: #bae6fd;
+          --status-error-bg: rgba(248, 113, 113, 0.24);
+          --status-error-text: #fecaca;
+          --status-success-bg: rgba(74, 222, 128, 0.22);
+          --status-success-text: #bbf7d0;
+        }
       }
 
       * {
@@ -24,8 +96,9 @@
         font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
           sans-serif;
         font-size: 15px;
-        background: #f5f6f8;
-        color: #1f2933;
+        background: var(--background);
+        color: var(--text);
+        transition: background 0.2s ease, color 0.2s ease;
       }
 
       main.layout {
@@ -53,11 +126,12 @@
       }
 
       .panel {
-        background: #ffffff;
-        border: 1px solid #d2d6dc;
+        background: var(--panel-bg);
+        border: 1px solid var(--panel-border);
         border-radius: 8px;
         padding: 18px 20px;
-        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        box-shadow: var(--panel-shadow);
+        transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
       }
 
       .panel-heading {
@@ -66,34 +140,69 @@
         justify-content: space-between;
         gap: 12px;
         margin-bottom: 12px;
+        color: var(--muted);
       }
 
       .panel-heading label {
         margin: 0;
+        color: inherit;
       }
 
       .top-bar {
         display: flex;
-        gap: 8px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
         padding: 16px 20px 0;
-        border-bottom: 1px solid #e5e7eb;
-        background: #f8fafc;
+        border-bottom: 1px solid var(--panel-border);
+        background: var(--panel-bg);
         border-radius: 8px 8px 0 0;
+      }
+
+      .top-bar-left,
+      .top-bar-right {
+        display: flex;
+        align-items: center;
+        gap: 8px;
       }
 
       .top-bar button {
         border-radius: 999px;
         border: 1px solid transparent;
-        background: #e2e8f0;
-        color: #1f2933;
+        background: var(--accent-muted);
+        color: var(--text);
         padding: 6px 14px;
         font-weight: 600;
+        transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+      }
+
+      .top-bar button[data-view]:hover {
+        background: var(--accent);
+        color: var(--accent-contrast);
+        border-color: var(--accent);
       }
 
       .top-bar button.active {
-        background: #2563eb;
-        border-color: #2563eb;
-        color: #ffffff;
+        background: var(--accent);
+        border-color: var(--accent);
+        color: var(--accent-contrast);
+      }
+
+      .top-bar button.ghost {
+        background: transparent;
+        border-color: var(--panel-border);
+        color: var(--muted);
+      }
+
+      .top-bar button.ghost:hover {
+        border-color: var(--accent);
+        color: var(--text);
+      }
+
+      .top-bar button.ghost.active {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: var(--accent-contrast);
       }
 
       .content-panel {
@@ -114,9 +223,9 @@
       }
 
       .edit-banner {
-        background: #fef3c7;
-        color: #92400e;
-        border: 1px solid #fcd34d;
+        background: var(--status-info-bg);
+        color: var(--status-info-text);
+        border: 1px solid var(--panel-border);
         border-radius: 6px;
         padding: 8px 12px;
         font-size: 0.9rem;
@@ -148,6 +257,7 @@
         display: block;
         margin-bottom: 4px;
         font-size: 0.9rem;
+        color: var(--muted);
       }
 
       input[type='text'],
@@ -158,11 +268,12 @@
         width: 100%;
         padding: 8px 10px;
         border-radius: 6px;
-        border: 1px solid #cbd5e0;
+        border: 1px solid var(--panel-border);
         font-family: inherit;
         font-size: 0.95rem;
-        background: #ffffff;
-        color: inherit;
+        background: var(--panel-bg);
+        color: var(--text);
+        transition: border-color 0.2s ease, background 0.2s ease;
       }
 
       textarea {
@@ -170,25 +281,47 @@
         min-height: 96px;
       }
 
+      input:focus,
+      textarea:focus,
+      select:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+      }
+
       button {
-        border: 1px solid #2563eb;
-        background: #2563eb;
-        color: #ffffff;
+        border: 1px solid var(--accent);
+        background: var(--accent);
+        color: var(--accent-contrast);
         border-radius: 6px;
         padding: 8px 14px;
         font-size: 0.95rem;
         font-weight: 600;
         cursor: pointer;
+        transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+      }
+
+      button:hover {
+        opacity: 0.92;
       }
 
       button.secondary {
-        background: #ffffff;
-        color: #2563eb;
+        background: transparent;
+        color: var(--accent);
+      }
+
+      button.secondary:hover {
+        background: rgba(37, 99, 235, 0.12);
       }
 
       button.danger {
-        background: #dc2626;
-        border-color: #dc2626;
+        background: var(--danger);
+        border-color: var(--danger);
+        color: var(--danger-contrast);
+      }
+
+      button.danger:hover {
+        opacity: 0.9;
       }
 
       button:disabled {
@@ -196,7 +329,13 @@
         cursor: not-allowed;
       }
 
+      .pill {
+        border-radius: 999px;
+      }
+
       .status-bar {
+        background: var(--panel-bg);
+        border: 1px solid var(--panel-border);
         max-width: 1200px;
         margin: 0 auto;
         padding: 10px 14px;
@@ -206,21 +345,21 @@
       }
 
       .status-bar[data-variant='error'] {
-        background: #fee2e2;
-        color: #991b1b;
-        border: 1px solid #fecaca;
+        background: var(--status-error-bg);
+        color: var(--status-error-text);
+        border-color: var(--status-error-bg);
       }
 
       .status-bar[data-variant='success'] {
-        background: #dcfce7;
-        color: #166534;
-        border: 1px solid #bbf7d0;
+        background: var(--status-success-bg);
+        color: var(--status-success-text);
+        border-color: var(--status-success-bg);
       }
 
       .status-bar[data-variant='info'] {
-        background: #e0f2fe;
-        color: #075985;
-        border: 1px solid #bae6fd;
+        background: var(--status-info-bg);
+        color: var(--status-info-text);
+        border-color: var(--status-info-bg);
       }
 
       .stats-grid {
@@ -230,10 +369,10 @@
       }
 
       .stats-grid div {
-        border: 1px solid #d8dee9;
+        border: 1px solid var(--panel-border);
         border-radius: 6px;
         padding: 10px;
-        background: #f8fafc;
+        background: var(--background);
       }
 
       .stats-grid dt {
@@ -241,22 +380,22 @@
         font-size: 0.75rem;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        color: #6b7280;
+        color: var(--muted);
       }
 
       .stats-grid dd {
         margin: 4px 0 0;
         font-size: 1.1rem;
         font-weight: 600;
-        color: #1f2933;
+        color: var(--text);
       }
 
       .curriculum {
         margin-top: 12px;
-        border: 1px solid #e5e7eb;
+        border: 1px solid var(--panel-border);
         border-radius: 6px;
         padding: 8px;
-        background: #fdfdfd;
+        background: var(--panel-bg);
         max-height: calc(100vh - 260px);
         overflow-y: auto;
         font-size: 0.95rem;
@@ -272,6 +411,20 @@
         margin-bottom: 6px;
       }
 
+      .curriculum-toolbar {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      .class-item,
+      .module-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
       .class-item {
         font-weight: 600;
         margin-top: 8px;
@@ -280,12 +433,17 @@
       .module-item {
         margin-left: 6px;
         font-weight: 500;
-        color: #1f2933;
+      }
+
+      .lecture-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        justify-content: space-between;
       }
 
       .lecture-button {
-        display: block;
-        width: 100%;
+        flex: 1;
         text-align: left;
         padding: 6px 8px;
         border: 1px solid transparent;
@@ -293,22 +451,54 @@
         background: transparent;
         cursor: pointer;
         font-size: 0.95rem;
+        color: inherit;
+        transition: border-color 0.2s ease, background 0.2s ease;
       }
 
       .lecture-button:hover,
       .lecture-button:focus {
-        border-color: #94a3b8;
-        background: #f1f5f9;
+        border-color: var(--panel-border);
+        background: var(--accent-muted);
         outline: none;
       }
 
       .lecture-button.active {
-        border-color: #2563eb;
-        background: #e2e8f0;
+        border-color: var(--accent);
+        background: rgba(37, 99, 235, 0.12);
+      }
+
+      .item-actions {
+        display: flex;
+        gap: 6px;
+        margin-left: auto;
+      }
+
+      button.text-button {
+        background: transparent;
+        border: none;
+        color: var(--accent);
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s ease, color 0.2s ease;
+      }
+
+      button.text-button:hover {
+        background: var(--accent-muted);
+      }
+
+      button.text-button.danger {
+        color: var(--danger);
+      }
+
+      button.text-button.danger:hover {
+        background: rgba(220, 38, 38, 0.12);
       }
 
       .placeholder {
-        color: #64748b;
+        color: var(--placeholder);
         font-style: italic;
       }
 
@@ -333,10 +523,10 @@
       }
 
       .asset-item {
-        border: 1px solid #e2e8f0;
+        border: 1px solid var(--panel-border);
         border-radius: 6px;
         padding: 10px 12px;
-        background: #f9fafb;
+        background: var(--background);
       }
 
       .asset-header {
@@ -346,7 +536,7 @@
 
       .asset-status {
         font-size: 0.9rem;
-        color: #475569;
+        color: var(--muted);
         margin-bottom: 6px;
       }
 
@@ -358,30 +548,39 @@
       }
 
       .asset-actions a {
-        color: #2563eb;
+        color: var(--accent);
         text-decoration: none;
         font-size: 0.9rem;
+        font-weight: 600;
       }
 
       .asset-actions a[aria-disabled='true'] {
         pointer-events: none;
-        color: #94a3b8;
+        color: var(--muted);
       }
 
       .file-input {
         position: relative;
         overflow: hidden;
         display: inline-flex;
+        align-items: center;
+        border-radius: 6px;
+        border: 1px dashed var(--panel-border);
+        padding: 0;
+        cursor: pointer;
+        color: var(--accent);
+        background: transparent;
       }
 
       .file-input span {
         display: inline-block;
         padding: 6px 10px;
-        border-radius: 4px;
-        border: 1px solid #2563eb;
-        color: #2563eb;
-        background: #ffffff;
         font-size: 0.9rem;
+        font-weight: 600;
+      }
+
+      .file-input:hover {
+        border-color: var(--accent);
       }
 
       .file-input input[type='file'] {
@@ -402,32 +601,46 @@
       .actions-row label.inline {
         display: inline-flex;
         flex-direction: column;
-        font-weight: 500;
+        font-weight: 600;
         font-size: 0.85rem;
-        color: #334155;
+        color: var(--muted);
       }
 
+      .actions-row label.inline select,
       .actions-row label.inline input {
         margin-top: 4px;
-        width: 100px;
+        min-width: 120px;
       }
 
-      .preview-block {
-        border-top: 1px solid #e5e7eb;
-        padding-top: 12px;
-        margin-top: 12px;
+      #asset-section {
+        margin-top: 16px;
       }
 
-      .preview-block pre {
-        background: #f1f5f9;
-        border-radius: 4px;
-        padding: 8px;
-        max-height: 220px;
-        overflow: auto;
-        font-family: 'JetBrains Mono', SFMono-Regular, ui-monospace, monospace;
-        font-size: 0.85rem;
-        line-height: 1.45;
-        white-space: pre-wrap;
+      #settings-form fieldset {
+        border: 1px solid var(--panel-border);
+        border-radius: 8px;
+        padding: 16px;
+        margin: 0 0 16px;
+      }
+
+      #settings-form fieldset:last-of-type {
+        margin-bottom: 0;
+      }
+
+      #settings-form legend {
+        font-weight: 600;
+        color: var(--muted);
+        padding: 0 6px;
+      }
+
+      #settings-form .field-inline {
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 12px;
+      }
+
+      #settings-form .field-inline:last-child {
+        margin-bottom: 0;
       }
 
       @media (max-width: 960px) {
@@ -461,9 +674,6 @@
         <section class="panel">
           <div class="panel-heading">
             <label for="search-input">Filter curriculum</label>
-            <button id="toggle-edit-mode" type="button" class="secondary">
-              Enable edit mode
-            </button>
           </div>
           <input
             id="search-input"
@@ -477,12 +687,23 @@
       <section class="content">
         <section class="panel content-panel">
           <div class="top-bar" role="tablist">
-            <button type="button" class="active" data-view="details" aria-pressed="true">
-              Details
-            </button>
-            <button type="button" data-view="create" aria-pressed="false">Create</button>
-            <button type="button" data-view="preview" aria-pressed="false">Preview</button>
-            <button type="button" data-view="settings" aria-pressed="false">Settings</button>
+            <div class="top-bar-left">
+              <button type="button" class="active" data-view="details" aria-pressed="true">
+                Details
+              </button>
+              <button
+                id="toggle-edit-mode"
+                type="button"
+                class="ghost pill"
+                aria-pressed="false"
+              >
+                Enable edit mode
+              </button>
+            </div>
+            <div class="top-bar-right">
+              <button type="button" data-view="create" aria-pressed="false">Create</button>
+              <button type="button" data-view="settings" aria-pressed="false">Settings</button>
+            </div>
           </div>
           <div id="view-details" class="view active" data-view="details">
             <header style="display: flex; justify-content: space-between; align-items: center;">
@@ -556,17 +777,46 @@
               </div>
             </form>
           </div>
-          <div id="view-preview" class="view" data-view="preview" hidden>
-            <h2>Preview</h2>
-            <div id="preview-content" class="placeholder">
-              Transcript and notes preview will appear here.
-            </div>
-          </div>
           <div id="view-settings" class="view" data-view="settings" hidden>
             <h2>Settings</h2>
-            <p class="placeholder">
-              Settings will appear here. Enable edit mode to rename or delete lectures.
-            </p>
+            <form id="settings-form">
+              <fieldset>
+                <legend>Appearance</legend>
+                <div class="field-inline">
+                  <label for="settings-theme">Theme</label>
+                  <select id="settings-theme">
+                    <option value="system">Follow system</option>
+                    <option value="light">Light</option>
+                    <option value="dark">Dark</option>
+                  </select>
+                </div>
+              </fieldset>
+              <fieldset>
+                <legend>Whisper transcription</legend>
+                <div class="field-inline">
+                  <label for="settings-whisper-model">Default model</label>
+                  <input id="settings-whisper-model" type="text" required />
+                </div>
+                <div class="field-inline">
+                  <label for="settings-whisper-compute">Compute type</label>
+                  <input id="settings-whisper-compute" type="text" required />
+                </div>
+                <div class="field-inline">
+                  <label for="settings-whisper-beam">Beam size</label>
+                  <input id="settings-whisper-beam" type="number" min="1" max="10" required />
+                </div>
+              </fieldset>
+              <fieldset>
+                <legend>Slides</legend>
+                <div class="field-inline">
+                  <label for="settings-slide-dpi">Rendering DPI</label>
+                  <input id="settings-slide-dpi" type="number" min="72" max="600" step="10" required />
+                </div>
+              </fieldset>
+              <div class="form-actions">
+                <button type="submit">Save settings</button>
+              </div>
+            </form>
           </div>
         </section>
       </section>
@@ -581,6 +831,7 @@
           buttonMap: new Map(),
           editMode: false,
           activeView: 'details',
+          settings: null,
         };
 
         const dom = {
@@ -605,14 +856,18 @@
           createName: document.getElementById('create-name'),
           createDescription: document.getElementById('create-description'),
           createSubmit: document.getElementById('create-submit'),
-          preview: document.getElementById('preview-content'),
           viewButtons: Array.from(document.querySelectorAll('.top-bar [data-view]')),
           views: {
             details: document.getElementById('view-details'),
             create: document.getElementById('view-create'),
-            preview: document.getElementById('view-preview'),
             settings: document.getElementById('view-settings'),
           },
+          settingsForm: document.getElementById('settings-form'),
+          settingsTheme: document.getElementById('settings-theme'),
+          settingsWhisperModel: document.getElementById('settings-whisper-model'),
+          settingsWhisperCompute: document.getElementById('settings-whisper-compute'),
+          settingsWhisperBeam: document.getElementById('settings-whisper-beam'),
+          settingsSlideDpi: document.getElementById('settings-slide-dpi'),
         };
 
         const assetDefinitions = [
@@ -737,8 +992,6 @@
           dom.assetSection.hidden = true;
           dom.assetList.innerHTML = '';
           dom.transcribeButton.disabled = true;
-          dom.preview.textContent = 'Transcript and notes preview will appear here.';
-          dom.preview.classList.add('placeholder');
           updateEditControlsAvailability();
         }
 
@@ -754,10 +1007,12 @@
           if (dom.editToggle) {
             dom.editToggle.textContent = isActive ? 'Exit edit mode' : 'Enable edit mode';
             dom.editToggle.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+            dom.editToggle.classList.toggle('active', isActive);
           }
           if (dom.editBanner) {
             dom.editBanner.hidden = !isActive;
           }
+          renderCurriculum();
           updateEditControlsAvailability();
         }
 
@@ -902,21 +1157,67 @@
           state.buttonMap.clear();
           const filtered = computeFilteredClasses();
           dom.curriculum.innerHTML = '';
+          dom.curriculum.classList.remove('placeholder');
+
+          if (state.editMode) {
+            const toolbar = document.createElement('div');
+            toolbar.className = 'curriculum-toolbar';
+            const addClassButton = document.createElement('button');
+            addClassButton.type = 'button';
+            addClassButton.className = 'secondary pill';
+            addClassButton.textContent = 'Add class';
+            addClassButton.addEventListener('click', handleAddClass);
+            toolbar.appendChild(addClassButton);
+            dom.curriculum.appendChild(toolbar);
+          }
+
           if (filtered.length === 0) {
-            dom.curriculum.textContent = state.classes.length
+            const message = document.createElement('div');
+            message.className = 'placeholder';
+            message.textContent = state.classes.length
               ? 'No lectures match the current filter.'
               : 'No classes available yet.';
+            dom.curriculum.appendChild(message);
             dom.curriculum.classList.add('placeholder');
             return;
           }
-          dom.curriculum.classList.remove('placeholder');
 
           const list = document.createElement('ul');
           filtered.forEach((entry) => {
             const classItem = document.createElement('li');
             const classTitle = document.createElement('div');
             classTitle.className = 'class-item';
-            classTitle.textContent = entry.class.name;
+            const className = document.createElement('span');
+            className.textContent = entry.class.name;
+            classTitle.appendChild(className);
+
+            if (state.editMode) {
+              const classActions = document.createElement('div');
+              classActions.className = 'item-actions';
+
+              const addModuleButton = document.createElement('button');
+              addModuleButton.type = 'button';
+              addModuleButton.className = 'text-button';
+              addModuleButton.textContent = 'Add module';
+              addModuleButton.addEventListener('click', (event) => {
+                event.stopPropagation();
+                handleAddModule(entry.class);
+              });
+              classActions.appendChild(addModuleButton);
+
+              const deleteClassButton = document.createElement('button');
+              deleteClassButton.type = 'button';
+              deleteClassButton.className = 'text-button danger';
+              deleteClassButton.textContent = 'Delete';
+              deleteClassButton.addEventListener('click', (event) => {
+                event.stopPropagation();
+                handleDeleteClass(entry);
+              });
+              classActions.appendChild(deleteClassButton);
+
+              classTitle.appendChild(classActions);
+            }
+
             classItem.appendChild(classTitle);
 
             const moduleList = document.createElement('ul');
@@ -924,20 +1225,72 @@
               const moduleItem = document.createElement('li');
               const moduleTitle = document.createElement('div');
               moduleTitle.className = 'module-item';
-              moduleTitle.textContent = moduleEntry.module.name;
+              const moduleName = document.createElement('span');
+              moduleName.textContent = moduleEntry.module.name;
+              moduleTitle.appendChild(moduleName);
+
+              if (state.editMode) {
+                const moduleActions = document.createElement('div');
+                moduleActions.className = 'item-actions';
+
+                const addLectureButton = document.createElement('button');
+                addLectureButton.type = 'button';
+                addLectureButton.className = 'text-button';
+                addLectureButton.textContent = 'Add lecture';
+                addLectureButton.addEventListener('click', (event) => {
+                  event.stopPropagation();
+                  handleAddLecture(moduleEntry.module, entry.class);
+                });
+                moduleActions.appendChild(addLectureButton);
+
+                const deleteModuleButton = document.createElement('button');
+                deleteModuleButton.type = 'button';
+                deleteModuleButton.className = 'text-button danger';
+                deleteModuleButton.textContent = 'Delete';
+                deleteModuleButton.addEventListener('click', (event) => {
+                  event.stopPropagation();
+                  handleDeleteModule(moduleEntry, entry.class);
+                });
+                moduleActions.appendChild(deleteModuleButton);
+
+                moduleTitle.appendChild(moduleActions);
+              }
+
               moduleItem.appendChild(moduleTitle);
 
               const lectureList = document.createElement('ul');
               moduleEntry.lectures.forEach((lecture) => {
                 const lectureItem = document.createElement('li');
+                const lectureRow = document.createElement('div');
+                lectureRow.className = 'lecture-row';
+
                 const button = document.createElement('button');
                 button.type = 'button';
                 button.className = 'lecture-button';
                 button.textContent = lecture.name;
                 button.addEventListener('click', () => selectLecture(lecture.id));
-                lectureItem.appendChild(button);
-                lectureList.appendChild(lectureItem);
+                lectureRow.appendChild(button);
                 state.buttonMap.set(lecture.id, button);
+
+                if (state.editMode) {
+                  const lectureActions = document.createElement('div');
+                  lectureActions.className = 'item-actions';
+
+                  const deleteLectureButton = document.createElement('button');
+                  deleteLectureButton.type = 'button';
+                  deleteLectureButton.className = 'text-button danger';
+                  deleteLectureButton.textContent = 'Delete';
+                  deleteLectureButton.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    handleDeleteLecture(lecture, moduleEntry.module, entry.class);
+                  });
+                  lectureActions.appendChild(deleteLectureButton);
+
+                  lectureRow.appendChild(lectureActions);
+                }
+
+                lectureItem.appendChild(lectureRow);
+                lectureList.appendChild(lectureItem);
               });
 
               if (moduleEntry.lectures.length === 0) {
@@ -957,6 +1310,236 @@
 
           dom.curriculum.appendChild(list);
           highlightSelected();
+        }
+
+        function requireEditMode(message = 'Enable edit mode to manage the curriculum.') {
+          if (!state.editMode) {
+            showStatus(message, 'info');
+            return false;
+          }
+          return true;
+        }
+
+        async function handleAddClass() {
+          if (!requireEditMode()) {
+            return;
+          }
+          const name = window.prompt('Class name');
+          if (!name || !name.trim()) {
+            return;
+          }
+          const description = window.prompt('Description (optional)') ?? '';
+          try {
+            await request('/api/classes', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name: name.trim(), description: description.trim() }),
+            });
+            showStatus('Class created.', 'success');
+            await refreshData();
+          } catch (error) {
+            showStatus(error.message, 'error');
+          }
+        }
+
+        async function handleAddModule(classRecord) {
+          if (!requireEditMode()) {
+            return;
+          }
+          const name = window.prompt(`Module name for ${classRecord.name}`);
+          if (!name || !name.trim()) {
+            return;
+          }
+          const description = window.prompt('Description (optional)') ?? '';
+          try {
+            await request('/api/modules', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                class_id: classRecord.id,
+                name: name.trim(),
+                description: description.trim(),
+              }),
+            });
+            showStatus('Module created.', 'success');
+            await refreshData();
+          } catch (error) {
+            showStatus(error.message, 'error');
+          }
+        }
+
+        async function handleDeleteClass(classEntry) {
+          if (!requireEditMode()) {
+            return;
+          }
+          const moduleCount = classEntry.modules.length;
+          const lectureCount = classEntry.modules.reduce(
+            (total, moduleEntry) => total + (moduleEntry.lectures?.length || 0),
+            0,
+          );
+          let message = `Delete class "${classEntry.class.name}"?`;
+          if (moduleCount || lectureCount) {
+            message += `\n\nThis will remove ${moduleCount} module${moduleCount === 1 ? '' : 's'} and ${lectureCount} lecture${lectureCount === 1 ? '' : 's'}.`;
+          }
+          const confirmed = window.confirm(message);
+          if (!confirmed) {
+            return;
+          }
+          try {
+            await request(`/api/classes/${classEntry.class.id}`, { method: 'DELETE' });
+            if (state.selectedLectureId) {
+              const removed = classEntry.modules.some((moduleEntry) =>
+                (moduleEntry.lectures || []).some(
+                  (lecture) => lecture.id === state.selectedLectureId,
+                ),
+              );
+              if (removed) {
+                state.selectedLectureId = null;
+                clearDetailPanel();
+              }
+            }
+            showStatus('Class removed.', 'success');
+            await refreshData();
+          } catch (error) {
+            showStatus(error.message, 'error');
+          }
+        }
+
+        async function handleDeleteModule(moduleEntry, classRecord) {
+          if (!requireEditMode()) {
+            return;
+          }
+          const lectureCount = moduleEntry.lectures.length;
+          let message = `Delete module "${moduleEntry.module.name}"`;
+          if (classRecord) {
+            message += ` from "${classRecord.name}"`;
+          }
+          message += '?';
+          if (lectureCount) {
+            message += `\n\nThis will remove ${lectureCount} lecture${lectureCount === 1 ? '' : 's'}.`;
+          }
+          const confirmed = window.confirm(message);
+          if (!confirmed) {
+            return;
+          }
+          try {
+            await request(`/api/modules/${moduleEntry.module.id}`, { method: 'DELETE' });
+            if (state.selectedLectureId) {
+              const removed = (moduleEntry.lectures || []).some(
+                (lecture) => lecture.id === state.selectedLectureId,
+              );
+              if (removed) {
+                state.selectedLectureId = null;
+                clearDetailPanel();
+              }
+            }
+            showStatus('Module removed.', 'success');
+            await refreshData();
+          } catch (error) {
+            showStatus(error.message, 'error');
+          }
+        }
+
+        async function handleAddLecture(moduleRecord, classRecord) {
+          if (!requireEditMode()) {
+            return;
+          }
+          const namePrompt = classRecord
+            ? `Lecture title for ${classRecord.name} • ${moduleRecord.name}`
+            : `Lecture title for ${moduleRecord.name}`;
+          const name = window.prompt(namePrompt);
+          if (!name || !name.trim()) {
+            return;
+          }
+          const description = window.prompt('Description (optional)') ?? '';
+          try {
+            const payload = await request('/api/lectures', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                module_id: moduleRecord.id,
+                name: name.trim(),
+                description: description.trim(),
+              }),
+            });
+            showStatus('Lecture created.', 'success');
+            await refreshData();
+            const newLectureId = payload?.lecture?.id;
+            if (newLectureId) {
+              await selectLecture(newLectureId);
+            }
+          } catch (error) {
+            showStatus(error.message, 'error');
+          }
+        }
+
+        async function handleDeleteLecture(lecture, moduleRecord, classRecord) {
+          if (!requireEditMode()) {
+            return;
+          }
+          let context = lecture.name;
+          if (moduleRecord) {
+            context += ` in ${moduleRecord.name}`;
+          }
+          if (classRecord) {
+            context += ` (${classRecord.name})`;
+          }
+          const confirmed = window.confirm(`Delete lecture "${context}"?`);
+          if (!confirmed) {
+            return;
+          }
+          try {
+            await request(`/api/lectures/${lecture.id}`, { method: 'DELETE' });
+            if (state.selectedLectureId === lecture.id) {
+              state.selectedLectureId = null;
+              clearDetailPanel();
+            }
+            showStatus('Lecture removed.', 'success');
+            await refreshData();
+          } catch (error) {
+            showStatus(error.message, 'error');
+          }
+        }
+
+        function applyTheme(theme) {
+          const target = theme || 'system';
+          document.body.dataset.theme = target;
+        }
+
+        function ensureTranscribeOption(value) {
+          if (!value) {
+            return;
+          }
+          const exists = Array.from(dom.transcribeModel.options).some(
+            (option) => option.value === value,
+          );
+          if (!exists) {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = value;
+            dom.transcribeModel.appendChild(option);
+          }
+        }
+
+        async function loadSettings() {
+          try {
+            const payload = await request('/api/settings');
+            const settings = payload?.settings;
+            if (!settings) {
+              return;
+            }
+            state.settings = settings;
+            dom.settingsTheme.value = settings.theme ?? 'system';
+            dom.settingsWhisperModel.value = settings.whisper_model ?? 'base';
+            dom.settingsWhisperCompute.value = settings.whisper_compute_type ?? 'int8';
+            dom.settingsWhisperBeam.value = String(settings.whisper_beam_size ?? 5);
+            dom.settingsSlideDpi.value = String(settings.slide_dpi ?? 200);
+            ensureTranscribeOption(settings.whisper_model);
+            dom.transcribeModel.value = settings.whisper_model;
+            applyTheme(settings.theme);
+          } catch (error) {
+            showStatus(error.message, 'error');
+          }
         }
 
         function renderAssets(lecture) {
@@ -1065,66 +1648,6 @@
           dom.summary.appendChild(description);
         }
 
-        function renderPreview(preview) {
-          if (!preview || (!preview.transcript && !preview.notes)) {
-            dom.preview.textContent = 'Transcript and notes preview will appear here.';
-            dom.preview.classList.add('placeholder');
-            return;
-          }
-
-          dom.preview.innerHTML = '';
-          dom.preview.classList.remove('placeholder');
-
-          function makeBlock(title, data) {
-            const block = document.createElement('div');
-            block.className = 'preview-block';
-            const heading = document.createElement('h3');
-            heading.textContent = title;
-            block.appendChild(heading);
-
-            const metaPieces = [];
-            if (data.line_count) {
-              metaPieces.push(`${data.line_count} lines`);
-            }
-            if (typeof data.byte_size === 'number') {
-              const formatted = formatBytes(data.byte_size);
-              if (formatted) {
-                metaPieces.push(formatted);
-              }
-            }
-            const formattedDate = formatDate(data.modified);
-            if (formattedDate) {
-              metaPieces.push(formattedDate);
-            }
-            if (metaPieces.length) {
-              const meta = document.createElement('div');
-              meta.className = 'asset-status';
-              meta.textContent = metaPieces.join(' • ');
-              block.appendChild(meta);
-            }
-
-            const content = document.createElement('pre');
-            content.textContent = data.text || '';
-            block.appendChild(content);
-
-            if (data.truncated) {
-              const note = document.createElement('div');
-              note.className = 'asset-status';
-              note.textContent = 'Preview truncated to the first portion of the file.';
-              block.appendChild(note);
-            }
-
-            return block;
-          }
-
-          if (preview.transcript) {
-            dom.preview.appendChild(makeBlock('Transcript', preview.transcript));
-          }
-          if (preview.notes) {
-            dom.preview.appendChild(makeBlock('Notes', preview.notes));
-          }
-        }
-
         async function refreshData() {
           try {
             const payload = await request('/api/classes');
@@ -1175,9 +1698,6 @@
             dom.transcribeButton.disabled = !detail.lecture.audio_path;
 
             renderAssets(detail.lecture);
-
-            const preview = await request(`/api/lectures/${lectureId}/preview`);
-            renderPreview(preview);
           } catch (error) {
             showStatus(error.message, 'error');
           }
@@ -1380,9 +1900,55 @@
             dom.transcribeButton.disabled = false;
           }
         });
+
+        if (dom.settingsForm) {
+          dom.settingsForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const themeValue = dom.settingsTheme.value || 'system';
+            const modelValue = dom.settingsWhisperModel.value.trim() || 'base';
+            const computeValue = dom.settingsWhisperCompute.value.trim() || 'int8';
+            const beamValue = Math.max(
+              1,
+              Math.min(10, Number(dom.settingsWhisperBeam.value) || 5),
+            );
+            const dpiValue = Math.max(
+              72,
+              Math.min(600, Number(dom.settingsSlideDpi.value) || 200),
+            );
+
+            try {
+              const response = await request('/api/settings', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  theme: themeValue,
+                  whisper_model: modelValue,
+                  whisper_compute_type: computeValue,
+                  whisper_beam_size: beamValue,
+                  slide_dpi: dpiValue,
+                }),
+              });
+              state.settings = response?.settings ?? {
+                theme: themeValue,
+                whisper_model: modelValue,
+                whisper_compute_type: computeValue,
+                whisper_beam_size: beamValue,
+                slide_dpi: dpiValue,
+              };
+              ensureTranscribeOption(modelValue);
+              dom.transcribeModel.value = modelValue;
+              applyTheme(themeValue);
+              showStatus('Settings saved.', 'success');
+            } catch (error) {
+              showStatus(error.message, 'error');
+            }
+          });
+        }
         setActiveView(state.activeView);
         updateEditModeUI();
         clearDetailPanel();
+        applyTheme('system');
+        loadSettings();
         refreshData();
       })();
     </script>

@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Iterable, Optional, Protocol
 
 from ..config import AppConfig
+from .naming import build_asset_stem, build_timestamped_name, slugify
 from .storage import ClassRecord, LectureRecord, LectureRepository, ModuleRecord
 
 
@@ -62,7 +63,9 @@ class LecturePaths:
         module_name: str,
         lecture_name: str,
     ) -> "LecturePaths":
-        lecture_root = storage_root / _slugify(class_name) / _slugify(module_name) / _slugify(lecture_name)
+        lecture_root = (
+            storage_root / slugify(class_name) / slugify(module_name) / slugify(lecture_name)
+        )
         raw_dir = lecture_root / "raw"
         processed_dir = lecture_root / "processed"
         transcript_dir = processed_dir / "transcripts"
@@ -87,17 +90,6 @@ class LecturePaths:
             self.notes_dir,
         ):
             path.mkdir(parents=True, exist_ok=True)
-
-
-def _slugify(value: str) -> str:
-    import re
-
-    value = value.strip().lower()
-    value = re.sub(r"[^a-z0-9]+", "-", value)
-    value = re.sub(r"-+", "-", value).strip("-")
-    return value or "item"
-
-
 class LectureIngestor:
     """Coordinates the ingestion of lecture assets."""
 
@@ -150,7 +142,8 @@ class LectureIngestor:
         slide_image_relative = None
 
         if audio_file is not None:
-            audio_relative = self._copy_asset(audio_file, lecture_paths.raw_dir)
+            audio_stem = build_asset_stem(class_name, module_name, lecture_name, "audio")
+            audio_relative = self._copy_asset(audio_file, lecture_paths.raw_dir, audio_stem)
             if self._transcription_engine is None:
                 raise IngestionError("No transcription engine configured for audio ingestion")
             transcript = self._transcription_engine.transcribe(
@@ -161,7 +154,8 @@ class LectureIngestor:
             audio_relative = (lecture_paths.raw_dir / audio_relative).relative_to(self._config.storage_root).as_posix()
 
         if slide_file is not None:
-            slide_relative = self._copy_asset(slide_file, lecture_paths.raw_dir)
+            slide_stem = build_asset_stem(class_name, module_name, lecture_name, "slides")
+            slide_relative = self._copy_asset(slide_file, lecture_paths.raw_dir, slide_stem)
             if self._slide_converter is None:
                 raise IngestionError("No slide converter configured for slideshow ingestion")
             generated = list(
@@ -223,11 +217,11 @@ class LectureIngestor:
             raise IngestionError("Failed to create lecture record")
         return record
 
-    def _copy_asset(self, src: Path, destination_dir: Path) -> str:
+    def _copy_asset(self, src: Path, destination_dir: Path, stem: str) -> str:
         if not src.exists():
             raise IngestionError(f"Asset not found: {src}")
         destination_dir.mkdir(parents=True, exist_ok=True)
-        destination = destination_dir / src.name
+        destination = destination_dir / build_timestamped_name(stem, extension=src.suffix)
         shutil.copy2(src, destination)
         return destination.name
 

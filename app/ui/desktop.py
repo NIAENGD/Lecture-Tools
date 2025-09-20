@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 import platform
-import re
 import shutil
 import subprocess
 import tkinter as tk
@@ -27,6 +26,7 @@ from ..processing import (
     save_preprocessed_wav,
 )
 from ..services.ingestion import LecturePaths
+from ..services.naming import build_asset_stem, build_timestamped_name, slugify
 from ..services.settings import SettingsStore, ThemeName, UISettings
 from ..services.storage import ClassRecord, LectureRecord, LectureRepository, ModuleRecord
 from .overview import (
@@ -65,7 +65,7 @@ class DesktopUI:
 
         self._settings_store: SettingsStore | None = None
         self._settings: UISettings = UISettings()
-        self._current_theme: ThemeName = "dark"
+        self._current_theme: ThemeName = "system"
 
         if self._config is not None:
             self._settings_store = SettingsStore(self._config)
@@ -100,7 +100,8 @@ class DesktopUI:
         except tk.TclError:
             pass
 
-        palette = self._get_palette(self._current_theme)
+        effective_theme = self._resolve_effective_theme(self._current_theme)
+        palette = self._get_palette(effective_theme)
         self._configure_styles(style, palette)
         root.configure(background=palette["background"])
 
@@ -112,7 +113,7 @@ class DesktopUI:
         self._build_content(container, snapshot)
         self._build_status(container)
 
-        self._update_theme_button()
+        self._apply_theme()
 
         root.mainloop()
 
@@ -977,8 +978,15 @@ class DesktopUI:
                 if self._root:
                     self._root.after(0, lambda: status_var.set("Balancing audio for Whisper..."))
                 processed = preprocess_audio(raw_audio, recorder.sample_rate)
-                timestamp = datetime.now().strftime("recording-%Y%m%d-%H%M%S.wav")
-                destination = lecture_paths.raw_dir / timestamp
+                stem = build_asset_stem(
+                    class_record.name,
+                    module_record.name,
+                    record.name,
+                    "audio-recording",
+                )
+                destination = lecture_paths.raw_dir / build_timestamped_name(
+                    stem, extension=".wav"
+                )
                 if self._root:
                     self._root.after(0, lambda: status_var.set("Saving optimised mono WAV"))
                 save_preprocessed_wav(destination, processed, recorder.sample_rate)
@@ -1119,7 +1127,21 @@ class DesktopUI:
         }.get(destination, lecture_paths.raw_dir)
 
         destination_dir.mkdir(parents=True, exist_ok=True)
-        target = destination_dir / source.name
+        kind_map = {
+            "audio_path": "audio",
+            "slide_path": "slides",
+            "transcript_path": "transcript",
+            "notes_path": "notes",
+        }
+        stem = build_asset_stem(
+            class_record.name,
+            module_record.name,
+            lecture_record.name,
+            kind_map.get(attribute, attribute),
+        )
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        filename = build_timestamped_name(stem, timestamp=timestamp, extension=source.suffix)
+        target = destination_dir / filename
         shutil.copy2(source, target)
 
         relative = target.relative_to(self._config.storage_root).as_posix()
@@ -1151,12 +1173,32 @@ class DesktopUI:
         )
         lecture_paths.ensure()
 
-        timestamp = datetime.now().strftime("images-%Y%m%d-%H%M%S")
-        destination_dir = lecture_paths.slide_dir / timestamp
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        folder_stem = build_asset_stem(
+            class_record.name,
+            module_record.name,
+            lecture_record.name,
+            "slide-images",
+        )
+        folder_name = build_timestamped_name(folder_stem, timestamp=timestamp)
+        destination_dir = lecture_paths.slide_dir / folder_name
         destination_dir.mkdir(parents=True, exist_ok=True)
 
-        for source in sources:
-            target = destination_dir / source.name
+        file_stem = build_asset_stem(
+            class_record.name,
+            module_record.name,
+            lecture_record.name,
+            "slide-image",
+        )
+
+        for index, source in enumerate(sources, start=1):
+            filename = build_timestamped_name(
+                file_stem,
+                timestamp=timestamp,
+                sequence=index,
+                extension=source.suffix,
+            )
+            target = destination_dir / filename
             shutil.copy2(source, target)
 
         relative = destination_dir.relative_to(self._config.storage_root).as_posix()
@@ -1531,7 +1573,7 @@ class DesktopUI:
             return
 
         if self._config:
-            class_dir = self._config.storage_root / self._slugify(overview.record.name)
+            class_dir = self._config.storage_root / slugify(overview.record.name)
             self._delete_storage_path(class_dir, "Delete class")
 
         self._selected_lecture_id = None
@@ -1564,8 +1606,8 @@ class DesktopUI:
         if self._config:
             module_dir = (
                 self._config.storage_root
-                / self._slugify(class_record.name)
-                / self._slugify(overview.record.name)
+                / slugify(class_record.name)
+                / slugify(overview.record.name)
             )
             self._delete_storage_path(module_dir, "Delete module")
 
@@ -1710,18 +1752,65 @@ class DesktopUI:
                 parent=self._root,
             )
 
-    @staticmethod
-    def _slugify(value: str) -> str:
-        value = value.strip().lower()
-        value = re.sub(r"[^a-z0-9]+", "-", value)
-        value = re.sub(r"-+", "-", value).strip("-")
-        return value or "item"
-
     # ------------------------------------------------------------------
     # Settings and theming
     # ------------------------------------------------------------------
+    def _resolve_effective_theme(self, theme: ThemeName) -> ThemeName:
+        if theme != "system":
+            return theme
+        return self._detect_system_theme()
+
+    def _detect_system_theme(self) -> ThemeName:
+        system = platform.system()
+        if system == "Windows":
+            try:  # pragma: no cover - platform specific
+                import winreg  # type: ignore
+
+                with winreg.OpenKey(
+                    winreg.HKEY_CURRENT_USER,
+                    r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize",
+                ) as key:
+                    value, _ = winreg.QueryValueEx(key, "AppsUseLightTheme")
+                    return "light" if int(value) else "dark"
+            except Exception:
+                return "light"
+        if system == "Darwin":
+            try:  # pragma: no cover - platform specific
+                result = subprocess.run(
+                    ["defaults", "read", "-g", "AppleInterfaceStyle"],
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                )
+                if result.returncode == 0 and result.stdout.strip():
+                    return "dark"
+            except Exception:
+                return "light"
+            return "light"
+        scheme = os.environ.get("GTK_THEME", "").lower()
+        if "dark" in scheme:
+            return "dark"
+        try:  # pragma: no cover - depends on optional desktop tooling
+            result = subprocess.run(
+                [
+                    "gsettings",
+                    "get",
+                    "org.gnome.desktop.interface",
+                    "color-scheme",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            if result.returncode == 0 and "dark" in result.stdout.lower():
+                return "dark"
+        except Exception:
+            pass
+        return "light"
+
     def _toggle_theme(self) -> None:
-        self._current_theme = "light" if self._current_theme == "dark" else "dark"
+        effective = self._resolve_effective_theme(self._current_theme)
+        self._current_theme = "light" if effective == "dark" else "dark"
         self._settings.theme = self._current_theme
         if self._settings_store:
             self._settings_store.save(self._settings)
@@ -1732,7 +1821,7 @@ class DesktopUI:
             return
 
         style = ttk.Style(self._root)
-        palette = self._get_palette(self._current_theme)
+        palette = self._get_palette(self._resolve_effective_theme(self._current_theme))
         self._configure_styles(style, palette)
         self._root.configure(background=palette["background"])
         self._update_theme_button()
@@ -1742,7 +1831,8 @@ class DesktopUI:
     def _update_theme_button(self) -> None:
         if self._theme_button_text is None:
             return
-        if self._current_theme == "dark":
+        effective = self._resolve_effective_theme(self._current_theme)
+        if effective == "dark":
             self._theme_button_text.set("Switch to light mode")
         else:
             self._theme_button_text.set("Switch to dark mode")
@@ -1799,8 +1889,15 @@ class DesktopUI:
 
         theme_frame = ttk.Frame(frame, style="PanelBody.TFrame")
         theme_frame.grid(row=1, column=0, sticky="w", pady=(4, 16))
-        ttk.Radiobutton(theme_frame, text="Dark", value="dark", variable=theme_var).pack(side=tk.LEFT)
-        ttk.Radiobutton(theme_frame, text="Light", value="light", variable=theme_var).pack(side=tk.LEFT, padx=(12, 0))
+        ttk.Radiobutton(
+            theme_frame, text="Follow system", value="system", variable=theme_var
+        ).pack(side=tk.LEFT)
+        ttk.Radiobutton(theme_frame, text="Dark", value="dark", variable=theme_var).pack(
+            side=tk.LEFT, padx=(12, 0)
+        )
+        ttk.Radiobutton(theme_frame, text="Light", value="light", variable=theme_var).pack(
+            side=tk.LEFT, padx=(12, 0)
+        )
 
         ttk.Label(frame, text="Whisper settings", style="DetailTitle.TLabel").grid(
             row=2, column=0, sticky="w"
