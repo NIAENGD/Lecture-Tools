@@ -19,7 +19,7 @@ from pydantic import BaseModel, Field
 from ..config import AppConfig
 from ..processing import PyMuPDFSlideConverter
 from ..services.ingestion import LecturePaths
-from ..services.naming import build_asset_stem, build_timestamped_name
+from ..services.naming import build_asset_stem, build_timestamped_name, slugify
 from ..services.settings import SettingsStore, UISettings
 from ..services.storage import ClassRecord, LectureRecord, LectureRepository, ModuleRecord
 
@@ -30,6 +30,31 @@ except Exception:  # noqa: BLE001 - optional dependency may be absent
 
 _TEMPLATE_PATH = Path(__file__).parent / "templates" / "index.html"
 _PREVIEW_LIMIT = 1200
+_WHISPER_MODEL_OPTIONS: Tuple[str, ...] = ("tiny", "base", "small", "medium", "large")
+_WHISPER_MODEL_SET = set(_WHISPER_MODEL_OPTIONS)
+_SLIDE_DPI_OPTIONS: Tuple[int, ...] = (150, 200, 300, 400, 600)
+_SLIDE_DPI_SET = set(_SLIDE_DPI_OPTIONS)
+_DEFAULT_UI_SETTINGS = UISettings()
+
+
+def _normalize_whisper_model(value: Any) -> str:
+    """Return a supported Whisper model choice."""
+
+    if isinstance(value, str):
+        candidate = value.strip()
+    else:
+        candidate = str(value or "").strip()
+    return candidate if candidate in _WHISPER_MODEL_SET else _DEFAULT_UI_SETTINGS.whisper_model
+
+
+def _normalize_slide_dpi(value: Any) -> int:
+    """Return a supported slide DPI choice."""
+
+    try:
+        candidate = int(value)
+    except (TypeError, ValueError):
+        return _DEFAULT_UI_SETTINGS.slide_dpi
+    return candidate if candidate in _SLIDE_DPI_SET else _DEFAULT_UI_SETTINGS.slide_dpi
 
 
 def _format_asset_counts(lectures: List[Dict[str, Any]]) -> Dict[str, int]:
@@ -202,10 +227,10 @@ class ModuleCreatePayload(BaseModel):
 
 class SettingsPayload(BaseModel):
     theme: Literal["dark", "light", "system"] = "system"
-    whisper_model: str = Field("base", min_length=1)
+    whisper_model: Literal[*_WHISPER_MODEL_OPTIONS] = "base"
     whisper_compute_type: str = Field("int8", min_length=1)
     whisper_beam_size: int = Field(5, ge=1, le=10)
-    slide_dpi: int = Field(200, ge=72, le=600)
+    slide_dpi: Literal[*_SLIDE_DPI_OPTIONS] = 200
 
 
 def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
@@ -224,13 +249,20 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
 
     def _load_ui_settings() -> UISettings:
         try:
-            return settings_store.load()
+            settings = settings_store.load()
         except Exception:  # pragma: no cover - defensive fallback
-            return UISettings()
+            settings = UISettings()
+        settings.whisper_model = _normalize_whisper_model(settings.whisper_model)
+        settings.slide_dpi = _normalize_slide_dpi(settings.slide_dpi)
+        return settings
 
     def _make_slide_converter() -> PyMuPDFSlideConverter:
         settings = _load_ui_settings()
-        return PyMuPDFSlideConverter(dpi=settings.slide_dpi)
+        converter_cls = PyMuPDFSlideConverter
+        try:
+            return converter_cls(dpi=settings.slide_dpi)
+        except TypeError:  # pragma: no cover - allows monkeypatched callables without kwargs
+            return converter_cls()
 
     def _require_hierarchy(lecture: LectureRecord) -> Tuple[ClassRecord, ModuleRecord]:
         module = repository.get_module(lecture.module_id)
@@ -240,6 +272,86 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
         if class_record is None:
             raise HTTPException(status_code=404, detail="Class not found")
         return class_record, module
+
+    def _delete_storage_path(target: Path) -> None:
+        storage_root = config.storage_root.resolve()
+        candidate = target.resolve()
+        try:
+            candidate.relative_to(storage_root)
+        except ValueError:
+            return
+        if candidate == storage_root or not candidate.exists():
+            return
+        if candidate.is_dir():
+            shutil.rmtree(candidate)
+        else:
+            candidate.unlink()
+
+    def _delete_asset_path(relative: Optional[str]) -> None:
+        if not relative:
+            return
+        try:
+            asset_path = _resolve_storage_path(config.storage_root, relative)
+        except ValueError:
+            return
+        _delete_storage_path(asset_path)
+
+    def _name_variants(value: str) -> List[str]:
+        cleaned = value.strip()
+        variants = {slugify(cleaned)}
+        if cleaned:
+            variants.add(cleaned)
+        return list(variants)
+
+    def _iter_class_dirs(class_record: ClassRecord) -> List[Path]:
+        storage_root = config.storage_root
+        candidates: List[Path] = []
+        for class_name in _name_variants(class_record.name):
+            candidate = storage_root / class_name
+            if candidate not in candidates:
+                candidates.append(candidate)
+        return candidates
+
+    def _iter_module_dirs(class_record: ClassRecord, module: ModuleRecord) -> List[Path]:
+        candidates: List[Path] = []
+        for class_dir in _iter_class_dirs(class_record):
+            for module_name in _name_variants(module.name):
+                candidate = class_dir / module_name
+                if candidate not in candidates:
+                    candidates.append(candidate)
+        return candidates
+
+    def _iter_lecture_dirs(
+        class_record: ClassRecord, module: ModuleRecord, lecture: LectureRecord
+    ) -> List[Path]:
+        candidates: List[Path] = []
+        for module_dir in _iter_module_dirs(class_record, module):
+            for lecture_name in _name_variants(lecture.name):
+                candidate = module_dir / lecture_name
+                if candidate not in candidates:
+                    candidates.append(candidate)
+        return candidates
+
+    def _purge_lecture_storage(
+        lecture: LectureRecord, class_record: ClassRecord, module: ModuleRecord
+    ) -> None:
+        for attribute in (
+            lecture.audio_path,
+            lecture.slide_path,
+            lecture.transcript_path,
+            lecture.notes_path,
+            lecture.slide_image_dir,
+        ):
+            _delete_asset_path(attribute)
+        for directory in _iter_lecture_dirs(class_record, module, lecture):
+            _delete_storage_path(directory)
+
+    def _purge_module_storage(class_record: ClassRecord, module: ModuleRecord) -> None:
+        lectures = list(repository.iter_lectures(module.id))
+        for lecture in lectures:
+            _purge_lecture_storage(lecture, class_record, module)
+        for directory in _iter_module_dirs(class_record, module):
+            _delete_storage_path(directory)
 
     def _generate_slide_archive(
         pdf_path: Path,
@@ -338,6 +450,17 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
         record = repository.get_class(class_id)
         if record is None:
             raise HTTPException(status_code=404, detail="Class not found")
+        modules = list(repository.iter_modules(class_id))
+        try:
+            for module in modules:
+                _purge_module_storage(record, module)
+            for directory in _iter_class_dirs(record):
+                _delete_storage_path(directory)
+        except OSError as error:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to remove class files: {error}",
+            ) from error
         repository.remove_class(class_id)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -375,6 +498,16 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
         record = repository.get_module(module_id)
         if record is None:
             raise HTTPException(status_code=404, detail="Module not found")
+        class_record = repository.get_class(record.class_id)
+        if class_record is None:
+            raise HTTPException(status_code=404, detail="Class not found")
+        try:
+            _purge_module_storage(class_record, record)
+        except OSError as error:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to remove module files: {error}",
+            ) from error
         repository.remove_module(module_id)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -461,6 +594,14 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
         lecture = repository.get_lecture(lecture_id)
         if lecture is None:
             raise HTTPException(status_code=404, detail="Lecture not found")
+        class_record, module = _require_hierarchy(lecture)
+        try:
+            _purge_lecture_storage(lecture, class_record, module)
+        except OSError as error:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to remove lecture files: {error}",
+            ) from error
         repository.remove_lecture(lecture_id)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -495,7 +636,8 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
 
         attribute, destination = destinations[asset_key]
         destination.mkdir(parents=True, exist_ok=True)
-        suffix = Path(file.filename or "").suffix
+        original_name = Path(file.filename or "").name
+        suffix = Path(original_name).suffix if original_name else Path(file.filename or "").suffix
         stem = build_asset_stem(
             class_record.name,
             module.name,
@@ -503,8 +645,13 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
             asset_key,
         )
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        filename = build_timestamped_name(stem, timestamp=timestamp, extension=suffix)
-        target = destination / filename
+        candidate_name = original_name or ""
+        if not candidate_name:
+            candidate_name = build_timestamped_name(stem, timestamp=timestamp, extension=suffix)
+        target = destination / candidate_name
+        if target.exists():
+            candidate_name = build_timestamped_name(stem, timestamp=timestamp, extension=suffix)
+            target = destination / candidate_name
 
         try:
             with target.open("wb") as buffer:
@@ -539,12 +686,12 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
     async def update_settings(payload: SettingsPayload) -> Dict[str, Any]:
         settings = _load_ui_settings()
         settings.theme = payload.theme
-        settings.whisper_model = payload.whisper_model.strip() or settings.whisper_model
+        settings.whisper_model = _normalize_whisper_model(payload.whisper_model)
         settings.whisper_compute_type = (
             payload.whisper_compute_type.strip() or settings.whisper_compute_type
         )
         settings.whisper_beam_size = payload.whisper_beam_size
-        settings.slide_dpi = payload.slide_dpi
+        settings.slide_dpi = _normalize_slide_dpi(payload.slide_dpi)
         settings_store.save(settings)
         return {"settings": asdict(settings)}
 

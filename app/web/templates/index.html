@@ -91,6 +91,10 @@
         box-sizing: border-box;
       }
 
+      .hidden {
+        display: none !important;
+      }
+
       body {
         margin: 0;
         font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
@@ -99,6 +103,10 @@
         background: var(--background);
         color: var(--text);
         transition: background 0.2s ease, color 0.2s ease;
+      }
+
+      body.dialog-open {
+        overflow: hidden;
       }
 
       main.layout {
@@ -132,6 +140,136 @@
         padding: 18px 20px;
         box-shadow: var(--panel-shadow);
         transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .dialog {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        z-index: 1000;
+      }
+
+      .dialog.hidden {
+        display: none !important;
+      }
+
+      .dialog-backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.45);
+        backdrop-filter: blur(2px);
+      }
+
+      .dialog-window {
+        position: relative;
+        z-index: 1;
+        background: var(--panel-bg);
+        border: 1px solid var(--panel-border);
+        border-radius: 12px;
+        padding: 24px;
+        width: min(420px, 100%);
+        box-shadow: 0 20px 45px rgba(15, 23, 42, 0.25), var(--panel-shadow);
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .dialog-title {
+        margin: 0;
+        font-size: 1.1rem;
+        font-weight: 600;
+      }
+
+      .dialog-message {
+        margin: 0;
+        font-size: 0.95rem;
+        color: var(--muted);
+        white-space: pre-wrap;
+      }
+
+      .dialog-input-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .dialog-input {
+        width: 100%;
+        border: 1px solid var(--panel-border);
+        border-radius: 8px;
+        padding: 10px 12px;
+        font-size: 0.95rem;
+        background: var(--background);
+        color: var(--text);
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .dialog-input:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+      }
+
+      .dialog-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+      }
+
+      .dialog-button {
+        border: 1px solid transparent;
+        border-radius: 999px;
+        padding: 8px 16px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        cursor: pointer;
+        transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease,
+          filter 0.2s ease;
+      }
+
+      .dialog-button:focus {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+      }
+
+      .dialog-button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        box-shadow: none;
+      }
+
+      .dialog-button.secondary {
+        background: transparent;
+        border-color: var(--panel-border);
+        color: var(--muted);
+      }
+
+      .dialog-button.secondary:hover {
+        border-color: var(--accent);
+        color: var(--text);
+      }
+
+      .dialog-button.primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: var(--accent-contrast);
+      }
+
+      .dialog-button.primary:hover {
+        filter: brightness(0.95);
+      }
+
+      .dialog-button.danger {
+        background: var(--danger);
+        border-color: var(--danger);
+        color: var(--danger-contrast);
+      }
+
+      .dialog-button.danger:hover {
+        filter: brightness(0.92);
       }
 
       .panel-heading {
@@ -795,7 +933,13 @@
                 <legend>Whisper transcription</legend>
                 <div class="field-inline">
                   <label for="settings-whisper-model">Default model</label>
-                  <input id="settings-whisper-model" type="text" required />
+                  <select id="settings-whisper-model" required>
+                    <option value="tiny">Tiny (fastest)</option>
+                    <option value="base" selected>Base (balanced)</option>
+                    <option value="small">Small (accurate)</option>
+                    <option value="medium">Medium (detailed)</option>
+                    <option value="large">Large (maximum accuracy)</option>
+                  </select>
                 </div>
                 <div class="field-inline">
                   <label for="settings-whisper-compute">Compute type</label>
@@ -810,7 +954,13 @@
                 <legend>Slides</legend>
                 <div class="field-inline">
                   <label for="settings-slide-dpi">Rendering DPI</label>
-                  <input id="settings-slide-dpi" type="number" min="72" max="600" step="10" required />
+                  <select id="settings-slide-dpi" required>
+                    <option value="150">150 dpi (fastest)</option>
+                    <option value="200" selected>200 dpi (balanced)</option>
+                    <option value="300">300 dpi (detailed)</option>
+                    <option value="400">400 dpi (high detail)</option>
+                    <option value="600">600 dpi (maximum)</option>
+                  </select>
                 </div>
               </fieldset>
               <div class="form-actions">
@@ -821,8 +971,62 @@
         </section>
       </section>
     </main>
+    <div id="dialog-root" class="dialog hidden" aria-hidden="true" tabindex="-1">
+      <div id="dialog-backdrop" class="dialog-backdrop"></div>
+      <div
+        id="dialog-window"
+        class="dialog-window"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="dialog-title"
+        aria-describedby="dialog-message"
+      >
+        <div class="dialog-header">
+          <h2 id="dialog-title" class="dialog-title"></h2>
+        </div>
+        <div id="dialog-message" class="dialog-message"></div>
+        <div id="dialog-input-wrapper" class="dialog-input-wrapper hidden">
+          <input id="dialog-input" class="dialog-input" type="text" autocomplete="off" />
+        </div>
+        <div class="dialog-actions">
+          <button type="button" id="dialog-cancel" class="dialog-button secondary">Cancel</button>
+          <button type="button" id="dialog-confirm" class="dialog-button primary">Confirm</button>
+        </div>
+      </div>
+    </div>
     <script>
       (function () {
+        const WHISPER_MODEL_CHOICES = new Set([
+          'tiny',
+          'base',
+          'small',
+          'medium',
+          'large',
+        ]);
+        const DEFAULT_WHISPER_MODEL = 'base';
+        const SLIDE_DPI_CHOICES = new Set(['150', '200', '300', '400', '600']);
+        const DEFAULT_SLIDE_DPI = '200';
+
+        function normalizeWhisperModel(value) {
+          const candidate =
+            typeof value === 'string' ? value.trim() : String(value ?? '');
+          return WHISPER_MODEL_CHOICES.has(candidate)
+            ? candidate
+            : DEFAULT_WHISPER_MODEL;
+        }
+
+        function normalizeSlideDpi(value) {
+          let candidate;
+          if (typeof value === 'number' && Number.isFinite(value)) {
+            candidate = String(Math.trunc(value));
+          } else if (typeof value === 'string') {
+            candidate = value.trim();
+          } else {
+            candidate = String(value ?? '');
+          }
+          return SLIDE_DPI_CHOICES.has(candidate) ? candidate : DEFAULT_SLIDE_DPI;
+        }
+
         const state = {
           classes: [],
           stats: {},
@@ -868,6 +1072,17 @@
           settingsWhisperCompute: document.getElementById('settings-whisper-compute'),
           settingsWhisperBeam: document.getElementById('settings-whisper-beam'),
           settingsSlideDpi: document.getElementById('settings-slide-dpi'),
+          dialog: {
+            root: document.getElementById('dialog-root'),
+            backdrop: document.getElementById('dialog-backdrop'),
+            window: document.getElementById('dialog-window'),
+            title: document.getElementById('dialog-title'),
+            message: document.getElementById('dialog-message'),
+            inputWrapper: document.getElementById('dialog-input-wrapper'),
+            input: document.getElementById('dialog-input'),
+            confirm: document.getElementById('dialog-confirm'),
+            cancel: document.getElementById('dialog-cancel'),
+          },
         };
 
         const assetDefinitions = [
@@ -915,6 +1130,212 @@
           dom.status.textContent = message;
           dom.status.dataset.variant = variant;
           dom.status.style.display = 'block';
+        }
+
+        const dialogState = { active: false };
+
+        function syncSettingsForm(settings) {
+          const themeValue = settings?.theme ?? 'system';
+          const modelValue = normalizeWhisperModel(settings?.whisper_model);
+          const computeRaw = settings?.whisper_compute_type ?? 'int8';
+          const computeValue =
+            typeof computeRaw === 'string' ? computeRaw.trim() || 'int8' : 'int8';
+          const beamNumber = Math.max(
+            1,
+            Math.min(10, Number(settings?.whisper_beam_size) || 5),
+          );
+          const dpiValue = normalizeSlideDpi(settings?.slide_dpi);
+
+          dom.settingsTheme.value = themeValue;
+          dom.settingsWhisperModel.value = modelValue;
+          dom.settingsWhisperCompute.value = computeValue;
+          dom.settingsWhisperBeam.value = String(beamNumber);
+          dom.settingsSlideDpi.value = dpiValue;
+          dom.transcribeModel.value = modelValue;
+
+          state.settings = {
+            theme: themeValue,
+            whisper_model: modelValue,
+            whisper_compute_type: computeValue,
+            whisper_beam_size: beamNumber,
+            slide_dpi: Number(dpiValue),
+          };
+
+          applyTheme(themeValue);
+        }
+
+        function showDialog({
+          title = '',
+          message = '',
+          confirmText = 'Confirm',
+          cancelText = 'Cancel',
+          variant = 'primary',
+          input = false,
+          placeholder = '',
+          defaultValue = '',
+          required = false,
+        } = {}) {
+          return new Promise((resolve) => {
+            const dialog = dom.dialog;
+            if (!dialog.root || dialogState.active) {
+              resolve({ confirmed: false, value: null });
+              return;
+            }
+
+            dialogState.active = true;
+            const previousActive =
+              document.activeElement instanceof HTMLElement ? document.activeElement : null;
+            const requireValue = Boolean(required && input);
+            const variantClass = variant === 'danger' ? 'danger' : 'primary';
+
+            dialog.title.textContent = title || '';
+            dialog.message.textContent = message || '';
+            dialog.message.style.display = message ? 'block' : 'none';
+
+            if (input) {
+              dialog.inputWrapper.classList.remove('hidden');
+              dialog.input.value = defaultValue ?? '';
+              dialog.input.placeholder = placeholder ?? '';
+            } else {
+              dialog.inputWrapper.classList.add('hidden');
+              dialog.input.value = '';
+              dialog.input.placeholder = '';
+            }
+
+            dialog.confirm.textContent = confirmText;
+            dialog.cancel.textContent = cancelText;
+            dialog.confirm.classList.remove('primary', 'danger');
+            dialog.confirm.classList.add(variantClass);
+            dialog.confirm.disabled = false;
+
+            const focusOrder = [];
+            if (input) {
+              focusOrder.push(dialog.input);
+            }
+            focusOrder.push(dialog.cancel, dialog.confirm);
+
+            function updateConfirmState() {
+              if (!requireValue) {
+                dialog.confirm.disabled = false;
+                return;
+              }
+              dialog.confirm.disabled = dialog.input.value.trim().length === 0;
+            }
+
+            function cleanup() {
+              dialog.confirm.removeEventListener('click', handleConfirm);
+              dialog.cancel.removeEventListener('click', handleCancel);
+              dialog.backdrop.removeEventListener('click', handleCancel);
+              dialog.window.removeEventListener('keydown', handleKeyDown);
+              if (input) {
+                dialog.input.removeEventListener('input', updateConfirmState);
+              }
+              dialog.root.classList.add('hidden');
+              dialog.root.setAttribute('aria-hidden', 'true');
+              document.body.classList.remove('dialog-open');
+              dialogState.active = false;
+              if (previousActive) {
+                previousActive.focus({ preventScroll: true });
+              }
+            }
+
+            function resolveAndClose(result) {
+              cleanup();
+              resolve(result);
+            }
+
+            function handleConfirm(event) {
+              event.preventDefault();
+              if (dialog.confirm.disabled) {
+                return;
+              }
+              const value = input ? dialog.input.value : null;
+              resolveAndClose({ confirmed: true, value });
+            }
+
+            function handleCancel(event) {
+              event.preventDefault();
+              resolveAndClose({ confirmed: false, value: null });
+            }
+
+            function handleKeyDown(event) {
+              if (event.key === 'Escape') {
+                event.preventDefault();
+                handleCancel(event);
+                return;
+              }
+              if (event.key === 'Enter') {
+                if (input) {
+                  if (requireValue && dialog.input.value.trim().length === 0) {
+                    return;
+                  }
+                  if (document.activeElement !== dialog.cancel) {
+                    event.preventDefault();
+                    handleConfirm(event);
+                  }
+                } else if (
+                  document.activeElement !== dialog.confirm &&
+                  document.activeElement !== dialog.cancel
+                ) {
+                  event.preventDefault();
+                  handleConfirm(event);
+                }
+                return;
+              }
+              if (event.key === 'Tab') {
+                const focusable = focusOrder.filter(
+                  (element) => element instanceof HTMLElement && !element.disabled,
+                );
+                if (!focusable.length) {
+                  return;
+                }
+                const currentIndex = focusable.indexOf(document.activeElement);
+                if (event.shiftKey) {
+                  const previousIndex = currentIndex <= 0 ? focusable.length - 1 : currentIndex - 1;
+                  focusable[previousIndex].focus();
+                } else {
+                  const nextIndex = currentIndex === focusable.length - 1 ? 0 : currentIndex + 1;
+                  focusable[nextIndex].focus();
+                }
+                event.preventDefault();
+              }
+            }
+
+            dialog.confirm.addEventListener('click', handleConfirm);
+            dialog.cancel.addEventListener('click', handleCancel);
+            dialog.backdrop.addEventListener('click', handleCancel);
+            dialog.window.addEventListener('keydown', handleKeyDown);
+            if (input) {
+              dialog.input.addEventListener('input', updateConfirmState);
+            }
+
+            dialog.root.classList.remove('hidden');
+            dialog.root.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('dialog-open');
+            updateConfirmState();
+
+            const initialFocus = input ? dialog.input : dialog.confirm;
+            window.requestAnimationFrame(() => {
+              initialFocus.focus({ preventScroll: true });
+              if (input) {
+                const valueLength = dialog.input.value.length;
+                dialog.input.setSelectionRange(valueLength, valueLength);
+              }
+            });
+          });
+        }
+
+        async function confirmDialog(options = {}) {
+          const result = await showDialog({ ...options, input: false });
+          return Boolean(result.confirmed);
+        }
+
+        async function promptDialog(options = {}) {
+          const result = await showDialog({ ...options, input: true });
+          if (!result.confirmed) {
+            return null;
+          }
+          return typeof result.value === 'string' ? result.value : '';
         }
 
         function formatNumber(value) {
@@ -1324,11 +1745,24 @@
           if (!requireEditMode()) {
             return;
           }
-          const name = window.prompt('Class name');
+          const name = await promptDialog({
+            title: 'Create class',
+            message: 'Enter a class name.',
+            confirmText: 'Create',
+            placeholder: 'Introduction to Astronomy',
+            required: true,
+          });
           if (!name || !name.trim()) {
             return;
           }
-          const description = window.prompt('Description (optional)') ?? '';
+          const description =
+            (await promptDialog({
+              title: 'Class description',
+              message: 'Description (optional)',
+              confirmText: 'Save',
+              cancelText: 'Skip',
+              placeholder: 'Add a short summary…',
+            })) ?? '';
           try {
             await request('/api/classes', {
               method: 'POST',
@@ -1346,11 +1780,24 @@
           if (!requireEditMode()) {
             return;
           }
-          const name = window.prompt(`Module name for ${classRecord.name}`);
+          const name = await promptDialog({
+            title: 'Create module',
+            message: `Module name for ${classRecord.name}`,
+            confirmText: 'Create',
+            placeholder: 'Foundations',
+            required: true,
+          });
           if (!name || !name.trim()) {
             return;
           }
-          const description = window.prompt('Description (optional)') ?? '';
+          const description =
+            (await promptDialog({
+              title: 'Module description',
+              message: 'Description (optional)',
+              confirmText: 'Save',
+              cancelText: 'Skip',
+              placeholder: 'Add a short summary…',
+            })) ?? '';
           try {
             await request('/api/modules', {
               method: 'POST',
@@ -1381,7 +1828,13 @@
           if (moduleCount || lectureCount) {
             message += `\n\nThis will remove ${moduleCount} module${moduleCount === 1 ? '' : 's'} and ${lectureCount} lecture${lectureCount === 1 ? '' : 's'}.`;
           }
-          const confirmed = window.confirm(message);
+          const confirmed = await confirmDialog({
+            title: 'Delete class',
+            message,
+            confirmText: 'Delete',
+            cancelText: 'Keep class',
+            variant: 'danger',
+          });
           if (!confirmed) {
             return;
           }
@@ -1418,7 +1871,13 @@
           if (lectureCount) {
             message += `\n\nThis will remove ${lectureCount} lecture${lectureCount === 1 ? '' : 's'}.`;
           }
-          const confirmed = window.confirm(message);
+          const confirmed = await confirmDialog({
+            title: 'Delete module',
+            message,
+            confirmText: 'Delete',
+            cancelText: 'Keep module',
+            variant: 'danger',
+          });
           if (!confirmed) {
             return;
           }
@@ -1447,11 +1906,24 @@
           const namePrompt = classRecord
             ? `Lecture title for ${classRecord.name} • ${moduleRecord.name}`
             : `Lecture title for ${moduleRecord.name}`;
-          const name = window.prompt(namePrompt);
+          const name = await promptDialog({
+            title: 'Create lecture',
+            message: namePrompt,
+            confirmText: 'Create',
+            placeholder: 'Lecture title',
+            required: true,
+          });
           if (!name || !name.trim()) {
             return;
           }
-          const description = window.prompt('Description (optional)') ?? '';
+          const description =
+            (await promptDialog({
+              title: 'Lecture description',
+              message: 'Description (optional)',
+              confirmText: 'Save',
+              cancelText: 'Skip',
+              placeholder: 'Add a short outline…',
+            })) ?? '';
           try {
             const payload = await request('/api/lectures', {
               method: 'POST',
@@ -1484,7 +1956,13 @@
           if (classRecord) {
             context += ` (${classRecord.name})`;
           }
-          const confirmed = window.confirm(`Delete lecture "${context}"?`);
+          const confirmed = await confirmDialog({
+            title: 'Delete lecture',
+            message: `Delete lecture "${context}"?`,
+            confirmText: 'Delete',
+            cancelText: 'Keep lecture',
+            variant: 'danger',
+          });
           if (!confirmed) {
             return;
           }
@@ -1506,21 +1984,6 @@
           document.body.dataset.theme = target;
         }
 
-        function ensureTranscribeOption(value) {
-          if (!value) {
-            return;
-          }
-          const exists = Array.from(dom.transcribeModel.options).some(
-            (option) => option.value === value,
-          );
-          if (!exists) {
-            const option = document.createElement('option');
-            option.value = value;
-            option.textContent = value;
-            dom.transcribeModel.appendChild(option);
-          }
-        }
-
         async function loadSettings() {
           try {
             const payload = await request('/api/settings');
@@ -1528,15 +1991,7 @@
             if (!settings) {
               return;
             }
-            state.settings = settings;
-            dom.settingsTheme.value = settings.theme ?? 'system';
-            dom.settingsWhisperModel.value = settings.whisper_model ?? 'base';
-            dom.settingsWhisperCompute.value = settings.whisper_compute_type ?? 'int8';
-            dom.settingsWhisperBeam.value = String(settings.whisper_beam_size ?? 5);
-            dom.settingsSlideDpi.value = String(settings.slide_dpi ?? 200);
-            ensureTranscribeOption(settings.whisper_model);
-            dom.transcribeModel.value = settings.whisper_model;
-            applyTheme(settings.theme);
+            syncSettingsForm(settings);
           } catch (error) {
             showStatus(error.message, 'error');
           }
@@ -1832,13 +2287,23 @@
           if (!state.selectedLectureId || !state.editMode) {
             return;
           }
-          const confirmed = window.confirm('Delete this lecture and all linked assets?');
+          const confirmed = await confirmDialog({
+            title: 'Delete lecture',
+            message: 'Delete this lecture and all linked assets?',
+            confirmText: 'Delete',
+            cancelText: 'Keep lecture',
+            variant: 'danger',
+          });
           if (!confirmed) {
             return;
           }
-          const secondCheck = window.confirm(
-            'This action cannot be undone. Do you want to permanently remove it?',
-          );
+          const secondCheck = await confirmDialog({
+            title: 'Confirm deletion',
+            message: 'This action cannot be undone. Do you want to permanently remove it?',
+            confirmText: 'Yes, delete it',
+            cancelText: 'Cancel',
+            variant: 'danger',
+          });
           if (!secondCheck) {
             return;
           }
@@ -1905,16 +2370,13 @@
           dom.settingsForm.addEventListener('submit', async (event) => {
             event.preventDefault();
             const themeValue = dom.settingsTheme.value || 'system';
-            const modelValue = dom.settingsWhisperModel.value.trim() || 'base';
+            const modelValue = normalizeWhisperModel(dom.settingsWhisperModel.value);
             const computeValue = dom.settingsWhisperCompute.value.trim() || 'int8';
             const beamValue = Math.max(
               1,
               Math.min(10, Number(dom.settingsWhisperBeam.value) || 5),
             );
-            const dpiValue = Math.max(
-              72,
-              Math.min(600, Number(dom.settingsSlideDpi.value) || 200),
-            );
+            const dpiValue = Number(normalizeSlideDpi(dom.settingsSlideDpi.value));
 
             try {
               const response = await request('/api/settings', {
@@ -1928,16 +2390,14 @@
                   slide_dpi: dpiValue,
                 }),
               });
-              state.settings = response?.settings ?? {
+              const updatedSettings = response?.settings ?? {
                 theme: themeValue,
                 whisper_model: modelValue,
                 whisper_compute_type: computeValue,
                 whisper_beam_size: beamValue,
                 slide_dpi: dpiValue,
               };
-              ensureTranscribeOption(modelValue);
-              dom.transcribeModel.value = modelValue;
-              applyTheme(themeValue);
+              syncSettingsForm(updatedSettings);
               showStatus('Settings saved.', 'success');
             } catch (error) {
               showStatus(error.message, 'error');

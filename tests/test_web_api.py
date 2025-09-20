@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -12,7 +13,7 @@ from fastapi.testclient import TestClient
 from app.web import create_app
 from app.web import server as web_server
 from app.services.storage import LectureRepository
-from app.services.ingestion import TranscriptResult
+from app.services.ingestion import LecturePaths, TranscriptResult
 
 
 def _create_sample_data(config) -> tuple[LectureRepository, int, int]:
@@ -136,9 +137,96 @@ def test_create_update_delete_lecture(temp_config):
     assert response.status_code == 200
     assert repository.get_lecture(lecture_id).description == "Updated description"
 
+    lecture_record = repository.get_lecture(lecture_id)
+    assert lecture_record is not None
+    module_record = repository.get_module(module_id)
+    assert module_record is not None
+    class_record = repository.get_class(module_record.class_id)
+    assert class_record is not None
+
+    lecture_paths = LecturePaths.build(
+        temp_config.storage_root,
+        class_record.name,
+        module_record.name,
+        lecture_record.name,
+    )
+    lecture_paths.ensure()
+    (lecture_paths.raw_dir / "sample.txt").write_text("data", encoding="utf-8")
+
+    legacy_dir = (
+        temp_config.storage_root
+        / class_record.name
+        / module_record.name
+        / lecture_record.name
+    )
+    legacy_dir.mkdir(parents=True, exist_ok=True)
+    (legacy_dir / "legacy.txt").write_text("legacy", encoding="utf-8")
+
     response = client.delete(f"/api/lectures/{lecture_id}")
     assert response.status_code == 204
     assert repository.get_lecture(lecture_id) is None
+    assert not lecture_paths.lecture_root.exists()
+    assert not legacy_dir.exists()
+
+
+def test_delete_module_removes_storage(temp_config):
+    repository, _lecture_id, module_id = _create_sample_data(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    module_record = repository.get_module(module_id)
+    assert module_record is not None
+    class_record = repository.get_class(module_record.class_id)
+    assert class_record is not None
+
+    slug_module_dir = LecturePaths.build(
+        temp_config.storage_root,
+        class_record.name,
+        module_record.name,
+        "Placeholder",
+    ).lecture_root.parent
+    slug_module_dir.mkdir(parents=True, exist_ok=True)
+    (slug_module_dir / "slug.txt").write_text("slug", encoding="utf-8")
+
+    legacy_module_dir = temp_config.storage_root / class_record.name / module_record.name
+    legacy_module_dir.mkdir(parents=True, exist_ok=True)
+    (legacy_module_dir / "legacy.txt").write_text("legacy", encoding="utf-8")
+
+    response = client.delete(f"/api/modules/{module_id}")
+    assert response.status_code == 204
+    assert repository.get_module(module_id) is None
+    assert not slug_module_dir.exists()
+    assert not legacy_module_dir.exists()
+
+
+def test_delete_class_removes_storage(temp_config):
+    repository, _lecture_id, module_id = _create_sample_data(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    module_record = repository.get_module(module_id)
+    assert module_record is not None
+    class_record = repository.get_class(module_record.class_id)
+    assert class_record is not None
+
+    slug_class_dir = LecturePaths.build(
+        temp_config.storage_root,
+        class_record.name,
+        module_record.name,
+        "Placeholder",
+    ).lecture_root.parent.parent
+    slug_class_dir.mkdir(parents=True, exist_ok=True)
+    (slug_class_dir / "slug.txt").write_text("slug", encoding="utf-8")
+
+    legacy_class_dir = temp_config.storage_root / class_record.name
+    legacy_class_dir.mkdir(parents=True, exist_ok=True)
+    (legacy_class_dir / "legacy.txt").write_text("legacy", encoding="utf-8")
+
+    response = client.delete(f"/api/classes/{class_record.id}")
+    assert response.status_code == 204
+    assert repository.get_class(class_record.id) is None
+    assert not slug_class_dir.exists()
+    assert not legacy_class_dir.exists()
 
 
 def test_upload_asset_updates_repository(temp_config):
@@ -259,6 +347,66 @@ def test_transcribe_audio_uses_backend(monkeypatch, temp_config):
     assert captured["download_root"] == temp_config.assets_root
     assert captured["compute_type"] == "float16"
     assert captured["beam_size"] == 7
+
+
+def test_get_settings_coerces_invalid_choices(temp_config):
+    repository = LectureRepository(temp_config)
+    settings_path = temp_config.storage_root / "settings.json"
+    settings_path.parent.mkdir(parents=True, exist_ok=True)
+    settings_path.write_text(
+        json.dumps(
+            {
+                "theme": "dark",
+                "whisper_model": "giant",
+                "whisper_compute_type": "int8",
+                "whisper_beam_size": 4,
+                "slide_dpi": 180,
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    response = client.get("/api/settings")
+    assert response.status_code == 200
+    payload = response.json()["settings"]
+    assert payload["whisper_model"] == "base"
+    assert payload["slide_dpi"] == 200
+
+
+def test_update_settings_enforces_choices(temp_config):
+    repository = LectureRepository(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    valid_payload = {
+        "theme": "light",
+        "whisper_model": "small",
+        "whisper_compute_type": "float16",
+        "whisper_beam_size": 6,
+        "slide_dpi": 300,
+    }
+
+    response = client.put("/api/settings", json=valid_payload)
+    assert response.status_code == 200
+    payload = response.json()["settings"]
+    assert payload["whisper_model"] == "small"
+    assert payload["slide_dpi"] == 300
+
+    invalid_model = client.put(
+        "/api/settings",
+        json={**valid_payload, "whisper_model": "giant"},
+    )
+    assert invalid_model.status_code == 422
+
+    invalid_dpi = client.put(
+        "/api/settings",
+        json={**valid_payload, "slide_dpi": 180},
+    )
+    assert invalid_dpi.status_code == 422
 
 
 def test_reveal_asset_uses_helper(monkeypatch, temp_config):
