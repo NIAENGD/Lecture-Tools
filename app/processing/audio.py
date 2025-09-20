@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
+import re
+import subprocess
+import sys
+import wave
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Optional
@@ -19,8 +24,13 @@ class TranscriptSegment:
     text: str
 
 
+_SEGMENT_PATTERN = re.compile(
+    r"^\[(\d+):(\d+):(\d+\.\d+)\s+-->\s+(\d+):(\d+):(\d+\.\d+)\]\s*(.*)$"
+)
+
+
 class FasterWhisperTranscription(TranscriptionEngine):
-    """Transcription engine backed by :mod:`faster_whisper`."""
+    """Transcription engine backed by :mod:`faster_whisper` or the GPU CLI."""
 
     def __init__(
         self,
@@ -30,29 +40,65 @@ class FasterWhisperTranscription(TranscriptionEngine):
         compute_type: str = "int8",
         beam_size: int = 5,
     ) -> None:
-        try:
-            from faster_whisper import WhisperModel
-        except ImportError as exc:  # pragma: no cover - exercised in runtime, not tests
-            raise RuntimeError("faster-whisper is not installed") from exc
-
-        download_directory = str(download_root) if download_root is not None else None
-        self._model = WhisperModel(
-            model_size,
-            device="cpu",
-            compute_type=compute_type,
-            download_root=download_directory,
-        )
         self._beam_size = beam_size
+        self._model = None
+        self._use_gpu_cli = False
+        self._cli_binary: Optional[Path] = None
+        self._cli_model_path: Optional[Path] = None
+
+        requested_model = model_size.lower()
+        if requested_model == "gpu":
+            cli_binary = self._resolve_cli_binary()
+            cli_supported = False
+            if cli_binary is not None:
+                cli_supported = self._check_cli_support(cli_binary)
+            if cli_supported:
+                try:
+                    self._cli_model_path = self._resolve_cli_model_path(download_root)
+                except FileNotFoundError as exc:
+                    message = (
+                        "GPU Whisper model not found. Download ggml-medium.en.bin and "
+                        "place it inside the assets/models directory."
+                    )
+                    raise RuntimeError(message) from exc
+                self._use_gpu_cli = True
+                self._cli_binary = cli_binary
+            else:
+                print(
+                    "GPU Whisper CLI is not supported on this platform. Falling back to "
+                    "CPU faster-whisper.",
+                    file=sys.stderr,
+                )
+
+        if not self._use_gpu_cli:
+            try:
+                from faster_whisper import WhisperModel
+            except ImportError as exc:  # pragma: no cover - exercised in runtime, not tests
+                raise RuntimeError("faster-whisper is not installed") from exc
+
+            download_directory = str(download_root) if download_root is not None else None
+            self._model = WhisperModel(
+                model_size,
+                device="cpu",
+                compute_type=compute_type,
+                download_root=download_directory,
+            )
 
     def transcribe(self, audio_path: Path, output_dir: Path) -> TranscriptResult:
         output_dir.mkdir(parents=True, exist_ok=True)
+        if self._use_gpu_cli:
+            return self._transcribe_with_cli(audio_path, output_dir)
+
+        assert self._model is not None  # for type checkers
         segments, _info = self._model.transcribe(
             str(audio_path),
             beam_size=self._beam_size,
         )
 
         collected_segments = list(self._collect_segments(segments))
-        transcript_text = "\n".join(segment.text.strip() for segment in collected_segments if segment.text.strip())
+        transcript_text = "\n".join(
+            segment.text.strip() for segment in collected_segments if segment.text.strip()
+        )
 
         transcript_file = output_dir / "transcript.txt"
         transcript_file.write_text(transcript_text, encoding="utf-8")
@@ -62,6 +108,156 @@ class FasterWhisperTranscription(TranscriptionEngine):
         segments_file.write_text(json.dumps(segments_payload, indent=2), encoding="utf-8")
 
         return TranscriptResult(text_path=transcript_file, segments_path=segments_file)
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+    def _resolve_cli_binary(self) -> Optional[Path]:
+        cli_root = Path(__file__).resolve().parent.parent / "cli"
+        candidates = [cli_root / "main.exe", cli_root / "main"]
+        for candidate in candidates:
+            if candidate.exists():
+                return candidate
+        return None
+
+    def _check_cli_support(self, binary: Path) -> bool:
+        try:
+            result = subprocess.run(
+                [str(binary)],
+                capture_output=True,
+                text=True,
+                timeout=5,
+                check=False,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            return False
+
+        combined = (result.stdout + result.stderr).strip()
+        return bool(combined)
+
+    def _resolve_cli_model_path(self, download_root: Optional[Path]) -> Path:
+        base_root = download_root if download_root is not None else Path.cwd() / "assets"
+        model_path = base_root / "models" / "ggml-medium.en.bin"
+        if not model_path.exists():
+            raise FileNotFoundError(model_path)
+        return model_path
+
+    def _transcribe_with_cli(self, audio_path: Path, output_dir: Path) -> TranscriptResult:
+        assert self._cli_binary is not None
+        assert self._cli_model_path is not None
+
+        command = [
+            str(self._cli_binary),
+            "-m",
+            str(self._cli_model_path),
+            "-f",
+            str(audio_path),
+            "-gpu",
+            "0",
+        ]
+
+        segments: list[TranscriptSegment] = []
+        transcript_lines: list[str] = []
+        captured_output: list[str] = []
+
+        total_duration = self._get_audio_duration(audio_path)
+        last_progress = 0.0
+
+        process = subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+        )
+
+        assert process.stdout is not None
+        try:
+            for raw_line in process.stdout:
+                line = raw_line.rstrip()
+                if line:
+                    captured_output.append(line)
+                match = _SEGMENT_PATTERN.match(line.strip())
+                if match:
+                    start = self._timestamp_to_seconds(match.group(1), match.group(2), match.group(3))
+                    end = self._timestamp_to_seconds(match.group(4), match.group(5), match.group(6))
+                    text = match.group(7).strip()
+                    segment = TranscriptSegment(start=start, end=end, text=text)
+                    segments.append(segment)
+                    if text:
+                        transcript_lines.append(text)
+                    last_progress = max(last_progress, end)
+                    self._render_progress(last_progress, total_duration)
+        except Exception:
+            process.kill()
+            process.wait()
+            raise
+        finally:
+            process.stdout.close()
+
+        return_code = process.wait()
+
+        if last_progress > 0:
+            self._render_progress(total_duration or last_progress, total_duration)
+            sys.stdout.write("\n")
+            sys.stdout.flush()
+
+        if return_code != 0:
+            combined_output = "\n".join(captured_output)
+            raise RuntimeError(
+                f"GPU Whisper CLI failed with exit code {return_code}.\n{combined_output}"
+            )
+
+        transcript_text = "\n".join(line.strip() for line in transcript_lines if line.strip())
+
+        transcript_file = output_dir / "transcript.txt"
+        transcript_file.write_text(transcript_text, encoding="utf-8")
+
+        segments_file = output_dir / "segments.json"
+        segments_payload = [segment.__dict__ for segment in segments]
+        segments_file.write_text(json.dumps(segments_payload, indent=2), encoding="utf-8")
+
+        return TranscriptResult(text_path=transcript_file, segments_path=segments_file)
+
+    def _render_progress(self, current: float, total: Optional[float]) -> None:
+        if total and total > 0:
+            ratio = max(0.0, min(current / total, 1.0))
+            width = 30
+            filled = min(width, int(ratio * width))
+            if filled >= width:
+                bar = "=" * width
+            else:
+                bar = "=" * filled + ">" + "." * (width - filled - 1)
+            message = f"====> [{bar}] {ratio * 100:5.1f}% ({current:.1f}/{total:.1f}s)"
+        else:
+            message = f"====> processed {current:.1f}s"
+        sys.stdout.write("\r" + message)
+        sys.stdout.flush()
+
+    def _timestamp_to_seconds(self, hours: str, minutes: str, seconds: str) -> float:
+        return int(hours) * 3600 + int(minutes) * 60 + float(seconds)
+
+    def _get_audio_duration(self, audio_path: Path) -> Optional[float]:
+        if audio_path.suffix.lower() == ".wav":
+            with contextlib.closing(wave.open(str(audio_path), "rb")) as handle:
+                frames = handle.getnframes()
+                rate = handle.getframerate()
+                if rate:
+                    return frames / float(rate)
+                return None
+        try:
+            from mutagen import File as MutagenFile  # type: ignore[import-not-found]
+        except ImportError:  # pragma: no cover - optional dependency
+            return None
+
+        metadata = MutagenFile(str(audio_path))
+        if metadata is None:
+            return None
+        info = getattr(metadata, "info", None)
+        if info is None:
+            return None
+        length = getattr(info, "length", None)
+        return float(length) if length else None
 
     def _collect_segments(self, segments: Iterable[object]) -> Iterable[TranscriptSegment]:
         for segment in segments:
