@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import platform
 import shutil
 import subprocess
@@ -952,7 +953,8 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
                 error_reported = True
                 raise HTTPException(status_code=400, detail=str(error)) from error
 
-            result = engine.transcribe(
+            result = await asyncio.to_thread(
+                engine.transcribe,
                 audio_file,
                 lecture_paths.transcript_dir,
                 progress_callback=handle_progress,
