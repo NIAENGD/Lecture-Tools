@@ -5,9 +5,10 @@ from __future__ import annotations
 import platform
 import shutil
 import subprocess
+from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Literal, Optional, Tuple
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Response
 from fastapi import status
@@ -18,6 +19,8 @@ from pydantic import BaseModel, Field
 from ..config import AppConfig
 from ..processing import PyMuPDFSlideConverter
 from ..services.ingestion import LecturePaths
+from ..services.naming import build_asset_stem, build_timestamped_name
+from ..services.settings import SettingsStore, UISettings
 from ..services.storage import ClassRecord, LectureRecord, LectureRepository, ModuleRecord
 
 try:  # pragma: no cover - optional dependency imported lazily
@@ -186,10 +189,30 @@ class RevealRequest(BaseModel):
     select: bool = False
 
 
+class ClassCreatePayload(BaseModel):
+    name: str = Field(..., min_length=1)
+    description: str = ""
+
+
+class ModuleCreatePayload(BaseModel):
+    class_id: int
+    name: str = Field(..., min_length=1)
+    description: str = ""
+
+
+class SettingsPayload(BaseModel):
+    theme: Literal["dark", "light", "system"] = "system"
+    whisper_model: str = Field("base", min_length=1)
+    whisper_compute_type: str = Field("int8", min_length=1)
+    whisper_beam_size: int = Field(5, ge=1, le=10)
+    slide_dpi: int = Field(200, ge=72, le=600)
+
+
 def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
     """Return a configured FastAPI application."""
 
     app = FastAPI(title="Lecture Tools", description="Browse lectures from any device")
+    settings_store = SettingsStore(config)
 
     app.mount(
         "/storage",
@@ -198,6 +221,16 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
     )
 
     index_html = _TEMPLATE_PATH.read_text(encoding="utf-8")
+
+    def _load_ui_settings() -> UISettings:
+        try:
+            return settings_store.load()
+        except Exception:  # pragma: no cover - defensive fallback
+            return UISettings()
+
+    def _make_slide_converter() -> PyMuPDFSlideConverter:
+        settings = _load_ui_settings()
+        return PyMuPDFSlideConverter(dpi=settings.slide_dpi)
 
     def _require_hierarchy(lecture: LectureRecord) -> Tuple[ClassRecord, ModuleRecord]:
         module = repository.get_module(lecture.module_id)
@@ -211,6 +244,7 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
     def _generate_slide_archive(
         pdf_path: Path,
         lecture_paths: LecturePaths,
+        converter: PyMuPDFSlideConverter,
         *,
         page_range: Optional[Tuple[int, int]] = None,
     ) -> Optional[str]:
@@ -218,7 +252,6 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
         if lecture_paths.slide_dir.exists():
             existing_items = list(lecture_paths.slide_dir.iterdir())
 
-        converter = PyMuPDFSlideConverter()
         try:
             generated = list(
                 converter.convert(
@@ -278,6 +311,72 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
                 **total_asset_counts,
             },
         }
+
+    @app.post("/api/classes", status_code=status.HTTP_201_CREATED)
+    async def create_class(payload: ClassCreatePayload) -> Dict[str, Any]:
+        name = payload.name.strip()
+        if not name:
+            raise HTTPException(status_code=400, detail="Class name is required")
+
+        try:
+            class_id = repository.add_class(name, payload.description.strip())
+        except Exception as error:  # noqa: BLE001 - propagate integrity issues
+            raise HTTPException(status_code=400, detail=str(error)) from error
+
+        record = repository.get_class(class_id)
+        if record is None:
+            raise HTTPException(status_code=500, detail="Class creation failed")
+
+        return {"class": _serialize_class(repository, record)}
+
+    @app.delete(
+        "/api/classes/{class_id}",
+        status_code=status.HTTP_204_NO_CONTENT,
+        response_class=Response,
+    )
+    async def delete_class(class_id: int) -> Response:
+        record = repository.get_class(class_id)
+        if record is None:
+            raise HTTPException(status_code=404, detail="Class not found")
+        repository.remove_class(class_id)
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    @app.post("/api/modules", status_code=status.HTTP_201_CREATED)
+    async def create_module(payload: ModuleCreatePayload) -> Dict[str, Any]:
+        class_record = repository.get_class(payload.class_id)
+        if class_record is None:
+            raise HTTPException(status_code=404, detail="Class not found")
+
+        name = payload.name.strip()
+        if not name:
+            raise HTTPException(status_code=400, detail="Module name is required")
+
+        try:
+            module_id = repository.add_module(
+                payload.class_id,
+                name,
+                payload.description.strip(),
+            )
+        except Exception as error:  # noqa: BLE001 - propagate integrity issues
+            raise HTTPException(status_code=400, detail=str(error)) from error
+
+        record = repository.get_module(module_id)
+        if record is None:
+            raise HTTPException(status_code=500, detail="Module creation failed")
+
+        return {"module": _serialize_module(repository, record)}
+
+    @app.delete(
+        "/api/modules/{module_id}",
+        status_code=status.HTTP_204_NO_CONTENT,
+        response_class=Response,
+    )
+    async def delete_module(module_id: int) -> Response:
+        record = repository.get_module(module_id)
+        if record is None:
+            raise HTTPException(status_code=404, detail="Module not found")
+        repository.remove_module(module_id)
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     @app.post("/api/lectures", status_code=status.HTTP_201_CREATED)
     async def create_lecture(payload: LectureCreatePayload) -> Dict[str, Any]:
@@ -396,7 +495,15 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
 
         attribute, destination = destinations[asset_key]
         destination.mkdir(parents=True, exist_ok=True)
-        filename = Path(file.filename or "asset").name
+        suffix = Path(file.filename or "").suffix
+        stem = build_asset_stem(
+            class_record.name,
+            module.name,
+            lecture.name,
+            asset_key,
+        )
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        filename = build_timestamped_name(stem, timestamp=timestamp, extension=suffix)
         target = destination / filename
 
         try:
@@ -409,7 +516,9 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
         update_kwargs: Dict[str, Optional[str]] = {attribute: relative}
 
         if asset_key == "slides":
-            slide_archive = _generate_slide_archive(target, lecture_paths)
+            slide_archive = _generate_slide_archive(
+                target, lecture_paths, _make_slide_converter()
+            )
             update_kwargs["slide_image_dir"] = slide_archive
 
         repository.update_lecture_assets(lecture_id, **update_kwargs)
@@ -420,6 +529,24 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
         if asset_key == "slides":
             response["slide_image_dir"] = update_kwargs.get("slide_image_dir")
         return response
+
+    @app.get("/api/settings")
+    async def get_settings() -> Dict[str, Any]:
+        settings = _load_ui_settings()
+        return {"settings": asdict(settings)}
+
+    @app.put("/api/settings")
+    async def update_settings(payload: SettingsPayload) -> Dict[str, Any]:
+        settings = _load_ui_settings()
+        settings.theme = payload.theme
+        settings.whisper_model = payload.whisper_model.strip() or settings.whisper_model
+        settings.whisper_compute_type = (
+            payload.whisper_compute_type.strip() or settings.whisper_compute_type
+        )
+        settings.whisper_beam_size = payload.whisper_beam_size
+        settings.slide_dpi = payload.slide_dpi
+        settings_store.save(settings)
+        return {"settings": asdict(settings)}
 
     @app.get("/api/lectures/{lecture_id}/preview")
     async def get_lecture_preview(lecture_id: int) -> Dict[str, Any]:
@@ -501,8 +628,15 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
         )
         lecture_paths.ensure()
 
-        slide_filename = Path(file.filename or "slides.pdf").with_suffix(".pdf")
-        slide_destination = lecture_paths.raw_dir / slide_filename.name
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        slide_stem = build_asset_stem(
+            class_record.name,
+            module.name,
+            lecture.name,
+            "slides",
+        )
+        slide_filename = build_timestamped_name(slide_stem, timestamp=timestamp, extension=".pdf")
+        slide_destination = lecture_paths.raw_dir / slide_filename
         slide_destination.parent.mkdir(parents=True, exist_ok=True)
 
         try:
@@ -523,6 +657,7 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
         slide_image_relative = _generate_slide_archive(
             slide_destination,
             lecture_paths,
+            _make_slide_converter(),
             page_range=selected_range,
         )
 

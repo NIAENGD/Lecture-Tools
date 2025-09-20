@@ -10,14 +10,14 @@ from typing import Literal
 from ..config import AppConfig
 
 
-ThemeName = Literal["dark", "light"]
+ThemeName = Literal["dark", "light", "system"]
 
 
 @dataclass
 class UISettings:
     """Container for customisable UI options."""
 
-    theme: ThemeName = "dark"
+    theme: ThemeName = "system"
     whisper_model: str = "base"
     whisper_compute_type: str = "int8"
     whisper_beam_size: int = 5
