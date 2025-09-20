@@ -11,6 +11,7 @@ from ..config import AppConfig
 
 
 ThemeName = Literal["dark", "light", "system"]
+LanguageCode = Literal["en", "zh", "es", "fr"]
 
 
 @dataclass
@@ -18,6 +19,7 @@ class UISettings:
     """Container for customisable UI options."""
 
     theme: ThemeName = "system"
+    language: LanguageCode = "en"
     whisper_model: str = "base"
     whisper_compute_type: str = "int8"
     whisper_beam_size: int = 5

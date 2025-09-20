@@ -1005,6 +1005,15 @@
                     <option value="dark">Dark</option>
                   </select>
                 </div>
+                <div class="field-inline">
+                  <label for="settings-language">Language</label>
+                  <select id="settings-language">
+                    <option value="en">English</option>
+                    <option value="zh">中文 (Chinese)</option>
+                    <option value="es">Español (Spanish)</option>
+                    <option value="fr">Français (French)</option>
+                  </select>
+                </div>
               </fieldset>
               <fieldset>
                 <legend>Whisper transcription</legend>
@@ -1100,6 +1109,8 @@
         const DEFAULT_WHISPER_MODEL = 'base';
         const SLIDE_DPI_CHOICES = new Set(['150', '200', '300', '400', '600']);
         const DEFAULT_SLIDE_DPI = '200';
+        const LANGUAGE_CHOICES = new Set(['en', 'zh', 'es', 'fr']);
+        const DEFAULT_LANGUAGE = 'en';
 
         function normalizeWhisperModel(value) {
           const candidate =
@@ -1119,6 +1130,14 @@
             candidate = String(value ?? '');
           }
           return SLIDE_DPI_CHOICES.has(candidate) ? candidate : DEFAULT_SLIDE_DPI;
+        }
+
+        function normalizeLanguage(value) {
+          if (typeof value === 'string') {
+            const trimmed = value.trim().toLowerCase();
+            return LANGUAGE_CHOICES.has(trimmed) ? trimmed : DEFAULT_LANGUAGE;
+          }
+          return DEFAULT_LANGUAGE;
         }
 
         const state = {
@@ -1179,6 +1198,7 @@
           },
           settingsForm: document.getElementById('settings-form'),
           settingsTheme: document.getElementById('settings-theme'),
+          settingsLanguage: document.getElementById('settings-language'),
           settingsWhisperModel: document.getElementById('settings-whisper-model'),
           settingsWhisperCompute: document.getElementById('settings-whisper-compute'),
           settingsWhisperBeam: document.getElementById('settings-whisper-beam'),
@@ -1412,6 +1432,7 @@
 
         function syncSettingsForm(settings) {
           const themeValue = settings?.theme ?? 'system';
+          const languageValue = normalizeLanguage(settings?.language);
           const requestedModel = normalizeWhisperModel(settings?.whisper_model);
           const computeRaw = settings?.whisper_compute_type ?? 'int8';
           const computeValue =
@@ -1428,6 +1449,7 @@
               : requestedModel;
 
           dom.settingsTheme.value = themeValue;
+          dom.settingsLanguage.value = languageValue;
           dom.settingsWhisperModel.value = effectiveModel;
           dom.settingsWhisperCompute.value = computeValue;
           dom.settingsWhisperBeam.value = String(beamNumber);
@@ -1436,6 +1458,7 @@
 
           state.settings = {
             theme: themeValue,
+            language: languageValue,
             whisper_model: effectiveModel,
             whisper_model_requested: requestedModel,
             whisper_compute_type: computeValue,
@@ -2865,6 +2888,7 @@
           dom.settingsForm.addEventListener('submit', async (event) => {
             event.preventDefault();
             const themeValue = dom.settingsTheme.value || 'system';
+            const languageValue = normalizeLanguage(dom.settingsLanguage.value);
             const modelValue = normalizeWhisperModel(dom.settingsWhisperModel.value);
             const computeValue = dom.settingsWhisperCompute.value.trim() || 'int8';
             const beamValue = Math.max(
@@ -2879,6 +2903,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                   theme: themeValue,
+                  language: languageValue,
                   whisper_model: modelValue,
                   whisper_compute_type: computeValue,
                   whisper_beam_size: beamValue,
@@ -2887,6 +2912,7 @@
               });
               const updatedSettings = response?.settings ?? {
                 theme: themeValue,
+                language: languageValue,
                 whisper_model: modelValue,
                 whisper_compute_type: computeValue,
                 whisper_beam_size: beamValue,

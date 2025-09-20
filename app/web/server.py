@@ -46,6 +46,8 @@ _WHISPER_MODEL_OPTIONS: Tuple[str, ...] = ("tiny", "base", "small", "medium", "l
 _WHISPER_MODEL_SET = set(_WHISPER_MODEL_OPTIONS)
 _SLIDE_DPI_OPTIONS: Tuple[int, ...] = (150, 200, 300, 400, 600)
 _SLIDE_DPI_SET = set(_SLIDE_DPI_OPTIONS)
+_LANGUAGE_OPTIONS: Tuple[str, ...] = ("en", "zh", "es", "fr")
+_LANGUAGE_SET = set(_LANGUAGE_OPTIONS)
 _DEFAULT_UI_SETTINGS = UISettings()
 
 
@@ -162,6 +164,16 @@ def _normalize_slide_dpi(value: Any) -> int:
     except (TypeError, ValueError):
         return _DEFAULT_UI_SETTINGS.slide_dpi
     return candidate if candidate in _SLIDE_DPI_SET else _DEFAULT_UI_SETTINGS.slide_dpi
+
+
+def _normalize_language(value: Any) -> str:
+    """Return a supported interface language code."""
+
+    if isinstance(value, str):
+        candidate = value.strip().lower()
+    else:
+        candidate = str(value or "").strip().lower()
+    return candidate if candidate in _LANGUAGE_SET else _DEFAULT_UI_SETTINGS.language
 
 
 def _format_asset_counts(lectures: List[Dict[str, Any]]) -> Dict[str, int]:
@@ -338,6 +350,7 @@ class SettingsPayload(BaseModel):
     whisper_compute_type: str = Field("int8", min_length=1)
     whisper_beam_size: int = Field(5, ge=1, le=10)
     slide_dpi: Literal[*_SLIDE_DPI_OPTIONS] = 200
+    language: Literal[*_LANGUAGE_OPTIONS] = _DEFAULT_UI_SETTINGS.language
 
 
 def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
@@ -370,6 +383,7 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
             settings = UISettings()
         settings.whisper_model = _normalize_whisper_model(settings.whisper_model)
         settings.slide_dpi = _normalize_slide_dpi(settings.slide_dpi)
+        settings.language = _normalize_language(getattr(settings, "language", None))
         return settings
 
     def _record_gpu_probe(probe: Dict[str, Any], *, checked: bool = True) -> Dict[str, Any]:
@@ -861,6 +875,7 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
     async def update_settings(payload: SettingsPayload) -> Dict[str, Any]:
         settings = _load_ui_settings()
         settings.theme = payload.theme
+        settings.language = _normalize_language(payload.language)
         desired_model = _normalize_whisper_model(payload.whisper_model)
         if desired_model == "gpu":
             if check_gpu_whisper_availability is None:
