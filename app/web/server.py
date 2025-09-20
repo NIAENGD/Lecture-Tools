@@ -343,6 +343,7 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
     """Return a configured FastAPI application."""
 
     app = FastAPI(title="Lecture Tools", description="Browse lectures from any device")
+    app.state.server = None
     settings_store = SettingsStore(config)
     progress_tracker = TranscriptionProgressTracker()
     gpu_support_state: Dict[str, Any] = {
@@ -1074,6 +1075,18 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
             raise HTTPException(status_code=500, detail=str(error)) from error
 
         return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    @app.post("/api/system/shutdown", status_code=status.HTTP_202_ACCEPTED)
+    async def shutdown_application() -> Dict[str, str]:
+        server = getattr(app.state, "server", None)
+        if server is None:
+            raise HTTPException(status_code=503, detail="Shutdown is unavailable.")
+
+        server.should_exit = True
+        if hasattr(server, "force_exit"):
+            server.force_exit = True
+
+        return {"status": "shutting_down"}
 
     return app
 
