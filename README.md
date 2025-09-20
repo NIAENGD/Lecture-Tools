@@ -1,117 +1,129 @@
-# Lecture Tools
+<h1 align="center">Lecture Tools</h1>
 
-Lecture Tools ingests lecture recordings and slide decks, producing searchable
-transcripts and paired slide images organised by class → module → lecture. The
-project emphasises a portable workflow that keeps dependencies self-contained
-inside the repository's `storage` and `assets` directories.
+<p align="center"><strong>The luxurious companion for lecture capture, transcription, and course management.</strong></p>
 
-Key capabilities include:
+<p align="center">
+  <img alt="Python" src="https://img.shields.io/badge/Made%20with-Python%203.11-3776AB?style=for-the-badge&logo=python&logoColor=white" />
+  <img alt="FastAPI" src="https://img.shields.io/badge/API-FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" />
+  <img alt="Pydantic" src="https://img.shields.io/badge/Validation-Pydantic-3666A0?style=for-the-badge" />
+  <img alt="MIT License" src="https://img.shields.io/badge/License-MIT-black?style=for-the-badge" />
+</p>
 
-- A polished desktop overview with a navigation tree, stats cards, and lecture detail panes that let you browse classes in a modern UI as soon as the app launches.
-- SQLite-backed storage for classes, modules, and lectures.
-- Automatic folder management for raw uploads and processed artefacts.
-- CPU-only transcription using [faster-whisper](https://github.com/SYSTRAN/faster-whisper) (models download to `assets`).
-- Optional GPU-accelerated Whisper transcription via the bundled Windows CLI runner.
-- Slide conversion with PyMuPDF and Pillow that exports vertically stacked slide pairs.
-- A Typer-powered CLI for ingesting lectures and reviewing stored metadata.
+---
 
-## Getting Started
+## Table of Contents
 
-1. Ensure Python 3.11 or later is available on your system.
-2. (Optional) Create and activate a virtual environment.
-3. On Windows, run `start.bat` to bootstrap the project. On macOS and Linux,
-   use the companion `start.sh` script. Both helpers:
+1. [✨ Signature Highlights](#-signature-highlights)
+2. [🏁 Lightning-Fast Onboarding](#-lightning-fast-onboarding)
+3. [🧭 Project Tour](#-project-tour)
+4. [🎛️ Interface Personalisation](#-interface-personalisation)
+5. [🛠️ Core Workflows](#-core-workflows)
+6. [🧪 Quality Suite](#-quality-suite)
+7. [🤝 Contributing](#-contributing)
 
-   - create a local `.venv` virtual environment if one does not exist,
-   - install the dependencies from `requirements-dev.txt` (or `requirements.txt`
-     when the development file is absent), and
-   - launch the CLI so you can pass commands such as `overview` or `ingest`.
+---
 
-   ```powershell
-   .\start.bat overview
-   ```
+## ✨ Signature Highlights
 
+- **Opulent overview dashboard** – Navigate from class to module to lecture with silky-smooth transitions, shimmering stats, and contextual action panels that keep every asset one click away.
+- **Curated media pipeline** – Lecture audio, transcripts, and slides glide through a managed storage layout with automatic housekeeping for raw and processed artefacts.
+- **Transcription on your terms** – Run CPU-friendly [faster-whisper](https://github.com/SYSTRAN/faster-whisper) models locally or elevate to GPU-accelerated binaries when available.
+- **All-inclusive interface languages** – Effortlessly switch between **English**, **中文**, **Español**, and **Français** from the Settings screen for a globally polished experience.
+- **Cross-platform CLI** – A Typer-powered assistant for ingestion, metadata review, and automation-ready operations.
+
+---
+
+## 🏁 Lightning-Fast Onboarding
+
+> 💡 **Prerequisite**: Python 3.11 or newer is recommended for the smoothest ride.
+
+1. **Clone & (optionally) isolate dependencies**
    ```bash
-   ./start.sh overview
+   git clone https://github.com/your-org/lecture-tools.git
+   cd lecture-tools
+   python -m venv .venv && source .venv/bin/activate  # PowerShell: .\.venv\\Scripts\\Activate.ps1
    ```
+2. **Bootstrap with the luxury launcher**
+   - Windows: `start.bat`
+   - macOS/Linux: `./start.sh`
 
-   Prefer manual setup? Install the runtime dependencies yourself:
-
+   Both scripts pamper your environment by creating a virtualenv (if needed), installing from `requirements-dev.txt`, and launching the CLI so you can immediately explore commands like `overview` or `ingest`.
+3. **Prefer a bespoke setup?** Install dependencies manually:
    ```bash
    pip install -r requirements-dev.txt
    ```
-
-   The runtime stack relies on CPU-only builds of `faster-whisper`, `PyMuPDF`,
-   `Pillow`, and `typer`. The first transcription run downloads the selected
-   Whisper model into `assets/` automatically. GPU acceleration is optional and
-   requires manual setup (see below).
-
-4. Launch the new web experience:
-
+4. **Enter the immersive web suite**
    ```bash
-   python run.py  # or: python run.py serve --host 0.0.0.0 --port 9000
+   python run.py  # or customise: python run.py serve --host 0.0.0.0 --port 9000
    ```
-
-   The command starts a lightweight FastAPI server that serves a responsive
-   dashboard at `http://127.0.0.1:8000/`. The page combines shimmering cards for
-   high-level statistics with an interactive tree that lets you drill down from
-   classes to modules and individual lectures. Asset links open directly from
-   the browser, so transcripts, audio, and slide images are always one click
-   away.
-
-   Prefer the original terminal styles? They are still available:
-
+   Visit **http://127.0.0.1:8000/** to enjoy the modern control centre.
+5. **Classic terminal vibes still included**
    ```bash
    python run.py overview --style modern
    python run.py overview --style console
    ```
 
-5. Ingest a lecture by providing an audio/video file and (optionally) a PDF deck:
+---
 
-   ```bash
-   python run.py ingest \
-     --class-name "Computer Science" \
-     --module-name "Algorithms" \
-     --lecture-name "Sorting" \
-     --audio path/to/lecture.wav \
-     --slides path/to/deck.pdf
-   ```
+## 🧭 Project Tour
 
-   The CLI stores raw uploads under `storage/<class>/<module>/<lecture>/raw`
-   and writes transcripts plus slide images into the corresponding
-   `processed/transcripts` and `processed/slides` folders. The SQLite database
-   is updated with the relative paths so the information can be surfaced in the
-   overview command or future graphical front-ends.
+| Area | Description |
+| --- | --- |
+| `app/` | Application core – services, UI layers, background workers, and FastAPI server. |
+| `assets/` | Whisper models and supporting binaries land here. |
+| `storage/` | Your curated lecture library lives here with raw uploads and processed exports. |
+| `cli/` | Cross-platform helpers, including the optional GPU-enabled Windows binary. |
+| `tests/` | Pytest suite with lightweight doubles for rapid validation. |
 
-### GPU-accelerated Whisper (optional)
+---
 
-The repository ships with a Windows-only `cli/main.exe` binary that can drive a
-GPU-enabled Whisper transcription. To enable it:
+## 🎛️ Interface Personalisation
 
-1. Create an `assets/models/` directory if it does not already exist.
-2. Download the `ggml-medium.en.bin` model from
-   [ggerganov/whisper.cpp](https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.en.bin)
-   and place the file inside `assets/models/`.
-3. When running `python run.py ingest`, set `--whisper-model GPU`.
-4. In the web interface, open **Settings → Whisper transcription** and click
-   **Test support**. If the CLI prints diagnostic output the GPU option is
-   unlocked in both the default model selector and the lecture transcription
-   dropdown.
+Visit **Settings → Appearance** in the web UI to tailor the ambience:
 
-During ingestion or web-driven transcription the application probes whether
-`cli/main.exe` can run on the current platform. If it produces output, the GPU
-path is used and real-time progress is displayed using a `====>` bar derived
-from the CLI timestamps (the web UI mirrors this progress in the status banner).
-When the binary is unavailable or unsupported, the workflow automatically falls
-back to the standard CPU-based `faster-whisper` pipeline.
+- **Theme**: Follow your system palette or opt for Light/Dark.
+- **Language**: Choose English (`en`), 中文 (`zh`), Español (`es`), or Français (`fr`). Preferences persist in `storage/settings.json` and sync automatically across sessions.
+- **Whisper defaults**: Pre-select your transcription model, compute type, and beam size; GPU options unlock once verified.
+- **Slide rendering**: Dial in DPI quality from lightning-fast 150 to exquisite 600.
 
-## Running Tests
+---
 
-Execute the test suite with:
+## 🛠️ Core Workflows
+
+### Ingest a lecture
+```bash
+python run.py ingest \
+  --class-name "Computer Science" \
+  --module-name "Algorithms" \
+  --lecture-name "Sorting" \
+  --audio path/to/lecture.wav \
+  --slides path/to/slides.pdf
+```
+The CLI stores originals under `storage/<class>/<module>/<lecture>/raw` while transcripts and slides enter the `processed/` suites. Metadata is tracked in SQLite for instant retrieval by the UI.
+
+### GPU-accelerated Whisper (optional indulgence)
+1. Create `assets/models/` if absent.
+2. Download `ggml-medium.en.bin` from [ggerganov/whisper.cpp](https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.en.bin).
+3. Set `--whisper-model GPU` during ingestion or switch to GPU in the web Settings once the support probe passes.
+4. Trigger **Test support** from the settings pane to unlock the GPU option globally.
+
+During transcription, Lecture Tools automatically benchmarks GPU availability and gracefully falls back to CPU pipelines with live progress indicators when acceleration is unavailable.
+
+---
+
+## 🧪 Quality Suite
 
 ```bash
 pytest
 ```
+The test harness relies on lightweight doubles, so it runs swiftly without needing to download ML models.
 
-The tests rely on lightweight dummy processing backends so they run quickly
-without downloading ML models.
+---
+
+## 🤝 Contributing
+
+Pull requests are welcome! Please ensure code is formatted, tests are green, and any UI additions respect the project’s modern aesthetic. For feature proposals or feedback, open an issue and let’s craft the next premium experience together.
+
+---
+
+<p align="center">Crafted with care for educators, researchers, and knowledge artisans everywhere.</p>

@@ -412,6 +412,7 @@ def test_update_settings_rejects_gpu_without_support(monkeypatch, temp_config):
         "/api/settings",
         json={
             "theme": "light",
+            "language": "en",
             "whisper_model": "gpu",
             "whisper_compute_type": "float16",
             "whisper_beam_size": 5,
@@ -480,6 +481,7 @@ def test_get_settings_coerces_invalid_choices(temp_config):
         json.dumps(
             {
                 "theme": "dark",
+                "language": "xx",
                 "whisper_model": "giant",
                 "whisper_compute_type": "int8",
                 "whisper_beam_size": 4,
@@ -498,6 +500,7 @@ def test_get_settings_coerces_invalid_choices(temp_config):
     payload = response.json()["settings"]
     assert payload["whisper_model"] == "base"
     assert payload["slide_dpi"] == 200
+    assert payload["language"] == "en"
 
 
 def test_update_settings_enforces_choices(temp_config):
@@ -507,6 +510,7 @@ def test_update_settings_enforces_choices(temp_config):
 
     valid_payload = {
         "theme": "light",
+        "language": "fr",
         "whisper_model": "small",
         "whisper_compute_type": "float16",
         "whisper_beam_size": 6,
@@ -518,6 +522,7 @@ def test_update_settings_enforces_choices(temp_config):
     payload = response.json()["settings"]
     assert payload["whisper_model"] == "small"
     assert payload["slide_dpi"] == 300
+    assert payload["language"] == "fr"
 
     invalid_model = client.put(
         "/api/settings",
@@ -530,6 +535,12 @@ def test_update_settings_enforces_choices(temp_config):
         json={**valid_payload, "slide_dpi": 180},
     )
     assert invalid_dpi.status_code == 422
+
+    invalid_language = client.put(
+        "/api/settings",
+        json={**valid_payload, "language": "de"},
+    )
+    assert invalid_language.status_code == 422
 
 
 def test_reveal_asset_uses_helper(monkeypatch, temp_config):
