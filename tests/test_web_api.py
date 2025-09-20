@@ -215,10 +215,27 @@ def test_process_slides_generates_archive(monkeypatch, temp_config):
 def test_transcribe_audio_uses_backend(monkeypatch, temp_config):
     repository, lecture_id, _module_id = _create_sample_data(temp_config)
 
+    store = web_server.SettingsStore(temp_config)
+    settings = web_server.UISettings()
+    settings.whisper_compute_type = "float16"
+    settings.whisper_beam_size = 7
+    store.save(settings)
+
+    captured: dict[str, Any] = {}
+
     class DummyEngine:
-        def __init__(self, model: str, download_root: Path) -> None:
-            self.model = model
-            self.download_root = download_root
+        def __init__(
+            self,
+            model: str,
+            *,
+            download_root: Path,
+            compute_type: str,
+            beam_size: int,
+        ) -> None:
+            captured["model"] = model
+            captured["download_root"] = download_root
+            captured["compute_type"] = compute_type
+            captured["beam_size"] = beam_size
 
         def transcribe(self, audio_path: Path, output_dir: Path) -> TranscriptResult:
             output_dir.mkdir(parents=True, exist_ok=True)
@@ -238,6 +255,10 @@ def test_transcribe_audio_uses_backend(monkeypatch, temp_config):
     assert response.status_code == 200
     updated = repository.get_lecture(lecture_id)
     assert updated.transcript_path.endswith("auto.txt")
+    assert captured["model"] == "small"
+    assert captured["download_root"] == temp_config.assets_root
+    assert captured["compute_type"] == "float16"
+    assert captured["beam_size"] == 7
 
 
 def test_reveal_asset_uses_helper(monkeypatch, temp_config):
