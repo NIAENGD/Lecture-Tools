@@ -60,6 +60,69 @@
         box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
       }
 
+      .panel-heading {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .panel-heading label {
+        margin: 0;
+      }
+
+      .top-bar {
+        display: flex;
+        gap: 8px;
+        padding: 16px 20px 0;
+        border-bottom: 1px solid #e5e7eb;
+        background: #f8fafc;
+        border-radius: 8px 8px 0 0;
+      }
+
+      .top-bar button {
+        border-radius: 999px;
+        border: 1px solid transparent;
+        background: #e2e8f0;
+        color: #1f2933;
+        padding: 6px 14px;
+        font-weight: 600;
+      }
+
+      .top-bar button.active {
+        background: #2563eb;
+        border-color: #2563eb;
+        color: #ffffff;
+      }
+
+      .content-panel {
+        padding: 0;
+        overflow: hidden;
+      }
+
+      .content-panel .view {
+        padding: 20px;
+      }
+
+      .view {
+        display: none;
+      }
+
+      .view.active {
+        display: block;
+      }
+
+      .edit-banner {
+        background: #fef3c7;
+        color: #92400e;
+        border: 1px solid #fcd34d;
+        border-radius: 6px;
+        padding: 8px 12px;
+        font-size: 0.9rem;
+        margin-bottom: 12px;
+      }
+
       h1 {
         font-size: 1.6rem;
         margin: 0 0 8px;
@@ -396,7 +459,12 @@
           <dl id="stats" class="stats-grid"></dl>
         </section>
         <section class="panel">
-          <label for="search-input">Filter curriculum</label>
+          <div class="panel-heading">
+            <label for="search-input">Filter curriculum</label>
+            <button id="toggle-edit-mode" type="button" class="secondary">
+              Enable edit mode
+            </button>
+          </div>
           <input
             id="search-input"
             type="search"
@@ -407,94 +475,98 @@
         </section>
       </aside>
       <section class="content">
-        <section class="panel" id="detail-panel">
-          <header style="display: flex; justify-content: space-between; align-items: center;">
-            <h2>Lecture details</h2>
-            <button id="delete-lecture" class="danger" type="button" hidden>
-              Delete lecture
+        <section class="panel content-panel">
+          <div class="top-bar" role="tablist">
+            <button type="button" class="active" data-view="details" aria-pressed="true">
+              Details
             </button>
-          </header>
-          <div id="lecture-summary" class="placeholder">
-            Select a lecture from the curriculum.
+            <button type="button" data-view="create" aria-pressed="false">Create</button>
+            <button type="button" data-view="preview" aria-pressed="false">Preview</button>
+            <button type="button" data-view="settings" aria-pressed="false">Settings</button>
           </div>
-          <form id="lecture-edit-form" hidden>
-            <div class="field">
-              <label for="edit-lecture-name">Title</label>
-              <input id="edit-lecture-name" name="name" type="text" required />
+          <div id="view-details" class="view active" data-view="details">
+            <header style="display: flex; justify-content: space-between; align-items: center;">
+              <h2>Lecture details</h2>
+              <button id="delete-lecture" class="danger" type="button" hidden>
+                Delete lecture
+              </button>
+            </header>
+            <div id="edit-mode-banner" class="edit-banner" hidden>
+              Edit mode is enabled. Update lecture information or remove items while it is active.
             </div>
-            <div class="field">
-              <label for="edit-lecture-module">Module</label>
-              <select id="edit-lecture-module" name="module" required></select>
+            <div id="lecture-summary" class="placeholder">
+              Select a lecture from the curriculum.
             </div>
-            <div class="field">
-              <label for="edit-lecture-description">Description</label>
-              <textarea
-                id="edit-lecture-description"
-                name="description"
-                rows="4"
-              ></textarea>
-            </div>
-            <div class="form-actions">
-              <button type="submit">Save changes</button>
-            </div>
-          </form>
-          <section id="asset-section" hidden>
-            <h3>Assets</h3>
-            <ul id="asset-list" class="asset-list"></ul>
-            <div class="actions-row">
-              <button id="transcribe-button" type="button">Transcribe audio</button>
-              <label class="inline" for="transcribe-model" style="margin-left: auto;">
-                Model
-                <select id="transcribe-model">
-                  <option value="tiny">tiny</option>
-                  <option value="base" selected>base</option>
-                  <option value="small">small</option>
-                  <option value="medium">medium</option>
-                  <option value="large">large</option>
-                </select>
-              </label>
-            </div>
-            <form id="process-slides-form" class="actions-row">
-              <label class="file-input">
-                <span>Choose PDF</span>
-                <input id="process-slides-file" type="file" accept="application/pdf" required />
-              </label>
-              <label class="inline">
-                Start page
-                <input id="process-page-start" type="number" min="1" placeholder="1" />
-              </label>
-              <label class="inline">
-                End page
-                <input id="process-page-end" type="number" min="1" placeholder="last" />
-              </label>
-              <button type="submit">Process slides</button>
+            <form id="lecture-edit-form" hidden>
+              <div class="field">
+                <label for="edit-lecture-name">Title</label>
+                <input id="edit-lecture-name" name="name" type="text" required />
+              </div>
+              <div class="field">
+                <label for="edit-lecture-module">Module</label>
+                <select id="edit-lecture-module" name="module" required></select>
+              </div>
+              <div class="field">
+                <label for="edit-lecture-description">Description</label>
+                <textarea
+                  id="edit-lecture-description"
+                  name="description"
+                  rows="4"
+                ></textarea>
+              </div>
+              <div class="form-actions">
+                <button type="submit">Save changes</button>
+              </div>
             </form>
-          </section>
-        </section>
-        <section class="panel">
-          <h2>Create lecture</h2>
-          <form id="lecture-create-form">
-            <div class="field">
-              <label for="create-module">Module</label>
-              <select id="create-module" required></select>
+            <section id="asset-section" hidden>
+              <h3>Assets</h3>
+              <ul id="asset-list" class="asset-list"></ul>
+              <div class="actions-row">
+                <button id="transcribe-button" type="button">Transcribe audio</button>
+                <label class="inline" for="transcribe-model" style="margin-left: auto;">
+                  Model
+                  <select id="transcribe-model">
+                    <option value="tiny">tiny</option>
+                    <option value="base" selected>base</option>
+                    <option value="small">small</option>
+                    <option value="medium">medium</option>
+                    <option value="large">large</option>
+                  </select>
+                </label>
+              </div>
+            </section>
+          </div>
+          <div id="view-create" class="view" data-view="create" hidden>
+            <h2>Create lecture</h2>
+            <form id="lecture-create-form">
+              <div class="field">
+                <label for="create-module">Module</label>
+                <select id="create-module" required></select>
+              </div>
+              <div class="field">
+                <label for="create-name">Title</label>
+                <input id="create-name" type="text" required />
+              </div>
+              <div class="field">
+                <label for="create-description">Description</label>
+                <textarea id="create-description" rows="4"></textarea>
+              </div>
+              <div class="form-actions">
+                <button id="create-submit" type="submit">Add lecture</button>
+              </div>
+            </form>
+          </div>
+          <div id="view-preview" class="view" data-view="preview" hidden>
+            <h2>Preview</h2>
+            <div id="preview-content" class="placeholder">
+              Transcript and notes preview will appear here.
             </div>
-            <div class="field">
-              <label for="create-name">Title</label>
-              <input id="create-name" type="text" required />
-            </div>
-            <div class="field">
-              <label for="create-description">Description</label>
-              <textarea id="create-description" rows="4"></textarea>
-            </div>
-            <div class="form-actions">
-              <button id="create-submit" type="submit">Add lecture</button>
-            </div>
-          </form>
-        </section>
-        <section class="panel">
-          <h2>Preview</h2>
-          <div id="preview-content" class="placeholder">
-            Transcript and notes preview will appear here.
+          </div>
+          <div id="view-settings" class="view" data-view="settings" hidden>
+            <h2>Settings</h2>
+            <p class="placeholder">
+              Settings will appear here. Enable edit mode to rename or delete lectures.
+            </p>
           </div>
         </section>
       </section>
@@ -507,6 +579,8 @@
           query: '',
           selectedLectureId: null,
           buttonMap: new Map(),
+          editMode: false,
+          activeView: 'details',
         };
 
         const dom = {
@@ -520,20 +594,25 @@
           editModule: document.getElementById('edit-lecture-module'),
           editDescription: document.getElementById('edit-lecture-description'),
           deleteButton: document.getElementById('delete-lecture'),
+          editToggle: document.getElementById('toggle-edit-mode'),
+          editBanner: document.getElementById('edit-mode-banner'),
           assetSection: document.getElementById('asset-section'),
           assetList: document.getElementById('asset-list'),
           transcribeButton: document.getElementById('transcribe-button'),
           transcribeModel: document.getElementById('transcribe-model'),
-          processForm: document.getElementById('process-slides-form'),
-          processFile: document.getElementById('process-slides-file'),
-          processStart: document.getElementById('process-page-start'),
-          processEnd: document.getElementById('process-page-end'),
           createForm: document.getElementById('lecture-create-form'),
           createModule: document.getElementById('create-module'),
           createName: document.getElementById('create-name'),
           createDescription: document.getElementById('create-description'),
           createSubmit: document.getElementById('create-submit'),
           preview: document.getElementById('preview-content'),
+          viewButtons: Array.from(document.querySelectorAll('.top-bar [data-view]')),
+          views: {
+            details: document.getElementById('view-details'),
+            create: document.getElementById('view-create'),
+            preview: document.getElementById('view-preview'),
+            settings: document.getElementById('view-settings'),
+          },
         };
 
         const assetDefinitions = [
@@ -567,6 +646,7 @@
             label: 'Slide images (ZIP)',
             accept: null,
             type: 'slide_images',
+            reveal: 'folder',
           },
         ];
 
@@ -651,13 +731,54 @@
         function clearDetailPanel() {
           dom.summary.textContent = 'Select a lecture from the curriculum.';
           dom.summary.classList.add('placeholder');
-          dom.editForm.hidden = true;
-          dom.deleteButton.hidden = true;
+          if (dom.editForm) {
+            dom.editForm.reset();
+          }
           dom.assetSection.hidden = true;
+          dom.assetList.innerHTML = '';
           dom.transcribeButton.disabled = true;
-          dom.processForm.reset();
           dom.preview.textContent = 'Transcript and notes preview will appear here.';
           dom.preview.classList.add('placeholder');
+          updateEditControlsAvailability();
+        }
+
+        function updateEditControlsAvailability() {
+          const hasSelection = Boolean(state.selectedLectureId);
+          const allowEditing = state.editMode && hasSelection;
+          dom.editForm.hidden = !allowEditing;
+          dom.deleteButton.hidden = !allowEditing;
+        }
+
+        function updateEditModeUI() {
+          const isActive = state.editMode;
+          if (dom.editToggle) {
+            dom.editToggle.textContent = isActive ? 'Exit edit mode' : 'Enable edit mode';
+            dom.editToggle.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+          }
+          if (dom.editBanner) {
+            dom.editBanner.hidden = !isActive;
+          }
+          updateEditControlsAvailability();
+        }
+
+        function setActiveView(view) {
+          if (!dom.views[view]) {
+            return;
+          }
+          state.activeView = view;
+          dom.viewButtons.forEach((button) => {
+            const isActive = button.dataset.view === view;
+            button.classList.toggle('active', isActive);
+            button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+          });
+          Object.entries(dom.views).forEach(([key, element]) => {
+            if (!element) {
+              return;
+            }
+            const isActive = key === view;
+            element.classList.toggle('active', isActive);
+            element.hidden = !isActive;
+          });
         }
 
         function updateStats() {
@@ -851,7 +972,19 @@
 
             const status = document.createElement('div');
             status.className = 'asset-status';
-            status.textContent = value ? `Linked: ${value.split('/').pop()}` : 'Not linked';
+            let statusText = 'Not linked';
+            if (definition.type === 'slides') {
+              statusText = value
+                ? `Linked: ${value.split('/').pop()} (auto processed)`
+                : 'Upload a PDF to generate slide images automatically.';
+            } else if (definition.type === 'slide_images') {
+              statusText = value
+                ? `Archive created: ${value.split('/').pop()}`
+                : 'No slide images generated yet.';
+            } else if (value) {
+              statusText = `Linked: ${value.split('/').pop()}`;
+            }
+            status.textContent = statusText;
             item.appendChild(status);
 
             const actions = document.createElement('div');
@@ -890,15 +1023,16 @@
             }
             actions.appendChild(link);
 
-            if (definition.type === 'slide_images') {
+            if (definition.reveal) {
               const revealButton = document.createElement('button');
               revealButton.type = 'button';
               revealButton.className = 'secondary';
-              revealButton.textContent = 'Reveal archive';
+              revealButton.textContent =
+                definition.reveal === 'folder' ? 'Reveal folder' : 'Reveal location';
               revealButton.disabled = !value;
               revealButton.addEventListener('click', () => {
                 if (value) {
-                  revealAsset(value);
+                  revealAsset(value, definition.reveal);
                 }
               });
               actions.appendChild(revealButton);
@@ -1019,19 +1153,24 @@
         async function selectLecture(lectureId) {
           state.selectedLectureId = lectureId;
           highlightSelected();
+          setActiveView('details');
           try {
             const detail = await request(`/api/lectures/${lectureId}`);
             if (!detail) {
               return;
             }
             renderSummary(detail);
-            dom.editForm.hidden = false;
-            dom.deleteButton.hidden = false;
             dom.assetSection.hidden = false;
 
             dom.editName.value = detail.lecture.name;
             dom.editDescription.value = detail.lecture.description || '';
             dom.editModule.value = String(detail.lecture.module_id);
+
+            updateEditControlsAvailability();
+
+            if (state.editMode) {
+              dom.editName.focus();
+            }
 
             dom.transcribeButton.disabled = !detail.lecture.audio_path;
 
@@ -1055,7 +1194,11 @@
               method: 'POST',
               body: formData,
             });
-            showStatus('Asset uploaded successfully.', 'success');
+            const successMessage =
+              kind === 'slides'
+                ? 'Slides uploaded and processed into an image archive.'
+                : 'Asset uploaded successfully.';
+            showStatus(successMessage, 'success');
             await refreshData();
             await selectLecture(state.selectedLectureId);
           } catch (error) {
@@ -1063,17 +1206,66 @@
           }
         }
 
-        async function revealAsset(relativePath) {
+        function buildRevealPayload(relativePath, mode = 'file') {
+          if (!relativePath) {
+            return null;
+          }
+          if (mode === 'folder') {
+            const segments = relativePath.split('/').filter(Boolean);
+            if (segments.length > 1) {
+              segments.pop();
+              return { path: segments.join('/'), select: false };
+            }
+            return { path: relativePath, select: false };
+          }
+          return { path: relativePath, select: true };
+        }
+
+        async function revealAsset(relativePath, mode = 'file') {
+          const payload = buildRevealPayload(relativePath, mode);
+          if (!payload) {
+            return;
+          }
           try {
             await request('/api/assets/reveal', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ path: relativePath, select: true }),
+              body: JSON.stringify(payload),
             });
-            showStatus('Opening archive location in your file manager.', 'info');
+            const message =
+              mode === 'folder'
+                ? 'Opening folder in your file manager.'
+                : 'Opening asset location in your file manager.';
+            showStatus(message, 'info');
           } catch (error) {
             showStatus(error.message, 'error');
           }
+        }
+
+        dom.viewButtons.forEach((button) => {
+          button.addEventListener('click', () => {
+            const view = button.dataset.view;
+            if (!view) {
+              return;
+            }
+            setActiveView(view);
+            if (view === 'create') {
+              dom.createModule.focus();
+            } else if (view === 'details' && state.editMode && state.selectedLectureId) {
+              dom.editName.focus();
+            }
+          });
+        });
+
+        if (dom.editToggle) {
+          dom.editToggle.addEventListener('click', () => {
+            state.editMode = !state.editMode;
+            updateEditModeUI();
+            if (state.editMode && state.selectedLectureId) {
+              setActiveView('details');
+              dom.editName.focus();
+            }
+          });
         }
 
         dom.search.addEventListener('input', (event) => {
@@ -1083,6 +1275,10 @@
 
         dom.editForm.addEventListener('submit', async (event) => {
           event.preventDefault();
+          if (!state.editMode) {
+            showStatus('Enable edit mode to update lecture details.', 'info');
+            return;
+          }
           if (!state.selectedLectureId) {
             return;
           }
@@ -1113,11 +1309,17 @@
         });
 
         dom.deleteButton.addEventListener('click', async () => {
-          if (!state.selectedLectureId) {
+          if (!state.selectedLectureId || !state.editMode) {
             return;
           }
           const confirmed = window.confirm('Delete this lecture and all linked assets?');
           if (!confirmed) {
+            return;
+          }
+          const secondCheck = window.confirm(
+            'This action cannot be undone. Do you want to permanently remove it?',
+          );
+          if (!secondCheck) {
             return;
           }
           try {
@@ -1178,39 +1380,8 @@
             dom.transcribeButton.disabled = false;
           }
         });
-
-        dom.processForm.addEventListener('submit', async (event) => {
-          event.preventDefault();
-          if (!state.selectedLectureId) {
-            return;
-          }
-          const file = dom.processFile.files && dom.processFile.files[0];
-          if (!file) {
-            showStatus('Select a PDF file to process.', 'error');
-            return;
-          }
-          const formData = new FormData();
-          formData.append('file', file);
-          if (dom.processStart.value) {
-            formData.append('page_start', dom.processStart.value);
-          }
-          if (dom.processEnd.value) {
-            formData.append('page_end', dom.processEnd.value);
-          }
-          try {
-            await request(`/api/lectures/${state.selectedLectureId}/process-slides`, {
-              method: 'POST',
-              body: formData,
-            });
-            dom.processForm.reset();
-            showStatus('Slides processed into an image archive.', 'success');
-            await refreshData();
-            await selectLecture(state.selectedLectureId);
-          } catch (error) {
-            showStatus(error.message, 'error');
-          }
-        });
-
+        setActiveView(state.activeView);
+        updateEditModeUI();
         clearDetailPanel();
         refreshData();
       })();
