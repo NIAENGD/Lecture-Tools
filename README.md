@@ -19,18 +19,23 @@ Key capabilities include:
 
 1. Ensure Python 3.11 or later is available on your system.
 2. (Optional) Create and activate a virtual environment.
-3. On Windows, run `start.bat` to bootstrap the project. The helper script:
+3. On Windows, run `start.bat` to bootstrap the project. On macOS and Linux,
+   use the companion `start.sh` script. Both helpers:
 
-   - creates a local `.venv` virtual environment if one does not exist,
-   - installs the dependencies from `requirements-dev.txt` (or `requirements.txt`
+   - create a local `.venv` virtual environment if one does not exist,
+   - install the dependencies from `requirements-dev.txt` (or `requirements.txt`
      when the development file is absent), and
-   - launches the CLI so you can pass commands such as `overview` or `ingest`.
+   - launch the CLI so you can pass commands such as `overview` or `ingest`.
 
    ```powershell
    .\start.bat overview
    ```
 
-   On other platforms, install the runtime dependencies manually:
+   ```bash
+   ./start.sh overview
+   ```
+
+   Prefer manual setup? Install the runtime dependencies yourself:
 
    ```bash
    pip install -r requirements-dev.txt
