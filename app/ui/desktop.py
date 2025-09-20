@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import platform
 import shutil
+import stat
 import subprocess
 import tkinter as tk
 import zipfile
@@ -14,6 +15,18 @@ from tkinter import filedialog, messagebox, simpledialog, ttk
 from typing import Callable, Dict, List, Optional, Tuple
 
 import threading
+
+
+def _handle_remove_readonly(func, path, exc_info) -> None:
+    _, error, _ = exc_info
+    if not isinstance(error, PermissionError):
+        raise error
+    target = Path(path)
+    try:
+        target.chmod(target.stat().st_mode | stat.S_IWRITE)
+    except Exception:
+        target.chmod(stat.S_IWRITE)
+    func(path)
 
 from PIL import Image, ImageTk
 
@@ -1742,9 +1755,13 @@ class DesktopUI:
 
         try:
             if path.is_dir():
-                shutil.rmtree(path)
+                shutil.rmtree(path, onerror=_handle_remove_readonly)
             else:
-                path.unlink()
+                try:
+                    path.unlink()
+                except PermissionError:
+                    path.chmod(path.stat().st_mode | stat.S_IWRITE)
+                    path.unlink()
         except Exception as error:
             messagebox.showwarning(
                 context,

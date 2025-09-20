@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import platform
 import shutil
+import stat
 import subprocess
 import threading
 import time
@@ -404,6 +405,17 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
             raise HTTPException(status_code=404, detail="Class not found")
         return class_record, module
 
+    def _handle_remove_readonly(func, path, exc_info) -> None:
+        _, error, _ = exc_info
+        if not isinstance(error, PermissionError):
+            raise error
+        target = Path(path)
+        try:
+            target.chmod(target.stat().st_mode | stat.S_IWRITE)
+        except Exception:
+            target.chmod(stat.S_IWRITE)
+        func(path)
+
     def _delete_storage_path(target: Path) -> None:
         storage_root = config.storage_root.resolve()
         candidate = target.resolve()
@@ -414,9 +426,13 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
         if candidate == storage_root or not candidate.exists():
             return
         if candidate.is_dir():
-            shutil.rmtree(candidate)
+            shutil.rmtree(candidate, onerror=_handle_remove_readonly)
         else:
-            candidate.unlink()
+            try:
+                candidate.unlink()
+            except PermissionError:
+                candidate.chmod(candidate.stat().st_mode | stat.S_IWRITE)
+                candidate.unlink()
 
     def _delete_asset_path(relative: Optional[str]) -> None:
         if not relative:
