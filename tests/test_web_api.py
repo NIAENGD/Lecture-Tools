@@ -170,6 +170,107 @@ def test_create_update_delete_lecture(temp_config):
     assert not legacy_dir.exists()
 
 
+def test_reorder_endpoint_moves_lecture(temp_config):
+    repository, lecture_id, module_id = _create_sample_data(temp_config)
+    module_record = repository.get_module(module_id)
+    assert module_record is not None
+    class_id = module_record.class_id
+
+    lectures = list(repository.iter_lectures(module_id))
+    assert len(lectures) == 2
+    other_lecture_id = next(lecture.id for lecture in lectures if lecture.id != lecture_id)
+
+    other_module_id = repository.add_module(class_id, "Cosmology")
+
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/lectures/reorder",
+        json={
+            "modules": [
+                {"module_id": module_id, "lecture_ids": [other_lecture_id]},
+                {"module_id": other_module_id, "lecture_ids": [lecture_id]},
+            ]
+        },
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert "modules" in payload
+
+    remaining = [lecture.id for lecture in repository.iter_lectures(module_id)]
+    moved = [lecture.id for lecture in repository.iter_lectures(other_module_id)]
+
+    assert remaining == [other_lecture_id]
+    assert moved == [lecture_id]
+
+
+def test_export_import_archive(temp_config):
+    repository, lecture_id, module_id = _create_sample_data(temp_config)
+    module_record = repository.get_module(module_id)
+    assert module_record is not None
+    class_id = module_record.class_id
+
+    lectures = list(repository.iter_lectures(module_id))
+    lecture_names = {lecture.id: lecture.name for lecture in lectures}
+
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    export_response = client.post("/api/settings/export")
+    assert export_response.status_code == 200
+    archive_info = export_response.json()["archive"]
+    archive_path = temp_config.storage_root / archive_info["path"]
+    assert archive_path.exists()
+
+    # Remove data before import
+    repository.remove_class(class_id)
+    assert not list(repository.iter_classes())
+
+    with archive_path.open("rb") as handle:
+        import_response = client.post(
+            "/api/settings/import",
+            data={"mode": "replace"},
+            files={"file": ("export.zip", handle, "application/zip")},
+        )
+    assert import_response.status_code == 200
+    replace_payload = import_response.json()["import"]
+    assert replace_payload["mode"] == "replace"
+    assert replace_payload["lectures"] >= 1
+
+    restored_class = repository.find_class_by_name("Astronomy")
+    assert restored_class is not None
+    restored_module = repository.find_module_by_name(restored_class.id, "Stellar Physics")
+    assert restored_module is not None
+    restored_lectures = list(repository.iter_lectures(restored_module.id))
+    restored_names = {lecture.name for lecture in restored_lectures}
+    assert set(lecture_names.values()).issubset(restored_names)
+
+    transcript_file = (
+        temp_config.storage_root
+        / "Astronomy"
+        / "Stellar Physics"
+        / "Stellar Evolution"
+        / "transcript.txt"
+    )
+    assert transcript_file.exists()
+
+    removed_name = lecture_names[lecture_id]
+    repository.remove_lecture(lecture_id)
+    assert removed_name not in {lecture.name for lecture in repository.iter_lectures(restored_module.id)}
+
+    with archive_path.open("rb") as handle:
+        merge_response = client.post(
+            "/api/settings/import",
+            data={"mode": "merge"},
+            files={"file": ("export.zip", handle, "application/zip")},
+        )
+    assert merge_response.status_code == 200
+    merge_payload = merge_response.json()["import"]
+    assert merge_payload["mode"] == "merge"
+
+    merged_names = {lecture.name for lecture in repository.iter_lectures(restored_module.id)}
+    assert removed_name in merged_names
 def test_delete_module_removes_storage(temp_config):
     repository, _lecture_id, module_id = _create_sample_data(temp_config)
     app = create_app(repository, config=temp_config)

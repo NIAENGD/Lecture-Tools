@@ -94,6 +94,18 @@
         box-sizing: border-box;
       }
 
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
       .hidden {
         display: none !important;
       }
@@ -180,16 +192,7 @@
         gap: 16px;
       }
 
-      .storage-window {
-        position: relative;
-        z-index: 1;
-        background: var(--panel-bg);
-        border: 1px solid var(--panel-border);
-        border-radius: 12px;
-        padding: 24px;
-        width: min(960px, 100%);
-        max-height: min(80vh, 720px);
-        box-shadow: 0 20px 45px rgba(15, 23, 42, 0.25), var(--panel-shadow);
+      .storage-page {
         display: flex;
         flex-direction: column;
         gap: 16px;
@@ -802,66 +805,187 @@
       .curriculum {
         margin-top: 12px;
         border: 1px solid var(--panel-border);
-        border-radius: 6px;
-        padding: 8px;
+        border-radius: 12px;
+        padding: 16px;
         background: var(--panel-bg);
         max-height: calc(100vh - 260px);
         overflow-y: auto;
         font-size: 0.95rem;
       }
 
-      .curriculum ul {
-        list-style: none;
-        margin: 0;
-        padding-left: 12px;
-      }
-
-      .curriculum li {
-        margin-bottom: 6px;
+      .curriculum.placeholder {
+        color: var(--placeholder);
+        font-style: italic;
       }
 
       .curriculum-toolbar {
         display: flex;
-        justify-content: flex-end;
-        gap: 8px;
-        margin-bottom: 8px;
-      }
-
-      .class-item,
-      .module-item {
-        display: flex;
         align-items: center;
-        gap: 8px;
-      }
-
-      .class-item {
-        font-weight: 600;
-        margin-top: 8px;
-      }
-
-      .module-item {
-        margin-left: 6px;
-        font-weight: 500;
-      }
-
-      .lecture-row {
-        display: flex;
-        align-items: center;
-        gap: 8px;
         justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+
+      .curriculum-toolbar h3 {
+        margin: 0;
+        font-size: 1rem;
+        color: var(--muted);
+      }
+
+      .curriculum-toolbar-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .syllabus {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .syllabus details {
+        border: 1px solid var(--panel-border);
+        border-radius: 10px;
+        background: var(--background);
+        overflow: hidden;
+      }
+
+      .syllabus summary {
+        list-style: none;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        cursor: pointer;
+        font-weight: 600;
+        position: relative;
+      }
+
+      .syllabus summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .syllabus summary::before {
+        content: '';
+        width: 10px;
+        height: 10px;
+        border-right: 2px solid var(--muted);
+        border-bottom: 2px solid var(--muted);
+        transform: rotate(-45deg);
+        transition: transform 0.2s ease;
+        flex-shrink: 0;
+      }
+
+      details[open] > summary::before {
+        transform: rotate(45deg);
+      }
+
+      .syllabus-summary-text {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        flex: 1;
+        min-width: 0;
+      }
+
+      .syllabus-title {
+        font-size: 1rem;
+      }
+
+      .syllabus-meta {
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+
+      .syllabus-actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .syllabus-content {
+        padding: 0 16px 16px 36px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .syllabus-modules {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .syllabus-module summary {
+        font-weight: 500;
+        padding: 10px 14px;
+      }
+
+      .syllabus-module .syllabus-content {
+        padding: 0 16px 16px 28px;
+      }
+
+      .syllabus-lectures {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .syllabus-lectures.empty {
+        min-height: 36px;
+      }
+
+      .syllabus-lecture {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        position: relative;
+      }
+
+      .syllabus-lecture.dragging {
+        opacity: 0.55;
+      }
+
+      .syllabus-lectures.drop-target {
+        background: rgba(37, 99, 235, 0.08);
+        border-radius: 8px;
+        padding: 6px;
+      }
+
+      .syllabus-lecture.drop-before::before,
+      .syllabus-lecture.drop-after::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: var(--accent);
+        border-radius: 999px;
+      }
+
+      .syllabus-lecture.drop-before::before {
+        top: -4px;
+      }
+
+      .syllabus-lecture.drop-after::after {
+        bottom: -4px;
       }
 
       .lecture-button {
         flex: 1;
         text-align: left;
-        padding: 6px 8px;
+        padding: 8px 12px;
         border: 1px solid transparent;
-        border-radius: 4px;
+        border-radius: 8px;
         background: transparent;
         cursor: pointer;
         font-size: 0.95rem;
         color: inherit;
-        transition: border-color 0.2s ease, background 0.2s ease;
+        transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
       }
 
       .lecture-button:hover,
@@ -874,12 +998,7 @@
       .lecture-button.active {
         border-color: var(--accent);
         background: rgba(37, 99, 235, 0.12);
-      }
-
-      .item-actions {
-        display: flex;
-        gap: 6px;
-        margin-left: auto;
+        color: var(--accent);
       }
 
       button.text-button {
@@ -1058,6 +1177,32 @@
         gap: 16px;
       }
 
+      .field-help {
+        font-size: 0.85rem;
+        color: var(--muted);
+        margin: 6px 0 0;
+      }
+
+      .archive-controls {
+        flex-direction: row;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .archive-controls label.inline {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-weight: 600;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      .archive-controls select {
+        min-width: 180px;
+      }
+
       .gpu-support-info {
         display: flex;
         flex-direction: column;
@@ -1113,8 +1258,15 @@
         </section>
         <section class="panel">
           <div class="panel-heading">
-            <label for="search-input" data-i18n="sidebar.filterLabel">Filter curriculum</label>
+            <h2 data-i18n="sidebar.syllabusTitle">Course syllabus</h2>
           </div>
+          <label
+            class="sr-only"
+            for="search-input"
+            data-i18n="sidebar.searchLabel"
+          >
+            Search syllabus
+          </label>
           <input
             id="search-input"
             type="search"
@@ -1123,7 +1275,9 @@
             data-i18n-attr="placeholder"
             autocomplete="off"
           />
-          <div id="curriculum" class="curriculum placeholder" data-i18n="sidebar.loading">Loading…</div>
+          <div id="curriculum" class="curriculum">
+            <div class="placeholder" data-i18n="sidebar.loading">Loading…</div>
+          </div>
         </section>
       </aside>
       <section class="content">
@@ -1159,9 +1313,10 @@
                 Create
               </button>
               <button
-                id="open-storage"
                 type="button"
                 class="ghost"
+                data-view="storage"
+                aria-pressed="false"
                 data-i18n="topBar.storage"
               >
                 Storage
@@ -1266,6 +1421,57 @@
               </div>
             </form>
           </div>
+          <div id="view-storage" class="view" data-view="storage" hidden>
+            <div class="storage-page">
+              <div class="storage-header">
+                <div>
+                  <h2 data-i18n="storage.title">Storage manager</h2>
+                  <p id="storage-path" class="storage-path" data-i18n="storage.subtitle"></p>
+                </div>
+                <div class="storage-actions">
+                  <button id="storage-refresh" type="button" data-i18n="storage.actions.refresh">
+                    Refresh
+                  </button>
+                  <button
+                    id="storage-purge"
+                    type="button"
+                    class="danger"
+                    data-i18n="storage.actions.purge"
+                  >
+                    Remove processed audio
+                  </button>
+                </div>
+              </div>
+              <section class="storage-usage" aria-live="polite">
+                <div class="storage-usage-item">
+                  <span class="storage-usage-label" data-i18n="storage.usage.used">Used</span>
+                  <span id="storage-used" class="storage-usage-value">--</span>
+                </div>
+                <div class="storage-usage-item">
+                  <span class="storage-usage-label" data-i18n="storage.usage.available">Available</span>
+                  <span id="storage-available" class="storage-usage-value">--</span>
+                </div>
+                <div class="storage-usage-item">
+                  <span class="storage-usage-label" data-i18n="storage.usage.total">Total</span>
+                  <span id="storage-total" class="storage-usage-value">--</span>
+                </div>
+              </section>
+              <p
+                id="storage-purge-summary"
+                class="storage-purge-summary"
+                data-i18n="storage.purge.none"
+              ></p>
+              <div id="storage-loading" class="storage-loading" hidden data-i18n="storage.loading">
+                Loading…
+              </div>
+              <div id="storage-empty" class="storage-empty" hidden data-i18n="storage.empty">
+                No stored classes found.
+              </div>
+              <div id="storage-class-wrapper" class="storage-class-wrapper" hidden>
+                <ul id="storage-class-list" class="storage-class-list"></ul>
+              </div>
+            </div>
+          </div>
           <div id="view-settings" class="view" data-view="settings" hidden>
             <h2 data-i18n="settings.title">Settings</h2>
             <form id="settings-form">
@@ -1361,6 +1567,31 @@
                   </select>
                 </div>
               </fieldset>
+              <fieldset>
+                <legend data-i18n="settings.archive.legend">Archive</legend>
+                <p class="field-help" data-i18n="settings.archive.description">
+                  Export your lectures and assets or import an archive from another machine.
+                </p>
+                <div class="field-inline archive-controls">
+                  <button id="settings-export" type="button" class="secondary" data-i18n="settings.archive.export">
+                    Export archive
+                  </button>
+                  <label class="file-input">
+                    <span data-i18n="settings.archive.import">Import archive</span>
+                    <input id="settings-import" type="file" accept=".zip" />
+                  </label>
+                  <label class="inline" for="settings-import-mode" data-i18n="settings.archive.modeLabel">
+                    Import mode
+                    <select id="settings-import-mode">
+                      <option value="merge" data-i18n="settings.archive.modes.merge">Merge with existing</option>
+                      <option value="replace" data-i18n="settings.archive.modes.replace">Replace existing data</option>
+                    </select>
+                  </label>
+                </div>
+                <p class="field-help" data-i18n="settings.archive.hint">
+                  Exported archives are stored temporarily and cleared when the app starts.
+                </p>
+              </fieldset>
               <div class="form-actions">
                 <button type="submit" data-i18n="settings.save">Save settings</button>
               </div>
@@ -1411,77 +1642,6 @@
         </div>
       </div>
     </div>
-    <div id="storage-dialog" class="dialog hidden" aria-hidden="true">
-      <div id="storage-backdrop" class="dialog-backdrop"></div>
-      <div
-        id="storage-window"
-        class="storage-window"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="storage-title"
-        tabindex="-1"
-      >
-        <div class="storage-header">
-          <div>
-            <h2 id="storage-title" data-i18n="storage.title">Storage manager</h2>
-            <p
-              id="storage-path"
-              class="storage-path"
-              data-i18n="storage.subtitle"
-            ></p>
-          </div>
-          <div class="storage-actions">
-            <button id="storage-refresh" type="button" data-i18n="storage.actions.refresh">
-              Refresh
-            </button>
-            <button
-              id="storage-purge"
-              type="button"
-              class="danger"
-              data-i18n="storage.actions.purge"
-            >
-              Remove processed audio
-            </button>
-            <button
-              id="storage-close"
-              type="button"
-              class="primary"
-              data-i18n="storage.actions.close"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-        <section class="storage-usage" aria-live="polite">
-          <div class="storage-usage-item">
-            <span class="storage-usage-label" data-i18n="storage.usage.used">Used</span>
-            <span id="storage-used" class="storage-usage-value">--</span>
-          </div>
-          <div class="storage-usage-item">
-            <span class="storage-usage-label" data-i18n="storage.usage.available">Available</span>
-            <span id="storage-available" class="storage-usage-value">--</span>
-          </div>
-          <div class="storage-usage-item">
-            <span class="storage-usage-label" data-i18n="storage.usage.total">Total</span>
-            <span id="storage-total" class="storage-usage-value">--</span>
-          </div>
-        </section>
-        <p
-          id="storage-purge-summary"
-          class="storage-purge-summary"
-          data-i18n="storage.purge.none"
-        ></p>
-        <div id="storage-loading" class="storage-loading" hidden data-i18n="storage.loading">
-          Loading…
-        </div>
-        <div id="storage-empty" class="storage-empty" hidden data-i18n="storage.empty">
-          No stored classes found.
-        </div>
-        <div id="storage-class-wrapper" class="storage-class-wrapper" hidden>
-          <ul id="storage-class-list" class="storage-class-list"></ul>
-        </div>
-      </div>
-    </div>
     <script>
       (async function () {
         const translations = {
@@ -1493,7 +1653,8 @@
               heading: 'Lecture Tools',
               tagline: 'Review, organise, and process lecture resources quickly.',
               overview: 'Overview',
-              filterLabel: 'Filter curriculum',
+              syllabusTitle: 'Course syllabus',
+              searchLabel: 'Search the syllabus',
               searchPlaceholder: 'Search by name',
               loading: 'Loading…',
             },
@@ -1611,6 +1772,19 @@
                   600: '600 dpi (maximum)',
                 },
               },
+              archive: {
+                legend: 'Archive',
+                description:
+                  'Export your lectures and assets or import an archive from another machine.',
+                export: 'Export archive',
+                import: 'Import archive',
+                modeLabel: 'Import mode',
+                modes: {
+                  merge: 'Merge with existing',
+                  replace: 'Replace existing data',
+                },
+                hint: 'Exported archives are stored temporarily and cleared when the app starts.',
+              },
               save: 'Save settings',
               exit: 'Exit application',
             },
@@ -1627,7 +1801,6 @@
               actions: {
                 refresh: 'Refresh',
                 purge: 'Remove processed audio',
-                close: 'Close',
               },
               purge: {
                 none: 'No processed audio to remove.',
@@ -1680,16 +1853,10 @@
                 message: 'Enter a class name.',
                 placeholder: 'Introduction to Astronomy',
               },
-              classDescription: {
-                title: 'Class description',
-              },
               createModule: {
                 title: 'Create module',
                 message: 'Module name for {{className}}',
                 placeholder: 'Foundations',
-              },
-              moduleDescription: {
-                title: 'Module description',
               },
               createLecture: {
                 title: 'Create lecture',
@@ -1741,11 +1908,14 @@
               noLectures: 'No lectures',
               noLecturesFilter: 'No lectures match the current filter.',
               noClasses: 'No classes available yet.',
+              noModules: 'No modules yet.',
             },
             curriculum: {
               addClass: 'Add class',
               addModule: 'Add module',
-              addLecture: 'Add lecture',
+              manageHeading: 'Manage syllabus',
+              classMeta: '{{moduleCount}} {{moduleWord}} • {{lectureCount}} {{lectureWord}}',
+              moduleMeta: '{{lectureCount}} {{lectureWord}}',
             },
             common: {
               actions: {
@@ -1791,6 +1961,13 @@
               shuttingDown: 'Shutting down application…',
               settingsSaved: 'Settings saved.',
               gpuFallback: 'Falling back to {{model}} model.',
+              lectureReordered: 'Lecture order updated.',
+              exporting: 'Preparing archive…',
+              exportReady: 'Archive ready to download.',
+              exportFailed: 'Unable to create archive.',
+              importing: 'Importing archive…',
+              importSuccess: 'Imported {{count}} lectures.',
+              importNoChanges: 'Archive imported (no new lectures).',
             },
             counts: {
               module: { one: 'module', other: 'modules' },
@@ -1805,7 +1982,8 @@
               heading: '课堂助手',
               tagline: '快速审阅、整理并处理课程资源。',
               overview: '概览',
-              filterLabel: '筛选课程表',
+              syllabusTitle: '课程大纲',
+              searchLabel: '搜索课程大纲',
               searchPlaceholder: '按名称搜索',
               loading: '正在加载…',
             },
@@ -1922,6 +2100,18 @@
                   600: '600 dpi（最高）',
                 },
               },
+              archive: {
+                legend: '归档',
+                description: '导出讲座及资源，或从其他设备导入归档文件。',
+                export: '导出归档',
+                import: '导入归档',
+                modeLabel: '导入模式',
+                modes: {
+                  merge: '与现有内容合并',
+                  replace: '替换现有数据',
+                },
+                hint: '导出的归档会临时保存，并在应用启动时清理。',
+              },
               save: '保存设置',
               exit: '退出应用',
             },
@@ -1938,7 +2128,6 @@
               actions: {
                 refresh: '刷新',
                 purge: '移除已处理的音频',
-                close: '关闭',
               },
               purge: {
                 none: '没有可移除的音频。',
@@ -1990,16 +2179,10 @@
                 message: '输入课程名称。',
                 placeholder: '天文学导论',
               },
-              classDescription: {
-                title: '课程描述',
-              },
               createModule: {
                 title: '创建模块',
                 message: '为 {{className}} 输入模块名称',
                 placeholder: '基础内容',
-              },
-              moduleDescription: {
-                title: '模块描述',
               },
               createLecture: {
                 title: '创建讲座',
@@ -2051,11 +2234,14 @@
               noLectures: '暂无讲座',
               noLecturesFilter: '没有符合当前筛选条件的讲座。',
               noClasses: '尚未有课程。',
+              noModules: '暂无模块。',
             },
             curriculum: {
               addClass: '添加课程',
               addModule: '添加模块',
-              addLecture: '添加讲座',
+              manageHeading: '管理课程大纲',
+              classMeta: '{{moduleCount}} 个{{moduleWord}} • {{lectureCount}} 个{{lectureWord}}',
+              moduleMeta: '{{lectureCount}} 个{{lectureWord}}',
             },
             common: {
               actions: {
@@ -2101,6 +2287,13 @@
               shuttingDown: '正在关闭应用…',
               settingsSaved: '设置已保存。',
               gpuFallback: '将回退到 {{model}} 模型。',
+              lectureReordered: '课程顺序已更新。',
+              exporting: '正在准备归档…',
+              exportReady: '归档已生成，可供下载。',
+              exportFailed: '无法创建归档。',
+              importing: '正在导入归档…',
+              importSuccess: '已导入 {{count}} 个讲座。',
+              importNoChanges: '归档导入完成（没有新讲座）。',
             },
             counts: {
               module: { one: '模块', other: '模块' },
@@ -2115,7 +2308,8 @@
               heading: 'Herramientas de clases',
               tagline: 'Revisa, organiza y procesa recursos de clases rápidamente.',
               overview: 'Resumen',
-              filterLabel: 'Filtrar plan de estudios',
+              syllabusTitle: 'Programa del curso',
+              searchLabel: 'Buscar en el programa',
               searchPlaceholder: 'Buscar por nombre',
               loading: 'Cargando…',
             },
@@ -2232,6 +2426,19 @@
                   600: '600 dpi (máximo)',
                 },
               },
+              archive: {
+                legend: 'Archivo',
+                description:
+                  'Exporta tus clases y recursos o importa un archivo desde otro equipo.',
+                export: 'Exportar archivo',
+                import: 'Importar archivo',
+                modeLabel: 'Modo de importación',
+                modes: {
+                  merge: 'Combinar con los existentes',
+                  replace: 'Reemplazar los datos existentes',
+                },
+                hint: 'Los archivos exportados se guardan temporalmente y se eliminan al iniciar la aplicación.',
+              },
               save: 'Guardar configuración',
               exit: 'Salir de la aplicación',
             },
@@ -2248,7 +2455,6 @@
               actions: {
                 refresh: 'Actualizar',
                 purge: 'Quitar audio procesado',
-                close: 'Cerrar',
               },
               purge: {
                 none: 'No hay audio procesado para eliminar.',
@@ -2301,16 +2507,10 @@
                 message: 'Ingresa un nombre de curso.',
                 placeholder: 'Introducción a la astronomía',
               },
-              classDescription: {
-                title: 'Descripción del curso',
-              },
               createModule: {
                 title: 'Crear módulo',
                 message: 'Nombre del módulo para {{className}}',
                 placeholder: 'Fundamentos',
-              },
-              moduleDescription: {
-                title: 'Descripción del módulo',
               },
               createLecture: {
                 title: 'Crear clase',
@@ -2362,11 +2562,14 @@
               noLectures: 'Sin clases',
               noLecturesFilter: 'Ninguna clase coincide con el filtro actual.',
               noClasses: 'Aún no hay cursos disponibles.',
+              noModules: 'Sin módulos por ahora.',
             },
             curriculum: {
               addClass: 'Agregar curso',
               addModule: 'Agregar módulo',
-              addLecture: 'Agregar clase',
+              manageHeading: 'Administrar programa',
+              classMeta: '{{moduleCount}} {{moduleWord}} • {{lectureCount}} {{lectureWord}}',
+              moduleMeta: '{{lectureCount}} {{lectureWord}}',
             },
             common: {
               actions: {
@@ -2412,6 +2615,13 @@
               shuttingDown: 'Cerrando la aplicación…',
               settingsSaved: 'Configuración guardada.',
               gpuFallback: 'Se usará el modelo {{model}}.',
+              lectureReordered: 'El orden de las clases se actualizó.',
+              exporting: 'Preparando archivo…',
+              exportReady: 'Archivo listo para descargar.',
+              exportFailed: 'No se pudo crear el archivo.',
+              importing: 'Importando archivo…',
+              importSuccess: 'Se importaron {{count}} clases.',
+              importNoChanges: 'Archivo importado (sin clases nuevas).',
             },
             counts: {
               module: { one: 'módulo', other: 'módulos' },
@@ -2426,7 +2636,8 @@
               heading: 'Outils de cours',
               tagline: 'Passez en revue, organisez et traitez rapidement les ressources de cours.',
               overview: 'Vue d’ensemble',
-              filterLabel: 'Filtrer le programme',
+              syllabusTitle: 'Plan de cours',
+              searchLabel: 'Rechercher dans le plan',
               searchPlaceholder: 'Rechercher par nom',
               loading: 'Chargement…',
             },
@@ -2544,6 +2755,19 @@
                   600: '600 dpi (maximum)',
                 },
               },
+              archive: {
+                legend: 'Archive',
+                description:
+                  'Exportez vos cours et ressources ou importez une archive depuis une autre machine.',
+                export: 'Exporter l’archive',
+                import: 'Importer une archive',
+                modeLabel: 'Mode d’importation',
+                modes: {
+                  merge: 'Fusionner avec l’existant',
+                  replace: 'Remplacer les données existantes',
+                },
+                hint: 'Les archives exportées sont conservées temporairement et supprimées au démarrage de l’application.',
+              },
               save: 'Enregistrer les paramètres',
               exit: 'Quitter l’application',
             },
@@ -2560,7 +2784,6 @@
               actions: {
                 refresh: 'Actualiser',
                 purge: 'Supprimer l’audio traité',
-                close: 'Fermer',
               },
               purge: {
                 none: 'Aucun audio traité à supprimer.',
@@ -2613,16 +2836,10 @@
                 message: 'Saisissez le nom du cours.',
                 placeholder: 'Introduction à l’astronomie',
               },
-              classDescription: {
-                title: 'Description du cours',
-              },
               createModule: {
                 title: 'Créer un module',
                 message: 'Nom du module pour {{className}}',
                 placeholder: 'Fondements',
-              },
-              moduleDescription: {
-                title: 'Description du module',
               },
               createLecture: {
                 title: 'Créer une leçon',
@@ -2674,11 +2891,14 @@
               noLectures: 'Aucune leçon',
               noLecturesFilter: 'Aucune leçon ne correspond au filtre actuel.',
               noClasses: 'Aucun cours disponible pour le moment.',
+              noModules: 'Aucun module pour le moment.',
             },
             curriculum: {
               addClass: 'Ajouter un cours',
               addModule: 'Ajouter un module',
-              addLecture: 'Ajouter une leçon',
+              manageHeading: 'Gérer le plan de cours',
+              classMeta: '{{moduleCount}} {{moduleWord}} • {{lectureCount}} {{lectureWord}}',
+              moduleMeta: '{{lectureCount}} {{lectureWord}}',
             },
             common: {
               actions: {
@@ -2724,6 +2944,13 @@
               shuttingDown: 'Fermeture de l’application…',
               settingsSaved: 'Paramètres enregistrés.',
               gpuFallback: 'Bascule vers le modèle {{model}}.',
+              lectureReordered: 'L’ordre des cours a été mis à jour.',
+              exporting: 'Préparation de l’archive…',
+              exportReady: 'Archive prête au téléchargement.',
+              exportFailed: 'Impossible de créer l’archive.',
+              importing: 'Importation de l’archive…',
+              importSuccess: '{{count}} cours importés.',
+              importNoChanges: 'Archive importée (aucun nouveau cours).',
             },
             counts: {
               module: { one: 'module', other: 'modules' },
@@ -2899,6 +3126,9 @@
           editMode: false,
           activeView: 'details',
           settings: null,
+          draggingLectureId: null,
+          draggingSourceModuleId: null,
+          draggedElement: null,
           gpuWhisper: {
             supported: false,
             checked: false,
@@ -2913,12 +3143,11 @@
           lastProgressRatio: null,
           statusHideTimer: null,
           storage: {
-            open: false,
             usage: null,
             loading: false,
             overview: null,
-            previousFocus: null,
             purging: false,
+            initialized: false,
           },
         };
 
@@ -2952,6 +3181,7 @@
           views: {
             details: document.getElementById('view-details'),
             create: document.getElementById('view-create'),
+            storage: document.getElementById('view-storage'),
             settings: document.getElementById('view-settings'),
           },
           settingsForm: document.getElementById('settings-form'),
@@ -2964,13 +3194,13 @@
           settingsWhisperGpuTest: document.getElementById('settings-whisper-gpu-test'),
           settingsSlideDpi: document.getElementById('settings-slide-dpi'),
           settingsExitApp: document.getElementById('settings-exit-app'),
+          settingsExport: document.getElementById('settings-export'),
+          settingsImport: document.getElementById('settings-import'),
+          settingsImportMode: document.getElementById('settings-import-mode'),
           gpuModelOptions: Array.from(document.querySelectorAll('option.gpu-only')),
           storage: {
-            button: document.getElementById('open-storage'),
-            root: document.getElementById('storage-dialog'),
-            backdrop: document.getElementById('storage-backdrop'),
-            window: document.getElementById('storage-window'),
-            close: document.getElementById('storage-close'),
+            container: document.getElementById('view-storage'),
+            path: document.getElementById('storage-path'),
             refresh: document.getElementById('storage-refresh'),
             used: document.getElementById('storage-used'),
             available: document.getElementById('storage-available'),
@@ -3289,50 +3519,8 @@
             showStatus(message || t('status.storageUsageFailed'), 'error');
           }
           state.storage.loading = false;
+          state.storage.initialized = true;
           renderStorage();
-        }
-
-        async function openStorageManager(initialPath = '') {
-          if (!dom.storage || !dom.storage.root) {
-            return;
-          }
-          if (state.storage.open) {
-            await refreshStorage();
-            return;
-          }
-          state.storage.previousFocus =
-            document.activeElement instanceof HTMLElement ? document.activeElement : null;
-          state.storage.open = true;
-          state.storage.overview = null;
-          state.storage.loading = true;
-          state.storage.purging = false;
-          dom.storage.root.classList.remove('hidden');
-          dom.storage.root.setAttribute('aria-hidden', 'false');
-          document.body.classList.add('dialog-open');
-          renderStorage();
-          window.requestAnimationFrame(() => {
-            if (dom.storage.window) {
-              dom.storage.window.focus({ preventScroll: true });
-            }
-          });
-          await refreshStorage();
-        }
-
-        function closeStorageManager() {
-          if (!dom.storage || !state.storage.open) {
-            return;
-          }
-          state.storage.open = false;
-          dom.storage.root.classList.add('hidden');
-          dom.storage.root.setAttribute('aria-hidden', 'true');
-          if (!dom.dialog || !dom.dialog.root || dom.dialog.root.classList.contains('hidden')) {
-            document.body.classList.remove('dialog-open');
-          }
-          const previous = state.storage.previousFocus;
-          state.storage.previousFocus = null;
-          if (previous) {
-            previous.focus({ preventScroll: true });
-          }
         }
 
         async function handlePurgeProcessedAudio() {
@@ -3409,7 +3597,7 @@
           {
             key: 'audio_path',
             labelKey: 'assets.labels.audio',
-            accept: 'audio/*,video/*',
+            accept: 'audio/*,video/*,*/*',
             type: 'audio',
           },
           {
@@ -4006,6 +4194,13 @@
             element.classList.toggle('active', isActive);
             element.hidden = !isActive;
           });
+          if (view === 'storage') {
+            if (!state.storage.initialized && !state.storage.loading) {
+              refreshStorage();
+            } else {
+              renderStorage();
+            }
+          }
         }
 
         function updateStats() {
@@ -4125,21 +4320,245 @@
           });
         }
 
+        function findModuleEntry(moduleId) {
+          for (const classEntry of state.classes) {
+            const modules = classEntry.modules || [];
+            for (const moduleEntry of modules) {
+              if (moduleEntry.module.id === moduleId) {
+                return { classEntry, moduleEntry };
+              }
+            }
+          }
+          return null;
+        }
+
+        function findLectureLocation(lectureId) {
+          for (const classEntry of state.classes) {
+            const modules = classEntry.modules || [];
+            for (const moduleEntry of modules) {
+              const lectures = moduleEntry.lectures || [];
+              for (let index = 0; index < lectures.length; index += 1) {
+                if (lectures[index].id === lectureId) {
+                  return { classEntry, moduleEntry, index };
+                }
+              }
+            }
+          }
+          return null;
+        }
+
+        function clearDragIndicators() {
+          if (!dom.curriculum) {
+            return;
+          }
+          dom.curriculum
+            .querySelectorAll('.drop-before, .drop-after')
+            .forEach((element) => element.classList.remove('drop-before', 'drop-after'));
+          dom.curriculum
+            .querySelectorAll('.syllabus-lectures.drop-target')
+            .forEach((element) => element.classList.remove('drop-target'));
+        }
+
+        function startLectureDrag(event, lecture, moduleId) {
+          if (!state.editMode) {
+            event.preventDefault();
+            return;
+          }
+          state.draggingLectureId = lecture.id;
+          state.draggingSourceModuleId = moduleId;
+          state.draggedElement = event.currentTarget || null;
+          if (event.dataTransfer) {
+            event.dataTransfer.effectAllowed = 'move';
+            try {
+              event.dataTransfer.setData('text/plain', String(lecture.id));
+            } catch (error) {
+              // Ignore data transfer errors in unsupported browsers.
+            }
+          }
+          if (state.draggedElement) {
+            state.draggedElement.classList.add('dragging');
+          }
+        }
+
+        function clearLectureDrag(event) {
+          const element = (event && event.currentTarget) || state.draggedElement;
+          if (element) {
+            element.classList.remove('dragging');
+          }
+          state.draggingLectureId = null;
+          state.draggingSourceModuleId = null;
+          state.draggedElement = null;
+          clearDragIndicators();
+        }
+
+        function handleLectureDragOver(event) {
+          if (!state.editMode || !state.draggingLectureId) {
+            return;
+          }
+          event.preventDefault();
+          if (event.dataTransfer) {
+            event.dataTransfer.dropEffect = 'move';
+          }
+          const container = event.currentTarget;
+          if (!container || !container.classList) {
+            return;
+          }
+          container.classList.add('drop-target');
+          container
+            .querySelectorAll('.drop-before, .drop-after')
+            .forEach((element) => element.classList.remove('drop-before', 'drop-after'));
+          const targetItem = event.target && event.target.closest('.syllabus-lecture');
+          if (!targetItem || Number(targetItem.dataset.lectureId) === state.draggingLectureId) {
+            return;
+          }
+          const rect = targetItem.getBoundingClientRect();
+          const placeAfter = event.clientY > rect.top + rect.height / 2;
+          targetItem.classList.add(placeAfter ? 'drop-after' : 'drop-before');
+        }
+
+        function handleLectureDragLeave(event) {
+          const container = event.currentTarget;
+          if (!container) {
+            return;
+          }
+          const related = event.relatedTarget;
+          if (!related || (!container.contains(related) && related !== container)) {
+            container.classList.remove('drop-target');
+            container
+              .querySelectorAll('.drop-before, .drop-after')
+              .forEach((element) => element.classList.remove('drop-before', 'drop-after'));
+          }
+        }
+
+        async function handleLectureDrop(event, targetModuleId) {
+          if (!state.editMode || !state.draggingLectureId) {
+            return;
+          }
+          event.preventDefault();
+          const container = event.currentTarget;
+          if (container) {
+            container.classList.remove('drop-target');
+            container
+              .querySelectorAll('.drop-before, .drop-after')
+              .forEach((element) => element.classList.remove('drop-before', 'drop-after'));
+          }
+          const targetElement = event.target && event.target.closest('.syllabus-lecture');
+          let targetIndex = null;
+          if (targetElement) {
+            const moduleInfo = findModuleEntry(targetModuleId);
+            if (moduleInfo) {
+              const lectures = moduleInfo.moduleEntry.lectures || [];
+              const targetLectureId = Number(targetElement.dataset.lectureId);
+              const existingIndex = lectures.findIndex((item) => item.id === targetLectureId);
+              if (existingIndex !== -1) {
+                const rect = targetElement.getBoundingClientRect();
+                const placeAfter = event.clientY > rect.top + rect.height / 2;
+                targetIndex = existingIndex + (placeAfter ? 1 : 0);
+              }
+            }
+          }
+          await performLectureReorder(state.draggingLectureId, targetModuleId, targetIndex);
+        }
+
+        async function performLectureReorder(lectureId, targetModuleId, targetIndex) {
+          const sourceInfo = findLectureLocation(lectureId);
+          const targetInfo = findModuleEntry(targetModuleId);
+          if (!sourceInfo || !targetInfo) {
+            clearDragIndicators();
+            return;
+          }
+
+          const sourceModuleId = sourceInfo.moduleEntry.module.id;
+          const sourceLectures = sourceInfo.moduleEntry.lectures || [];
+          const targetLectures = targetInfo.moduleEntry.lectures || [];
+
+          let insertionIndex =
+            typeof targetIndex === 'number' && Number.isFinite(targetIndex)
+              ? targetIndex
+              : targetLectures.length;
+
+          if (sourceModuleId === targetModuleId) {
+            if (insertionIndex > sourceInfo.index) {
+              insertionIndex -= 1;
+            }
+            if (insertionIndex === sourceInfo.index) {
+              clearDragIndicators();
+              return;
+            }
+          }
+
+          const lectureRecord = sourceLectures[sourceInfo.index];
+          sourceLectures.splice(sourceInfo.index, 1);
+
+          if (insertionIndex < 0 || insertionIndex > targetLectures.length) {
+            insertionIndex = targetLectures.length;
+          }
+
+          lectureRecord.module_id = targetModuleId;
+          targetLectures.splice(insertionIndex, 0, lectureRecord);
+
+          if (state.draggedElement) {
+            state.draggedElement.classList.remove('dragging');
+          }
+
+          const modulesToUpdate = new Map();
+          modulesToUpdate.set(sourceModuleId, sourceInfo.moduleEntry);
+          modulesToUpdate.set(targetModuleId, targetInfo.moduleEntry);
+
+          state.draggingLectureId = null;
+          state.draggingSourceModuleId = null;
+          state.draggedElement = null;
+
+          renderCurriculum();
+
+          const payload = {
+            modules: Array.from(modulesToUpdate.values()).map((moduleEntry) => ({
+              module_id: moduleEntry.module.id,
+              lecture_ids: (moduleEntry.lectures || []).map((item) => item.id),
+            })),
+          };
+
+          try {
+            await request('/api/lectures/reorder', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload),
+            });
+            await refreshData();
+            showStatus(t('status.lectureReordered'), 'success');
+          } catch (error) {
+            showStatus(error.message, 'error');
+            await refreshData();
+          }
+        }
+
         function renderCurriculum() {
           state.buttonMap.clear();
           const filtered = computeFilteredClasses();
           dom.curriculum.innerHTML = '';
-          dom.curriculum.classList.remove('placeholder');
 
           if (state.editMode) {
             const toolbar = document.createElement('div');
             toolbar.className = 'curriculum-toolbar';
+
+            const heading = document.createElement('h3');
+            heading.textContent = t('curriculum.manageHeading');
+            toolbar.appendChild(heading);
+
+            const actions = document.createElement('div');
+            actions.className = 'curriculum-toolbar-actions';
+
             const addClassButton = document.createElement('button');
             addClassButton.type = 'button';
             addClassButton.className = 'secondary pill';
             addClassButton.textContent = t('curriculum.addClass');
-            addClassButton.addEventListener('click', handleAddClass);
-            toolbar.appendChild(addClassButton);
+            addClassButton.addEventListener('click', (event) => {
+              event.preventDefault();
+              handleAddClass();
+            });
+            actions.appendChild(addClassButton);
+
+            toolbar.appendChild(actions);
             dom.curriculum.appendChild(toolbar);
           }
 
@@ -4150,137 +4569,230 @@
               ? t('placeholders.noLecturesFilter')
               : t('placeholders.noClasses');
             dom.curriculum.appendChild(message);
-            dom.curriculum.classList.add('placeholder');
             return;
           }
 
-          const list = document.createElement('ul');
-          filtered.forEach((entry) => {
-            const classItem = document.createElement('li');
-            const classTitle = document.createElement('div');
-            classTitle.className = 'class-item';
-            const className = document.createElement('span');
-            className.textContent = entry.class.name;
-            classTitle.appendChild(className);
+          const syllabus = document.createElement('div');
+          syllabus.className = 'syllabus';
+
+          filtered.forEach((entry, classIndex) => {
+            const classDetails = document.createElement('details');
+            classDetails.className = 'syllabus-class';
+            const hasSelection = entry.modules.some((moduleEntry) =>
+              (moduleEntry.lectures || []).some(
+                (lecture) => lecture.id === state.selectedLectureId,
+              ),
+            );
+            const expandClass =
+              state.query || hasSelection || (!state.query && !hasSelection && classIndex === 0);
+            classDetails.open = expandClass;
+
+            const summary = document.createElement('summary');
+            summary.className = 'syllabus-summary';
+
+            const summaryText = document.createElement('div');
+            summaryText.className = 'syllabus-summary-text';
+
+            const title = document.createElement('span');
+            title.className = 'syllabus-title';
+            title.textContent = entry.class.name;
+            summaryText.appendChild(title);
+
+            const moduleCount = entry.modules.length;
+            const lectureCount = entry.modules.reduce(
+              (total, moduleEntry) => total + (moduleEntry.lectures?.length || 0),
+              0,
+            );
+            const moduleWord = pluralize(currentLanguage, 'counts.module', moduleCount);
+            const lectureWord = pluralize(currentLanguage, 'counts.lecture', lectureCount);
+            const meta = document.createElement('span');
+            meta.className = 'syllabus-meta';
+            meta.textContent = t('curriculum.classMeta', {
+              moduleCount,
+              moduleWord,
+              lectureCount,
+              lectureWord,
+            });
+            summaryText.appendChild(meta);
+
+            summary.appendChild(summaryText);
 
             if (state.editMode) {
-              const classActions = document.createElement('div');
-              classActions.className = 'item-actions';
+              const actions = document.createElement('div');
+              actions.className = 'syllabus-actions';
 
               const addModuleButton = document.createElement('button');
               addModuleButton.type = 'button';
               addModuleButton.className = 'text-button';
               addModuleButton.textContent = t('curriculum.addModule');
               addModuleButton.addEventListener('click', (event) => {
+                event.preventDefault();
                 event.stopPropagation();
                 handleAddModule(entry.class);
               });
-              classActions.appendChild(addModuleButton);
+              actions.appendChild(addModuleButton);
 
               const deleteClassButton = document.createElement('button');
               deleteClassButton.type = 'button';
               deleteClassButton.className = 'text-button danger';
               deleteClassButton.textContent = t('common.actions.delete');
               deleteClassButton.addEventListener('click', (event) => {
+                event.preventDefault();
                 event.stopPropagation();
                 handleDeleteClass(entry);
               });
-              classActions.appendChild(deleteClassButton);
+              actions.appendChild(deleteClassButton);
 
-              classTitle.appendChild(classActions);
+              summary.appendChild(actions);
             }
 
-            classItem.appendChild(classTitle);
+            classDetails.appendChild(summary);
 
-            const moduleList = document.createElement('ul');
-            entry.modules.forEach((moduleEntry) => {
-              const moduleItem = document.createElement('li');
-              const moduleTitle = document.createElement('div');
-              moduleTitle.className = 'module-item';
-              const moduleName = document.createElement('span');
-              moduleName.textContent = moduleEntry.module.name;
-              moduleTitle.appendChild(moduleName);
+            const content = document.createElement('div');
+            content.className = 'syllabus-content';
 
-              if (state.editMode) {
-                const moduleActions = document.createElement('div');
-                moduleActions.className = 'item-actions';
+            if (!entry.modules.length) {
+              const emptyModules = document.createElement('div');
+              emptyModules.className = 'placeholder';
+              emptyModules.textContent = t('placeholders.noModules');
+              content.appendChild(emptyModules);
+            } else {
+              const modulesContainer = document.createElement('div');
+              modulesContainer.className = 'syllabus-modules';
 
-                const addLectureButton = document.createElement('button');
-                addLectureButton.type = 'button';
-                addLectureButton.className = 'text-button';
-                addLectureButton.textContent = t('curriculum.addLecture');
-                addLectureButton.addEventListener('click', (event) => {
-                  event.stopPropagation();
-                  handleAddLecture(moduleEntry.module, entry.class);
+              entry.modules.forEach((moduleEntry, moduleIndex) => {
+                const moduleDetails = document.createElement('details');
+                moduleDetails.className = 'syllabus-module';
+                const moduleHasSelection = (moduleEntry.lectures || []).some(
+                  (lecture) => lecture.id === state.selectedLectureId,
+                );
+                const expandModule =
+                  state.query ||
+                  moduleHasSelection ||
+                  (!state.query && !moduleHasSelection && expandClass && moduleIndex === 0);
+                moduleDetails.open = expandModule;
+
+                const moduleSummary = document.createElement('summary');
+                moduleSummary.className = 'syllabus-summary';
+
+                const moduleSummaryText = document.createElement('div');
+                moduleSummaryText.className = 'syllabus-summary-text';
+
+                const moduleTitle = document.createElement('span');
+                moduleTitle.className = 'syllabus-title';
+                moduleTitle.textContent = moduleEntry.module.name;
+                moduleSummaryText.appendChild(moduleTitle);
+
+                const moduleLectureCount = moduleEntry.lectures.length;
+                const moduleLectureWord = pluralize(
+                  currentLanguage,
+                  'counts.lecture',
+                  moduleLectureCount,
+                );
+                const moduleMeta = document.createElement('span');
+                moduleMeta.className = 'syllabus-meta';
+                moduleMeta.textContent = t('curriculum.moduleMeta', {
+                  lectureCount: moduleLectureCount,
+                  lectureWord: moduleLectureWord,
                 });
-                moduleActions.appendChild(addLectureButton);
+                moduleSummaryText.appendChild(moduleMeta);
 
-                const deleteModuleButton = document.createElement('button');
-                deleteModuleButton.type = 'button';
-                deleteModuleButton.className = 'text-button danger';
-                deleteModuleButton.textContent = t('common.actions.delete');
-                deleteModuleButton.addEventListener('click', (event) => {
-                  event.stopPropagation();
-                  handleDeleteModule(moduleEntry, entry.class);
-                });
-                moduleActions.appendChild(deleteModuleButton);
-
-                moduleTitle.appendChild(moduleActions);
-              }
-
-              moduleItem.appendChild(moduleTitle);
-
-              const lectureList = document.createElement('ul');
-              moduleEntry.lectures.forEach((lecture) => {
-                const lectureItem = document.createElement('li');
-                const lectureRow = document.createElement('div');
-                lectureRow.className = 'lecture-row';
-
-                const button = document.createElement('button');
-                button.type = 'button';
-                button.className = 'lecture-button';
-                button.textContent = lecture.name;
-                button.addEventListener('click', () => selectLecture(lecture.id));
-                lectureRow.appendChild(button);
-                state.buttonMap.set(lecture.id, button);
+                moduleSummary.appendChild(moduleSummaryText);
 
                 if (state.editMode) {
-                  const lectureActions = document.createElement('div');
-                  lectureActions.className = 'item-actions';
+                  const moduleActions = document.createElement('div');
+                  moduleActions.className = 'syllabus-actions';
 
-                  const deleteLectureButton = document.createElement('button');
-                  deleteLectureButton.type = 'button';
-                  deleteLectureButton.className = 'text-button danger';
-                  deleteLectureButton.textContent = t('common.actions.delete');
-                  deleteLectureButton.addEventListener('click', (event) => {
+                  const deleteModuleButton = document.createElement('button');
+                  deleteModuleButton.type = 'button';
+                  deleteModuleButton.className = 'text-button danger';
+                  deleteModuleButton.textContent = t('common.actions.delete');
+                  deleteModuleButton.addEventListener('click', (event) => {
+                    event.preventDefault();
                     event.stopPropagation();
-                    handleDeleteLecture(lecture, moduleEntry.module, entry.class);
+                    handleDeleteModule(moduleEntry, entry.class);
                   });
-                  lectureActions.appendChild(deleteLectureButton);
+                  moduleActions.appendChild(deleteModuleButton);
 
-                  lectureRow.appendChild(lectureActions);
+                  moduleSummary.appendChild(moduleActions);
                 }
 
-                lectureItem.appendChild(lectureRow);
-                lectureList.appendChild(lectureItem);
+                moduleDetails.appendChild(moduleSummary);
+
+                const moduleContent = document.createElement('div');
+                moduleContent.className = 'syllabus-content';
+
+                const lectureList = document.createElement('ul');
+                lectureList.className = 'syllabus-lectures';
+                lectureList.dataset.moduleId = String(moduleEntry.module.id);
+
+                if (!moduleEntry.lectures.length) {
+                  lectureList.classList.add('empty');
+                  const emptyLectures = document.createElement('div');
+                  emptyLectures.className = 'placeholder';
+                  emptyLectures.textContent = t('placeholders.noLectures');
+                  moduleContent.appendChild(emptyLectures);
+                } else {
+                  moduleEntry.lectures.forEach((lecture) => {
+                    const lectureItem = document.createElement('li');
+                    lectureItem.className = 'syllabus-lecture';
+                    lectureItem.dataset.lectureId = String(lecture.id);
+
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.className = 'lecture-button';
+                    button.textContent = lecture.name;
+                    button.addEventListener('click', (event) => {
+                      event.preventDefault();
+                      selectLecture(lecture.id);
+                    });
+                    lectureItem.appendChild(button);
+                    state.buttonMap.set(lecture.id, button);
+
+                    if (state.editMode) {
+                      lectureItem.draggable = true;
+                      lectureItem.addEventListener('dragstart', (event) => {
+                        startLectureDrag(event, lecture, moduleEntry.module.id);
+                      });
+                      lectureItem.addEventListener('dragend', clearLectureDrag);
+
+                      const deleteLectureButton = document.createElement('button');
+                      deleteLectureButton.type = 'button';
+                      deleteLectureButton.className = 'text-button danger';
+                      deleteLectureButton.textContent = t('common.actions.delete');
+                      deleteLectureButton.addEventListener('click', (event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        handleDeleteLecture(lecture, moduleEntry.module, entry.class);
+                      });
+                      lectureItem.appendChild(deleteLectureButton);
+                    }
+
+                    lectureList.appendChild(lectureItem);
+                  });
+                }
+
+                if (state.editMode) {
+                  const dropHandler = (event) => handleLectureDrop(event, moduleEntry.module.id);
+                  lectureList.addEventListener('dragover', handleLectureDragOver);
+                  lectureList.addEventListener('dragleave', handleLectureDragLeave);
+                  lectureList.addEventListener('drop', dropHandler);
+                }
+
+                moduleContent.appendChild(lectureList);
+
+                moduleDetails.appendChild(moduleContent);
+                modulesContainer.appendChild(moduleDetails);
               });
 
-              if (moduleEntry.lectures.length === 0) {
-                const empty = document.createElement('div');
-                empty.className = 'placeholder';
-                empty.textContent = t('placeholders.noLectures');
-                lectureList.appendChild(empty);
-              }
+              content.appendChild(modulesContainer);
+            }
 
-              moduleItem.appendChild(lectureList);
-              moduleList.appendChild(moduleItem);
-            });
-
-            classItem.appendChild(moduleList);
-            list.appendChild(classItem);
+            classDetails.appendChild(content);
+            syllabus.appendChild(classDetails);
           });
 
-          dom.curriculum.appendChild(list);
+          dom.curriculum.appendChild(syllabus);
           highlightSelected();
         }
 
@@ -4306,19 +4818,11 @@
           if (!name || !name.trim()) {
             return;
           }
-          const description =
-            (await promptDialog({
-              title: t('dialogs.classDescription.title'),
-              message: t('dialogs.descriptionOptional'),
-              confirmText: t('common.actions.save'),
-              cancelText: t('common.actions.skip'),
-              placeholder: t('dialogs.descriptionPlaceholder'),
-            })) ?? '';
           try {
             await request('/api/classes', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ name: name.trim(), description: description.trim() }),
+              body: JSON.stringify({ name: name.trim() }),
             });
             showStatus(t('status.classCreated'), 'success');
             await refreshData();
@@ -4341,14 +4845,6 @@
           if (!name || !name.trim()) {
             return;
           }
-          const description =
-            (await promptDialog({
-              title: t('dialogs.moduleDescription.title'),
-              message: t('dialogs.descriptionOptional'),
-              confirmText: t('common.actions.save'),
-              cancelText: t('common.actions.skip'),
-              placeholder: t('dialogs.descriptionPlaceholder'),
-            })) ?? '';
           try {
             await request('/api/modules', {
               method: 'POST',
@@ -4356,7 +4852,6 @@
               body: JSON.stringify({
                 class_id: classRecord.id,
                 name: name.trim(),
-                description: description.trim(),
               }),
             });
             showStatus(t('status.moduleCreated'), 'success');
@@ -4679,6 +5174,9 @@
             const payload = await request('/api/classes');
             state.classes = payload?.classes || [];
             state.stats = payload?.stats || {};
+            state.storage.initialized = false;
+            state.storage.overview = null;
+            state.storage.usage = null;
             updateStats();
             updateModuleOptions();
             renderCurriculum();
@@ -4788,24 +5286,6 @@
           }
         }
 
-        if (dom.storage && dom.storage.button) {
-          dom.storage.button.addEventListener('click', () => {
-            openStorageManager();
-          });
-        }
-
-        if (dom.storage && dom.storage.close) {
-          dom.storage.close.addEventListener('click', () => {
-            closeStorageManager();
-          });
-        }
-
-        if (dom.storage && dom.storage.backdrop) {
-          dom.storage.backdrop.addEventListener('click', () => {
-            closeStorageManager();
-          });
-        }
-
         if (dom.storage && dom.storage.refresh) {
           dom.storage.refresh.addEventListener('click', () => {
             refreshStorage();
@@ -4815,15 +5295,6 @@
         if (dom.storage && dom.storage.purge) {
           dom.storage.purge.addEventListener('click', () => {
             handlePurgeProcessedAudio();
-          });
-        }
-
-        if (dom.storage && dom.storage.window) {
-          dom.storage.window.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape') {
-              event.preventDefault();
-              closeStorageManager();
-            }
           });
         }
 
@@ -5062,6 +5533,78 @@
               showStatus(message, 'error');
             } finally {
               dom.settingsWhisperGpuTest.disabled = state.gpuWhisper.unavailable;
+            }
+          });
+        }
+
+        if (dom.settingsExport) {
+          dom.settingsExport.addEventListener('click', async () => {
+            dom.settingsExport.disabled = true;
+            showStatus(t('status.exporting'), 'info');
+            try {
+              const payload = await request('/api/settings/export', { method: 'POST' });
+              const archive = payload?.archive;
+              if (!archive || !archive.path) {
+                throw new Error(t('status.exportFailed'));
+              }
+              const link = document.createElement('a');
+              link.href = buildStorageURL(archive.path);
+              link.download = archive.filename || 'lecture-tools-export.zip';
+              document.body.appendChild(link);
+              link.click();
+              link.remove();
+              showStatus(t('status.exportReady'), 'success');
+            } catch (error) {
+              showStatus(error.message, 'error');
+            } finally {
+              dom.settingsExport.disabled = false;
+            }
+          });
+        }
+
+        if (dom.settingsImport) {
+          dom.settingsImport.addEventListener('change', async (event) => {
+            const input = event.target;
+            const files = input?.files || [];
+            if (!files.length) {
+              return;
+            }
+            const file = files[0];
+            const formData = new FormData();
+            formData.append('file', file);
+            if (dom.settingsImportMode) {
+              formData.append('mode', dom.settingsImportMode.value || 'merge');
+            }
+            dom.settingsImport.disabled = true;
+            if (dom.settingsExport) {
+              dom.settingsExport.disabled = true;
+            }
+            showStatus(t('status.importing'), 'info');
+            try {
+              const payload = await request('/api/settings/import', {
+                method: 'POST',
+                body: formData,
+              });
+              const summary = payload?.import;
+              if (summary) {
+                const count = Number(summary.lectures || 0);
+                if (count > 0) {
+                  showStatus(t('status.importSuccess', { count }), 'success');
+                } else {
+                  showStatus(t('status.importNoChanges'), 'success');
+                }
+              } else {
+                showStatus(t('status.importSuccess', { count: 0 }), 'success');
+              }
+              await refreshData();
+            } catch (error) {
+              showStatus(error.message, 'error');
+            } finally {
+              dom.settingsImport.value = '';
+              dom.settingsImport.disabled = false;
+              if (dom.settingsExport) {
+                dom.settingsExport.disabled = false;
+              }
             }
           });
         }
