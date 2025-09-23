@@ -1025,6 +1025,51 @@
         background: rgba(220, 38, 38, 0.12);
       }
 
+      .icon-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 30px;
+        height: 30px;
+        border-radius: 999px;
+        border: none;
+        background: transparent;
+        color: var(--accent);
+        padding: 0;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s ease, color 0.2s ease;
+      }
+
+      .icon-button:hover,
+      .icon-button:focus-visible {
+        background: var(--accent-muted);
+      }
+
+      .icon-button:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.24);
+      }
+
+      .icon-button.danger {
+        color: var(--danger);
+      }
+
+      .icon-button.danger:hover,
+      .icon-button.danger:focus-visible {
+        background: rgba(220, 38, 38, 0.12);
+      }
+
+      .icon-button.danger:focus-visible {
+        box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2);
+      }
+
+      .icon-button .icon {
+        font-size: 1.15rem;
+        line-height: 1;
+      }
+
       .placeholder {
         color: var(--placeholder);
         font-style: italic;
@@ -4359,6 +4404,68 @@
             .forEach((element) => element.classList.remove('drop-target'));
         }
 
+        function createIconButton(label, icon, ...classNames) {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = ['icon-button', ...classNames.filter(Boolean)].join(' ');
+          button.setAttribute('aria-label', label);
+          button.title = label;
+
+          const iconSpan = document.createElement('span');
+          iconSpan.className = 'icon';
+          iconSpan.setAttribute('aria-hidden', 'true');
+          iconSpan.textContent = icon;
+          button.appendChild(iconSpan);
+
+          const srLabel = document.createElement('span');
+          srLabel.className = 'sr-only';
+          srLabel.textContent = label;
+          button.appendChild(srLabel);
+
+          return button;
+        }
+
+        function calculateLectureDropPosition(container, moduleId, pointerY) {
+          const moduleInfo = findModuleEntry(moduleId);
+          if (!moduleInfo) {
+            return { index: null, indicator: null, position: null };
+          }
+
+          const lectures = moduleInfo.moduleEntry.lectures || [];
+          let index = lectures.length;
+          let indicator = null;
+          let position = null;
+
+          for (let lectureIndex = 0; lectureIndex < lectures.length; lectureIndex += 1) {
+            const lecture = lectures[lectureIndex];
+            if (!lecture || lecture.id === state.draggingLectureId) {
+              continue;
+            }
+
+            const element = container.querySelector(
+              `.syllabus-lecture[data-lecture-id="${lecture.id}"]`,
+            );
+            if (!element) {
+              continue;
+            }
+
+            const rect = element.getBoundingClientRect();
+            const midpoint = rect.top + rect.height / 2;
+            if (typeof pointerY === 'number' && Number.isFinite(pointerY) && pointerY < midpoint) {
+              index = lectureIndex;
+              indicator = element;
+              position = 'before';
+              return { index, indicator, position };
+            }
+
+            index = lectureIndex + 1;
+            indicator = element;
+            position = 'after';
+          }
+
+          return { index, indicator: indicator ?? null, position };
+        }
+
         function startLectureDrag(event, lecture, moduleId) {
           if (!state.editMode) {
             event.preventDefault();
@@ -4407,13 +4514,19 @@
           container
             .querySelectorAll('.drop-before, .drop-after')
             .forEach((element) => element.classList.remove('drop-before', 'drop-after'));
-          const targetItem = event.target && event.target.closest('.syllabus-lecture');
-          if (!targetItem || Number(targetItem.dataset.lectureId) === state.draggingLectureId) {
+          const moduleId = Number(container.dataset.moduleId);
+          if (!Number.isFinite(moduleId)) {
             return;
           }
-          const rect = targetItem.getBoundingClientRect();
-          const placeAfter = event.clientY > rect.top + rect.height / 2;
-          targetItem.classList.add(placeAfter ? 'drop-after' : 'drop-before');
+          const { indicator, position } = calculateLectureDropPosition(
+            container,
+            moduleId,
+            event.clientY,
+          );
+          if (!indicator || !position) {
+            return;
+          }
+          indicator.classList.add(position === 'before' ? 'drop-before' : 'drop-after');
         }
 
         function handleLectureDragLeave(event) {
@@ -4442,19 +4555,11 @@
               .querySelectorAll('.drop-before, .drop-after')
               .forEach((element) => element.classList.remove('drop-before', 'drop-after'));
           }
-          const targetElement = event.target && event.target.closest('.syllabus-lecture');
           let targetIndex = null;
-          if (targetElement) {
-            const moduleInfo = findModuleEntry(targetModuleId);
-            if (moduleInfo) {
-              const lectures = moduleInfo.moduleEntry.lectures || [];
-              const targetLectureId = Number(targetElement.dataset.lectureId);
-              const existingIndex = lectures.findIndex((item) => item.id === targetLectureId);
-              if (existingIndex !== -1) {
-                const rect = targetElement.getBoundingClientRect();
-                const placeAfter = event.clientY > rect.top + rect.height / 2;
-                targetIndex = existingIndex + (placeAfter ? 1 : 0);
-              }
+          if (container) {
+            const { index } = calculateLectureDropPosition(container, targetModuleId, event.clientY);
+            if (typeof index === 'number' && Number.isFinite(index)) {
+              targetIndex = index;
             }
           }
           await performLectureReorder(state.draggingLectureId, targetModuleId, targetIndex);
@@ -4548,10 +4653,7 @@
             const actions = document.createElement('div');
             actions.className = 'curriculum-toolbar-actions';
 
-            const addClassButton = document.createElement('button');
-            addClassButton.type = 'button';
-            addClassButton.className = 'secondary pill';
-            addClassButton.textContent = t('curriculum.addClass');
+            const addClassButton = createIconButton(t('curriculum.addClass'), '+');
             addClassButton.addEventListener('click', (event) => {
               event.preventDefault();
               handleAddClass();
@@ -4621,10 +4723,7 @@
               const actions = document.createElement('div');
               actions.className = 'syllabus-actions';
 
-              const addModuleButton = document.createElement('button');
-              addModuleButton.type = 'button';
-              addModuleButton.className = 'text-button';
-              addModuleButton.textContent = t('curriculum.addModule');
+              const addModuleButton = createIconButton(t('curriculum.addModule'), '+');
               addModuleButton.addEventListener('click', (event) => {
                 event.preventDefault();
                 event.stopPropagation();
@@ -4632,10 +4731,7 @@
               });
               actions.appendChild(addModuleButton);
 
-              const deleteClassButton = document.createElement('button');
-              deleteClassButton.type = 'button';
-              deleteClassButton.className = 'text-button danger';
-              deleteClassButton.textContent = t('common.actions.delete');
+              const deleteClassButton = createIconButton(t('common.actions.delete'), '×', 'danger');
               deleteClassButton.addEventListener('click', (event) => {
                 event.preventDefault();
                 event.stopPropagation();
@@ -4703,10 +4799,11 @@
                   const moduleActions = document.createElement('div');
                   moduleActions.className = 'syllabus-actions';
 
-                  const deleteModuleButton = document.createElement('button');
-                  deleteModuleButton.type = 'button';
-                  deleteModuleButton.className = 'text-button danger';
-                  deleteModuleButton.textContent = t('common.actions.delete');
+                  const deleteModuleButton = createIconButton(
+                    t('common.actions.delete'),
+                    '×',
+                    'danger',
+                  );
                   deleteModuleButton.addEventListener('click', (event) => {
                     event.preventDefault();
                     event.stopPropagation();
@@ -4756,10 +4853,11 @@
                       });
                       lectureItem.addEventListener('dragend', clearLectureDrag);
 
-                      const deleteLectureButton = document.createElement('button');
-                      deleteLectureButton.type = 'button';
-                      deleteLectureButton.className = 'text-button danger';
-                      deleteLectureButton.textContent = t('common.actions.delete');
+                      const deleteLectureButton = createIconButton(
+                        t('common.actions.delete'),
+                        '×',
+                        'danger',
+                      );
                       deleteLectureButton.addEventListener('click', (event) => {
                         event.preventDefault();
                         event.stopPropagation();
