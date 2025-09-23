@@ -1053,6 +1053,12 @@
       }
 
       .icon-button.danger {
+        width: auto;
+        height: auto;
+        min-width: 0;
+        padding: 0;
+        border-radius: 4px;
+        background: transparent;
         color: var(--danger);
       }
 
@@ -1074,11 +1080,12 @@
 
       .icon-button.danger .icon {
         color: inherit;
+        font-size: 1rem;
       }
 
       .icon-button.danger:hover .icon,
       .icon-button.danger:focus-visible .icon {
-        transform: rotate(90deg);
+        transform: none;
       }
 
       .placeholder {
@@ -1837,8 +1844,8 @@
                 import: 'Import archive',
                 modeLabel: 'Import mode',
                 modes: {
-                  merge: 'Merge with existing',
-                  replace: 'Replace existing data',
+                  merge: 'Import and add to existing content',
+                  replace: 'Clear existing content and overwrite',
                 },
                 hint: 'Exported archives are stored temporarily and cleared when the app starts.',
               },
@@ -2164,8 +2171,8 @@
                 import: '导入归档',
                 modeLabel: '导入模式',
                 modes: {
-                  merge: '与现有内容合并',
-                  replace: '替换现有数据',
+                  merge: '追加到现有内容',
+                  replace: '清空现有内容并覆盖',
                 },
                 hint: '导出的归档会临时保存，并在应用启动时清理。',
               },
@@ -2491,8 +2498,8 @@
                 import: 'Importar archivo',
                 modeLabel: 'Modo de importación',
                 modes: {
-                  merge: 'Combinar con los existentes',
-                  replace: 'Reemplazar los datos existentes',
+                  merge: 'Agregar al contenido existente',
+                  replace: 'Borrar el contenido actual y sobrescribir',
                 },
                 hint: 'Los archivos exportados se guardan temporalmente y se eliminan al iniciar la aplicación.',
               },
@@ -2820,8 +2827,8 @@
                 import: 'Importer une archive',
                 modeLabel: 'Mode d’importation',
                 modes: {
-                  merge: 'Fusionner avec l’existant',
-                  replace: 'Remplacer les données existantes',
+                  merge: 'Ajouter au contenu existant',
+                  replace: 'Effacer le contenu actuel puis écraser',
                 },
                 hint: 'Les archives exportées sont conservées temporairement et supprimées au démarrage de l’application.',
               },
