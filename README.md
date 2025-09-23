@@ -15,11 +15,12 @@
 
 1. [✨ Key Features](#-key-features)
 2. [🏁 Quick Start](#-quick-start)
-3. [🧭 Project Structure](#-project-structure)
-4. [🎛️ Interface Customization](#-interface-customization)
-5. [🛠️ Core Workflows](#-core-workflows)
-6. [🧪 Testing](#-testing)
-7. [🤝 Contributing](#-contributing)
+3. [🖥️ Debian 13 VPS Deployment](#%F0%9F%96%A5%EF%B8%8F-debian-13-vps-deployment)
+4. [🧭 Project Structure](#-project-structure)
+5. [🎛️ Interface Customization](#-interface-customization)
+6. [🛠️ Core Workflows](#-core-workflows)
+7. [🧪 Testing](#-testing)
+8. [🤝 Contributing](#-contributing)
 
 ---
 
@@ -63,6 +64,70 @@
    python run.py overview --style modern
    python run.py overview --style console
    ```
+
+---
+
+## 🖥️ Debian 13 VPS Deployment
+
+Follow these steps to run Lecture Tools as a managed service that automatically starts whenever your VPS reboots.
+
+### 1. Prepare the server
+
+```bash
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y python3 python3-venv python3-pip git
+sudo adduser --system --group --home /opt/lecture-tools lecturetools
+sudo mkdir -p /opt/lecture-tools
+sudo chown -R lecturetools:lecturetools /opt/lecture-tools
+```
+
+### 2. Deploy the application
+
+```bash
+sudo -u lecturetools git clone https://github.com/your-org/lecture-tools.git /opt/lecture-tools/app
+sudo -u lecturetools python3 -m venv /opt/lecture-tools/.venv
+sudo -u lecturetools /opt/lecture-tools/.venv/bin/pip install --upgrade pip
+sudo -u lecturetools /opt/lecture-tools/.venv/bin/pip install -r /opt/lecture-tools/app/requirements-dev.txt
+```
+
+> 💡 Keep long-lived data outside the git checkout. By default the application uses `/opt/lecture-tools/app/storage/` which already ships in the repository.
+
+### 3. Review the service definition
+
+The repository ships a systemd unit at `config/systemd/lecture-tools.service`. Update the following lines to match your environment if needed:
+
+- `WorkingDirectory=` – folder that contains `run.py` (default `/opt/lecture-tools/app`).
+- `ExecStart=` – full path to the virtual environment’s Python interpreter and desired `run.py` command.
+- `User=` / `Group=` – change to the dedicated account you created above (for example `lecturetools`).
+
+### 4. Install the systemd unit
+
+```bash
+sudo cp /opt/lecture-tools/app/config/systemd/lecture-tools.service /etc/systemd/system/lecture-tools.service
+sudo chown root:root /etc/systemd/system/lecture-tools.service
+sudo chmod 644 /etc/systemd/system/lecture-tools.service
+```
+
+### 5. Enable the service
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now lecture-tools
+sudo systemctl status lecture-tools
+```
+
+Tail runtime logs with `journalctl -u lecture-tools -f`.
+
+### 6. Update the deployment
+
+```bash
+sudo systemctl stop lecture-tools
+sudo -u lecturetools git -C /opt/lecture-tools/app pull
+sudo -u lecturetools /opt/lecture-tools/.venv/bin/pip install -r /opt/lecture-tools/app/requirements-dev.txt
+sudo systemctl start lecture-tools
+```
+
+> 🔐 Harden your VPS by restricting inbound ports (allow only the one you expose via `run.py`) and serving the application behind a reverse proxy such as Nginx with HTTPS termination.
 
 ---
 
