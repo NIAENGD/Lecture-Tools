@@ -1053,12 +1053,12 @@
       }
 
       .icon-button.danger {
-        color: var(--text);
+        color: var(--danger);
       }
 
       .icon-button.danger:hover,
       .icon-button.danger:focus-visible {
-        background: rgba(220, 38, 38, 0.12);
+        background: transparent;
         color: var(--danger);
       }
 
@@ -4381,7 +4381,10 @@
           for (const classEntry of state.classes) {
             const modules = classEntry.modules || [];
             for (const moduleEntry of modules) {
-              if (moduleEntry.module.id === moduleId) {
+              if (moduleEntry && moduleEntry.id === moduleId) {
+                if (!Array.isArray(moduleEntry.lectures)) {
+                  moduleEntry.lectures = [];
+                }
                 return { classEntry, moduleEntry };
               }
             }
@@ -4585,9 +4588,15 @@
             return;
           }
 
-          const sourceModuleId = sourceInfo.moduleEntry.module.id;
-          const sourceLectures = sourceInfo.moduleEntry.lectures || [];
-          const targetLectures = targetInfo.moduleEntry.lectures || [];
+          const sourceModuleId = sourceInfo.moduleEntry.id;
+          if (!Array.isArray(sourceInfo.moduleEntry.lectures)) {
+            sourceInfo.moduleEntry.lectures = [];
+          }
+          if (!Array.isArray(targetInfo.moduleEntry.lectures)) {
+            targetInfo.moduleEntry.lectures = [];
+          }
+          const sourceLectures = sourceInfo.moduleEntry.lectures;
+          const targetLectures = targetInfo.moduleEntry.lectures;
 
           let insertionIndex =
             typeof targetIndex === 'number' && Number.isFinite(targetIndex)
@@ -4622,6 +4631,9 @@
           modulesToUpdate.set(sourceModuleId, sourceInfo.moduleEntry);
           modulesToUpdate.set(targetModuleId, targetInfo.moduleEntry);
 
+          sourceInfo.moduleEntry.lecture_count = sourceLectures.length;
+          targetInfo.moduleEntry.lecture_count = targetLectures.length;
+
           state.draggingLectureId = null;
           state.draggingSourceModuleId = null;
           state.draggedElement = null;
@@ -4630,7 +4642,7 @@
 
           const payload = {
             modules: Array.from(modulesToUpdate.values()).map((moduleEntry) => ({
-              module_id: moduleEntry.module.id,
+              module_id: moduleEntry.id,
               lecture_ids: (moduleEntry.lectures || []).map((item) => item.id),
             })),
           };
