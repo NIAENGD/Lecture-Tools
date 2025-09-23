@@ -1,0 +1,17 @@
+[Unit]
+Description=Lecture Tools FastAPI server
+After=network.target
+
+[Service]
+Type=simple
+# Update these paths to match your installation directory and virtual environment
+WorkingDirectory=/opt/lecture-tools/app
+ExecStart=/opt/lecture-tools/.venv/bin/python run.py serve --host 0.0.0.0 --port 8000
+Restart=on-failure
+RestartSec=5
+# Change these if you use a different dedicated service account
+User=lecturetools
+Group=lecturetools
+
+[Install]
+WantedBy=multi-user.target
