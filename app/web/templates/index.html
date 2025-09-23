@@ -246,6 +246,22 @@
         filter: brightness(0.95);
       }
 
+      .storage-actions button.danger {
+        background: var(--danger);
+        border-color: var(--danger);
+        color: var(--danger-contrast);
+      }
+
+      .storage-actions button.danger:hover {
+        filter: brightness(0.95);
+      }
+
+      .storage-actions button:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+        filter: none;
+      }
+
       .storage-usage {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -272,115 +288,6 @@
         font-weight: 600;
       }
 
-      .storage-breadcrumb {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        align-items: center;
-        color: var(--muted);
-        font-size: 0.9rem;
-      }
-
-      .storage-crumb {
-        border: none;
-        background: transparent;
-        color: var(--accent);
-        font-weight: 600;
-        padding: 0;
-        cursor: pointer;
-      }
-
-      .storage-crumb.current {
-        color: var(--text);
-        cursor: default;
-      }
-
-      .storage-crumb:disabled {
-        color: var(--text);
-        cursor: default;
-      }
-
-      .storage-separator {
-        color: var(--muted);
-      }
-
-      .storage-table-wrapper {
-        border: 1px solid var(--panel-border);
-        border-radius: 10px;
-        overflow: auto;
-        flex: 1;
-      }
-
-      .storage-table {
-        width: 100%;
-        min-width: 100%;
-        border-collapse: collapse;
-        font-size: 0.95rem;
-      }
-
-      .storage-table th,
-      .storage-table td {
-        padding: 10px 14px;
-        text-align: left;
-        border-bottom: 1px solid var(--panel-border);
-      }
-
-      .storage-table tbody tr:hover {
-        background: var(--accent-muted);
-      }
-
-      .storage-table td:last-child {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-      }
-
-      .storage-name-button {
-        background: transparent;
-        border: none;
-        color: var(--accent);
-        font-weight: 600;
-        cursor: pointer;
-        padding: 0;
-      }
-
-      .storage-name-button:hover,
-      .storage-name-button:focus {
-        text-decoration: underline;
-        outline: none;
-      }
-
-      .storage-link {
-        color: var(--accent);
-        text-decoration: none;
-        font-weight: 600;
-      }
-
-      .storage-link:hover,
-      .storage-link:focus {
-        text-decoration: underline;
-        outline: none;
-      }
-
-      .storage-action-button {
-        border-radius: 999px;
-        border: 1px solid var(--panel-border);
-        background: transparent;
-        color: var(--muted);
-        padding: 4px 12px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
-      }
-
-      .storage-action-button:hover,
-      .storage-action-button:focus {
-        border-color: var(--danger);
-        color: var(--danger);
-        background: rgba(220, 38, 38, 0.08);
-        outline: none;
-      }
-
       .storage-empty,
       .storage-loading {
         text-align: center;
@@ -393,6 +300,110 @@
       .storage-loading {
         border-style: solid;
         border-color: transparent;
+      }
+
+      .storage-purge-summary {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .storage-class-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .storage-class-list,
+      .storage-module-list,
+      .storage-lecture-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .storage-module-list,
+      .storage-lecture-list {
+        gap: 10px;
+      }
+
+      .storage-class-card,
+      .storage-module-card,
+      .storage-lecture-item {
+        border: 1px solid var(--panel-border);
+        border-radius: 10px;
+        background: var(--background);
+        padding: 14px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .storage-module-card,
+      .storage-lecture-item {
+        border-radius: 8px;
+      }
+
+      .storage-lecture-item {
+        padding: 12px 14px;
+      }
+
+      .storage-class-header,
+      .storage-module-header,
+      .storage-lecture-header {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .storage-class-title,
+      .storage-module-title {
+        margin: 0;
+        font-size: 1.05rem;
+      }
+
+      .storage-lecture-title {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 600;
+      }
+
+      .storage-class-meta,
+      .storage-module-meta,
+      .storage-lecture-meta {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+
+      .storage-class-size,
+      .storage-module-size,
+      .storage-lecture-size {
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      .storage-lecture-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .storage-lecture-eligible {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: var(--status-success-bg);
+        color: var(--status-success-text);
+        border-radius: 999px;
+        padding: 2px 8px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        align-self: flex-start;
       }
 
       .dialog-title {
@@ -1413,11 +1424,23 @@
         <div class="storage-header">
           <div>
             <h2 id="storage-title" data-i18n="storage.title">Storage manager</h2>
-            <p id="storage-path" class="storage-path"></p>
+            <p
+              id="storage-path"
+              class="storage-path"
+              data-i18n="storage.subtitle"
+            ></p>
           </div>
           <div class="storage-actions">
             <button id="storage-refresh" type="button" data-i18n="storage.actions.refresh">
               Refresh
+            </button>
+            <button
+              id="storage-purge"
+              type="button"
+              class="danger"
+              data-i18n="storage.actions.purge"
+            >
+              Remove processed audio
             </button>
             <button
               id="storage-close"
@@ -1443,25 +1466,19 @@
             <span id="storage-total" class="storage-usage-value">--</span>
           </div>
         </section>
-        <nav id="storage-breadcrumb" class="storage-breadcrumb" aria-label="Storage path"></nav>
+        <p
+          id="storage-purge-summary"
+          class="storage-purge-summary"
+          data-i18n="storage.purge.none"
+        ></p>
         <div id="storage-loading" class="storage-loading" hidden data-i18n="storage.loading">
           Loading…
         </div>
         <div id="storage-empty" class="storage-empty" hidden data-i18n="storage.empty">
-          Folder is empty.
+          No stored classes found.
         </div>
-        <div id="storage-table-wrapper" class="storage-table-wrapper" hidden>
-          <table id="storage-table" class="storage-table">
-            <thead>
-              <tr>
-                <th scope="col" data-i18n="storage.columns.name">Name</th>
-                <th scope="col" data-i18n="storage.columns.size">Size</th>
-                <th scope="col" data-i18n="storage.columns.modified">Modified</th>
-                <th scope="col" data-i18n="storage.columns.actions">Actions</th>
-              </tr>
-            </thead>
-            <tbody id="storage-entries"></tbody>
-          </table>
+        <div id="storage-class-wrapper" class="storage-class-wrapper" hidden>
+          <ul id="storage-class-list" class="storage-class-list"></ul>
         </div>
       </div>
     </div>
@@ -1599,31 +1616,49 @@
             },
             storage: {
               title: 'Storage manager',
-              root: 'Storage',
+              subtitle: 'Review stored assets by class hierarchy.',
               loading: 'Loading…',
-              empty: 'Folder is empty.',
+              empty: 'No stored classes found.',
               usage: {
                 used: 'Used',
                 available: 'Available',
                 total: 'Total',
               },
-              columns: {
-                name: 'Name',
-                size: 'Size',
-                modified: 'Modified',
-                actions: 'Actions',
-              },
               actions: {
                 refresh: 'Refresh',
+                purge: 'Remove processed audio',
                 close: 'Close',
-                open: 'Open',
-                delete: 'Delete',
+              },
+              purge: {
+                none: 'No processed audio to remove.',
+                available: '{{count}} {{lectureWord}} ready for cleanup.',
+                working: 'Removing audio…',
+                readyCount: '{{count}} {{lectureWord}} ready for cleanup',
+              },
+              classes: {
+                summary: '{{moduleCount}} {{moduleWord}} • {{lectureCount}} {{lectureWord}}',
+                empty: 'No modules stored for this class yet.',
+              },
+              modules: {
+                summary: '{{lectureCount}} {{lectureWord}}',
+                empty: 'No lectures stored for this module yet.',
+              },
+              lecture: {
+                audio: 'Audio',
+                transcript: 'Transcript',
+                notes: 'Notes',
+                slides: 'Slides',
+                empty: 'No linked assets.',
+                eligible: 'Audio ready for removal',
               },
               dialogs: {
-                deleteTitle: 'Delete item',
-                deleteFile: 'Delete file "{{name}}"?',
-                deleteFolder: 'Delete folder "{{name}}" and everything it contains?',
+                purgeTitle: 'Remove processed audio',
+                purgeMessage:
+                  'Delete audio files for {{count}} {{lectureWord}} that already have transcripts? This cannot be undone.',
               },
+              unnamedClass: 'Untitled class',
+              unnamedModule: 'Untitled module',
+              unnamedLecture: 'Untitled lecture',
             },
             dialog: {
               cancel: 'Cancel',
@@ -1744,9 +1779,10 @@
               transcriptionPreparing: '====> Preparing transcription…',
               transcriptionCompleted: 'Transcription completed.',
               processing: 'Processing…',
-              storageDeleted: 'Item removed from storage.',
               storageLoadFailed: 'Unable to load storage contents.',
               storageUsageFailed: 'Unable to load storage usage.',
+              storagePurged: 'Removed processed audio files.',
+              storagePurgeFailed: 'Unable to remove processed audio files.',
               gpuChecking: '====> Checking GPU Whisper support…',
               gpuConfirmed: 'GPU Whisper support confirmed.',
               gpuUnavailable: 'GPU acceleration is unavailable on this platform.',
@@ -1891,31 +1927,48 @@
             },
             storage: {
               title: '存储管理器',
-              root: '存储',
+              subtitle: '按课堂结构查看存储的资源。',
               loading: '正在加载…',
-              empty: '文件夹为空。',
+              empty: '没有检测到存储的班级。',
               usage: {
                 used: '已用',
                 available: '可用',
                 total: '总计',
               },
-              columns: {
-                name: '名称',
-                size: '大小',
-                modified: '修改时间',
-                actions: '操作',
-              },
               actions: {
                 refresh: '刷新',
+                purge: '移除已处理的音频',
                 close: '关闭',
-                open: '打开',
-                delete: '删除',
+              },
+              purge: {
+                none: '没有可移除的音频。',
+                available: '有 {{count}} 个{{lectureWord}}可清理。',
+                working: '正在移除音频…',
+                readyCount: '{{count}} 个{{lectureWord}}可清理',
+              },
+              classes: {
+                summary: '{{moduleCount}} 个{{moduleWord}} • {{lectureCount}} 个{{lectureWord}}',
+                empty: '该班级暂无存储的模块。',
+              },
+              modules: {
+                summary: '{{lectureCount}} 个{{lectureWord}}',
+                empty: '该模块暂无存储的讲座。',
+              },
+              lecture: {
+                audio: '音频',
+                transcript: '逐字稿',
+                notes: '笔记',
+                slides: '课件',
+                empty: '尚未关联资源。',
+                eligible: '音频可安全移除',
               },
               dialogs: {
-                deleteTitle: '删除项目',
-                deleteFile: '删除文件“{{name}}”？',
-                deleteFolder: '删除文件夹“{{name}}”及其所有内容？',
+                purgeTitle: '移除已处理的音频',
+                purgeMessage: '确认删除 {{count}} 个已生成逐字稿的{{lectureWord}}音频文件？此操作无法撤销。',
               },
+              unnamedClass: '未命名班级',
+              unnamedModule: '未命名模块',
+              unnamedLecture: '未命名讲座',
             },
             dialog: {
               cancel: '取消',
@@ -2036,9 +2089,10 @@
               transcriptionPreparing: '====> 正在准备转录…',
               transcriptionCompleted: '转录完成。',
               processing: '处理中…',
-              storageDeleted: '已从存储中移除项目。',
               storageLoadFailed: '无法加载存储内容。',
               storageUsageFailed: '无法加载存储用量。',
+              storagePurged: '已移除处理完成的音频。',
+              storagePurgeFailed: '无法移除已处理的音频。',
               gpuChecking: '====> 正在检查 GPU Whisper 支持…',
               gpuConfirmed: 'GPU Whisper 支持已确认。',
               gpuUnavailable: '此平台不支持 GPU 加速。',
@@ -2183,31 +2237,49 @@
             },
             storage: {
               title: 'Administrador de almacenamiento',
-              root: 'Almacenamiento',
+              subtitle: 'Revisa los recursos almacenados según la estructura de clases.',
               loading: 'Cargando…',
-              empty: 'La carpeta está vacía.',
+              empty: 'No se encontraron clases con almacenamiento.',
               usage: {
                 used: 'En uso',
                 available: 'Disponible',
                 total: 'Total',
               },
-              columns: {
-                name: 'Nombre',
-                size: 'Tamaño',
-                modified: 'Modificado',
-                actions: 'Acciones',
-              },
               actions: {
                 refresh: 'Actualizar',
+                purge: 'Quitar audio procesado',
                 close: 'Cerrar',
-                open: 'Abrir',
-                delete: 'Eliminar',
+              },
+              purge: {
+                none: 'No hay audio procesado para eliminar.',
+                available: '{{count}} {{lectureWord}} listos para limpiar.',
+                working: 'Eliminando audio…',
+                readyCount: '{{count}} {{lectureWord}} listos para limpiar',
+              },
+              classes: {
+                summary: '{{moduleCount}} {{moduleWord}} • {{lectureCount}} {{lectureWord}}',
+                empty: 'Esta clase no tiene módulos almacenados.',
+              },
+              modules: {
+                summary: '{{lectureCount}} {{lectureWord}}',
+                empty: 'Este módulo no tiene clases almacenadas.',
+              },
+              lecture: {
+                audio: 'Audio',
+                transcript: 'Transcripción',
+                notes: 'Notas',
+                slides: 'Diapositivas',
+                empty: 'Sin recursos vinculados.',
+                eligible: 'Audio listo para eliminarse',
               },
               dialogs: {
-                deleteTitle: 'Eliminar elemento',
-                deleteFile: '¿Eliminar el archivo "{{name}}"?',
-                deleteFolder: '¿Eliminar la carpeta "{{name}}" y todo su contenido?',
+                purgeTitle: 'Quitar audio procesado',
+                purgeMessage:
+                  '¿Eliminar los archivos de audio de {{count}} {{lectureWord}} que ya tienen transcripción? Esta acción no se puede deshacer.',
               },
+              unnamedClass: 'Clase sin nombre',
+              unnamedModule: 'Módulo sin nombre',
+              unnamedLecture: 'Sesión sin nombre',
             },
             dialog: {
               cancel: 'Cancelar',
@@ -2328,9 +2400,10 @@
               transcriptionPreparing: '====> Preparando transcripción…',
               transcriptionCompleted: 'Transcripción completada.',
               processing: 'Procesando…',
-              storageDeleted: 'Elemento eliminado del almacenamiento.',
               storageLoadFailed: 'No se pudieron cargar los contenidos del almacenamiento.',
               storageUsageFailed: 'No se pudo cargar el uso del almacenamiento.',
+              storagePurged: 'Audio procesado eliminado.',
+              storagePurgeFailed: 'No se pudo eliminar el audio procesado.',
               gpuChecking: '====> Comprobando compatibilidad con GPU Whisper…',
               gpuConfirmed: 'Compatibilidad con GPU Whisper confirmada.',
               gpuUnavailable: 'GPU no disponible en esta plataforma.',
@@ -2476,31 +2549,49 @@
             },
             storage: {
               title: 'Gestionnaire de stockage',
-              root: 'Stockage',
+              subtitle: 'Consultez les ressources stockées selon la structure des cours.',
               loading: 'Chargement…',
-              empty: 'Le dossier est vide.',
+              empty: 'Aucune classe stockée trouvée.',
               usage: {
                 used: 'Utilisé',
                 available: 'Disponible',
                 total: 'Total',
               },
-              columns: {
-                name: 'Nom',
-                size: 'Taille',
-                modified: 'Modifié',
-                actions: 'Actions',
-              },
               actions: {
                 refresh: 'Actualiser',
+                purge: 'Supprimer l’audio traité',
                 close: 'Fermer',
-                open: 'Ouvrir',
-                delete: 'Supprimer',
+              },
+              purge: {
+                none: 'Aucun audio traité à supprimer.',
+                available: '{{count}} {{lectureWord}} prêts à nettoyer.',
+                working: 'Suppression des audios…',
+                readyCount: '{{count}} {{lectureWord}} prêts à nettoyer',
+              },
+              classes: {
+                summary: '{{moduleCount}} {{moduleWord}} • {{lectureCount}} {{lectureWord}}',
+                empty: 'Ce cours n’a pas encore de modules stockés.',
+              },
+              modules: {
+                summary: '{{lectureCount}} {{lectureWord}}',
+                empty: 'Ce module n’a pas encore de séances stockées.',
+              },
+              lecture: {
+                audio: 'Audio',
+                transcript: 'Transcription',
+                notes: 'Notes',
+                slides: 'Diapositives',
+                empty: 'Aucune ressource liée.',
+                eligible: 'Audio prêt à être supprimé',
               },
               dialogs: {
-                deleteTitle: 'Supprimer l’élément',
-                deleteFile: 'Supprimer le fichier « {{name}} » ?',
-                deleteFolder: 'Supprimer le dossier « {{name}} » et tout son contenu ?',
+                purgeTitle: 'Supprimer l’audio traité',
+                purgeMessage:
+                  'Supprimer les fichiers audio de {{count}} {{lectureWord}} déjà transcrites ? Cette action est irréversible.',
               },
+              unnamedClass: 'Cours sans nom',
+              unnamedModule: 'Module sans nom',
+              unnamedLecture: 'Séance sans nom',
             },
             dialog: {
               cancel: 'Annuler',
@@ -2621,9 +2712,10 @@
               transcriptionPreparing: '====> Préparation de la transcription…',
               transcriptionCompleted: 'Transcription terminée.',
               processing: 'Traitement…',
-              storageDeleted: 'Élément supprimé du stockage.',
               storageLoadFailed: 'Impossible de charger le contenu du stockage.',
               storageUsageFailed: 'Impossible de charger l’utilisation du stockage.',
+              storagePurged: 'Audios traités supprimés.',
+              storagePurgeFailed: 'Impossible de supprimer les audios traités.',
               gpuChecking: '====> Vérification de la compatibilité GPU Whisper…',
               gpuConfirmed: 'Compatibilité GPU Whisper confirmée.',
               gpuUnavailable: 'GPU indisponible sur cette plateforme.',
@@ -2822,12 +2914,11 @@
           statusHideTimer: null,
           storage: {
             open: false,
-            path: '',
-            parent: null,
-            entries: [],
             usage: null,
             loading: false,
+            overview: null,
             previousFocus: null,
+            purging: false,
           },
         };
 
@@ -2881,15 +2972,15 @@
             window: document.getElementById('storage-window'),
             close: document.getElementById('storage-close'),
             refresh: document.getElementById('storage-refresh'),
-            path: document.getElementById('storage-path'),
-            breadcrumb: document.getElementById('storage-breadcrumb'),
             used: document.getElementById('storage-used'),
             available: document.getElementById('storage-available'),
             total: document.getElementById('storage-total'),
             loading: document.getElementById('storage-loading'),
             empty: document.getElementById('storage-empty'),
-            tableWrapper: document.getElementById('storage-table-wrapper'),
-            entries: document.getElementById('storage-entries'),
+            wrapper: document.getElementById('storage-class-wrapper'),
+            list: document.getElementById('storage-class-list'),
+            purge: document.getElementById('storage-purge'),
+            purgeSummary: document.getElementById('storage-purge-summary'),
           },
           dialog: {
             root: document.getElementById('dialog-root'),
@@ -2904,20 +2995,6 @@
           },
         };
 
-        function normalizeStoragePath(value) {
-          if (typeof value !== 'string') {
-            return '';
-          }
-          const trimmed = value.trim();
-          if (!trimmed) {
-            return '';
-          }
-          return trimmed
-            .split('/')
-            .map((segment) => segment.trim())
-            .filter(Boolean)
-            .join('/');
-        }
 
         function renderStorageUsage() {
           if (!dom.storage) {
@@ -2938,121 +3015,234 @@
           }
         }
 
-        async function navigateStorage(path) {
-          await refreshStorage(path);
-        }
-
-        function renderStorageBreadcrumb() {
-          if (!dom.storage || !dom.storage.breadcrumb) {
+        function renderStoragePurgeSummary() {
+          if (!dom.storage || !dom.storage.purgeSummary) {
             return;
           }
-          const container = dom.storage.breadcrumb;
+          if (state.storage.loading) {
+            dom.storage.purgeSummary.textContent = t('storage.loading');
+            return;
+          }
+          const overview = state.storage.overview;
+          const eligible = Number(overview?.eligible_audio_total) || 0;
+          if (eligible > 0) {
+            const lectureWord = pluralize(currentLanguage, 'counts.lecture', eligible);
+            dom.storage.purgeSummary.textContent = t('storage.purge.available', {
+              count: eligible,
+              lectureWord,
+            });
+          } else {
+            dom.storage.purgeSummary.textContent = t('storage.purge.none');
+          }
+        }
+
+        function renderStoragePurgeControls() {
+          if (!dom.storage || !dom.storage.purge) {
+            return;
+          }
+          const overview = state.storage.overview;
+          const eligible = Number(overview?.eligible_audio_total) || 0;
+          dom.storage.purge.disabled =
+            state.storage.loading || state.storage.purging || eligible === 0;
+          if (state.storage.purging) {
+            dom.storage.purge.textContent = t('storage.purge.working');
+          } else {
+            dom.storage.purge.textContent = t('storage.actions.purge');
+          }
+        }
+
+        function renderStorageClasses() {
+          if (!dom.storage || !dom.storage.list) {
+            return;
+          }
+          const container = dom.storage.list;
           container.innerHTML = '';
-          const normalizedPath = normalizeStoragePath(state.storage.path);
-          const segments = normalizedPath ? normalizedPath.split('/') : [];
-          const crumbs = [{ name: t('storage.root'), path: '' }];
-          let current = '';
-          segments.forEach((segment) => {
-            current = current ? `${current}/${segment}` : segment;
-            crumbs.push({ name: segment, path: current });
-          });
-          crumbs.forEach((crumb, index) => {
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'storage-crumb';
-            button.textContent = crumb.name || t('storage.root');
-            if (index === crumbs.length - 1) {
-              button.disabled = true;
-              button.classList.add('current');
-            } else {
-              button.addEventListener('click', () => {
-                navigateStorage(crumb.path);
-              });
-            }
-            container.appendChild(button);
-            if (index < crumbs.length - 1) {
-              const separator = document.createElement('span');
-              separator.className = 'storage-separator';
-              separator.textContent = '/';
-              container.appendChild(separator);
-            }
-          });
-        }
-
-        function renderStorageEntries() {
-          if (!dom.storage || !dom.storage.entries) {
-            return;
-          }
-          const tbody = dom.storage.entries;
-          tbody.innerHTML = '';
           if (state.storage.loading) {
             return;
           }
-          const entries = Array.isArray(state.storage.entries) ? state.storage.entries : [];
-          entries.forEach((entry) => {
-            if (!entry || typeof entry !== 'object') {
+          const overview = state.storage.overview;
+          const classes = Array.isArray(overview?.classes) ? overview.classes : [];
+          classes.forEach((klass) => {
+            if (!klass || typeof klass !== 'object') {
               return;
             }
-            const row = document.createElement('tr');
+            const classItem = document.createElement('li');
+            classItem.className = 'storage-class-card';
 
-            const nameCell = document.createElement('td');
-            if (entry.is_dir) {
-              const button = document.createElement('button');
-              button.type = 'button';
-              button.className = 'storage-name-button';
-              button.textContent = entry.name || entry.path || t('storage.root');
-              button.addEventListener('click', () => {
-                navigateStorage(entry.path);
+            const header = document.createElement('div');
+            header.className = 'storage-class-header';
+
+            const title = document.createElement('h3');
+            title.className = 'storage-class-title';
+            title.textContent = klass.name || t('storage.unnamedClass');
+            header.appendChild(title);
+
+            const classSize = document.createElement('span');
+            classSize.className = 'storage-class-size';
+            classSize.textContent =
+              typeof klass.size === 'number' && klass.size >= 0 ? formatBytes(klass.size) : '—';
+            header.appendChild(classSize);
+
+            classItem.appendChild(header);
+
+            const moduleCount = Number(klass.module_count) || 0;
+            const lectureCount = Number(klass.lecture_count) || 0;
+            const moduleWord = pluralize(currentLanguage, 'counts.module', moduleCount);
+            const lectureWord = pluralize(currentLanguage, 'counts.lecture', lectureCount);
+            const classSummaryParts = [
+              t('storage.classes.summary', {
+                moduleCount,
+                moduleWord,
+                lectureCount,
+                lectureWord,
+              }),
+            ];
+            const classEligible = Number(klass.eligible_audio_count) || 0;
+            if (classEligible > 0) {
+              classSummaryParts.push(
+                t('storage.purge.readyCount', {
+                  count: classEligible,
+                  lectureWord: pluralize(currentLanguage, 'counts.lecture', classEligible),
+                }),
+              );
+            }
+            const classMeta = document.createElement('p');
+            classMeta.className = 'storage-class-meta';
+            classMeta.textContent = classSummaryParts.filter(Boolean).join(' • ');
+            classItem.appendChild(classMeta);
+
+            const modules = Array.isArray(klass.modules) ? klass.modules : [];
+            if (!modules.length) {
+              const empty = document.createElement('p');
+              empty.className = 'storage-class-meta';
+              empty.textContent = t('storage.classes.empty');
+              classItem.appendChild(empty);
+            } else {
+              const moduleList = document.createElement('ul');
+              moduleList.className = 'storage-module-list';
+              modules.forEach((module) => {
+                if (!module || typeof module !== 'object') {
+                  return;
+                }
+                const moduleItem = document.createElement('li');
+                moduleItem.className = 'storage-module-card';
+
+                const moduleHeader = document.createElement('div');
+                moduleHeader.className = 'storage-module-header';
+
+                const moduleTitle = document.createElement('h4');
+                moduleTitle.className = 'storage-module-title';
+                moduleTitle.textContent = module.name || t('storage.unnamedModule');
+                moduleHeader.appendChild(moduleTitle);
+
+                const moduleSize = document.createElement('span');
+                moduleSize.className = 'storage-module-size';
+                moduleSize.textContent =
+                  typeof module.size === 'number' && module.size >= 0
+                    ? formatBytes(module.size)
+                    : '—';
+                moduleHeader.appendChild(moduleSize);
+
+                moduleItem.appendChild(moduleHeader);
+
+                const moduleLectureCount = Number(module.lecture_count) || 0;
+                const moduleLectureWord = pluralize(
+                  currentLanguage,
+                  'counts.lecture',
+                  moduleLectureCount,
+                );
+                const moduleSummaryParts = [
+                  t('storage.modules.summary', {
+                    lectureCount: moduleLectureCount,
+                    lectureWord: moduleLectureWord,
+                  }),
+                ];
+                const moduleEligible = Number(module.eligible_audio_count) || 0;
+                if (moduleEligible > 0) {
+                  moduleSummaryParts.push(
+                    t('storage.purge.readyCount', {
+                      count: moduleEligible,
+                      lectureWord: pluralize(currentLanguage, 'counts.lecture', moduleEligible),
+                    }),
+                  );
+                }
+                const moduleMeta = document.createElement('p');
+                moduleMeta.className = 'storage-module-meta';
+                moduleMeta.textContent = moduleSummaryParts.filter(Boolean).join(' • ');
+                moduleItem.appendChild(moduleMeta);
+
+                const lectures = Array.isArray(module.lectures) ? module.lectures : [];
+                if (!lectures.length) {
+                  const emptyLecture = document.createElement('p');
+                  emptyLecture.className = 'storage-module-meta';
+                  emptyLecture.textContent = t('storage.modules.empty');
+                  moduleItem.appendChild(emptyLecture);
+                } else {
+                  const lectureList = document.createElement('ul');
+                  lectureList.className = 'storage-lecture-list';
+                  lectures.forEach((lecture) => {
+                    if (!lecture || typeof lecture !== 'object') {
+                      return;
+                    }
+                    const lectureItem = document.createElement('li');
+                    lectureItem.className = 'storage-lecture-item';
+
+                    const lectureHeader = document.createElement('div');
+                    lectureHeader.className = 'storage-lecture-header';
+
+                    const lectureTitle = document.createElement('p');
+                    lectureTitle.className = 'storage-lecture-title';
+                    lectureTitle.textContent = lecture.name || t('storage.unnamedLecture');
+                    lectureHeader.appendChild(lectureTitle);
+
+                    const lectureSize = document.createElement('span');
+                    lectureSize.className = 'storage-lecture-size';
+                    lectureSize.textContent =
+                      typeof lecture.size === 'number' && lecture.size >= 0
+                        ? formatBytes(lecture.size)
+                        : '—';
+                    lectureHeader.appendChild(lectureSize);
+
+                    lectureItem.appendChild(lectureHeader);
+
+                    const lectureMeta = document.createElement('p');
+                    lectureMeta.className = 'storage-lecture-meta';
+                    const assetLabels = [];
+                    if (lecture.has_audio) {
+                      assetLabels.push(t('storage.lecture.audio'));
+                    }
+                    if (lecture.has_transcript) {
+                      assetLabels.push(t('storage.lecture.transcript'));
+                    }
+                    if (lecture.has_notes) {
+                      assetLabels.push(t('storage.lecture.notes'));
+                    }
+                    if (lecture.has_slides) {
+                      assetLabels.push(t('storage.lecture.slides'));
+                    }
+                    lectureMeta.textContent = assetLabels.length
+                      ? assetLabels.join(' • ')
+                      : t('storage.lecture.empty');
+                    lectureItem.appendChild(lectureMeta);
+
+                    if (lecture.eligible_audio) {
+                      const eligibleBadge = document.createElement('span');
+                      eligibleBadge.className = 'storage-lecture-eligible';
+                      eligibleBadge.textContent = t('storage.lecture.eligible');
+                      lectureItem.appendChild(eligibleBadge);
+                    }
+
+                    lectureList.appendChild(lectureItem);
+                  });
+                  moduleItem.appendChild(lectureList);
+                }
+
+                moduleList.appendChild(moduleItem);
               });
-              nameCell.appendChild(button);
-            } else {
-              const link = document.createElement('a');
-              link.className = 'storage-link';
-              link.textContent = entry.name || entry.path || '';
-              link.href = buildStorageURL(entry.path);
-              link.target = '_blank';
-              link.rel = 'noopener';
-              nameCell.appendChild(link);
+              classItem.appendChild(moduleList);
             }
-            row.appendChild(nameCell);
 
-            const sizeCell = document.createElement('td');
-            if (typeof entry.size === 'number' && entry.size >= 0) {
-              sizeCell.textContent = formatBytes(entry.size);
-            } else {
-              sizeCell.textContent = '—';
-            }
-            row.appendChild(sizeCell);
-
-            const modifiedCell = document.createElement('td');
-            modifiedCell.textContent =
-              typeof entry.modified === 'string' && entry.modified
-                ? formatDate(entry.modified)
-                : '';
-            row.appendChild(modifiedCell);
-
-            const actionsCell = document.createElement('td');
-            actionsCell.style.whiteSpace = 'nowrap';
-            if (!entry.is_dir) {
-              const openLink = document.createElement('a');
-              openLink.className = 'storage-link';
-              openLink.textContent = t('storage.actions.open');
-              openLink.href = buildStorageURL(entry.path);
-              openLink.target = '_blank';
-              openLink.rel = 'noopener';
-              actionsCell.appendChild(openLink);
-            }
-            const deleteButton = document.createElement('button');
-            deleteButton.type = 'button';
-            deleteButton.className = 'storage-action-button';
-            deleteButton.textContent = t('storage.actions.delete');
-            deleteButton.addEventListener('click', () => {
-              handleDeleteStorageEntry(entry);
-            });
-            actionsCell.appendChild(deleteButton);
-            row.appendChild(actionsCell);
-
-            tbody.appendChild(row);
+            container.appendChild(classItem);
           });
         }
 
@@ -3060,62 +3250,36 @@
           if (!dom.storage) {
             return;
           }
-          const normalizedPath = normalizeStoragePath(state.storage.path);
-          if (dom.storage.path) {
-            dom.storage.path.textContent = normalizedPath
-              ? `${t('storage.root')} / ${normalizedPath}`
-              : t('storage.root');
-          }
           if (dom.storage.loading) {
-            const hidden = !state.storage.loading;
-            dom.storage.loading.hidden = hidden;
-            if (!hidden) {
-              dom.storage.loading.textContent = t('storage.loading');
-            }
+            dom.storage.loading.hidden = !state.storage.loading;
           }
-          if (dom.storage.tableWrapper) {
-            dom.storage.tableWrapper.hidden =
-              state.storage.loading || !state.storage.entries.length;
-          }
+          const overview = state.storage.overview;
+          const classes = Array.isArray(overview?.classes) ? overview.classes : [];
           if (dom.storage.empty) {
-            dom.storage.empty.hidden =
-              state.storage.loading || state.storage.entries.length > 0;
+            dom.storage.empty.hidden = state.storage.loading || classes.length > 0;
           }
-          renderStorageBreadcrumb();
+          if (dom.storage.wrapper) {
+            dom.storage.wrapper.hidden = state.storage.loading || classes.length === 0;
+          }
           renderStorageUsage();
-          if (state.storage.loading) {
-            if (dom.storage.entries) {
-              dom.storage.entries.innerHTML = '';
-            }
-            return;
-          }
-          renderStorageEntries();
+          renderStoragePurgeSummary();
+          renderStoragePurgeControls();
+          renderStorageClasses();
         }
 
-        async function refreshStorage(path = state.storage.path) {
+        async function refreshStorage() {
           if (!dom.storage) {
             return;
           }
-          const targetPath = normalizeStoragePath(path);
           state.storage.loading = true;
           renderStorage();
-          const query = targetPath ? `?path=${encodeURIComponent(targetPath)}` : '';
           try {
-            const payload = await request(`/api/storage/list${query}`);
-            const entries = Array.isArray(payload?.entries) ? payload.entries : [];
-            state.storage.entries = entries;
-            state.storage.path = normalizeStoragePath(payload?.path ?? targetPath);
-            if (typeof payload?.parent === 'string') {
-              state.storage.parent = normalizeStoragePath(payload.parent);
-            } else {
-              state.storage.parent = null;
-            }
+            const overviewPayload = await request('/api/storage/overview');
+            state.storage.overview = overviewPayload ?? null;
           } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             showStatus(message || t('status.storageLoadFailed'), 'error');
-            state.storage.entries = [];
-            state.storage.path = targetPath;
-            state.storage.parent = null;
+            state.storage.overview = null;
           }
           try {
             const usagePayload = await request('/api/storage/usage');
@@ -3132,18 +3296,16 @@
           if (!dom.storage || !dom.storage.root) {
             return;
           }
-          const normalizedPath = normalizeStoragePath(initialPath);
           if (state.storage.open) {
-            await refreshStorage(normalizedPath || state.storage.path);
+            await refreshStorage();
             return;
           }
           state.storage.previousFocus =
             document.activeElement instanceof HTMLElement ? document.activeElement : null;
           state.storage.open = true;
-          state.storage.path = normalizedPath;
-          state.storage.entries = [];
-          state.storage.parent = null;
+          state.storage.overview = null;
           state.storage.loading = true;
+          state.storage.purging = false;
           dom.storage.root.classList.remove('hidden');
           dom.storage.root.setAttribute('aria-hidden', 'false');
           document.body.classList.add('dialog-open');
@@ -3153,7 +3315,7 @@
               dom.storage.window.focus({ preventScroll: true });
             }
           });
-          await refreshStorage(normalizedPath);
+          await refreshStorage();
         }
 
         function closeStorageManager() {
@@ -3173,38 +3335,38 @@
           }
         }
 
-        async function handleDeleteStorageEntry(entry) {
-          if (!entry || !entry.path) {
+        async function handlePurgeProcessedAudio() {
+          if (!dom.storage || !dom.storage.purge) {
             return;
           }
-          const title = t('storage.dialogs.deleteTitle');
-          const message = entry.is_dir
-            ? t('storage.dialogs.deleteFolder', { name: entry.name || entry.path })
-            : t('storage.dialogs.deleteFile', { name: entry.name || entry.path });
+          const overview = state.storage.overview;
+          const eligible = Number(overview?.eligible_audio_total) || 0;
+          if (!eligible || state.storage.purging) {
+            return;
+          }
+          const lectureWord = pluralize(currentLanguage, 'counts.lecture', eligible);
           const confirmed = await confirmDialog({
-            title,
-            message,
+            title: t('storage.dialogs.purgeTitle'),
+            message: t('storage.dialogs.purgeMessage', { count: eligible, lectureWord }),
             confirmText: t('common.actions.delete'),
             cancelText: t('dialog.cancel'),
             variant: 'danger',
           });
-          if (state.storage.open) {
-            document.body.classList.add('dialog-open');
-          }
           if (!confirmed) {
             return;
           }
           try {
-            await request('/api/storage', {
-              method: 'DELETE',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ path: entry.path }),
-            });
-            showStatus(t('status.storageDeleted'), 'success');
-            await refreshStorage(state.storage.path);
+            state.storage.purging = true;
+            renderStorage();
+            await request('/api/storage/purge-audio', { method: 'POST' });
+            showStatus(t('status.storagePurged'), 'success');
+            await refreshStorage();
           } catch (error) {
             const messageText = error instanceof Error ? error.message : String(error);
-            showStatus(messageText || t('status.storageLoadFailed'), 'error');
+            showStatus(messageText || t('status.storagePurgeFailed'), 'error');
+          } finally {
+            state.storage.purging = false;
+            renderStorage();
           }
         }
 
@@ -4647,6 +4809,12 @@
         if (dom.storage && dom.storage.refresh) {
           dom.storage.refresh.addEventListener('click', () => {
             refreshStorage();
+          });
+        }
+
+        if (dom.storage && dom.storage.purge) {
+          dom.storage.purge.addEventListener('click', () => {
+            handlePurgeProcessedAudio();
           });
         }
 

@@ -12,7 +12,7 @@ import time
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Literal, Optional, Tuple
+from typing import Any, Dict, List, Literal, Optional, Set, Tuple
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Response
 from fastapi import status
@@ -351,6 +351,49 @@ class StorageDeleteRequest(BaseModel):
     path: str
 
 
+class LectureStorageSummary(BaseModel):
+    id: int
+    name: str
+    size: int
+    has_audio: bool
+    has_transcript: bool
+    has_notes: bool
+    has_slides: bool
+    eligible_audio: bool
+
+
+class ModuleStorageSummary(BaseModel):
+    id: int
+    name: str
+    size: int
+    lecture_count: int
+    audio_count: int
+    transcript_count: int
+    notes_count: int
+    slide_count: int
+    eligible_audio_count: int
+    lectures: List[LectureStorageSummary]
+
+
+class ClassStorageSummary(BaseModel):
+    id: int
+    name: str
+    size: int
+    module_count: int
+    lecture_count: int
+    audio_count: int
+    transcript_count: int
+    notes_count: int
+    slide_count: int
+    eligible_audio_count: int
+    modules: List[ModuleStorageSummary]
+
+
+class StorageOverviewResponse(BaseModel):
+    classes: List[ClassStorageSummary]
+    eligible_audio_total: int
+
+
 class ClassCreatePayload(BaseModel):
     name: str = Field(..., min_length=1)
     description: str = ""
@@ -521,6 +564,84 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
         if cleaned:
             variants.add(cleaned)
         return list(variants)
+
+    def _resolve_existing_asset(relative: Optional[str]) -> Optional[Path]:
+        if not relative:
+            return None
+        try:
+            candidate = _resolve_storage_path(config.storage_root, relative)
+        except ValueError:
+            return None
+        return candidate if candidate.exists() else None
+
+    def _summarize_lecture_storage(
+        lecture: LectureRecord, class_record: ClassRecord, module: ModuleRecord
+    ) -> LectureStorageSummary:
+        total_size = 0
+        counted_dirs: List[Path] = []
+
+        def _add_directory(path: Path) -> None:
+            nonlocal total_size
+            try:
+                resolved = path.resolve()
+            except (OSError, RuntimeError):
+                return
+            if not resolved.exists():
+                return
+            for existing in counted_dirs:
+                if resolved == existing:
+                    return
+                if resolved.is_relative_to(existing):
+                    return
+                if existing.is_relative_to(resolved):
+                    return
+            counted_dirs.append(resolved)
+            total_size += _calculate_directory_size(resolved)
+
+        for directory in _iter_lecture_dirs(class_record, module, lecture):
+            _add_directory(directory)
+
+        counted_files: Set[Path] = set()
+
+        def _add_path(relative: Optional[str]) -> None:
+            nonlocal total_size
+            asset = _resolve_existing_asset(relative)
+            if not asset:
+                return
+            try:
+                resolved = asset.resolve()
+            except (OSError, RuntimeError):
+                return
+            for directory in counted_dirs:
+                if resolved.is_relative_to(directory):
+                    return
+            if resolved in counted_files:
+                return
+            if resolved.is_dir():
+                total_size += _calculate_directory_size(resolved)
+            else:
+                try:
+                    total_size += resolved.stat().st_size
+                except (OSError, ValueError):
+                    return
+            counted_files.add(resolved)
+
+        _add_path(lecture.audio_path)
+        _add_path(lecture.slide_path)
+        _add_path(lecture.transcript_path)
+        _add_path(lecture.notes_path)
+        _add_path(lecture.slide_image_dir)
+
+        return LectureStorageSummary(
+            id=lecture.id,
+            name=lecture.name,
+            size=total_size,
+            has_audio=bool(lecture.audio_path),
+            has_transcript=bool(lecture.transcript_path),
+            has_notes=bool(lecture.notes_path),
+            has_slides=bool(lecture.slide_path or lecture.slide_image_dir),
+            eligible_audio=bool(lecture.audio_path and lecture.transcript_path),
+        )
 
     def _iter_class_dirs(class_record: ClassRecord) -> List[Path]:
         storage_root = config.storage_root
@@ -1200,6 +1321,86 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
 
         return StorageListResponse(path=relative_path, parent=parent_relative, entries=entries)
 
+    @app.get("/api/storage/overview")
+    async def get_storage_overview() -> StorageOverviewResponse:
+        classes: List[ClassStorageSummary] = []
+        eligible_total = 0
+
+        for class_record in repository.iter_classes():
+            modules: List[ModuleStorageSummary] = []
+            class_size = 0
+            class_lecture_count = 0
+            class_audio = 0
+            class_transcripts = 0
+            class_notes = 0
+            class_slides = 0
+            class_eligible = 0
+
+            module_records = list(repository.iter_modules(class_record.id))
+            for module in module_records:
+                lectures: List[LectureStorageSummary] = []
+                module_size = 0
+                module_audio = 0
+                module_transcripts = 0
+                module_notes = 0
+                module_slides = 0
+                module_eligible = 0
+
+                lecture_records = list(repository.iter_lectures(module.id))
+                for lecture in lecture_records:
+                    summary = _summarize_lecture_storage(lecture, class_record, module)
+                    lectures.append(summary)
+                    module_size += summary.size
+                    class_size += summary.size
+
+                    module_audio += int(summary.has_audio)
+                    module_transcripts += int(summary.has_transcript)
+                    module_notes += int(summary.has_notes)
+                    module_slides += int(summary.has_slides)
+                    module_eligible += int(summary.eligible_audio)
+
+                module_lecture_count = len(lectures)
+                class_lecture_count += module_lecture_count
+                class_audio += module_audio
+                class_transcripts += module_transcripts
+                class_notes += module_notes
+                class_slides += module_slides
+                class_eligible += module_eligible
+                eligible_total += module_eligible
+
+                modules.append(
+                    ModuleStorageSummary(
+                        id=module.id,
+                        name=module.name,
+                        size=module_size,
+                        lecture_count=module_lecture_count,
+                        audio_count=module_audio,
+                        transcript_count=module_transcripts,
+                        notes_count=module_notes,
+                        slide_count=module_slides,
+                        eligible_audio_count=module_eligible,
+                        lectures=lectures,
+                    )
+                )
+
+            classes.append(
+                ClassStorageSummary(
+                    id=class_record.id,
+                    name=class_record.name,
+                    size=class_size,
+                    module_count=len(module_records),
+                    lecture_count=class_lecture_count,
+                    audio_count=class_audio,
+                    transcript_count=class_transcripts,
+                    notes_count=class_notes,
+                    slide_count=class_slides,
+                    eligible_audio_count=class_eligible,
+                    modules=modules,
+                )
+            )
+
+        return StorageOverviewResponse(classes=classes, eligible_audio_total=eligible_total)
+
     @app.delete("/api/storage")
     async def delete_storage(payload: StorageDeleteRequest) -> Dict[str, str]:
         try:
@@ -1216,6 +1417,21 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
         _delete_storage_path(target)
 
         return {"status": "deleted"}
+
+    @app.post("/api/storage/purge-audio")
+    async def purge_transcribed_audio() -> Dict[str, int]:
+        deleted = 0
+        for class_record in repository.iter_classes():
+            for module in repository.iter_modules(class_record.id):
+                for lecture in repository.iter_lectures(module.id):
+                    if not (lecture.audio_path and lecture.transcript_path):
+                        continue
+                    audio_path = _resolve_existing_asset(lecture.audio_path)
+                    if audio_path:
+                        _delete_storage_path(audio_path)
+                    repository.update_lecture_assets(lecture.id, audio_path=None)
+                    deleted += 1
+        return {"deleted": deleted}
 
     @app.post(
         "/api/assets/reveal",
