@@ -180,6 +180,221 @@
         gap: 16px;
       }
 
+      .storage-window {
+        position: relative;
+        z-index: 1;
+        background: var(--panel-bg);
+        border: 1px solid var(--panel-border);
+        border-radius: 12px;
+        padding: 24px;
+        width: min(960px, 100%);
+        max-height: min(80vh, 720px);
+        box-shadow: 0 20px 45px rgba(15, 23, 42, 0.25), var(--panel-shadow);
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .storage-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .storage-header h2 {
+        margin: 0;
+      }
+
+      .storage-path {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+
+      .storage-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .storage-actions button {
+        border-radius: 999px;
+        border: 1px solid var(--panel-border);
+        background: transparent;
+        color: var(--muted);
+        padding: 6px 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease,
+          filter 0.2s ease;
+      }
+
+      .storage-actions button:hover {
+        border-color: var(--accent);
+        color: var(--text);
+        background: var(--accent-muted);
+      }
+
+      .storage-actions button.primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: var(--accent-contrast);
+      }
+
+      .storage-actions button.primary:hover {
+        filter: brightness(0.95);
+      }
+
+      .storage-usage {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 12px;
+        background: var(--background);
+        border: 1px solid var(--panel-border);
+        border-radius: 10px;
+        padding: 12px 16px;
+      }
+
+      .storage-usage-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .storage-usage-label {
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      .storage-usage-value {
+        font-size: 1.1rem;
+        font-weight: 600;
+      }
+
+      .storage-breadcrumb {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .storage-crumb {
+        border: none;
+        background: transparent;
+        color: var(--accent);
+        font-weight: 600;
+        padding: 0;
+        cursor: pointer;
+      }
+
+      .storage-crumb.current {
+        color: var(--text);
+        cursor: default;
+      }
+
+      .storage-crumb:disabled {
+        color: var(--text);
+        cursor: default;
+      }
+
+      .storage-separator {
+        color: var(--muted);
+      }
+
+      .storage-table-wrapper {
+        border: 1px solid var(--panel-border);
+        border-radius: 10px;
+        overflow: auto;
+        flex: 1;
+      }
+
+      .storage-table {
+        width: 100%;
+        min-width: 100%;
+        border-collapse: collapse;
+        font-size: 0.95rem;
+      }
+
+      .storage-table th,
+      .storage-table td {
+        padding: 10px 14px;
+        text-align: left;
+        border-bottom: 1px solid var(--panel-border);
+      }
+
+      .storage-table tbody tr:hover {
+        background: var(--accent-muted);
+      }
+
+      .storage-table td:last-child {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .storage-name-button {
+        background: transparent;
+        border: none;
+        color: var(--accent);
+        font-weight: 600;
+        cursor: pointer;
+        padding: 0;
+      }
+
+      .storage-name-button:hover,
+      .storage-name-button:focus {
+        text-decoration: underline;
+        outline: none;
+      }
+
+      .storage-link {
+        color: var(--accent);
+        text-decoration: none;
+        font-weight: 600;
+      }
+
+      .storage-link:hover,
+      .storage-link:focus {
+        text-decoration: underline;
+        outline: none;
+      }
+
+      .storage-action-button {
+        border-radius: 999px;
+        border: 1px solid var(--panel-border);
+        background: transparent;
+        color: var(--muted);
+        padding: 4px 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+      }
+
+      .storage-action-button:hover,
+      .storage-action-button:focus {
+        border-color: var(--danger);
+        color: var(--danger);
+        background: rgba(220, 38, 38, 0.08);
+        outline: none;
+      }
+
+      .storage-empty,
+      .storage-loading {
+        text-align: center;
+        padding: 32px 16px;
+        color: var(--muted);
+        border-radius: 10px;
+        border: 1px dashed var(--panel-border);
+      }
+
+      .storage-loading {
+        border-style: solid;
+        border-color: transparent;
+      }
+
       .dialog-title {
         margin: 0;
         font-size: 1.1rem;
@@ -933,6 +1148,14 @@
                 Create
               </button>
               <button
+                id="open-storage"
+                type="button"
+                class="ghost"
+                data-i18n="topBar.storage"
+              >
+                Storage
+              </button>
+              <button
                 type="button"
                 data-view="settings"
                 aria-pressed="false"
@@ -1177,6 +1400,71 @@
         </div>
       </div>
     </div>
+    <div id="storage-dialog" class="dialog hidden" aria-hidden="true">
+      <div id="storage-backdrop" class="dialog-backdrop"></div>
+      <div
+        id="storage-window"
+        class="storage-window"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="storage-title"
+        tabindex="-1"
+      >
+        <div class="storage-header">
+          <div>
+            <h2 id="storage-title" data-i18n="storage.title">Storage manager</h2>
+            <p id="storage-path" class="storage-path"></p>
+          </div>
+          <div class="storage-actions">
+            <button id="storage-refresh" type="button" data-i18n="storage.actions.refresh">
+              Refresh
+            </button>
+            <button
+              id="storage-close"
+              type="button"
+              class="primary"
+              data-i18n="storage.actions.close"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+        <section class="storage-usage" aria-live="polite">
+          <div class="storage-usage-item">
+            <span class="storage-usage-label" data-i18n="storage.usage.used">Used</span>
+            <span id="storage-used" class="storage-usage-value">--</span>
+          </div>
+          <div class="storage-usage-item">
+            <span class="storage-usage-label" data-i18n="storage.usage.available">Available</span>
+            <span id="storage-available" class="storage-usage-value">--</span>
+          </div>
+          <div class="storage-usage-item">
+            <span class="storage-usage-label" data-i18n="storage.usage.total">Total</span>
+            <span id="storage-total" class="storage-usage-value">--</span>
+          </div>
+        </section>
+        <nav id="storage-breadcrumb" class="storage-breadcrumb" aria-label="Storage path"></nav>
+        <div id="storage-loading" class="storage-loading" hidden data-i18n="storage.loading">
+          Loading…
+        </div>
+        <div id="storage-empty" class="storage-empty" hidden data-i18n="storage.empty">
+          Folder is empty.
+        </div>
+        <div id="storage-table-wrapper" class="storage-table-wrapper" hidden>
+          <table id="storage-table" class="storage-table">
+            <thead>
+              <tr>
+                <th scope="col" data-i18n="storage.columns.name">Name</th>
+                <th scope="col" data-i18n="storage.columns.size">Size</th>
+                <th scope="col" data-i18n="storage.columns.modified">Modified</th>
+                <th scope="col" data-i18n="storage.columns.actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="storage-entries"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
     <script>
       (async function () {
         const translations = {
@@ -1197,6 +1485,7 @@
               enableEdit: 'Enable edit mode',
               exitEdit: 'Exit edit mode',
               create: 'Create',
+              storage: 'Storage',
               settings: 'Settings',
             },
             details: {
@@ -1307,6 +1596,34 @@
               },
               save: 'Save settings',
               exit: 'Exit application',
+            },
+            storage: {
+              title: 'Storage manager',
+              root: 'Storage',
+              loading: 'Loading…',
+              empty: 'Folder is empty.',
+              usage: {
+                used: 'Used',
+                available: 'Available',
+                total: 'Total',
+              },
+              columns: {
+                name: 'Name',
+                size: 'Size',
+                modified: 'Modified',
+                actions: 'Actions',
+              },
+              actions: {
+                refresh: 'Refresh',
+                close: 'Close',
+                open: 'Open',
+                delete: 'Delete',
+              },
+              dialogs: {
+                deleteTitle: 'Delete item',
+                deleteFile: 'Delete file "{{name}}"?',
+                deleteFolder: 'Delete folder "{{name}}" and everything it contains?',
+              },
             },
             dialog: {
               cancel: 'Cancel',
@@ -1427,6 +1744,9 @@
               transcriptionPreparing: '====> Preparing transcription…',
               transcriptionCompleted: 'Transcription completed.',
               processing: 'Processing…',
+              storageDeleted: 'Item removed from storage.',
+              storageLoadFailed: 'Unable to load storage contents.',
+              storageUsageFailed: 'Unable to load storage usage.',
               gpuChecking: '====> Checking GPU Whisper support…',
               gpuConfirmed: 'GPU Whisper support confirmed.',
               gpuUnavailable: 'GPU acceleration is unavailable on this platform.',
@@ -1458,6 +1778,7 @@
               enableEdit: '开启编辑模式',
               exitEdit: '退出编辑模式',
               create: '新建',
+              storage: '存储',
               settings: '设置',
             },
             details: {
@@ -1567,6 +1888,34 @@
               },
               save: '保存设置',
               exit: '退出应用',
+            },
+            storage: {
+              title: '存储管理器',
+              root: '存储',
+              loading: '正在加载…',
+              empty: '文件夹为空。',
+              usage: {
+                used: '已用',
+                available: '可用',
+                total: '总计',
+              },
+              columns: {
+                name: '名称',
+                size: '大小',
+                modified: '修改时间',
+                actions: '操作',
+              },
+              actions: {
+                refresh: '刷新',
+                close: '关闭',
+                open: '打开',
+                delete: '删除',
+              },
+              dialogs: {
+                deleteTitle: '删除项目',
+                deleteFile: '删除文件“{{name}}”？',
+                deleteFolder: '删除文件夹“{{name}}”及其所有内容？',
+              },
             },
             dialog: {
               cancel: '取消',
@@ -1687,6 +2036,9 @@
               transcriptionPreparing: '====> 正在准备转录…',
               transcriptionCompleted: '转录完成。',
               processing: '处理中…',
+              storageDeleted: '已从存储中移除项目。',
+              storageLoadFailed: '无法加载存储内容。',
+              storageUsageFailed: '无法加载存储用量。',
               gpuChecking: '====> 正在检查 GPU Whisper 支持…',
               gpuConfirmed: 'GPU Whisper 支持已确认。',
               gpuUnavailable: '此平台不支持 GPU 加速。',
@@ -1718,6 +2070,7 @@
               enableEdit: 'Activar modo edición',
               exitEdit: 'Salir del modo edición',
               create: 'Crear',
+              storage: 'Almacenamiento',
               settings: 'Configuración',
             },
             details: {
@@ -1827,6 +2180,34 @@
               },
               save: 'Guardar configuración',
               exit: 'Salir de la aplicación',
+            },
+            storage: {
+              title: 'Administrador de almacenamiento',
+              root: 'Almacenamiento',
+              loading: 'Cargando…',
+              empty: 'La carpeta está vacía.',
+              usage: {
+                used: 'En uso',
+                available: 'Disponible',
+                total: 'Total',
+              },
+              columns: {
+                name: 'Nombre',
+                size: 'Tamaño',
+                modified: 'Modificado',
+                actions: 'Acciones',
+              },
+              actions: {
+                refresh: 'Actualizar',
+                close: 'Cerrar',
+                open: 'Abrir',
+                delete: 'Eliminar',
+              },
+              dialogs: {
+                deleteTitle: 'Eliminar elemento',
+                deleteFile: '¿Eliminar el archivo "{{name}}"?',
+                deleteFolder: '¿Eliminar la carpeta "{{name}}" y todo su contenido?',
+              },
             },
             dialog: {
               cancel: 'Cancelar',
@@ -1947,6 +2328,9 @@
               transcriptionPreparing: '====> Preparando transcripción…',
               transcriptionCompleted: 'Transcripción completada.',
               processing: 'Procesando…',
+              storageDeleted: 'Elemento eliminado del almacenamiento.',
+              storageLoadFailed: 'No se pudieron cargar los contenidos del almacenamiento.',
+              storageUsageFailed: 'No se pudo cargar el uso del almacenamiento.',
               gpuChecking: '====> Comprobando compatibilidad con GPU Whisper…',
               gpuConfirmed: 'Compatibilidad con GPU Whisper confirmada.',
               gpuUnavailable: 'GPU no disponible en esta plataforma.',
@@ -1978,6 +2362,7 @@
               enableEdit: 'Activer le mode édition',
               exitEdit: 'Quitter le mode édition',
               create: 'Créer',
+              storage: 'Stockage',
               settings: 'Paramètres',
             },
             details: {
@@ -2088,6 +2473,34 @@
               },
               save: 'Enregistrer les paramètres',
               exit: 'Quitter l’application',
+            },
+            storage: {
+              title: 'Gestionnaire de stockage',
+              root: 'Stockage',
+              loading: 'Chargement…',
+              empty: 'Le dossier est vide.',
+              usage: {
+                used: 'Utilisé',
+                available: 'Disponible',
+                total: 'Total',
+              },
+              columns: {
+                name: 'Nom',
+                size: 'Taille',
+                modified: 'Modifié',
+                actions: 'Actions',
+              },
+              actions: {
+                refresh: 'Actualiser',
+                close: 'Fermer',
+                open: 'Ouvrir',
+                delete: 'Supprimer',
+              },
+              dialogs: {
+                deleteTitle: 'Supprimer l’élément',
+                deleteFile: 'Supprimer le fichier « {{name}} » ?',
+                deleteFolder: 'Supprimer le dossier « {{name}} » et tout son contenu ?',
+              },
             },
             dialog: {
               cancel: 'Annuler',
@@ -2208,6 +2621,9 @@
               transcriptionPreparing: '====> Préparation de la transcription…',
               transcriptionCompleted: 'Transcription terminée.',
               processing: 'Traitement…',
+              storageDeleted: 'Élément supprimé du stockage.',
+              storageLoadFailed: 'Impossible de charger le contenu du stockage.',
+              storageUsageFailed: 'Impossible de charger l’utilisation du stockage.',
               gpuChecking: '====> Vérification de la compatibilité GPU Whisper…',
               gpuConfirmed: 'Compatibilité GPU Whisper confirmée.',
               gpuUnavailable: 'GPU indisponible sur cette plateforme.',
@@ -2404,6 +2820,15 @@
           lastProgressMessage: '',
           lastProgressRatio: null,
           statusHideTimer: null,
+          storage: {
+            open: false,
+            path: '',
+            parent: null,
+            entries: [],
+            usage: null,
+            loading: false,
+            previousFocus: null,
+          },
         };
 
         const dom = {
@@ -2449,6 +2874,23 @@
           settingsSlideDpi: document.getElementById('settings-slide-dpi'),
           settingsExitApp: document.getElementById('settings-exit-app'),
           gpuModelOptions: Array.from(document.querySelectorAll('option.gpu-only')),
+          storage: {
+            button: document.getElementById('open-storage'),
+            root: document.getElementById('storage-dialog'),
+            backdrop: document.getElementById('storage-backdrop'),
+            window: document.getElementById('storage-window'),
+            close: document.getElementById('storage-close'),
+            refresh: document.getElementById('storage-refresh'),
+            path: document.getElementById('storage-path'),
+            breadcrumb: document.getElementById('storage-breadcrumb'),
+            used: document.getElementById('storage-used'),
+            available: document.getElementById('storage-available'),
+            total: document.getElementById('storage-total'),
+            loading: document.getElementById('storage-loading'),
+            empty: document.getElementById('storage-empty'),
+            tableWrapper: document.getElementById('storage-table-wrapper'),
+            entries: document.getElementById('storage-entries'),
+          },
           dialog: {
             root: document.getElementById('dialog-root'),
             backdrop: document.getElementById('dialog-backdrop'),
@@ -2462,7 +2904,312 @@
           },
         };
 
+        function normalizeStoragePath(value) {
+          if (typeof value !== 'string') {
+            return '';
+          }
+          const trimmed = value.trim();
+          if (!trimmed) {
+            return '';
+          }
+          return trimmed
+            .split('/')
+            .map((segment) => segment.trim())
+            .filter(Boolean)
+            .join('/');
+        }
+
+        function renderStorageUsage() {
+          if (!dom.storage) {
+            return;
+          }
+          const usage = state.storage.usage;
+          if (dom.storage.used) {
+            dom.storage.used.textContent =
+              usage && typeof usage.used === 'number' ? formatBytes(usage.used) : '—';
+          }
+          if (dom.storage.available) {
+            dom.storage.available.textContent =
+              usage && typeof usage.free === 'number' ? formatBytes(usage.free) : '—';
+          }
+          if (dom.storage.total) {
+            dom.storage.total.textContent =
+              usage && typeof usage.total === 'number' ? formatBytes(usage.total) : '—';
+          }
+        }
+
+        async function navigateStorage(path) {
+          await refreshStorage(path);
+        }
+
+        function renderStorageBreadcrumb() {
+          if (!dom.storage || !dom.storage.breadcrumb) {
+            return;
+          }
+          const container = dom.storage.breadcrumb;
+          container.innerHTML = '';
+          const normalizedPath = normalizeStoragePath(state.storage.path);
+          const segments = normalizedPath ? normalizedPath.split('/') : [];
+          const crumbs = [{ name: t('storage.root'), path: '' }];
+          let current = '';
+          segments.forEach((segment) => {
+            current = current ? `${current}/${segment}` : segment;
+            crumbs.push({ name: segment, path: current });
+          });
+          crumbs.forEach((crumb, index) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'storage-crumb';
+            button.textContent = crumb.name || t('storage.root');
+            if (index === crumbs.length - 1) {
+              button.disabled = true;
+              button.classList.add('current');
+            } else {
+              button.addEventListener('click', () => {
+                navigateStorage(crumb.path);
+              });
+            }
+            container.appendChild(button);
+            if (index < crumbs.length - 1) {
+              const separator = document.createElement('span');
+              separator.className = 'storage-separator';
+              separator.textContent = '/';
+              container.appendChild(separator);
+            }
+          });
+        }
+
+        function renderStorageEntries() {
+          if (!dom.storage || !dom.storage.entries) {
+            return;
+          }
+          const tbody = dom.storage.entries;
+          tbody.innerHTML = '';
+          if (state.storage.loading) {
+            return;
+          }
+          const entries = Array.isArray(state.storage.entries) ? state.storage.entries : [];
+          entries.forEach((entry) => {
+            if (!entry || typeof entry !== 'object') {
+              return;
+            }
+            const row = document.createElement('tr');
+
+            const nameCell = document.createElement('td');
+            if (entry.is_dir) {
+              const button = document.createElement('button');
+              button.type = 'button';
+              button.className = 'storage-name-button';
+              button.textContent = entry.name || entry.path || t('storage.root');
+              button.addEventListener('click', () => {
+                navigateStorage(entry.path);
+              });
+              nameCell.appendChild(button);
+            } else {
+              const link = document.createElement('a');
+              link.className = 'storage-link';
+              link.textContent = entry.name || entry.path || '';
+              link.href = buildStorageURL(entry.path);
+              link.target = '_blank';
+              link.rel = 'noopener';
+              nameCell.appendChild(link);
+            }
+            row.appendChild(nameCell);
+
+            const sizeCell = document.createElement('td');
+            if (typeof entry.size === 'number' && entry.size >= 0) {
+              sizeCell.textContent = formatBytes(entry.size);
+            } else {
+              sizeCell.textContent = '—';
+            }
+            row.appendChild(sizeCell);
+
+            const modifiedCell = document.createElement('td');
+            modifiedCell.textContent =
+              typeof entry.modified === 'string' && entry.modified
+                ? formatDate(entry.modified)
+                : '';
+            row.appendChild(modifiedCell);
+
+            const actionsCell = document.createElement('td');
+            actionsCell.style.whiteSpace = 'nowrap';
+            if (!entry.is_dir) {
+              const openLink = document.createElement('a');
+              openLink.className = 'storage-link';
+              openLink.textContent = t('storage.actions.open');
+              openLink.href = buildStorageURL(entry.path);
+              openLink.target = '_blank';
+              openLink.rel = 'noopener';
+              actionsCell.appendChild(openLink);
+            }
+            const deleteButton = document.createElement('button');
+            deleteButton.type = 'button';
+            deleteButton.className = 'storage-action-button';
+            deleteButton.textContent = t('storage.actions.delete');
+            deleteButton.addEventListener('click', () => {
+              handleDeleteStorageEntry(entry);
+            });
+            actionsCell.appendChild(deleteButton);
+            row.appendChild(actionsCell);
+
+            tbody.appendChild(row);
+          });
+        }
+
+        function renderStorage() {
+          if (!dom.storage) {
+            return;
+          }
+          const normalizedPath = normalizeStoragePath(state.storage.path);
+          if (dom.storage.path) {
+            dom.storage.path.textContent = normalizedPath
+              ? `${t('storage.root')} / ${normalizedPath}`
+              : t('storage.root');
+          }
+          if (dom.storage.loading) {
+            const hidden = !state.storage.loading;
+            dom.storage.loading.hidden = hidden;
+            if (!hidden) {
+              dom.storage.loading.textContent = t('storage.loading');
+            }
+          }
+          if (dom.storage.tableWrapper) {
+            dom.storage.tableWrapper.hidden =
+              state.storage.loading || !state.storage.entries.length;
+          }
+          if (dom.storage.empty) {
+            dom.storage.empty.hidden =
+              state.storage.loading || state.storage.entries.length > 0;
+          }
+          renderStorageBreadcrumb();
+          renderStorageUsage();
+          if (state.storage.loading) {
+            if (dom.storage.entries) {
+              dom.storage.entries.innerHTML = '';
+            }
+            return;
+          }
+          renderStorageEntries();
+        }
+
+        async function refreshStorage(path = state.storage.path) {
+          if (!dom.storage) {
+            return;
+          }
+          const targetPath = normalizeStoragePath(path);
+          state.storage.loading = true;
+          renderStorage();
+          const query = targetPath ? `?path=${encodeURIComponent(targetPath)}` : '';
+          try {
+            const payload = await request(`/api/storage/list${query}`);
+            const entries = Array.isArray(payload?.entries) ? payload.entries : [];
+            state.storage.entries = entries;
+            state.storage.path = normalizeStoragePath(payload?.path ?? targetPath);
+            if (typeof payload?.parent === 'string') {
+              state.storage.parent = normalizeStoragePath(payload.parent);
+            } else {
+              state.storage.parent = null;
+            }
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            showStatus(message || t('status.storageLoadFailed'), 'error');
+            state.storage.entries = [];
+            state.storage.path = targetPath;
+            state.storage.parent = null;
+          }
+          try {
+            const usagePayload = await request('/api/storage/usage');
+            state.storage.usage = usagePayload?.usage ?? usagePayload ?? null;
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            showStatus(message || t('status.storageUsageFailed'), 'error');
+          }
+          state.storage.loading = false;
+          renderStorage();
+        }
+
+        async function openStorageManager(initialPath = '') {
+          if (!dom.storage || !dom.storage.root) {
+            return;
+          }
+          const normalizedPath = normalizeStoragePath(initialPath);
+          if (state.storage.open) {
+            await refreshStorage(normalizedPath || state.storage.path);
+            return;
+          }
+          state.storage.previousFocus =
+            document.activeElement instanceof HTMLElement ? document.activeElement : null;
+          state.storage.open = true;
+          state.storage.path = normalizedPath;
+          state.storage.entries = [];
+          state.storage.parent = null;
+          state.storage.loading = true;
+          dom.storage.root.classList.remove('hidden');
+          dom.storage.root.setAttribute('aria-hidden', 'false');
+          document.body.classList.add('dialog-open');
+          renderStorage();
+          window.requestAnimationFrame(() => {
+            if (dom.storage.window) {
+              dom.storage.window.focus({ preventScroll: true });
+            }
+          });
+          await refreshStorage(normalizedPath);
+        }
+
+        function closeStorageManager() {
+          if (!dom.storage || !state.storage.open) {
+            return;
+          }
+          state.storage.open = false;
+          dom.storage.root.classList.add('hidden');
+          dom.storage.root.setAttribute('aria-hidden', 'true');
+          if (!dom.dialog || !dom.dialog.root || dom.dialog.root.classList.contains('hidden')) {
+            document.body.classList.remove('dialog-open');
+          }
+          const previous = state.storage.previousFocus;
+          state.storage.previousFocus = null;
+          if (previous) {
+            previous.focus({ preventScroll: true });
+          }
+        }
+
+        async function handleDeleteStorageEntry(entry) {
+          if (!entry || !entry.path) {
+            return;
+          }
+          const title = t('storage.dialogs.deleteTitle');
+          const message = entry.is_dir
+            ? t('storage.dialogs.deleteFolder', { name: entry.name || entry.path })
+            : t('storage.dialogs.deleteFile', { name: entry.name || entry.path });
+          const confirmed = await confirmDialog({
+            title,
+            message,
+            confirmText: t('common.actions.delete'),
+            cancelText: t('dialog.cancel'),
+            variant: 'danger',
+          });
+          if (state.storage.open) {
+            document.body.classList.add('dialog-open');
+          }
+          if (!confirmed) {
+            return;
+          }
+          try {
+            await request('/api/storage', {
+              method: 'DELETE',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ path: entry.path }),
+            });
+            showStatus(t('status.storageDeleted'), 'success');
+            await refreshStorage(state.storage.path);
+          } catch (error) {
+            const messageText = error instanceof Error ? error.message : String(error);
+            showStatus(messageText || t('status.storageLoadFailed'), 'error');
+          }
+        }
+
         applyTranslations(DEFAULT_LANGUAGE);
+        renderStorage();
 
         const STATUS_DEFAULT_TIMEOUT = 5000;
 
@@ -2715,6 +3462,7 @@
           applyTheme(themeValue);
           updateGpuWhisperUI({ ...state.gpuWhisper });
           applyTranslations(languageValue);
+          renderStorage();
           updateEditModeUI();
         }
 
@@ -3878,6 +4626,39 @@
           }
         }
 
+        if (dom.storage && dom.storage.button) {
+          dom.storage.button.addEventListener('click', () => {
+            openStorageManager();
+          });
+        }
+
+        if (dom.storage && dom.storage.close) {
+          dom.storage.close.addEventListener('click', () => {
+            closeStorageManager();
+          });
+        }
+
+        if (dom.storage && dom.storage.backdrop) {
+          dom.storage.backdrop.addEventListener('click', () => {
+            closeStorageManager();
+          });
+        }
+
+        if (dom.storage && dom.storage.refresh) {
+          dom.storage.refresh.addEventListener('click', () => {
+            refreshStorage();
+          });
+        }
+
+        if (dom.storage && dom.storage.window) {
+          dom.storage.window.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+              event.preventDefault();
+              closeStorageManager();
+            }
+          });
+        }
+
         dom.viewButtons.forEach((button) => {
           button.addEventListener('click', () => {
             const view = button.dataset.view;
@@ -4159,6 +4940,7 @@
           dom.settingsLanguage.addEventListener('change', (event) => {
             const value = normalizeLanguage(event.target.value);
             applyTranslations(value);
+            renderStorage();
             updateEditModeUI();
           });
         }
