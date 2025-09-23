@@ -15,7 +15,7 @@
 
 1. [✨ Key Features](#-key-features)
 2. [🏁 Quick Start](#-quick-start)
-3. [🖥️ Debian 13 VPS Deployment](#%F0%9F%96%A5%EF%B8%8F-debian-13-vps-deployment)
+3. [🖥️ Debian Server Deployment](#🖥️-Debian-Server-Deployment)
 4. [🧭 Project Structure](#-project-structure)
 5. [🎛️ Interface Customization](#-interface-customization)
 6. [🛠️ Core Workflows](#-core-workflows)
@@ -67,7 +67,7 @@
 
 ---
 
-## 🖥️ Debian 13 VPS Deployment
+## 🖥️ Debian Server Deployment
 
 Follow these steps to run Lecture Tools as a managed service that automatically starts whenever your VPS reboots.
 
