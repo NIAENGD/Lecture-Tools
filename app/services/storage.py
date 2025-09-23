@@ -5,7 +5,7 @@ from __future__ import annotations
 import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, List, Optional
+from typing import Dict, Iterable, List, Optional
 
 from ..config import AppConfig
 
@@ -15,6 +15,7 @@ class ClassRecord:
     id: int
     name: str
     description: str
+    position: int
 
 
 @dataclass
@@ -23,6 +24,7 @@ class ModuleRecord:
     class_id: int
     name: str
     description: str
+    position: int
 
 
 @dataclass
@@ -31,6 +33,7 @@ class LectureRecord:
     module_id: int
     name: str
     description: str
+    position: int
     audio_path: Optional[str]
     slide_path: Optional[str]
     transcript_path: Optional[str]
@@ -58,36 +61,62 @@ class LectureRepository:
         connection.execute("PRAGMA foreign_keys = ON")
         return connection
 
+    def _next_position(
+        self,
+        connection: sqlite3.Connection,
+        table: str,
+        *,
+        filter_field: Optional[str] = None,
+        filter_value: Optional[int] = None,
+    ) -> int:
+        query = f"SELECT COALESCE(MAX(position), -1) + 1 FROM {table}"
+        params: List[object] = []
+        if filter_field is not None:
+            query += f" WHERE {filter_field} = ?"
+            params.append(filter_value)
+        cursor = connection.execute(query, params)
+        row = cursor.fetchone()
+        if row is None:
+            return 0
+        next_value = row[0]
+        return int(next_value or 0)
+
     # ---------------------------------------------------------------------
     # Creation helpers
     # ---------------------------------------------------------------------
     def add_class(self, name: str, description: str = "") -> int:
         with self._connect() as connection:
+            position = self._next_position(connection, "classes")
             cursor = connection.execute(
-                "INSERT INTO classes(name, description) VALUES (?, ?)", (name, description)
+                "INSERT INTO classes(name, description, position) VALUES (?, ?, ?)",
+                (name, description, position),
             )
             return int(cursor.lastrowid)
 
     def find_class_by_name(self, name: str) -> Optional[ClassRecord]:
         with self._connect() as connection:
             cursor = connection.execute(
-                "SELECT id, name, description FROM classes WHERE name = ?", (name,)
+                "SELECT id, name, description, position FROM classes WHERE name = ?",
+                (name,),
             )
             row = cursor.fetchone()
             return ClassRecord(**row) if row else None
 
     def add_module(self, class_id: int, name: str, description: str = "") -> int:
         with self._connect() as connection:
+            position = self._next_position(
+                connection, "modules", filter_field="class_id", filter_value=class_id
+            )
             cursor = connection.execute(
-                "INSERT INTO modules(class_id, name, description) VALUES (?, ?, ?)",
-                (class_id, name, description),
+                "INSERT INTO modules(class_id, name, description, position) VALUES (?, ?, ?, ?)",
+                (class_id, name, description, position),
             )
             return int(cursor.lastrowid)
 
     def find_module_by_name(self, class_id: int, name: str) -> Optional[ModuleRecord]:
         with self._connect() as connection:
             cursor = connection.execute(
-                "SELECT id, class_id, name, description FROM modules WHERE class_id = ? AND name = ?",
+                "SELECT id, class_id, name, description, position FROM modules WHERE class_id = ? AND name = ?",
                 (class_id, name),
             )
             row = cursor.fetchone()
@@ -106,16 +135,28 @@ class LectureRepository:
         slide_image_dir: Optional[str] = None,
     ) -> int:
         with self._connect() as connection:
+            position = self._next_position(
+                connection, "lectures", filter_field="module_id", filter_value=module_id
+            )
             cursor = connection.execute(
                 """
                 INSERT INTO lectures(
-                    module_id, name, description, audio_path, slide_path, transcript_path, notes_path, slide_image_dir
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    module_id,
+                    name,
+                    description,
+                    position,
+                    audio_path,
+                    slide_path,
+                    transcript_path,
+                    notes_path,
+                    slide_image_dir
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     module_id,
                     name,
                     description,
+                    position,
                     audio_path,
                     slide_path,
                     transcript_path,
@@ -129,7 +170,7 @@ class LectureRepository:
         with self._connect() as connection:
             cursor = connection.execute(
                 """
-                SELECT id, module_id, name, description, audio_path, slide_path, transcript_path, notes_path, slide_image_dir
+                SELECT id, module_id, name, description, position, audio_path, slide_path, transcript_path, notes_path, slide_image_dir
                 FROM lectures
                 WHERE module_id = ? AND name = ?
                 """,
@@ -143,14 +184,21 @@ class LectureRepository:
     # ------------------------------------------------------------------
     def iter_classes(self) -> Iterable[ClassRecord]:
         with self._connect() as connection:
-            cursor = connection.execute("SELECT id, name, description FROM classes ORDER BY name")
+            cursor = connection.execute(
+                "SELECT id, name, description, position FROM classes ORDER BY position, id"
+            )
             for row in cursor.fetchall():
                 yield ClassRecord(**row)
 
     def iter_modules(self, class_id: int) -> Iterable[ModuleRecord]:
         with self._connect() as connection:
             cursor = connection.execute(
-                "SELECT id, class_id, name, description FROM modules WHERE class_id = ? ORDER BY name",
+                """
+                SELECT id, class_id, name, description, position
+                FROM modules
+                WHERE class_id = ?
+                ORDER BY position, id
+                """,
                 (class_id,),
             )
             for row in cursor.fetchall():
@@ -160,10 +208,10 @@ class LectureRepository:
         with self._connect() as connection:
             cursor = connection.execute(
                 """
-                SELECT id, module_id, name, description, audio_path, slide_path, transcript_path, notes_path, slide_image_dir
+                SELECT id, module_id, name, description, position, audio_path, slide_path, transcript_path, notes_path, slide_image_dir
                 FROM lectures
                 WHERE module_id = ?
-                ORDER BY name
+                ORDER BY position, id
                 """,
                 (module_id,),
             )
@@ -173,7 +221,7 @@ class LectureRepository:
     def get_class(self, class_id: int) -> Optional[ClassRecord]:
         with self._connect() as connection:
             cursor = connection.execute(
-                "SELECT id, name, description FROM classes WHERE id = ?",
+                "SELECT id, name, description, position FROM classes WHERE id = ?",
                 (class_id,),
             )
             row = cursor.fetchone()
@@ -182,7 +230,7 @@ class LectureRepository:
     def get_module(self, module_id: int) -> Optional[ModuleRecord]:
         with self._connect() as connection:
             cursor = connection.execute(
-                "SELECT id, class_id, name, description FROM modules WHERE id = ?",
+                "SELECT id, class_id, name, description, position FROM modules WHERE id = ?",
                 (module_id,),
             )
             row = cursor.fetchone()
@@ -192,7 +240,7 @@ class LectureRepository:
         with self._connect() as connection:
             cursor = connection.execute(
                 """
-                SELECT id, module_id, name, description, audio_path, slide_path, transcript_path, notes_path, slide_image_dir
+                SELECT id, module_id, name, description, position, audio_path, slide_path, transcript_path, notes_path, slide_image_dir
                 FROM lectures WHERE id = ?
                 """,
                 (lecture_id,),
@@ -208,6 +256,10 @@ class LectureRepository:
         description: Optional[str] = None,
         module_id: Optional[int] = None,
     ) -> None:
+        current = self.get_lecture(lecture_id)
+        if current is None:
+            return
+
         assignments: List[str] = []
         params: List[object] = []
 
@@ -217,16 +269,25 @@ class LectureRepository:
         if description is not None:
             assignments.append("description = ?")
             params.append(description)
-        if module_id is not None:
-            assignments.append("module_id = ?")
-            params.append(module_id)
 
-        if not assignments:
-            return
-
-        params.append(lecture_id)
-        query = "UPDATE lectures SET " + ", ".join(assignments) + " WHERE id = ?"
         with self._connect() as connection:
+            if module_id is not None and module_id != current.module_id:
+                assignments.append("module_id = ?")
+                params.append(module_id)
+                new_position = self._next_position(
+                    connection, "lectures", filter_field="module_id", filter_value=module_id
+                )
+                assignments.append("position = ?")
+                params.append(new_position)
+            elif module_id is not None:
+                assignments.append("module_id = ?")
+                params.append(module_id)
+
+            if not assignments:
+                return
+
+            params.append(lecture_id)
+            query = "UPDATE lectures SET " + ", ".join(assignments) + " WHERE id = ?"
             connection.execute(query, params)
 
     def update_lecture_description(self, lecture_id: int, description: str) -> None:
@@ -288,6 +349,18 @@ class LectureRepository:
     def remove_lecture(self, lecture_id: int) -> None:
         with self._connect() as connection:
             connection.execute("DELETE FROM lectures WHERE id = ?", (lecture_id,))
+
+    def reorder_lectures(self, module_orders: Dict[int, List[int]]) -> None:
+        if not module_orders:
+            return
+        with self._connect() as connection:
+            cursor = connection.cursor()
+            for module_id, lecture_ids in module_orders.items():
+                for index, lecture_id in enumerate(lecture_ids):
+                    cursor.execute(
+                        "UPDATE lectures SET module_id = ?, position = ? WHERE id = ?",
+                        (module_id, index, lecture_id),
+                    )
 
 
 __all__ = [

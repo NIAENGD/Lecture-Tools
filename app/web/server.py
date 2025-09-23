@@ -3,15 +3,18 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import platform
 import shutil
 import stat
 import subprocess
 import threading
 import time
+import zipfile
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Any, Dict, List, Literal, Optional, Set, Tuple
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Response
@@ -194,6 +197,7 @@ def _serialize_lecture(lecture: LectureRecord) -> Dict[str, Any]:
         "module_id": lecture.module_id,
         "name": lecture.name,
         "description": lecture.description,
+        "position": lecture.position,
         "audio_path": lecture.audio_path,
         "slide_path": lecture.slide_path,
         "transcript_path": lecture.transcript_path,
@@ -212,6 +216,7 @@ def _serialize_module(repository: LectureRepository, module: ModuleRecord) -> Di
         "class_id": module.class_id,
         "name": module.name,
         "description": module.description,
+        "position": module.position,
         "lectures": lectures,
         "lecture_count": len(lectures),
         "asset_counts": asset_counts,
@@ -232,6 +237,7 @@ def _serialize_class(repository: LectureRepository, class_record: ClassRecord) -
         "id": class_record.id,
         "name": class_record.name,
         "description": class_record.description,
+        "position": class_record.position,
         "modules": modules,
         "module_count": len(modules),
         "asset_counts": asset_counts,
@@ -322,6 +328,15 @@ class LectureUpdatePayload(BaseModel):
     module_id: Optional[int] = None
     name: Optional[str] = Field(None, min_length=1)
     description: Optional[str] = None
+
+
+class LectureReorderEntry(BaseModel):
+    module_id: int
+    lecture_ids: List[int] = Field(default_factory=list)
+
+
+class LectureReorderPayload(BaseModel):
+    modules: List[LectureReorderEntry] = Field(default_factory=list)
 
 
 class TranscriptionRequest(BaseModel):
@@ -517,6 +532,54 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
         except ValueError:
             return
         _delete_storage_path(asset_path)
+
+    def _collect_archive_metadata() -> Dict[str, Any]:
+        classes: List[Dict[str, Any]] = []
+        for class_record in repository.iter_classes():
+            class_payload: Dict[str, Any] = {
+                "name": class_record.name,
+                "description": class_record.description,
+                "position": class_record.position,
+                "modules": [],
+            }
+            for module in repository.iter_modules(class_record.id):
+                module_payload: Dict[str, Any] = {
+                    "name": module.name,
+                    "description": module.description,
+                    "position": module.position,
+                    "lectures": [],
+                }
+                for lecture in repository.iter_lectures(module.id):
+                    module_payload["lectures"].append(
+                        {
+                            "name": lecture.name,
+                            "description": lecture.description,
+                            "position": lecture.position,
+                            "audio_path": lecture.audio_path,
+                            "slide_path": lecture.slide_path,
+                            "transcript_path": lecture.transcript_path,
+                            "notes_path": lecture.notes_path,
+                            "slide_image_dir": lecture.slide_image_dir,
+                        }
+                    )
+                class_payload["modules"].append(module_payload)
+            classes.append(class_payload)
+        return {"classes": classes}
+
+    def _clear_database() -> None:
+        with repository._connect() as connection:
+            connection.execute("DELETE FROM lectures")
+            connection.execute("DELETE FROM modules")
+            connection.execute("DELETE FROM classes")
+            connection.commit()
+
+    def _clear_storage() -> None:
+        storage_root = config.storage_root.resolve()
+        archive_root = config.archive_root.resolve()
+        for child in storage_root.iterdir():
+            if child.resolve() == archive_root:
+                continue
+            _delete_storage_path(child)
 
     def _calculate_directory_size(target: Path) -> int:
         total = 0
@@ -925,6 +988,41 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
             raise HTTPException(status_code=500, detail="Lecture update failed")
         return {"lecture": _serialize_lecture(updated)}
 
+    @app.post("/api/lectures/reorder")
+    async def reorder_lecture_positions(payload: LectureReorderPayload) -> Dict[str, Any]:
+        if not payload.modules:
+            return {"modules": []}
+
+        module_orders: Dict[int, List[int]] = {}
+        seen_lectures: Set[int] = set()
+
+        for entry in payload.modules:
+            module = repository.get_module(entry.module_id)
+            if module is None:
+                raise HTTPException(status_code=404, detail="Module not found")
+
+            lecture_ids: List[int] = []
+            for lecture_id in entry.lecture_ids:
+                if lecture_id in seen_lectures:
+                    raise HTTPException(status_code=400, detail="Duplicate lecture identifier provided")
+                lecture = repository.get_lecture(lecture_id)
+                if lecture is None:
+                    raise HTTPException(status_code=404, detail="Lecture not found")
+                seen_lectures.add(lecture_id)
+                lecture_ids.append(lecture_id)
+
+            module_orders[entry.module_id] = lecture_ids
+
+        repository.reorder_lectures(module_orders)
+
+        updated_modules: List[Dict[str, Any]] = []
+        for module_id in module_orders:
+            module = repository.get_module(module_id)
+            if module is not None:
+                updated_modules.append(_serialize_module(repository, module))
+
+        return {"modules": updated_modules}
+
     @app.delete(
         "/api/lectures/{lecture_id}",
         status_code=status.HTTP_204_NO_CONTENT,
@@ -1075,6 +1173,212 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
         settings.slide_dpi = _normalize_slide_dpi(payload.slide_dpi)
         settings_store.save(settings)
         return {"settings": asdict(settings)}
+
+    @app.post("/api/settings/export")
+    async def export_archive() -> Dict[str, Any]:
+        archive_root = config.archive_root
+        archive_root.mkdir(parents=True, exist_ok=True)
+        metadata = _collect_archive_metadata()
+        filename = build_timestamped_name("lecture-tools-export", extension="zip")
+        archive_path = archive_root / filename
+
+        storage_root = config.storage_root.resolve()
+        exclude_root = archive_root.resolve()
+
+        with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as bundle:
+            bundle.writestr("metadata.json", json.dumps(metadata, ensure_ascii=False, indent=2))
+            if storage_root.exists():
+                for path in storage_root.rglob("*"):
+                    if path.is_dir():
+                        continue
+                    resolved = path.resolve()
+                    if resolved == archive_path.resolve():
+                        continue
+                    if resolved == exclude_root or exclude_root in resolved.parents:
+                        continue
+                    arcname = Path("storage") / path.relative_to(storage_root)
+                    try:
+                        bundle.write(path, arcname.as_posix())
+                    except OSError:
+                        continue
+
+        relative = archive_path.relative_to(config.storage_root).as_posix()
+        info = archive_path.stat()
+
+        class_count = len(metadata.get("classes", []))
+        module_count = sum(len(item.get("modules", [])) for item in metadata.get("classes", []))
+        lecture_count = sum(
+            len(module.get("lectures", []))
+            for item in metadata.get("classes", [])
+            for module in item.get("modules", [])
+        )
+
+        return {
+            "archive": {
+                "filename": filename,
+                "path": relative,
+                "size": info.st_size,
+                "class_count": class_count,
+                "module_count": module_count,
+                "lecture_count": lecture_count,
+            }
+        }
+
+    @app.post("/api/settings/import")
+    async def import_archive(
+        mode: Literal["merge", "replace"] = Form("merge"),
+        file: UploadFile = File(...),
+    ) -> Dict[str, Any]:
+        normalized_mode = mode.lower()
+        if normalized_mode not in {"merge", "replace"}:
+            raise HTTPException(status_code=400, detail="Unsupported import mode")
+
+        payload = await file.read()
+        await file.close()
+        if not payload:
+            raise HTTPException(status_code=400, detail="Archive is empty")
+
+        with TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir) / "archive.zip"
+            temp_path.write_bytes(payload)
+            try:
+                with zipfile.ZipFile(temp_path, "r") as bundle:
+                    bundle.extractall(temp_dir)
+            except zipfile.BadZipFile as error:
+                raise HTTPException(status_code=400, detail="Invalid archive") from error
+
+            metadata_path = Path(temp_dir) / "metadata.json"
+            if not metadata_path.exists():
+                raise HTTPException(status_code=400, detail="Archive is missing metadata.json")
+
+            try:
+                metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError as error:
+                raise HTTPException(status_code=400, detail="Archive metadata is invalid") from error
+
+            files_root = Path(temp_dir) / "storage"
+
+            if normalized_mode == "replace":
+                _clear_database()
+                _clear_storage()
+
+            if files_root.exists():
+                for path in files_root.rglob("*"):
+                    if path.is_dir():
+                        continue
+                    destination = config.storage_root / path.relative_to(files_root)
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    try:
+                        shutil.copy2(path, destination)
+                    except OSError:
+                        continue
+
+            classes_data = metadata.get("classes", [])
+            classes_data = sorted(
+                classes_data,
+                key=lambda item: item.get("position") if isinstance(item.get("position"), int) else 0,
+            )
+
+            imported_classes = 0
+            imported_modules = 0
+            imported_lectures = 0
+
+            for class_entry in classes_data:
+                name = str(class_entry.get("name") or "").strip()
+                if not name:
+                    continue
+                description = class_entry.get("description") or ""
+
+                modules_data = class_entry.get("modules", [])
+                modules_data = sorted(
+                    modules_data,
+                    key=lambda item: item.get("position") if isinstance(item.get("position"), int) else 0,
+                )
+
+                if normalized_mode == "merge":
+                    existing_class = repository.find_class_by_name(name)
+                    if existing_class is not None:
+                        class_id = existing_class.id
+                    else:
+                        class_id = repository.add_class(name, description)
+                        imported_classes += 1
+                else:
+                    class_id = repository.add_class(name, description)
+                    imported_classes += 1
+
+                for module_entry in modules_data:
+                    module_name = str(module_entry.get("name") or "").strip()
+                    if not module_name:
+                        continue
+                    module_description = module_entry.get("description") or ""
+
+                    lectures_data = module_entry.get("lectures", [])
+                    lectures_data = sorted(
+                        lectures_data,
+                        key=lambda item: item.get("position") if isinstance(item.get("position"), int) else 0,
+                    )
+
+                    if normalized_mode == "merge":
+                        existing_module = repository.find_module_by_name(class_id, module_name)
+                        if existing_module is not None:
+                            module_id = existing_module.id
+                        else:
+                            module_id = repository.add_module(class_id, module_name, module_description)
+                            imported_modules += 1
+                    else:
+                        module_id = repository.add_module(class_id, module_name, module_description)
+                        imported_modules += 1
+
+                    for lecture_entry in lectures_data:
+                        lecture_name = str(lecture_entry.get("name") or "").strip()
+                        if not lecture_name:
+                            continue
+                        lecture_description = lecture_entry.get("description") or ""
+
+                        assets = {
+                            "audio_path": lecture_entry.get("audio_path"),
+                            "slide_path": lecture_entry.get("slide_path"),
+                            "transcript_path": lecture_entry.get("transcript_path"),
+                            "notes_path": lecture_entry.get("notes_path"),
+                            "slide_image_dir": lecture_entry.get("slide_image_dir"),
+                        }
+
+                        if normalized_mode == "merge":
+                            existing_lecture = repository.find_lecture_by_name(module_id, lecture_name)
+                            if existing_lecture is not None:
+                                repository.update_lecture(
+                                    existing_lecture.id,
+                                    description=lecture_description if lecture_description else None,
+                                )
+                                asset_updates = {
+                                    key: value
+                                    for key, value in assets.items()
+                                    if value
+                                }
+                                if asset_updates:
+                                    repository.update_lecture_assets(existing_lecture.id, **asset_updates)
+                                continue
+
+                        lecture_id = repository.add_lecture(
+                            module_id,
+                            lecture_name,
+                            lecture_description,
+                            audio_path=assets["audio_path"],
+                            slide_path=assets["slide_path"],
+                            transcript_path=assets["transcript_path"],
+                            notes_path=assets["notes_path"],
+                            slide_image_dir=assets["slide_image_dir"],
+                        )
+                        imported_lectures += 1
+
+        return {
+            "import": {
+                "mode": normalized_mode,
+                "classes": imported_classes,
+                "modules": imported_modules,
+                "lectures": imported_lectures,
+            }
+        }
 
     @app.get("/api/lectures/{lecture_id}/preview")
     async def get_lecture_preview(lecture_id: int) -> Dict[str, Any]:

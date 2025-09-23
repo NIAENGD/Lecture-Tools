@@ -97,3 +97,28 @@ def test_repository_lookup_helpers(temp_config: AppConfig) -> None:
     assert lecture.audio_path == "raw/derivatives.mp3"
     assert lecture.slide_image_dir == "processed/slides"
     assert lecture.notes_path == "processed/notes.docx"
+
+
+def test_reorder_lectures(temp_config: AppConfig) -> None:
+    repository = LectureRepository(temp_config)
+
+    class_id = repository.add_class("History")
+    early_module = repository.add_module(class_id, "Antiquity")
+    modern_module = repository.add_module(class_id, "Modern Era")
+
+    first = repository.add_lecture(early_module, "Prehistory")
+    second = repository.add_lecture(early_module, "Classical Greece")
+    third = repository.add_lecture(early_module, "Roman Empire")
+
+    repository.reorder_lectures(
+        {
+            early_module: [second],
+            modern_module: [third, first],
+        }
+    )
+
+    early_order = [lecture.id for lecture in repository.iter_lectures(early_module)]
+    modern_order = [lecture.id for lecture in repository.iter_lectures(modern_module)]
+
+    assert early_order == [second]
+    assert modern_order == [third, first]

@@ -16,6 +16,12 @@ class AppConfig:
     database_file: Path
     assets_root: Path
 
+    @property
+    def archive_root(self) -> Path:
+        """Location used for temporary export archives."""
+
+        return (self.storage_root / "_archives").resolve()
+
     @classmethod
     def from_mapping(cls, mapping: Dict[str, Any], *, base_path: Path) -> "AppConfig":
         storage_root = (base_path / mapping["storage_root"]).resolve()
