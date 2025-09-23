@@ -333,6 +333,24 @@ class RevealRequest(BaseModel):
     select: bool = False
 
 
+class StorageEntry(BaseModel):
+    name: str
+    path: str
+    is_dir: bool
+    size: int
+    modified: Optional[str] = None
+
+
+class StorageListResponse(BaseModel):
+    path: str
+    parent: Optional[str]
+    entries: List[StorageEntry]
+
+
+class StorageDeleteRequest(BaseModel):
+    path: str
+
+
 class ClassCreatePayload(BaseModel):
     name: str = Field(..., min_length=1)
     description: str = ""
@@ -456,6 +474,46 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
         except ValueError:
             return
         _delete_storage_path(asset_path)
+
+    def _calculate_directory_size(target: Path) -> int:
+        total = 0
+        try:
+            for child in target.rglob("*"):
+                if child.is_symlink():
+                    continue
+                try:
+                    if child.is_file():
+                        total += child.stat().st_size
+                except (FileNotFoundError, PermissionError, OSError):
+                    continue
+        except (FileNotFoundError, PermissionError, OSError):
+            return total
+        return total
+
+    def _build_storage_entry(path: Path) -> StorageEntry:
+        stat_result = path.lstat()
+        is_dir = path.is_dir() and not path.is_symlink()
+        size = 0
+        if is_dir:
+            size = _calculate_directory_size(path)
+        else:
+            try:
+                size = stat_result.st_size
+            except (OSError, ValueError):
+                size = 0
+        try:
+            modified = datetime.fromtimestamp(stat_result.st_mtime, tz=timezone.utc)
+            modified_iso = modified.isoformat()
+        except (OverflowError, OSError, ValueError):
+            modified_iso = None
+        relative_path = path.relative_to(config.storage_root).as_posix()
+        return StorageEntry(
+            name=path.name or relative_path,
+            path=relative_path,
+            is_dir=is_dir,
+            size=size,
+            modified=modified_iso,
+        )
 
     def _name_variants(value: str) -> List[str]:
         cleaned = value.strip()
@@ -1088,6 +1146,76 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
             "slide_path": slide_relative,
             "slide_image_dir": slide_image_relative,
         }
+
+    @app.get("/api/storage/usage")
+    async def get_storage_usage() -> Dict[str, Any]:
+        usage = shutil.disk_usage(config.storage_root)
+        return {
+            "usage": {
+                "total": usage.total,
+                "used": usage.used,
+                "free": usage.free,
+            }
+        }
+
+    @app.get("/api/storage/list")
+    async def list_storage(path: str = "") -> StorageListResponse:
+        if path:
+            try:
+                target = _resolve_storage_path(config.storage_root, path)
+            except ValueError as error:
+                raise HTTPException(status_code=400, detail="Path is outside storage root") from error
+        else:
+            target = config.storage_root
+
+        if not target.exists():
+            raise HTTPException(status_code=404, detail="Path not found")
+
+        if target.is_file():
+            raise HTTPException(status_code=400, detail="Path is not a directory")
+
+        relative_path = ""
+        parent_relative: Optional[str]
+        if target == config.storage_root:
+            parent_relative = None
+        else:
+            relative_path = target.relative_to(config.storage_root).as_posix()
+            parent_path = target.parent
+            if parent_path == config.storage_root:
+                parent_relative = ""
+            else:
+                parent_relative = parent_path.relative_to(config.storage_root).as_posix()
+
+        entries: List[StorageEntry] = []
+        try:
+            for child in target.iterdir():
+                try:
+                    entries.append(_build_storage_entry(child))
+                except (OSError, ValueError):
+                    continue
+        except (OSError, PermissionError, FileNotFoundError):
+            entries = []
+
+        entries.sort(key=lambda entry: (not entry.is_dir, entry.name.lower()))
+
+        return StorageListResponse(path=relative_path, parent=parent_relative, entries=entries)
+
+    @app.delete("/api/storage")
+    async def delete_storage(payload: StorageDeleteRequest) -> Dict[str, str]:
+        try:
+            target = _resolve_storage_path(config.storage_root, payload.path)
+        except ValueError as error:
+            raise HTTPException(status_code=400, detail="Path is outside storage root") from error
+
+        if target == config.storage_root:
+            raise HTTPException(status_code=400, detail="Cannot delete storage root")
+
+        if not target.exists():
+            raise HTTPException(status_code=404, detail="Path not found")
+
+        _delete_storage_path(target)
+
+        return {"status": "deleted"}
 
     @app.post(
         "/api/assets/reveal",
