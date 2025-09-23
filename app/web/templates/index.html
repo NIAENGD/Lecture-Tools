@@ -1053,12 +1053,13 @@
       }
 
       .icon-button.danger {
-        color: var(--danger);
+        color: var(--text);
       }
 
       .icon-button.danger:hover,
       .icon-button.danger:focus-visible {
         background: rgba(220, 38, 38, 0.12);
+        color: var(--danger);
       }
 
       .icon-button.danger:focus-visible {
@@ -1068,11 +1069,22 @@
       .icon-button .icon {
         font-size: 1.15rem;
         line-height: 1;
+        transition: color 0.2s ease, transform 0.2s ease;
+      }
+
+      .icon-button.danger .icon {
+        color: inherit;
+      }
+
+      .icon-button.danger:hover .icon,
+      .icon-button.danger:focus-visible .icon {
+        transform: rotate(90deg);
       }
 
       .placeholder {
         color: var(--placeholder);
         font-style: italic;
+        pointer-events: none;
       }
 
       .field {
@@ -4825,10 +4837,11 @@
 
                 if (!moduleEntry.lectures.length) {
                   lectureList.classList.add('empty');
-                  const emptyLectures = document.createElement('div');
+                  const emptyLectures = document.createElement('li');
                   emptyLectures.className = 'placeholder';
                   emptyLectures.textContent = t('placeholders.noLectures');
-                  moduleContent.appendChild(emptyLectures);
+                  emptyLectures.setAttribute('aria-hidden', 'true');
+                  lectureList.appendChild(emptyLectures);
                 } else {
                   moduleEntry.lectures.forEach((lecture) => {
                     const lectureItem = document.createElement('li');
