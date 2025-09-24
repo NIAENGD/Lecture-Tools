@@ -73,7 +73,10 @@ def test_index_injects_empty_root_path(temp_config):
 
     response = client.get("/")
     assert response.status_code == 200
-    assert 'window.__LECTURE_TOOLS_SERVER_ROOT_PATH__ = "";' in response.text
+    assert (
+        'window.__LECTURE_TOOLS_SERVER_ROOT_PATH__ = "__LECTURE_TOOLS_ROOT_PATH__";'
+        in response.text
+    )
 
 
 def test_api_honors_forwarded_prefix_header(temp_config):
@@ -86,6 +89,30 @@ def test_api_honors_forwarded_prefix_header(temp_config):
         headers={"X-Forwarded-Prefix": "/lecture"},
     )
     assert response.status_code == 200
+
+
+def test_cors_preflight_is_supported(temp_config):
+    repository, _lecture_id, _module_id = _create_sample_data(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    response = client.options(
+        "/api/classes",
+        headers={
+            "Origin": "https://example.com",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type",
+        },
+    )
+
+    assert response.status_code == 200
+    allow_origin = response.headers.get("access-control-allow-origin")
+    allow_methods = response.headers.get("access-control-allow-methods", "")
+    allow_headers = response.headers.get("access-control-allow-headers", "")
+
+    assert allow_origin == "*"
+    assert "POST" in allow_methods
+    assert "content-type" in allow_headers.lower()
 
 
 def test_static_storage_respects_root_path(temp_config):

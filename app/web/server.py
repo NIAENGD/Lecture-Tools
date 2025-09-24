@@ -19,6 +19,7 @@ from typing import Any, Dict, List, Literal, Optional, Set, Tuple
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Response, Request
 from fastapi import status
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -609,6 +610,12 @@ def create_app(
         root_path=normalized_root,
     )
     app.state.server = None
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
     app.add_middleware(ForwardedRootPathMiddleware)
     settings_store = SettingsStore(config)
     progress_tracker = TranscriptionProgressTracker()
@@ -643,6 +650,9 @@ def create_app(
             if normalized:
                 resolved = normalized
                 break
+        if not resolved:
+            return index_html
+
         safe_value = json.dumps(resolved)[1:-1]
         return index_html.replace("__LECTURE_TOOLS_ROOT_PATH__", safe_value)
 

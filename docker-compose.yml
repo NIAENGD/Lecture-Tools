@@ -1,0 +1,11 @@
+services:
+  lecturetools:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - LECTURE_TOOLS_ROOT_PATH=${LECTURE_TOOLS_ROOT_PATH:-}
+    volumes:
+      - ./storage:/app/storage
+      - ./assets:/app/assets
+    restart: unless-stopped

@@ -15,8 +15,8 @@
 
 1. [✨ Key Features](#-key-features)
 2. [🏁 Quick Start](#-quick-start)
-3. [🖥️ Debian 13 VPS Deployment](#%F0%9F%96%A5%EF%B8%8F-debian-13-vps-deployment)
-4. [🧭 Project Structure](#-project-structure)
+3. [🐳 Docker Deployment (Server)](#-docker-deployment-server)
+4. [🧭 Project Tour](#-project-tour)
 5. [🎛️ Interface Customization](#-interface-customization)
 6. [🛠️ Core Workflows](#-core-workflows)
 7. [🧪 Testing](#-testing)
@@ -73,152 +73,48 @@
 
 ---
 
-## 🖥️ Debian 13 VPS Deployment
+## 🐳 Docker Deployment (Server)
 
-You can either use the automated installer or follow the manual steps below to configure the application as a managed service.
+Deploy the Lecture Tools server in a reproducible Docker container. Personal computers can still use the direct setup described above; Docker is now the recommended path for remote servers.
 
-### ⚙️ Automated installer (Nginx + HTTPS)
+### 📦 Requirements
 
-Make sure Git is available, clone the repository, and run the helper script as root on a fresh Debian 13 server:
+- Docker Engine 24 or newer
+- The Docker Compose plugin (bundled with modern Docker releases)
 
-```bash
-sudo apt-get update && sudo apt-get install -y git
-git clone https://github.com/NIAENGD/Lecture-Tools.git
-cd Lecture-Tools
-sudo ./scripts/install_server.sh
-```
+### 🚀 Quick start
 
-The script will:
+1. Clone the repository on the host that will run the container and navigate into it.
+2. (Optional) Define a root-path prefix if the app sits behind a proxy: `export LECTURE_TOOLS_ROOT_PATH=/lecture`.
+3. Build and launch the service:
+   ```bash
+   docker compose up -d
+   ```
+4. Open `http://SERVER_IP:8000/` (or the proxied address) to reach the UI.
 
-- install required system packages (Python, Git, Nginx, Certbot, …),
-- create the `/opt/lecture-tools` application home and service account,
-- copy the repository, set up the virtual environment, and register the systemd unit,
-- ask for the public domain and optional URL prefix (e.g. `/lecture`) and configure Nginx as a reverse proxy, and
-- optionally request and auto-renew HTTPS certificates via Let's Encrypt.
+The compose stack mounts `./storage` and `./assets` from the host so transcripts, uploads, and downloaded models persist across restarts.
 
-To remove the deployment later, run `sudo ./scripts/remove_server.sh`. For a complete cleanup—including data, service account, and certificates—run `sudo ./scripts/remove_server_full.sh`.
+### 🔧 Configuration
 
-### 🛠️ Manual installation
+- **Port mapping** – Adjust the `8000:8000` mapping in `docker-compose.yml` when exposing a different port.
+- **Reverse proxies** – When terminating TLS with Nginx/Traefik, forward to the container and ensure the `LECTURE_TOOLS_ROOT_PATH` environment variable matches any prefix you inject (e.g. `/lecture`).
+- **Custom images** – Build and push your own tag with `docker build -t registry.example.com/lecture-tools:latest .` and update the compose file to reference it.
 
-Follow the steps below to deploy Lecture Tools manually and serve it securely at a custom domain (e.g. `lecture.example.com/tools`).
-
-### 1. Prepare the server
+### ♻️ Updating
 
 ```bash
-sudo apt update && sudo apt upgrade -y
-sudo apt install -y python3 python3-venv python3-pip git nginx certbot python3-certbot-nginx
-sudo adduser --system --group --home /opt/lecture-tools lecturetools
-sudo mkdir -p /opt/lecture-tools
-sudo chown -R lecturetools:lecturetools /opt/lecture-tools
+docker compose pull  # fetch updated base images
+docker compose build # rebuild the Lecture Tools image
+docker compose up -d --force-recreate
 ```
 
-> 🧱 The dedicated `lecturetools` user isolates the application from the rest of the system. The Nginx and Certbot packages are installed now so that HTTPS can be configured later without additional steps.
-
-### 2. Deploy the application
+### 🧹 Removing the stack
 
 ```bash
-sudo -u lecturetools git clone https://github.com/NIAENGD/Lecture-Tools.git /opt/lecture-tools/app
-sudo -u lecturetools python3 -m venv /opt/lecture-tools/.venv
-sudo -u lecturetools /opt/lecture-tools/.venv/bin/pip install --upgrade pip
-sudo -u lecturetools /opt/lecture-tools/.venv/bin/pip install -r /opt/lecture-tools/app/requirements-dev.txt
+docker compose down
 ```
 
-Create an environment file for runtime configuration:
-
-```bash
-sudo -u lecturetools tee /opt/lecture-tools/app/.env <<'EOF'
-LECTURE_TOOLS_ROOT_PATH=/tools
-LECTURE_TOOLS_LOG_LEVEL=info
-EOF
-```
-
-Adjust values (database URLs, storage paths, etc.) as needed for your deployment.
-
-### 3. Review the systemd service
-
-The repository ships a unit file at `config/systemd/lecture-tools.service`. Update the following directives if required:
-
-- `WorkingDirectory=` – path containing `run.py` (default `/opt/lecture-tools/app`).
-- `ExecStart=` – full path to the virtual environment’s Python interpreter and desired `run.py` command. Add `--root-path /tools` to match the sub-path you plan to expose.
-- `EnvironmentFile=` – point to `/opt/lecture-tools/app/.env` if you want systemd to load it automatically.
-- `User=` / `Group=` – ensure the service runs as the `lecturetools` user.
-
-### 4. Install and enable the service
-
-```bash
-sudo cp /opt/lecture-tools/app/config/systemd/lecture-tools.service /etc/systemd/system/lecture-tools.service
-sudo chown root:root /etc/systemd/system/lecture-tools.service
-sudo chmod 644 /etc/systemd/system/lecture-tools.service
-sudo systemctl daemon-reload
-sudo systemctl enable --now lecture-tools
-sudo systemctl status lecture-tools
-```
-
-Tail runtime logs with `journalctl -u lecture-tools -f` to confirm that the API is listening on `http://127.0.0.1:8000`.
-
-### 5. Configure Nginx for `https://lecture.example.com/tools`
-
-Replace `lecture.example.com` with your domain and `/tools` with the sub-path you selected.
-
-```bash
-sudo tee /etc/nginx/sites-available/lecture-tools.conf <<'EOF'
-server {
-    listen 80;
-    server_name lecture.example.com;
-
-    location /tools/ {
-        proxy_pass http://127.0.0.1:8000/;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Prefix /tools;
-        proxy_redirect off;
-    }
-
-    location /tools/static/ {
-        proxy_pass http://127.0.0.1:8000/static/;
-    }
-}
-EOF
-sudo ln -s /etc/nginx/sites-available/lecture-tools.conf /etc/nginx/sites-enabled/lecture-tools.conf
-sudo nginx -t
-sudo systemctl reload nginx
-```
-
-> 📌 The `proxy_set_header X-Forwarded-Prefix /tools` header and matching `LECTURE_TOOLS_ROOT_PATH` ensure that FastAPI generates correct URLs for assets and API routes.
-
-### 6. Issue a Let's Encrypt certificate
-
-Certbot will detect the Nginx site and request a certificate for the defined domain. The `--redirect` flag automatically updates the configuration to force HTTPS.
-
-```bash
-sudo certbot --nginx -d lecture.example.com --non-interactive --agree-tos -m admin@lecture.example.com --redirect
-```
-
-Verify the renewal timer:
-
-```bash
-sudo systemctl status certbot.timer
-sudo certbot renew --dry-run
-```
-
-### 7. Update the deployment
-
-Whenever you pull new code, restart the service to pick up the changes:
-
-```bash
-sudo systemctl stop lecture-tools
-sudo -u lecturetools git -C /opt/lecture-tools/app pull
-sudo -u lecturetools /opt/lecture-tools/.venv/bin/pip install -r /opt/lecture-tools/app/requirements-dev.txt
-sudo systemctl start lecture-tools
-```
-
-Your Lecture Tools instance is now available at `https://lecture.example.com/tools/` with automatic HTTPS renewal and an isolated systemd service.
-
-> 🔐 Harden your VPS further by restricting inbound firewall rules to ports 22 and 443, rotating SSH keys regularly, and monitoring `journalctl` logs for suspicious activity.
-
----
+Remove the `storage/` and `assets/` directories manually if you no longer need the persisted data.
 
 ## 🧭 Project Tour
 

@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+*.so
+*.log
+.env
+.venv/
+.git/
+.gitignore
+storage/
+assets/
+cli/
+scripts/
+tests/
+start.sh
+start.bat
