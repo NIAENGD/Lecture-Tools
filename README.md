@@ -41,8 +41,8 @@
 
 1. **Clone & (optionally) isolate dependencies**
    ```bash
-   git clone https://github.com/your-org/lecture-tools.git
-   cd lecture-tools
+   git clone https://github.com/NIAENGD/Lecture-Tools.git
+   cd Lecture-Tools
    python -m venv .venv && source .venv/bin/activate  # PowerShell: .\.venv\\Scripts\\Activate.ps1
    ```
 2. **Bootstrap with my launcher**
@@ -79,9 +79,12 @@ You can either use the automated installer or follow the manual steps below to c
 
 ### ⚙️ Automated installer (Nginx + HTTPS)
 
-Run the helper script as root on a fresh Debian 13 server:
+Make sure Git is available, clone the repository, and run the helper script as root on a fresh Debian 13 server:
 
 ```bash
+sudo apt-get update && sudo apt-get install -y git
+git clone https://github.com/NIAENGD/Lecture-Tools.git
+cd Lecture-Tools
 sudo ./scripts/install_server.sh
 ```
 
@@ -114,7 +117,7 @@ sudo chown -R lecturetools:lecturetools /opt/lecture-tools
 ### 2. Deploy the application
 
 ```bash
-sudo -u lecturetools git clone https://github.com/your-org/lecture-tools.git /opt/lecture-tools/app
+sudo -u lecturetools git clone https://github.com/NIAENGD/Lecture-Tools.git /opt/lecture-tools/app
 sudo -u lecturetools python3 -m venv /opt/lecture-tools/.venv
 sudo -u lecturetools /opt/lecture-tools/.venv/bin/pip install --upgrade pip
 sudo -u lecturetools /opt/lecture-tools/.venv/bin/pip install -r /opt/lecture-tools/app/requirements-dev.txt

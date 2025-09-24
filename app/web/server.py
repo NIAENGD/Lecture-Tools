@@ -483,16 +483,53 @@ def _extract_forwarded_prefix(scope: Scope) -> Optional[str]:
 
     path_value = headers.get("x-forwarded-path")
     forwarded_path = _normalize_forwarded_path(path_value)
-    if forwarded_path is None:
+    if forwarded_path is not None:
+        current_path = scope.get("path") or "/"
+        if not current_path.startswith("/"):
+            current_path = f"/{current_path}"
+
+        if forwarded_path.endswith(current_path):
+            prefix_candidate = forwarded_path[: len(forwarded_path) - len(current_path)]
+            normalized = _normalize_forwarded_prefix(prefix_candidate)
+            if normalized is not None:
+                return normalized
+
+    inferred = _infer_prefix_from_path(scope.get("path"))
+    if inferred:
+        return inferred
+
+    return None
+
+
+def _infer_prefix_from_path(value: Any) -> Optional[str]:
+    if value is None:
         return None
 
-    current_path = scope.get("path") or "/"
-    if not current_path.startswith("/"):
-        current_path = f"/{current_path}"
+    if isinstance(value, (bytes, bytearray)):
+        path = value.decode("latin-1", errors="ignore")
+    else:
+        path = str(value)
 
-    if forwarded_path.endswith(current_path):
-        prefix_candidate = forwarded_path[: len(forwarded_path) - len(current_path)]
-        return _normalize_forwarded_prefix(prefix_candidate)
+    if not path:
+        return None
+    if not path.startswith("/"):
+        path = f"/{path}"
+
+    markers: Tuple[str, ...] = (
+        "/api/",
+        "/storage/",
+        "/static/",
+        "/docs",
+        "/openapi.json",
+    )
+    for marker in markers:
+        index = path.find(marker)
+        if index <= 0:
+            continue
+        prefix = path[:index]
+        prefix = prefix.rstrip("/")
+        if prefix:
+            return prefix
 
     return None
 
