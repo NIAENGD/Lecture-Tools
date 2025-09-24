@@ -3025,6 +3025,40 @@
 
         const DEFAULT_LANGUAGE = 'en';
 
+        const BASE_PATH = (() => {
+          const { pathname } = window.location;
+          if (!pathname || pathname === '/' || pathname === '/index.html') {
+            return '';
+          }
+          const withoutIndex = pathname.replace(/\/index\.html?$/, '');
+          const trimmed = withoutIndex.endsWith('/')
+            ? withoutIndex.slice(0, -1)
+            : withoutIndex;
+          return trimmed === '/' ? '' : trimmed;
+        })();
+
+        window.__LECTURE_TOOLS_BASE_PATH__ = BASE_PATH;
+
+        function resolveAppUrl(target) {
+          if (!target || typeof target !== 'string') {
+            return target;
+          }
+          if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(target) || target.startsWith('//')) {
+            return target;
+          }
+          if (target.startsWith('#') || target.startsWith('?')) {
+            return target;
+          }
+          const normalized = target.startsWith('/') ? target : `/${target}`;
+          if (!BASE_PATH) {
+            return normalized;
+          }
+          if (normalized === '/') {
+            return BASE_PATH || '/';
+          }
+          return `${BASE_PATH}${normalized}`;
+        }
+
         function resolveTranslation(locale, key) {
           if (!locale || !key) {
             return undefined;
@@ -4090,14 +4124,16 @@
           if (!path) {
             return '#';
           }
-          return `/storage/${path
+          const encodedPath = path
             .split('/')
             .map((segment) => encodeURIComponent(segment))
-            .join('/')}`;
+            .join('/');
+          return resolveAppUrl(`/storage/${encodedPath}`);
         }
 
         async function request(url, options = {}) {
-          const response = await fetch(url, options);
+          const resolvedUrl = resolveAppUrl(url);
+          const response = await fetch(resolvedUrl, options);
           if (!response.ok) {
             let detail = `${response.status} ${response.statusText}`;
             try {
