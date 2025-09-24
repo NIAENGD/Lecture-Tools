@@ -1767,6 +1767,22 @@ def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
 
         return {"status": "shutting_down"}
 
+    @app.get("/{requested_path:path}", response_class=HTMLResponse)
+    async def spa_fallback(requested_path: str) -> HTMLResponse:
+        """Serve the UI for non-API paths when the app lives under a prefix."""
+
+        if not requested_path or requested_path == "index.html":
+            return HTMLResponse(index_html)
+
+        normalized = requested_path.lstrip("/")
+        if normalized in {"api", "storage"}:
+            raise HTTPException(status_code=404, detail="Not Found")
+
+        if normalized.startswith("api/") or normalized.startswith("storage/"):
+            raise HTTPException(status_code=404, detail="Not Found")
+
+        return HTMLResponse(index_html)
+
     return app
 
 
