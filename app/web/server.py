@@ -17,7 +17,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any, Dict, List, Literal, Optional, Set, Tuple
 
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Response
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Response, Request
 from fastapi import status
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -591,6 +591,24 @@ def create_app(
 
     index_html = _TEMPLATE_PATH.read_text(encoding="utf-8")
 
+    def _render_index_html(request: Request | None = None) -> str:
+        candidates: List[str] = []
+        if request is not None:
+            scope_root = request.scope.get("root_path")
+            if isinstance(scope_root, str):
+                candidates.append(scope_root)
+        if normalized_root:
+            candidates.append(normalized_root)
+
+        resolved = ""
+        for candidate in candidates:
+            normalized = _normalize_root_path(candidate)
+            if normalized:
+                resolved = normalized
+                break
+        safe_value = json.dumps(resolved)[1:-1]
+        return index_html.replace("__LECTURE_TOOLS_ROOT_PATH__", safe_value)
+
     def _load_ui_settings() -> UISettings:
         try:
             settings = settings_store.load()
@@ -935,8 +953,8 @@ def create_app(
         return slide_image_relative
 
     @app.get("/", response_class=HTMLResponse)
-    async def index() -> HTMLResponse:
-        return HTMLResponse(index_html)
+    async def index(request: Request) -> HTMLResponse:
+        return HTMLResponse(_render_index_html(request))
 
     @app.get("/api/classes")
     async def list_classes() -> Dict[str, Any]:
@@ -1907,11 +1925,11 @@ def create_app(
         return {"status": "shutting_down"}
 
     @app.get("/{requested_path:path}", response_class=HTMLResponse)
-    async def spa_fallback(requested_path: str) -> HTMLResponse:
+    async def spa_fallback(request: Request, requested_path: str) -> HTMLResponse:
         """Serve the UI for non-API paths when the app lives under a prefix."""
 
         if not requested_path or requested_path == "index.html":
-            return HTMLResponse(index_html)
+            return HTMLResponse(_render_index_html(request))
 
         normalized = requested_path.lstrip("/")
         if normalized in {"api", "storage"}:
@@ -1920,7 +1938,7 @@ def create_app(
         if normalized.startswith("api/") or normalized.startswith("storage/"):
             raise HTTPException(status_code=404, detail="Not Found")
 
-        return HTMLResponse(index_html)
+        return HTMLResponse(_render_index_html(request))
 
     return app
 
