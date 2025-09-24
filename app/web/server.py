@@ -22,6 +22,7 @@ from fastapi import status
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from ..config import AppConfig
 from ..processing import PyMuPDFSlideConverter
@@ -429,11 +430,149 @@ class SettingsPayload(BaseModel):
     language: Literal[*_LANGUAGE_OPTIONS] = _DEFAULT_UI_SETTINGS.language
 
 
-def create_app(repository: LectureRepository, *, config: AppConfig) -> FastAPI:
+class ForwardedRootPathMiddleware:
+    """Apply proxy-provided root path information to incoming requests."""
+
+    def __init__(self, app: ASGIApp) -> None:
+        self._app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope.get("type") not in {"http", "websocket"}:
+            await self._app(scope, receive, send)
+            return
+
+        prefix = _extract_forwarded_prefix(scope)
+        if prefix is None:
+            await self._app(scope, receive, send)
+            return
+
+        adjusted_scope = dict(scope)
+        adjusted_scope["root_path"] = prefix
+        adjusted_scope["path"] = _trim_path(scope.get("path", "/"), prefix)
+
+        raw_path = scope.get("raw_path")
+        if isinstance(raw_path, (bytes, bytearray)):
+            decoded = raw_path.decode("latin-1")
+            trimmed = _trim_path(decoded, prefix)
+            adjusted_scope["raw_path"] = trimmed.encode("latin-1")
+
+        await self._app(adjusted_scope, receive, send)
+
+
+def _normalize_root_path(value: Optional[str]) -> str:
+    if value is None:
+        return ""
+    normalized = value.strip()
+    if not normalized:
+        return ""
+    if not normalized.startswith("/"):
+        normalized = f"/{normalized}"
+    normalized = normalized.rstrip("/")
+    if normalized == "":
+        return ""
+    return normalized
+
+
+def _extract_forwarded_prefix(scope: Scope) -> Optional[str]:
+    headers = _headers_to_dict(scope)
+
+    prefix_value = headers.get("x-forwarded-prefix")
+    prefix = _normalize_forwarded_prefix(prefix_value)
+    if prefix is not None:
+        return prefix
+
+    path_value = headers.get("x-forwarded-path")
+    forwarded_path = _normalize_forwarded_path(path_value)
+    if forwarded_path is None:
+        return None
+
+    current_path = scope.get("path") or "/"
+    if not current_path.startswith("/"):
+        current_path = f"/{current_path}"
+
+    if forwarded_path.endswith(current_path):
+        prefix_candidate = forwarded_path[: len(forwarded_path) - len(current_path)]
+        return _normalize_forwarded_prefix(prefix_candidate)
+
+    return None
+
+
+def _headers_to_dict(scope: Scope) -> Dict[str, str]:
+    headers: Dict[str, str] = {}
+    for key, value in scope.get("headers", []):
+        try:
+            lower_key = key.decode("latin-1").lower()
+            if lower_key in headers:
+                continue
+            headers[lower_key] = value.decode("latin-1")
+        except Exception:  # pragma: no cover - defensive decoding
+            continue
+    return headers
+
+
+def _normalize_forwarded_prefix(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return None
+    candidate = value.split(",", 1)[0].strip()
+    if not candidate:
+        return None
+    if not candidate.startswith("/"):
+        candidate = f"/{candidate}"
+    candidate = candidate.rstrip("/")
+    if candidate == "":
+        return None
+    return candidate
+
+
+def _normalize_forwarded_path(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return None
+    candidate = value.split(",", 1)[0].strip()
+    if not candidate:
+        return None
+    if not candidate.startswith("/"):
+        candidate = f"/{candidate}"
+    return candidate
+
+
+def _trim_path(path: Any, prefix: str) -> str:
+    if isinstance(path, (bytes, bytearray)):
+        working = path.decode("latin-1")
+    else:
+        working = str(path)
+    if not working:
+        working = "/"
+    if not working.startswith("/"):
+        working = f"/{working}"
+
+    if prefix and working.startswith(prefix):
+        trimmed = working[len(prefix) :]
+        if not trimmed:
+            trimmed = "/"
+    else:
+        trimmed = working
+
+    if not trimmed.startswith("/"):
+        trimmed = f"/{trimmed}"
+    return trimmed
+
+
+def create_app(
+    repository: LectureRepository,
+    *,
+    config: AppConfig,
+    root_path: str | None = None,
+) -> FastAPI:
     """Return a configured FastAPI application."""
 
-    app = FastAPI(title="Lecture Tools", description="Browse lectures from any device")
+    normalized_root = _normalize_root_path(root_path)
+    app = FastAPI(
+        title="Lecture Tools",
+        description="Browse lectures from any device",
+        root_path=normalized_root,
+    )
     app.state.server = None
+    app.add_middleware(ForwardedRootPathMiddleware)
     settings_store = SettingsStore(config)
     progress_tracker = TranscriptionProgressTracker()
     gpu_support_state: Dict[str, Any] = {
