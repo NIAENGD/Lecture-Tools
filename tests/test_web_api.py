@@ -55,6 +55,27 @@ def test_api_handles_configured_root_path(temp_config):
     assert response.status_code == 200
 
 
+def test_index_injects_configured_root_path(temp_config):
+    repository, _lecture_id, _module_id = _create_sample_data(temp_config)
+    app = create_app(repository, config=temp_config, root_path="/lecture")
+    client = TestClient(app)
+
+    response = client.get("/lecture/")
+    assert response.status_code == 200
+    assert "__LECTURE_TOOLS_ROOT_PATH__" not in response.text
+    assert 'window.__LECTURE_TOOLS_SERVER_ROOT_PATH__ = "/lecture";' in response.text
+
+
+def test_index_injects_empty_root_path(temp_config):
+    repository, _lecture_id, _module_id = _create_sample_data(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    response = client.get("/")
+    assert response.status_code == 200
+    assert 'window.__LECTURE_TOOLS_SERVER_ROOT_PATH__ = "";' in response.text
+
+
 def test_api_honors_forwarded_prefix_header(temp_config):
     repository, _lecture_id, _module_id = _create_sample_data(temp_config)
     app = create_app(repository, config=temp_config)

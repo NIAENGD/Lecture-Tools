@@ -4,6 +4,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title data-i18n="document.title">Lecture Tools</title>
+    <script>
+      window.__LECTURE_TOOLS_SERVER_ROOT_PATH__ = "__LECTURE_TOOLS_ROOT_PATH__";
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -3025,7 +3028,31 @@
 
         const DEFAULT_LANGUAGE = 'en';
 
+        function normalizeServerPath(value) {
+          if (typeof value !== 'string') {
+            return null;
+          }
+          const sentinel = '__LECTURE_TOOLS_ROOT_PATH__';
+          if (value === sentinel) {
+            return null;
+          }
+          let normalized = value.trim();
+          if (!normalized || normalized === '/') {
+            return '';
+          }
+          if (!normalized.startsWith('/')) {
+            normalized = `/${normalized}`;
+          }
+          return normalized.replace(/\/+$/, '') || '';
+        }
+
         const BASE_PATH = (() => {
+          const serverPath = normalizeServerPath(
+            window.__LECTURE_TOOLS_SERVER_ROOT_PATH__,
+          );
+          if (serverPath !== null) {
+            return serverPath;
+          }
           const { pathname } = window.location;
           if (!pathname || pathname === '/' || pathname === '/index.html') {
             return '';
