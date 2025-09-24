@@ -88,23 +88,19 @@ Deploy the Lecture Tools server in a reproducible Docker container. Personal com
 curl -fsSL https://raw.githubusercontent.com/NIAENGD/Lecture-Tools/main/scripts/docker-install.sh | bash
 ```
 
-The installer script takes care of the entire workflow:
+The installer now guides you through a full production-ready setup:
 
-- Clones the latest Lecture Tools build into `~/lecture-tools` (override with `LECTURE_TOOLS_INSTALL_DIR=/custom/path`).
-- Builds or pulls the Docker images and launches the stack.
-- Keeps the `storage/` and `assets/` folders mapped from the host for persistence.
+- Verifies you are on a supported Debian-based distribution and installs every missing dependency (Docker Engine, Compose plugin, git, curl, etc.).
+- Prompts for the Git repository/branch, installation directory (default `/opt/lecture-tools`), persistent data directory, HTTP port, application root path (for reverse proxies), and the system user that will own the deployment.
+- Creates a dedicated systemd unit so the stack can automatically start on boot and be managed like a native service.
+- Generates a management CLI named `lecturetool` under `/usr/local/bin` with the following sub-commands:
+  - `lecturetool -enable` / `lecturetool -disable` – toggle auto-start at boot.
+  - `lecturetool -start` / `lecturetool -stop` – control the running containers.
+  - `lecturetool -status` – view systemd status plus container health.
+  - `lecturetool -update` – pull the latest code and container images, then restart the stack.
+  - `lecturetool -remove` – stop everything, delete persisted data, and uninstall Docker + Compose if the installer added them.
 
-Re-run the script at any time for updates. It refreshes the installation in a temporary workspace, replaces the on-disk copy, and restarts the containers with the newest code.
-
-Customise each run with optional environment variables:
-
-| Variable | Description | Default |
-| --- | --- | --- |
-| `LECTURE_TOOLS_INSTALL_DIR` | Where the project files are copied before launching Docker. | `~/lecture-tools` |
-| `LECTURE_TOOLS_REPO` | Git repository to clone (handy for forks). | `https://github.com/NIAENGD/Lecture-Tools.git` |
-| `LECTURE_TOOLS_PROJECT_NAME` | Friendly name used in log messages. | `lecture-tools` |
-
-After the script completes, open `http://SERVER_IP:8000/` (or the proxied address) to reach the UI. When deploying behind a reverse proxy, set `LECTURE_TOOLS_ROOT_PATH=/lecture` before running the installer so the container inherits the correct prefix.
+Open `http://SERVER_IP:PORT/` once the installer finishes. If you configure a reverse proxy, provide the desired path prefix when prompted so `LECTURE_TOOLS_ROOT_PATH` is populated automatically.
 
 ### 🔧 Configuration
 
@@ -115,18 +111,18 @@ After the script completes, open `http://SERVER_IP:8000/` (or the proxied addres
 ### ♻️ Updating
 
 ```bash
-docker compose pull  # fetch updated base images
-docker compose build # rebuild the Lecture Tools image
-docker compose up -d --force-recreate
+sudo lecturetool -update
 ```
+
+The update routine will stop the service, pull the latest git commit for the branch you selected during installation, rebuild/pull container images, and restart the stack.
 
 ### 🧹 Removing the stack
 
 ```bash
-docker compose down
+sudo lecturetool -remove
 ```
 
-Remove the `storage/` and `assets/` directories manually if you no longer need the persisted data.
+This command stops the containers, disables and deletes the systemd service, removes the persisted data directories, and purges Docker/Compose if they were originally installed by the helper.
 
 ## 🧭 Project Tour
 
