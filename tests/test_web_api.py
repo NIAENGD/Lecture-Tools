@@ -482,6 +482,38 @@ def test_upload_audio_processes_file(temp_config):
     assert "Audio mastering" in (progress_payload.get("message") or "")
 
 
+def test_upload_audio_converts_non_wav(monkeypatch, temp_config):
+    repository, lecture_id, _module_id = _create_sample_data(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    def fake_ensure_wav(path, *, output_dir, stem, timestamp):
+        destination = output_dir / f"{stem}-converted.wav"
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(_build_wav_bytes())
+        return destination, True
+
+    monkeypatch.setattr(web_server, "ensure_wav", fake_ensure_wav)
+
+    response = client.post(
+        f"/api/lectures/{lecture_id}/assets/audio",
+        files={"file": ("lecture.mp3", b"id3", "audio/mpeg")},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["audio_path"].endswith("-converted.wav")
+    wav_path = temp_config.storage_root / payload["audio_path"]
+    assert wav_path.exists()
+    assert not (wav_path.parent / "lecture.mp3").exists()
+
+    updated = repository.get_lecture(lecture_id)
+    assert updated is not None
+    assert updated.audio_path and updated.audio_path.endswith("-converted.wav")
+
+    processed_relative = payload.get("processed_audio_path")
+    assert processed_relative and processed_relative.endswith(".wav")
+
 def test_upload_slides_auto_generates_archive(monkeypatch, temp_config):
     repository, lecture_id, _module_id = _create_sample_data(temp_config)
 
