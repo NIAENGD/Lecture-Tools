@@ -97,17 +97,19 @@ To remove the deployment later, run `sudo ./scripts/remove_server.sh`. For a com
 
 ### 🛠️ Manual installation
 
-Follow these steps to run Lecture Tools as a managed service that automatically starts whenever your VPS reboots.
+Follow the steps below to deploy Lecture Tools manually and serve it securely at a custom domain (e.g. `lecture.example.com/tools`).
 
 ### 1. Prepare the server
 
 ```bash
 sudo apt update && sudo apt upgrade -y
-sudo apt install -y python3 python3-venv python3-pip git
+sudo apt install -y python3 python3-venv python3-pip git nginx certbot python3-certbot-nginx
 sudo adduser --system --group --home /opt/lecture-tools lecturetools
 sudo mkdir -p /opt/lecture-tools
 sudo chown -R lecturetools:lecturetools /opt/lecture-tools
 ```
+
+> 🧱 The dedicated `lecturetools` user isolates the application from the rest of the system. The Nginx and Certbot packages are installed now so that HTTPS can be configured later without additional steps.
 
 ### 2. Deploy the application
 
@@ -118,35 +120,89 @@ sudo -u lecturetools /opt/lecture-tools/.venv/bin/pip install --upgrade pip
 sudo -u lecturetools /opt/lecture-tools/.venv/bin/pip install -r /opt/lecture-tools/app/requirements-dev.txt
 ```
 
-> 💡 Keep long-lived data outside the git checkout. By default the application uses `/opt/lecture-tools/app/storage/` which already ships in the repository.
+Create an environment file for runtime configuration:
 
-### 3. Review the service definition
+```bash
+sudo -u lecturetools tee /opt/lecture-tools/app/.env <<'EOF'
+LECTURE_TOOLS_ROOT_PATH=/tools
+LECTURE_TOOLS_LOG_LEVEL=info
+EOF
+```
 
-The repository ships a systemd unit at `config/systemd/lecture-tools.service`. Update the following lines to match your environment if needed:
+Adjust values (database URLs, storage paths, etc.) as needed for your deployment.
 
-- `WorkingDirectory=` – folder that contains `run.py` (default `/opt/lecture-tools/app`).
-- `ExecStart=` – full path to the virtual environment’s Python interpreter and desired `run.py` command.
-- `User=` / `Group=` – change to the dedicated account you created above (for example `lecturetools`).
+### 3. Review the systemd service
 
-### 4. Install the systemd unit
+The repository ships a unit file at `config/systemd/lecture-tools.service`. Update the following directives if required:
+
+- `WorkingDirectory=` – path containing `run.py` (default `/opt/lecture-tools/app`).
+- `ExecStart=` – full path to the virtual environment’s Python interpreter and desired `run.py` command. Add `--root-path /tools` to match the sub-path you plan to expose.
+- `EnvironmentFile=` – point to `/opt/lecture-tools/app/.env` if you want systemd to load it automatically.
+- `User=` / `Group=` – ensure the service runs as the `lecturetools` user.
+
+### 4. Install and enable the service
 
 ```bash
 sudo cp /opt/lecture-tools/app/config/systemd/lecture-tools.service /etc/systemd/system/lecture-tools.service
 sudo chown root:root /etc/systemd/system/lecture-tools.service
 sudo chmod 644 /etc/systemd/system/lecture-tools.service
-```
-
-### 5. Enable the service
-
-```bash
 sudo systemctl daemon-reload
 sudo systemctl enable --now lecture-tools
 sudo systemctl status lecture-tools
 ```
 
-Tail runtime logs with `journalctl -u lecture-tools -f`.
+Tail runtime logs with `journalctl -u lecture-tools -f` to confirm that the API is listening on `http://127.0.0.1:8000`.
 
-### 6. Update the deployment
+### 5. Configure Nginx for `https://lecture.example.com/tools`
+
+Replace `lecture.example.com` with your domain and `/tools` with the sub-path you selected.
+
+```bash
+sudo tee /etc/nginx/sites-available/lecture-tools.conf <<'EOF'
+server {
+    listen 80;
+    server_name lecture.example.com;
+
+    location /tools/ {
+        proxy_pass http://127.0.0.1:8000/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Prefix /tools;
+        proxy_redirect off;
+    }
+
+    location /tools/static/ {
+        proxy_pass http://127.0.0.1:8000/static/;
+    }
+}
+EOF
+sudo ln -s /etc/nginx/sites-available/lecture-tools.conf /etc/nginx/sites-enabled/lecture-tools.conf
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+> 📌 The `proxy_set_header X-Forwarded-Prefix /tools` header and matching `LECTURE_TOOLS_ROOT_PATH` ensure that FastAPI generates correct URLs for assets and API routes.
+
+### 6. Issue a Let's Encrypt certificate
+
+Certbot will detect the Nginx site and request a certificate for the defined domain. The `--redirect` flag automatically updates the configuration to force HTTPS.
+
+```bash
+sudo certbot --nginx -d lecture.example.com --non-interactive --agree-tos -m admin@lecture.example.com --redirect
+```
+
+Verify the renewal timer:
+
+```bash
+sudo systemctl status certbot.timer
+sudo certbot renew --dry-run
+```
+
+### 7. Update the deployment
+
+Whenever you pull new code, restart the service to pick up the changes:
 
 ```bash
 sudo systemctl stop lecture-tools
@@ -155,7 +211,9 @@ sudo -u lecturetools /opt/lecture-tools/.venv/bin/pip install -r /opt/lecture-to
 sudo systemctl start lecture-tools
 ```
 
-> 🔐 Harden your VPS by restricting inbound ports (allow only the one you expose via `run.py`) and serving the application behind a reverse proxy such as Nginx with HTTPS termination. If the proxy mounts the site under a prefix (e.g. `/lecture`), set `Environment=LECTURE_TOOLS_ROOT_PATH=/lecture` in the systemd unit or pass `--root-path /lecture` to the CLI so FastAPI rewrites incoming requests correctly.
+Your Lecture Tools instance is now available at `https://lecture.example.com/tools/` with automatic HTTPS renewal and an isolated systemd service.
+
+> 🔐 Harden your VPS further by restricting inbound firewall rules to ports 22 and 443, rotating SSH keys regularly, and monitoring `journalctl` logs for suspicious activity.
 
 ---
 
