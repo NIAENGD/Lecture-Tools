@@ -82,17 +82,29 @@ Deploy the Lecture Tools server in a reproducible Docker container. Personal com
 - Docker Engine 24 or newer
 - The Docker Compose plugin (bundled with modern Docker releases)
 
-### 🚀 Quick start
+### 🚀 One-click install
 
-1. Clone the repository on the host that will run the container and navigate into it.
-2. (Optional) Define a root-path prefix if the app sits behind a proxy: `export LECTURE_TOOLS_ROOT_PATH=/lecture`.
-3. Build and launch the service:
-   ```bash
-   docker compose up -d
-   ```
-4. Open `http://SERVER_IP:8000/` (or the proxied address) to reach the UI.
+```bash
+curl -fsSL https://raw.githubusercontent.com/NIAENGD/Lecture-Tools/main/scripts/docker-install.sh | bash
+```
 
-The compose stack mounts `./storage` and `./assets` from the host so transcripts, uploads, and downloaded models persist across restarts.
+The installer script takes care of the entire workflow:
+
+- Clones the latest Lecture Tools build into `~/lecture-tools` (override with `LECTURE_TOOLS_INSTALL_DIR=/custom/path`).
+- Builds or pulls the Docker images and launches the stack.
+- Keeps the `storage/` and `assets/` folders mapped from the host for persistence.
+
+Re-run the script at any time for updates. It refreshes the installation in a temporary workspace, replaces the on-disk copy, and restarts the containers with the newest code.
+
+Customise each run with optional environment variables:
+
+| Variable | Description | Default |
+| --- | --- | --- |
+| `LECTURE_TOOLS_INSTALL_DIR` | Where the project files are copied before launching Docker. | `~/lecture-tools` |
+| `LECTURE_TOOLS_REPO` | Git repository to clone (handy for forks). | `https://github.com/NIAENGD/Lecture-Tools.git` |
+| `LECTURE_TOOLS_PROJECT_NAME` | Friendly name used in log messages. | `lecture-tools` |
+
+After the script completes, open `http://SERVER_IP:8000/` (or the proxied address) to reach the UI. When deploying behind a reverse proxy, set `LECTURE_TOOLS_ROOT_PATH=/lecture` before running the installer so the container inherits the correct prefix.
 
 ### 🔧 Configuration
 
