@@ -62,10 +62,29 @@ DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8000
 
 
+def _normalize_root_path(root_path: Optional[str]) -> str:
+    if root_path is None:
+        return ""
+    normalized = root_path.strip()
+    if not normalized:
+        return ""
+    if not normalized.startswith("/"):
+        normalized = f"/{normalized}"
+    normalized = normalized.rstrip("/")
+    if normalized == "":
+        return ""
+    return normalized
+
+
 @cli.command()
 def serve(
     host: str = typer.Option(DEFAULT_HOST, help="Host interface for the web server"),
     port: int = typer.Option(DEFAULT_PORT, help="Port for the web server"),
+    root_path: Optional[str] = typer.Option(
+        None,
+        help="Prefix the application expects when mounted behind a proxy",
+        envvar="LECTURE_TOOLS_ROOT_PATH",
+    ),
 ) -> None:
     """Run the FastAPI-powered web experience."""
 
@@ -73,16 +92,25 @@ def serve(
     _prepare_logging(app_config.storage_root)
 
     repository = LectureRepository(app_config)
-    app = create_app(repository, config=app_config)
+    normalized_root = _normalize_root_path(root_path)
+    app = create_app(repository, config=app_config, root_path=normalized_root)
 
-    server_config = uvicorn.Config(app, host=host, port=port, log_config=None)
+    server_config = uvicorn.Config(
+        app,
+        host=host,
+        port=port,
+        log_config=None,
+        root_path=normalized_root,
+    )
     server = uvicorn.Server(server_config)
     app.state.server = server
 
     browser_host = host
     if not browser_host or browser_host in {"0.0.0.0", "::"}:
         browser_host = "127.0.0.1"
-    url = f"http://{browser_host}:{port}/"
+    browser_suffix = normalized_root.rstrip("/")
+    url_path = f"{browser_suffix}/" if browser_suffix else "/"
+    url = f"http://{browser_host}:{port}{url_path}"
 
     def _open_browser_later() -> None:
         time.sleep(1.0)

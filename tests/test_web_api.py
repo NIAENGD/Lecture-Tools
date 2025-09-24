@@ -46,6 +46,50 @@ def _create_sample_data(config) -> tuple[LectureRepository, int, int]:
     return repository, lecture_id, module_id
 
 
+def test_api_handles_configured_root_path(temp_config):
+    repository, _lecture_id, _module_id = _create_sample_data(temp_config)
+    app = create_app(repository, config=temp_config, root_path="/lecture")
+    client = TestClient(app)
+
+    response = client.get("/lecture/api/classes")
+    assert response.status_code == 200
+
+
+def test_api_honors_forwarded_prefix_header(temp_config):
+    repository, _lecture_id, _module_id = _create_sample_data(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    response = client.get(
+        "/lecture/api/classes",
+        headers={"X-Forwarded-Prefix": "/lecture"},
+    )
+    assert response.status_code == 200
+
+
+def test_static_storage_respects_root_path(temp_config):
+    repository = LectureRepository(temp_config)
+    sample_file = temp_config.storage_root / "hello.txt"
+    sample_file.write_text("hi", encoding="utf-8")
+
+    app = create_app(repository, config=temp_config, root_path="/lecture")
+    client = TestClient(app)
+
+    response = client.get("/lecture/storage/hello.txt")
+    assert response.status_code == 200
+    assert response.text == "hi"
+
+
+def test_spa_fallback_respects_root_path(temp_config):
+    repository = LectureRepository(temp_config)
+    app = create_app(repository, config=temp_config, root_path="/lecture")
+    client = TestClient(app)
+
+    response = client.get("/lecture/overview")
+    assert response.status_code == 200
+    assert "<!DOCTYPE html>" in response.text
+
+
 def test_list_classes_reports_asset_counts(temp_config):
     repository, lecture_id, _module_id = _create_sample_data(temp_config)
     app = create_app(repository, config=temp_config)

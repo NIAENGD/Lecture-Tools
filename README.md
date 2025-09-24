@@ -59,6 +59,12 @@
    python run.py  # or customise: python run.py serve --host 0.0.0.0 --port 9000
    ```
    Visit **http://127.0.0.1:8000/** to enjoy the modern control centre.
+   - Deploying behind a reverse proxy? Provide the mount prefix so API, UI, and
+     static assets resolve correctly:
+       ```bash
+       python run.py serve --root-path /lecture
+       ```
+     or set `LECTURE_TOOLS_ROOT_PATH=/lecture` in the environment.
 5. **Classic terminal vibes still included**
    ```bash
    python run.py overview --style modern
@@ -127,7 +133,7 @@ sudo -u lecturetools /opt/lecture-tools/.venv/bin/pip install -r /opt/lecture-to
 sudo systemctl start lecture-tools
 ```
 
-> 🔐 Harden your VPS by restricting inbound ports (allow only the one you expose via `run.py`) and serving the application behind a reverse proxy such as Nginx with HTTPS termination.
+> 🔐 Harden your VPS by restricting inbound ports (allow only the one you expose via `run.py`) and serving the application behind a reverse proxy such as Nginx with HTTPS termination. If the proxy mounts the site under a prefix (e.g. `/lecture`), set `Environment=LECTURE_TOOLS_ROOT_PATH=/lecture` in the systemd unit or pass `--root-path /lecture` to the CLI so FastAPI rewrites incoming requests correctly.
 
 ---
 
