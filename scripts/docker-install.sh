@@ -22,15 +22,27 @@ require_cmd() {
   fi
 }
 
+trim_whitespace() {
+  local value=$1
+  while [[ -n $value && $value == [[:space:]]* ]]; do
+    value=${value#?}
+  done
+  while [[ -n $value && $value == *[[:space:]] ]]; do
+    value=${value%?}
+  done
+  printf '%s' "$value"
+}
+
 prompt_default() {
-  local prompt default reply
+  local prompt default reply trimmed
   prompt=$1
   default=$2
   read -r -p "$prompt [$default]: " reply || true
-  if [[ -z $reply ]]; then
+  trimmed=$(trim_whitespace "${reply:-}")
+  if [[ -z $trimmed ]]; then
     printf '%s' "$default"
   else
-    printf '%s' "$reply"
+    printf '%s' "$trimmed"
   fi
 }
 
