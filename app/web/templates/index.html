@@ -1761,6 +1761,7 @@
               },
               labels: {
                 audio: 'Audio',
+                masteredAudio: 'Mastered audio',
                 slides: 'Slides (PDF)',
                 transcript: 'Transcript',
                 notes: 'Notes',
@@ -1773,6 +1774,7 @@
                 linked: 'Linked: {{name}}',
                 linkedSlides: 'Linked: {{name}} (auto processed)',
                 archiveCreated: 'Archive created: {{name}}',
+                mastered: 'Mastered: {{name}}',
               },
               actions: {
                 upload: 'Upload',
@@ -1911,6 +1913,7 @@
               transcripts: 'Transcripts',
               slideDecks: 'Slide decks',
               audio: 'Audio files',
+              processedAudio: 'Mastered audio',
               notes: 'Notes',
               slideArchives: 'Slide archives',
             },
@@ -2089,6 +2092,7 @@
               },
               labels: {
                 audio: '音频',
+                masteredAudio: '优化音频',
                 slides: '课件（PDF）',
                 transcript: '逐字稿',
                 notes: '笔记',
@@ -2101,6 +2105,7 @@
                 linked: '已关联：{{name}}',
                 linkedSlides: '已关联：{{name}}（自动处理）',
                 archiveCreated: '已生成压缩包：{{name}}',
+                mastered: '已优化：{{name}}',
               },
               actions: {
                 upload: '上传',
@@ -2237,6 +2242,7 @@
               transcripts: '逐字稿',
               slideDecks: '课件',
               audio: '音频文件',
+              processedAudio: '优化音频',
               notes: '笔记',
               slideArchives: '课件压缩包',
             },
@@ -2415,6 +2421,7 @@
               },
               labels: {
                 audio: 'Audio',
+                masteredAudio: 'Audio masterizado',
                 slides: 'Diapositivas (PDF)',
                 transcript: 'Transcripción',
                 notes: 'Notas',
@@ -2427,6 +2434,7 @@
                 linked: 'Vinculado: {{name}}',
                 linkedSlides: 'Vinculado: {{name}} (procesado automáticamente)',
                 archiveCreated: 'Archivo creado: {{name}}',
+                mastered: 'Masterizado: {{name}}',
               },
               actions: {
                 upload: 'Subir',
@@ -2565,6 +2573,7 @@
               transcripts: 'Transcripciones',
               slideDecks: 'Presentaciones',
               audio: 'Archivos de audio',
+              processedAudio: 'Audio masterizado',
               notes: 'Notas',
               slideArchives: 'Archivos de diapositivas',
             },
@@ -2744,6 +2753,7 @@
               },
               labels: {
                 audio: 'Audio',
+                masteredAudio: 'Audio masterisé',
                 slides: 'Diapositives (PDF)',
                 transcript: 'Transcription',
                 notes: 'Notes',
@@ -2756,6 +2766,7 @@
                 linked: 'Lié : {{name}}',
                 linkedSlides: 'Lié : {{name}} (traitement automatique)',
                 archiveCreated: 'Archive créée : {{name}}',
+                mastered: 'Masterisé : {{name}}',
               },
               actions: {
                 upload: 'Importer',
@@ -2894,6 +2905,7 @@
               transcripts: 'Transcriptions',
               slideDecks: 'Présentations',
               audio: 'Fichiers audio',
+              processedAudio: 'Audio masterisé',
               notes: 'Notes',
               slideArchives: 'Archives de diapositives',
             },
@@ -3264,6 +3276,8 @@
           },
           transcriptionProgressTimer: null,
           transcriptionProgressLectureId: null,
+          processingProgressTimer: null,
+          processingProgressLectureId: null,
           lastProgressMessage: '',
           lastProgressRatio: null,
           statusHideTimer: null,
@@ -3724,6 +3738,13 @@
             labelKey: 'assets.labels.audio',
             accept: 'audio/*,video/*,*/*',
             type: 'audio',
+          },
+          {
+            key: 'processed_audio_path',
+            labelKey: 'assets.labels.masteredAudio',
+            accept: null,
+            type: 'processed_audio',
+            reveal: 'file',
           },
           {
             key: 'slide_path',
@@ -4212,12 +4233,39 @@
           }
         }
 
+        async function fetchProcessingProgress(lectureId) {
+          if (!lectureId) {
+            return null;
+          }
+          try {
+            const payload = await request(
+              `/api/lectures/${lectureId}/processing-progress`,
+            );
+            return payload?.progress || null;
+          } catch (error) {
+            return null;
+          }
+        }
+
         function stopTranscriptionProgress({ preserveMessage = false } = {}) {
           if (state.transcriptionProgressTimer !== null) {
             window.clearInterval(state.transcriptionProgressTimer);
           }
           state.transcriptionProgressTimer = null;
           state.transcriptionProgressLectureId = null;
+          if (!preserveMessage) {
+            state.lastProgressMessage = '';
+            state.lastProgressRatio = null;
+            resetStatusProgress();
+          }
+        }
+
+        function stopProcessingProgress({ preserveMessage = false } = {}) {
+          if (state.processingProgressTimer !== null) {
+            window.clearInterval(state.processingProgressTimer);
+          }
+          state.processingProgressTimer = null;
+          state.processingProgressLectureId = null;
           if (!preserveMessage) {
             state.lastProgressMessage = '';
             state.lastProgressRatio = null;
@@ -4266,6 +4314,22 @@
           };
           poll();
           state.transcriptionProgressTimer = window.setInterval(poll, 1200);
+        }
+
+        function startProcessingProgress(lectureId) {
+          stopProcessingProgress();
+          if (!lectureId) {
+            return;
+          }
+          state.processingProgressLectureId = lectureId;
+          const poll = async () => {
+            const progress = await fetchProcessingProgress(lectureId);
+            if (progress) {
+              handleProgressUpdate(progress);
+            }
+          };
+          poll();
+          state.processingProgressTimer = window.setInterval(poll, 900);
         }
 
         function clearDetailPanel() {
@@ -4339,6 +4403,7 @@
             [t('stats.transcripts'), stats.transcript_count],
             [t('stats.slideDecks'), stats.slide_count],
             [t('stats.audio'), stats.audio_count],
+            [t('stats.processedAudio'), stats.processed_audio_count],
             [t('stats.notes'), stats.notes_count],
             [t('stats.slideArchives'), stats.slide_image_count],
           ];
@@ -5271,6 +5336,8 @@
                 statusText = t('assets.status.linkedSlides', { name: fileName });
               } else if (definition.type === 'slide_images') {
                 statusText = t('assets.status.archiveCreated', { name: fileName });
+              } else if (definition.type === 'processed_audio') {
+                statusText = t('assets.status.mastered', { name: fileName });
               } else {
                 statusText = t('assets.status.linked', { name: fileName });
               }
@@ -5424,10 +5491,19 @@
           if (!state.selectedLectureId) {
             return;
           }
+          const lectureId = state.selectedLectureId;
           const formData = new FormData();
           formData.append('file', file);
           try {
-            await request(`/api/lectures/${state.selectedLectureId}/assets/${kind}`, {
+            if (kind === 'audio') {
+              stopTranscriptionProgress();
+              stopProcessingProgress();
+              state.lastProgressMessage = '';
+              state.lastProgressRatio = null;
+              startProcessingProgress(lectureId);
+            }
+
+            await request(`/api/lectures/${lectureId}/assets/${kind}`, {
               method: 'POST',
               body: formData,
             });
@@ -5435,10 +5511,18 @@
               kind === 'slides'
                 ? t('status.slidesProcessed')
                 : t('status.assetUploaded');
-            showStatus(successMessage, 'success');
+            if (kind !== 'audio') {
+              showStatus(successMessage, 'success');
+            }
             await refreshData();
-            await selectLecture(state.selectedLectureId);
+            await selectLecture(lectureId);
+            if (kind === 'audio') {
+              stopProcessingProgress({ preserveMessage: true });
+            }
           } catch (error) {
+            if (kind === 'audio') {
+              stopProcessingProgress();
+            }
             showStatus(error.message, 'error');
           }
         }

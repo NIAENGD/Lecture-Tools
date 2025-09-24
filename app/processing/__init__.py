@@ -7,17 +7,17 @@ from .audio import (
     GPUWhisperUnsupportedError,
     check_gpu_whisper_availability,
 )
-from .recording import AudioRecorder, preprocess_audio, save_preprocessed_wav
+from .recording import load_wav_file, preprocess_audio, save_preprocessed_wav
 from .slides import PyMuPDFSlideConverter
 
 __all__ = [
-    "AudioRecorder",
     "FasterWhisperTranscription",
     "GPUWhisperError",
     "GPUWhisperModelMissingError",
     "GPUWhisperUnsupportedError",
     "check_gpu_whisper_availability",
     "PyMuPDFSlideConverter",
+    "load_wav_file",
     "preprocess_audio",
     "save_preprocessed_wav",
 ]

@@ -35,6 +35,7 @@ class LectureRecord:
     description: str
     position: int
     audio_path: Optional[str]
+    processed_audio_path: Optional[str]
     slide_path: Optional[str]
     transcript_path: Optional[str]
     notes_path: Optional[str]
@@ -129,6 +130,7 @@ class LectureRepository:
         description: str = "",
         *,
         audio_path: Optional[str] = None,
+        processed_audio_path: Optional[str] = None,
         slide_path: Optional[str] = None,
         transcript_path: Optional[str] = None,
         notes_path: Optional[str] = None,
@@ -146,11 +148,12 @@ class LectureRepository:
                     description,
                     position,
                     audio_path,
+                    processed_audio_path,
                     slide_path,
                     transcript_path,
                     notes_path,
                     slide_image_dir
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     module_id,
@@ -158,6 +161,7 @@ class LectureRepository:
                     description,
                     position,
                     audio_path,
+                    processed_audio_path,
                     slide_path,
                     transcript_path,
                     notes_path,
@@ -170,7 +174,18 @@ class LectureRepository:
         with self._connect() as connection:
             cursor = connection.execute(
                 """
-                SELECT id, module_id, name, description, position, audio_path, slide_path, transcript_path, notes_path, slide_image_dir
+                SELECT
+                    id,
+                    module_id,
+                    name,
+                    description,
+                    position,
+                    audio_path,
+                    processed_audio_path,
+                    slide_path,
+                    transcript_path,
+                    notes_path,
+                    slide_image_dir
                 FROM lectures
                 WHERE module_id = ? AND name = ?
                 """,
@@ -208,7 +223,18 @@ class LectureRepository:
         with self._connect() as connection:
             cursor = connection.execute(
                 """
-                SELECT id, module_id, name, description, position, audio_path, slide_path, transcript_path, notes_path, slide_image_dir
+                SELECT
+                    id,
+                    module_id,
+                    name,
+                    description,
+                    position,
+                    audio_path,
+                    processed_audio_path,
+                    slide_path,
+                    transcript_path,
+                    notes_path,
+                    slide_image_dir
                 FROM lectures
                 WHERE module_id = ?
                 ORDER BY position, id
@@ -240,7 +266,18 @@ class LectureRepository:
         with self._connect() as connection:
             cursor = connection.execute(
                 """
-                SELECT id, module_id, name, description, position, audio_path, slide_path, transcript_path, notes_path, slide_image_dir
+                SELECT
+                    id,
+                    module_id,
+                    name,
+                    description,
+                    position,
+                    audio_path,
+                    processed_audio_path,
+                    slide_path,
+                    transcript_path,
+                    notes_path,
+                    slide_image_dir
                 FROM lectures WHERE id = ?
                 """,
                 (lecture_id,),
@@ -302,6 +339,7 @@ class LectureRepository:
         lecture_id: int,
         *,
         audio_path: Optional[str] | object = _MISSING,
+        processed_audio_path: Optional[str] | object = _MISSING,
         slide_path: Optional[str] | object = _MISSING,
         transcript_path: Optional[str] | object = _MISSING,
         notes_path: Optional[str] | object = _MISSING,
@@ -317,6 +355,9 @@ class LectureRepository:
         if audio_path is not _MISSING:
             assignments.append("audio_path = ?")
             params.append(audio_path)
+        if processed_audio_path is not _MISSING:
+            assignments.append("processed_audio_path = ?")
+            params.append(processed_audio_path)
         if slide_path is not _MISSING:
             assignments.append("slide_path = ?")
             params.append(slide_path)
