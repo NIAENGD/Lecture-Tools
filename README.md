@@ -75,6 +75,28 @@
 
 ## 🖥️ Debian 13 VPS Deployment
 
+You can either use the automated installer or follow the manual steps below to configure the application as a managed service.
+
+### ⚙️ Automated installer (Nginx + HTTPS)
+
+Run the helper script as root on a fresh Debian 13 server:
+
+```bash
+sudo ./scripts/install_server.sh
+```
+
+The script will:
+
+- install required system packages (Python, Git, Nginx, Certbot, …),
+- create the `/opt/lecture-tools` application home and service account,
+- copy the repository, set up the virtual environment, and register the systemd unit,
+- ask for the public domain and optional URL prefix (e.g. `/lecture`) and configure Nginx as a reverse proxy, and
+- optionally request and auto-renew HTTPS certificates via Let's Encrypt.
+
+To remove the deployment later, run `sudo ./scripts/remove_server.sh`. For a complete cleanup—including data, service account, and certificates—run `sudo ./scripts/remove_server_full.sh`.
+
+### 🛠️ Manual installation
+
 Follow these steps to run Lecture Tools as a managed service that automatically starts whenever your VPS reboots.
 
 ### 1. Prepare the server
