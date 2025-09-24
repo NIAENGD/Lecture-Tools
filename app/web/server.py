@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import platform
 import shutil
@@ -32,6 +33,7 @@ from ..processing import (
     preprocess_audio,
     save_preprocessed_wav,
 )
+from ..services.audio_conversion import ensure_wav
 from ..services.ingestion import LecturePaths
 from ..services.naming import build_asset_stem, build_timestamped_name, slugify
 from ..services.settings import SettingsStore, UISettings
@@ -1317,6 +1319,27 @@ def create_app(
         processed_relative: Optional[str] = None
 
         if asset_key == "audio":
+            original_target = target
+            try:
+                target, converted = await asyncio.to_thread(
+                    ensure_wav,
+                    target,
+                    output_dir=destination,
+                    stem=Path(candidate_name).stem or stem,
+                    timestamp=timestamp,
+                )
+            except ValueError as error:
+                with contextlib.suppress(OSError):
+                    original_target.unlink(missing_ok=True)
+                raise HTTPException(status_code=400, detail=str(error)) from error
+            else:
+                candidate_name = target.name
+                relative = target.relative_to(config.storage_root).as_posix()
+                update_kwargs[attribute] = relative
+                if converted:
+                    with contextlib.suppress(OSError):
+                        original_target.unlink(missing_ok=True)
+
             processing_tracker.start(
                 lecture_id, "====> Preparing audio mastering…"
             )
