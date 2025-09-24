@@ -57,6 +57,7 @@ class LecturePaths:
     lecture_root: Path
     raw_dir: Path
     processed_dir: Path
+    processed_audio_dir: Path
     transcript_dir: Path
     slide_dir: Path
     notes_dir: Path
@@ -74,6 +75,7 @@ class LecturePaths:
         )
         raw_dir = lecture_root / "raw"
         processed_dir = lecture_root / "processed"
+        processed_audio_dir = processed_dir / "audio"
         transcript_dir = processed_dir / "transcripts"
         slide_dir = processed_dir / "slides"
         notes_dir = processed_dir / "notes"
@@ -81,6 +83,7 @@ class LecturePaths:
             lecture_root=lecture_root,
             raw_dir=raw_dir,
             processed_dir=processed_dir,
+            processed_audio_dir=processed_audio_dir,
             transcript_dir=transcript_dir,
             slide_dir=slide_dir,
             notes_dir=notes_dir,
@@ -91,6 +94,7 @@ class LecturePaths:
             self.lecture_root,
             self.raw_dir,
             self.processed_dir,
+            self.processed_audio_dir,
             self.transcript_dir,
             self.slide_dir,
             self.notes_dir,

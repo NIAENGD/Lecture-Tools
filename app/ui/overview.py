@@ -10,6 +10,7 @@ from ..services.storage import ClassRecord, LectureRecord, LectureRepository, Mo
 
 ASSET_LABELS: Dict[str, str] = {
     "audio": "🎧 Audio",
+    "processed_audio": "🎚️ Mastered Audio",
     "slides": "📑 Slides",
     "transcript": "📝 Transcript",
     "notes": "📄 Notes",
@@ -83,6 +84,9 @@ def _extract_assets(
     if lecture_record.audio_path:
         assets.append(ASSET_LABELS["audio"])
         asset_totals["audio"] += 1
+    if lecture_record.processed_audio_path:
+        assets.append(ASSET_LABELS["processed_audio"])
+        asset_totals["processed_audio"] += 1
     if lecture_record.slide_path:
         assets.append(ASSET_LABELS["slides"])
         asset_totals["slides"] += 1

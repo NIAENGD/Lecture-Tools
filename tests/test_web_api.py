@@ -4,6 +4,9 @@ import json
 from pathlib import Path
 from typing import Any
 
+import io
+import wave
+
 import pytest
 
 pytest.importorskip("fastapi")
@@ -44,6 +47,18 @@ def _create_sample_data(config) -> tuple[LectureRepository, int, int]:
     notes_file.write_text("# Notes\nImportant points.\n", encoding="utf-8")
 
     return repository, lecture_id, module_id
+
+
+def _build_wav_bytes(duration_seconds: float = 0.25, sample_rate: int = 16_000) -> bytes:
+    frame_count = int(sample_rate * duration_seconds)
+    buffer = io.BytesIO()
+    with wave.open(buffer, "wb") as handle:
+        handle.setnchannels(1)
+        handle.setsampwidth(2)
+        handle.setframerate(sample_rate)
+        silence = b"\x00\x00" * frame_count
+        handle.writeframes(silence)
+    return buffer.getvalue()
 
 
 def test_api_handles_configured_root_path(temp_config):
@@ -435,6 +450,36 @@ def test_upload_asset_updates_repository(temp_config):
     assert response.status_code == 200
     assert response.json()["notes_path"].endswith("summary.docx")
     assert repository.get_lecture(lecture_id).notes_path.endswith("summary.docx")
+
+
+def test_upload_audio_processes_file(temp_config):
+    repository, lecture_id, _module_id = _create_sample_data(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    response = client.post(
+        f"/api/lectures/{lecture_id}/assets/audio",
+        files={"file": ("lecture.wav", _build_wav_bytes(), "audio/wav")},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["audio_path"].endswith("lecture.wav")
+    processed_relative = payload.get("processed_audio_path")
+    assert processed_relative and processed_relative.endswith(".wav")
+    processed_file = temp_config.storage_root / processed_relative
+    assert processed_file.exists()
+
+    updated = repository.get_lecture(lecture_id)
+    assert updated is not None
+    assert updated.processed_audio_path == processed_relative
+
+    progress_response = client.get(
+        f"/api/lectures/{lecture_id}/processing-progress"
+    )
+    assert progress_response.status_code == 200
+    progress_payload = progress_response.json().get("progress", {})
+    assert progress_payload.get("finished") is True
+    assert "Audio mastering" in (progress_payload.get("message") or "")
 
 
 def test_upload_slides_auto_generates_archive(monkeypatch, temp_config):

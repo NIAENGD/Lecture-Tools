@@ -1,51 +1,71 @@
-"""Audio recording and preprocessing helpers."""
+"""Audio preprocessing helpers."""
 
 from __future__ import annotations
 
 import math
 import wave
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Tuple
 
 import numpy as np
-
-try:  # pragma: no cover - exercised only when optional dependency is present at runtime
-    import sounddevice as _sounddevice
-except (ImportError, OSError):  # pragma: no cover - optional backend may be absent
-    _sounddevice = None
 
 
 def _db_to_amplitude(value: float) -> float:
     return float(10 ** (value / 20))
 
 
-@dataclass
-class AudioRecorder:
-    """Simple blocking recorder backed by :mod:`sounddevice`."""
+def load_wav_file(path: Path) -> Tuple[np.ndarray, int]:
+    """Return the PCM samples and sample rate stored in *path*.
 
-    sample_rate: int = 48_000
-    channels: int = 1
-    device: Optional[int | str] = None
+    The loader supports mono or multi-channel PCM WAV files with sample widths of
+    8, 16, 24, or 32 bits. Samples are returned as ``float32`` arrays with values
+    in the range ``[-1, 1]``. A :class:`ValueError` is raised if the file uses an
+    unsupported encoding.
+    """
 
-    def record(self, duration: float) -> np.ndarray:
-        """Record *duration* seconds of audio and return a ``float32`` buffer."""
+    try:
+        with wave.open(str(path), "rb") as handle:
+            channels = handle.getnchannels()
+            sample_rate = handle.getframerate()
+            sample_width = handle.getsampwidth()
+            frame_count = handle.getnframes()
+            payload = handle.readframes(frame_count)
+    except wave.Error as error:  # pragma: no cover - depends on external files
+        raise ValueError(f"Unsupported WAV file: {error}") from error
 
-        if duration <= 0:
-            raise ValueError("Recording duration must be positive")
-        if _sounddevice is None:
-            raise RuntimeError("sounddevice is not installed; recording is unavailable")
+    if channels <= 0:
+        raise ValueError("WAV file reports zero channels")
 
-        frames = int(self.sample_rate * duration)
-        recording = _sounddevice.rec(
-            frames,
-            samplerate=self.sample_rate,
-            channels=self.channels,
-            device=self.device,
-            dtype="float32",
+    if sample_width == 1:
+        data = np.frombuffer(payload, dtype=np.uint8).astype(np.float32)
+        data = (data - 128.0) / 128.0
+    elif sample_width == 2:
+        data = np.frombuffer(payload, dtype=np.int16).astype(np.float32)
+        data /= 32_768.0
+    elif sample_width == 3:
+        bytes_per_sample = 3
+        raw = np.frombuffer(payload, dtype=np.uint8)
+        if raw.size % bytes_per_sample:
+            raise ValueError("Corrupt 24-bit WAV payload")
+        reshaped = raw.reshape(-1, bytes_per_sample)
+        signed = (
+            reshaped[:, 0].astype(np.int32)
+            | (reshaped[:, 1].astype(np.int32) << 8)
+            | (reshaped[:, 2].astype(np.int32) << 16)
         )
-        _sounddevice.wait()
-        return np.asarray(recording, dtype=np.float32)
+        mask = signed & 0x800000
+        signed = signed - (mask << 1)
+        data = signed.astype(np.float32) / float(1 << 23)
+    elif sample_width == 4:
+        data = np.frombuffer(payload, dtype=np.int32).astype(np.float32)
+        data /= float(1 << 31)
+    else:
+        raise ValueError(f"Unsupported WAV sample width: {sample_width} bytes")
+
+    if channels > 1:
+        data = data.reshape(-1, channels)
+
+    return np.asarray(data, dtype=np.float32), sample_rate
 
 
 def preprocess_audio(
@@ -53,17 +73,20 @@ def preprocess_audio(
     sample_rate: int,
     *,
     highpass_hz: float = 80.0,
+    lowpass_hz: float = 12_000.0,
     presence_low_hz: float = 2_000.0,
     presence_high_hz: float = 4_000.0,
     presence_gain_db: float = 2.0,
-    compressor_threshold_db: float = -18.0,
-    compressor_ratio: float = 2.0,
-    compressor_attack_ms: float = 20.0,
-    compressor_release_ms: float = 90.0,
-    target_peak_db: float = -3.0,
-    target_lufs_db: float = -20.0,
+    noise_reduction_db: float = 12.0,
+    noise_sensitivity: float = 1.2,
+    compressor_threshold_db: float = -20.0,
+    compressor_ratio: float = 3.0,
+    compressor_attack_ms: float = 12.0,
+    compressor_release_ms: float = 120.0,
+    target_peak_db: float = -1.0,
+    target_lufs_db: float = -16.0,
 ) -> np.ndarray:
-    """Apply gentle mastering steps optimised for Whisper transcription."""
+    """Apply mastering steps to prioritise intelligible speech."""
 
     if audio.ndim == 2 and audio.shape[1] > 1:
         mono = np.mean(audio, axis=1)
@@ -71,10 +94,18 @@ def preprocess_audio(
         mono = np.squeeze(audio)
     mono = np.asarray(mono, dtype=np.float32)
 
+    mono = _reduce_noise(
+        mono,
+        sample_rate,
+        reduction_db=noise_reduction_db,
+        sensitivity=noise_sensitivity,
+    )
+
     mono = _shape_frequency_response(
         mono,
         sample_rate,
         highpass_hz=highpass_hz,
+        lowpass_hz=lowpass_hz,
         presence_low_hz=presence_low_hz,
         presence_high_hz=presence_high_hz,
         presence_gain_db=presence_gain_db,
@@ -129,6 +160,58 @@ def _normalise_signal(signal: np.ndarray, *, target_peak_db: float, target_lufs_
     return signal
 
 
+def _reduce_noise(
+    signal: np.ndarray,
+    sample_rate: int,
+    *,
+    reduction_db: float,
+    sensitivity: float,
+    frame_ms: float = 32.0,
+) -> np.ndarray:
+    if signal.size == 0:
+        return signal
+
+    frame_length = max(int(sample_rate * frame_ms / 1_000), 1)
+    hop_length = max(frame_length // 2, 1)
+    window = np.hanning(frame_length).astype(np.float32)
+
+    pad_length = ((len(signal) - frame_length) // hop_length + 1) * hop_length + frame_length
+    if pad_length <= 0:
+        pad_length = frame_length
+    pad_amount = max(0, pad_length - len(signal))
+    padded = np.pad(signal, (0, pad_amount), mode="reflect") if pad_amount else signal
+
+    spectra: list[np.ndarray] = []
+    for start in range(0, len(padded) - frame_length + 1, hop_length):
+        frame = padded[start : start + frame_length]
+        spectrum = np.fft.rfft(frame * window)
+        spectra.append(np.abs(spectrum))
+
+    if not spectra:
+        return signal
+
+    noise_profile = np.median(np.stack(spectra, axis=0), axis=0)
+    min_gain = _db_to_amplitude(-reduction_db)
+
+    output = np.zeros_like(padded, dtype=np.float32)
+    window_accumulator = np.zeros_like(padded, dtype=np.float32)
+
+    for start in range(0, len(padded) - frame_length + 1, hop_length):
+        frame = padded[start : start + frame_length]
+        spectrum = np.fft.rfft(frame * window)
+        magnitude = np.abs(spectrum)
+        floor = noise_profile * sensitivity
+        gain = np.clip((magnitude - floor) / np.maximum(magnitude, 1e-9), min_gain, 1.0)
+        processed = np.fft.irfft(spectrum * gain, n=frame_length).astype(np.float32)
+        output[start : start + frame_length] += processed * window
+        window_accumulator[start : start + frame_length] += window * window
+
+    valid = window_accumulator > 1e-6
+    output[valid] /= window_accumulator[valid]
+    trimmed = output[: signal.size] if output.size > signal.size else output
+    return np.asarray(trimmed, dtype=np.float32)
+
+
 def _compress_signal(
     signal: np.ndarray,
     sample_rate: int,
@@ -175,6 +258,7 @@ def _shape_frequency_response(
     sample_rate: int,
     *,
     highpass_hz: float,
+    lowpass_hz: float,
     presence_low_hz: float,
     presence_high_hz: float,
     presence_gain_db: float,
@@ -191,6 +275,11 @@ def _shape_frequency_response(
         if np.any(mask):
             weights[mask] *= freqs[mask] / max(highpass_hz, 1.0)
 
+    if lowpass_hz > 0:
+        mask = freqs > lowpass_hz
+        if np.any(mask):
+            weights[mask] *= np.maximum(lowpass_hz, 1.0) / freqs[mask]
+
     if presence_gain_db != 0 and presence_high_hz > presence_low_hz:
         mask = (freqs >= presence_low_hz) & (freqs <= presence_high_hz)
         if np.any(mask):
@@ -200,4 +289,4 @@ def _shape_frequency_response(
     return shaped.astype(np.float32)
 
 
-__all__ = ["AudioRecorder", "preprocess_audio", "save_preprocessed_wav"]
+__all__ = ["load_wav_file", "preprocess_audio", "save_preprocessed_wav"]

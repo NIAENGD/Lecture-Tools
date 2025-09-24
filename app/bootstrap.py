@@ -83,6 +83,7 @@ class Bootstrapper:
                     description TEXT DEFAULT '',
                     position INTEGER NOT NULL DEFAULT 0,
                     audio_path TEXT,
+                    processed_audio_path TEXT,
                     slide_path TEXT,
                     transcript_path TEXT,
                     notes_path TEXT,
@@ -94,12 +95,13 @@ class Bootstrapper:
             )
             connection.commit()
 
-            try:
-                cursor.execute("ALTER TABLE lectures ADD COLUMN notes_path TEXT")
-            except sqlite3.OperationalError as error:
-                message = str(error).lower()
-                if "duplicate column name" not in message:
-                    raise
+            for column in ("notes_path", "processed_audio_path"):
+                try:
+                    cursor.execute(f"ALTER TABLE lectures ADD COLUMN {column} TEXT")
+                except sqlite3.OperationalError as error:
+                    message = str(error).lower()
+                    if "duplicate column name" not in message:
+                        raise
 
             def _column_exists(table: str, column: str) -> bool:
                 cursor.execute(f"PRAGMA table_info({table})")

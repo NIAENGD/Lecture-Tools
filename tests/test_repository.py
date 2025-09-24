@@ -22,6 +22,7 @@ def test_repository_crud_cycle(temp_config: AppConfig) -> None:
     assert retrieved_lecture is not None
     assert retrieved_lecture.name == "Newton's Laws"
     assert retrieved_lecture.audio_path == "raw/audio.mp3"
+    assert retrieved_lecture.processed_audio_path is None
     assert retrieved_lecture.notes_path == "processed/notes.docx"
 
     modules = list(repository.iter_modules(class_id))
@@ -85,6 +86,7 @@ def test_repository_lookup_helpers(temp_config: AppConfig) -> None:
     repository.update_lecture_assets(
         lecture_id,
         audio_path="raw/derivatives.mp3",
+        processed_audio_path="processed/master.wav",
         slide_path="raw/derivatives.pdf",
         transcript_path="processed/transcript.txt",
         notes_path="processed/notes.docx",
@@ -95,6 +97,7 @@ def test_repository_lookup_helpers(temp_config: AppConfig) -> None:
     assert lecture is not None
     assert lecture.description == "Differential calculus"
     assert lecture.audio_path == "raw/derivatives.mp3"
+    assert lecture.processed_audio_path == "processed/master.wav"
     assert lecture.slide_image_dir == "processed/slides"
     assert lecture.notes_path == "processed/notes.docx"
 

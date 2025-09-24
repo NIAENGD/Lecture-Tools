@@ -26,7 +26,12 @@ from pydantic import BaseModel, Field
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from ..config import AppConfig
-from ..processing import PyMuPDFSlideConverter
+from ..processing import (
+    PyMuPDFSlideConverter,
+    load_wav_file,
+    preprocess_audio,
+    save_preprocessed_wav,
+)
 from ..services.ingestion import LecturePaths
 from ..services.naming import build_asset_stem, build_timestamped_name, slugify
 from ..services.settings import SettingsStore, UISettings
@@ -75,13 +80,13 @@ class TranscriptionProgressTracker:
             "timestamp": None,
         }
 
-    def start(self, lecture_id: int) -> None:
+    def start(self, lecture_id: int, message: str = "====> Preparing transcription…") -> None:
         with self._lock:
             state = self._baseline()
             state.update(
                 {
                     "active": True,
-                    "message": "====> Preparing transcription…",
+                    "message": message,
                     "timestamp": time.time(),
                 }
             )
@@ -188,6 +193,7 @@ def _format_asset_counts(lectures: List[Dict[str, Any]]) -> Dict[str, int]:
         "transcripts": sum(1 for lecture in lectures if lecture["transcript_path"]),
         "slides": sum(1 for lecture in lectures if lecture["slide_path"]),
         "audio": sum(1 for lecture in lectures if lecture["audio_path"]),
+        "processed_audio": sum(1 for lecture in lectures if lecture["processed_audio_path"]),
         "notes": sum(1 for lecture in lectures if lecture["notes_path"]),
         "slide_images": sum(1 for lecture in lectures if lecture["slide_image_dir"]),
     }
@@ -201,6 +207,7 @@ def _serialize_lecture(lecture: LectureRecord) -> Dict[str, Any]:
         "description": lecture.description,
         "position": lecture.position,
         "audio_path": lecture.audio_path,
+        "processed_audio_path": lecture.processed_audio_path,
         "slide_path": lecture.slide_path,
         "transcript_path": lecture.transcript_path,
         "notes_path": lecture.notes_path,
@@ -619,6 +626,7 @@ def create_app(
     app.add_middleware(ForwardedRootPathMiddleware)
     settings_store = SettingsStore(config)
     progress_tracker = TranscriptionProgressTracker()
+    processing_tracker = TranscriptionProgressTracker()
     gpu_support_state: Dict[str, Any] = {
         "supported": False,
         "checked": False,
@@ -1016,6 +1024,9 @@ def create_app(
             ),
             "slide_count": sum(klass["asset_counts"]["slides"] for klass in classes),
             "audio_count": sum(klass["asset_counts"]["audio"] for klass in classes),
+            "processed_audio_count": sum(
+                klass["asset_counts"].get("processed_audio", 0) for klass in classes
+            ),
             "notes_count": sum(klass["asset_counts"]["notes"] for klass in classes),
             "slide_image_count": sum(
                 klass["asset_counts"]["slide_images"] for klass in classes
@@ -1303,6 +1314,64 @@ def create_app(
 
         relative = target.relative_to(config.storage_root).as_posix()
         update_kwargs: Dict[str, Optional[str]] = {attribute: relative}
+        processed_relative: Optional[str] = None
+
+        if asset_key == "audio":
+            processing_tracker.start(
+                lecture_id, "====> Preparing audio mastering…"
+            )
+
+            def _process_audio() -> str:
+                total_steps = 3.0
+                processing_tracker.update(
+                    lecture_id,
+                    1.0,
+                    total_steps,
+                    "====> Analysing uploaded audio…",
+                )
+                samples, sample_rate = load_wav_file(target)
+                processing_tracker.update(
+                    lecture_id,
+                    1.5,
+                    total_steps,
+                    "====> Reducing background noise and balancing speech…",
+                )
+                processed = preprocess_audio(samples, sample_rate)
+                processing_tracker.update(
+                    lecture_id,
+                    2.5,
+                    total_steps,
+                    "====> Rendering mastered waveform…",
+                )
+
+                lecture_paths.processed_audio_dir.mkdir(parents=True, exist_ok=True)
+                base_stem = Path(candidate_name).stem if candidate_name else stem
+                processed_name = f"{base_stem}-master.wav"
+                processed_target = lecture_paths.processed_audio_dir / processed_name
+                if processed_target.exists():
+                    processed_name = build_timestamped_name(
+                        f"{base_stem}-master",
+                        timestamp=timestamp,
+                        extension=".wav",
+                    )
+                    processed_target = lecture_paths.processed_audio_dir / processed_name
+
+                save_preprocessed_wav(processed_target, processed, sample_rate)
+                return processed_target.relative_to(config.storage_root).as_posix()
+
+            try:
+                processed_relative = await asyncio.to_thread(_process_audio)
+            except ValueError as error:
+                processing_tracker.fail(lecture_id, f"====> {error}")
+                raise HTTPException(status_code=400, detail=str(error)) from error
+            except Exception as error:  # noqa: BLE001 - processing may raise
+                processing_tracker.fail(lecture_id, f"====> {error}")
+                raise HTTPException(status_code=500, detail=str(error)) from error
+            else:
+                processing_tracker.finish(
+                    lecture_id, "====> Audio mastering completed."
+                )
+                update_kwargs["processed_audio_path"] = processed_relative
 
         if asset_key == "slides":
             slide_archive = _generate_slide_archive(
@@ -1315,6 +1384,8 @@ def create_app(
         if updated is None:
             raise HTTPException(status_code=500, detail="Lecture update failed")
         response: Dict[str, Any] = {"lecture": _serialize_lecture(updated), attribute: relative}
+        if asset_key == "audio":
+            response["processed_audio_path"] = processed_relative
         if asset_key == "slides":
             response["slide_image_dir"] = update_kwargs.get("slide_image_dir")
         return response
@@ -1604,12 +1675,17 @@ def create_app(
         progress = progress_tracker.get(lecture_id)
         return {"progress": progress}
 
+    @app.get("/api/lectures/{lecture_id}/processing-progress")
+    async def get_processing_progress(lecture_id: int) -> Dict[str, Any]:
+        progress = processing_tracker.get(lecture_id)
+        return {"progress": progress}
+
     @app.post("/api/lectures/{lecture_id}/transcribe")
     async def transcribe_audio(lecture_id: int, payload: TranscriptionRequest) -> Dict[str, Any]:
         lecture = repository.get_lecture(lecture_id)
         if lecture is None:
             raise HTTPException(status_code=404, detail="Lecture not found")
-        if not lecture.audio_path:
+        if not lecture.audio_path and not lecture.processed_audio_path:
             raise HTTPException(status_code=400, detail="Upload an audio file first")
         if FasterWhisperTranscription is None:
             raise HTTPException(
@@ -1618,7 +1694,8 @@ def create_app(
             )
 
         class_record, module = _require_hierarchy(lecture)
-        audio_file = _resolve_storage_path(config.storage_root, lecture.audio_path)
+        source_path = lecture.processed_audio_path or lecture.audio_path
+        audio_file = _resolve_storage_path(config.storage_root, source_path)
         if not audio_file.exists():
             raise HTTPException(status_code=404, detail="Audio file not found")
 
