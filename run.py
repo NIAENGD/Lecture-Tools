@@ -28,6 +28,10 @@ from app.processing import (
 from app.services.audio_conversion import ensure_wav
 from app.services.ingestion import LectureIngestor
 from app.services.naming import build_timestamped_name
+from app.services.progress import (
+    AUDIO_MASTERING_TOTAL_STEPS,
+    format_progress_message,
+)
 from app.services.storage import LectureRepository
 from app.ui.console import ConsoleUI
 from app.ui.modern import ModernUI
@@ -209,7 +213,16 @@ def test_mastering(
 
     config = initialize_app()
     _prepare_logging(config.storage_root)
-    typer.echo("====> Preparing audio mastering…")
+    total_steps = float(AUDIO_MASTERING_TOTAL_STEPS)
+    completed_steps = 0.0
+
+    typer.echo(
+        format_progress_message(
+            "====> Preparing audio mastering…",
+            completed_steps,
+            total_steps,
+        )
+    )
     typer.echo(f"Source audio: {audio_path}")
 
     timestamp = time.strftime("%Y%m%d-%H%M%S")
@@ -218,15 +231,28 @@ def test_mastering(
     processed_target: Optional[Path] = None
 
     try:
-        typer.echo("====> Ensuring WAV input…")
+        typer.echo(
+            format_progress_message(
+                "====> Ensuring WAV input…",
+                completed_steps,
+                total_steps,
+            )
+        )
         wav_path, converted = ensure_wav(
             audio_path,
             output_dir=audio_path.parent,
             stem=audio_path.stem or "audio",
             timestamp=timestamp,
         )
+        completed_steps += 1.0
 
-        typer.echo("====> Analysing uploaded audio…")
+        typer.echo(
+            format_progress_message(
+                "====> Analysing uploaded audio…",
+                completed_steps,
+                total_steps,
+            )
+        )
         samples, sample_rate = load_wav_file(wav_path)
         if LOGGER.isEnabledFor(logging.DEBUG):
             LOGGER.debug(
@@ -234,8 +260,15 @@ def test_mastering(
                 audio_path,
                 describe_audio_debug_stats(samples, sample_rate),
             )
+        completed_steps += 1.0
 
-        typer.echo("====> Reducing background noise and balancing speech…")
+        typer.echo(
+            format_progress_message(
+                "====> Reducing background noise and balancing speech…",
+                completed_steps,
+                total_steps,
+            )
+        )
         processed = preprocess_audio(samples, sample_rate)
         if LOGGER.isEnabledFor(logging.DEBUG):
             LOGGER.debug(
@@ -243,8 +276,15 @@ def test_mastering(
                 audio_path,
                 describe_audio_debug_stats(processed, sample_rate),
             )
+        completed_steps += 1.0
 
-        typer.echo("====> Rendering mastered waveform…")
+        typer.echo(
+            format_progress_message(
+                "====> Rendering mastered waveform…",
+                completed_steps,
+                total_steps,
+            )
+        )
         base_stem = audio_path.stem or "audio"
         candidate = wav_path.parent / f"{base_stem}-master.wav"
         if candidate.exists():
@@ -256,6 +296,7 @@ def test_mastering(
 
         save_preprocessed_wav(candidate, processed, sample_rate)
         processed_target = candidate
+        completed_steps = total_steps
 
     except ValueError as error:
         typer.echo(f"Audio mastering failed: {error}")
@@ -267,7 +308,13 @@ def test_mastering(
         if converted and wav_path and wav_path.exists() and wav_path != audio_path:
             wav_path.unlink(missing_ok=True)
 
-    typer.echo("====> Audio mastering completed.")
+    typer.echo(
+        format_progress_message(
+            "====> Audio mastering completed.",
+            completed_steps,
+            total_steps,
+        )
+    )
     if processed_target is not None:
         typer.echo(f"Mastered audio saved to: {processed_target}")
     typer.echo(f"Original audio remains at: {audio_path}")
