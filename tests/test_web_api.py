@@ -463,14 +463,16 @@ def test_upload_audio_processes_file(temp_config):
     )
     assert response.status_code == 200
     payload = response.json()
-    assert payload["audio_path"].endswith("lecture.wav")
+    audio_relative = payload["audio_path"]
+    assert audio_relative.endswith("-master.wav")
     processed_relative = payload.get("processed_audio_path")
-    assert processed_relative and processed_relative.endswith(".wav")
+    assert processed_relative == audio_relative
     processed_file = temp_config.storage_root / processed_relative
     assert processed_file.exists()
 
     updated = repository.get_lecture(lecture_id)
     assert updated is not None
+    assert updated.audio_path == audio_relative
     assert updated.processed_audio_path == processed_relative
 
     progress_response = client.get(
@@ -502,17 +504,48 @@ def test_upload_audio_converts_non_wav(monkeypatch, temp_config):
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["audio_path"].endswith("-converted.wav")
+    assert payload["audio_path"].endswith("-converted-master.wav")
     wav_path = temp_config.storage_root / payload["audio_path"]
     assert wav_path.exists()
     assert not (wav_path.parent / "lecture.mp3").exists()
 
     updated = repository.get_lecture(lecture_id)
     assert updated is not None
-    assert updated.audio_path and updated.audio_path.endswith("-converted.wav")
+    assert updated.audio_path and updated.audio_path.endswith("-converted-master.wav")
 
     processed_relative = payload.get("processed_audio_path")
-    assert processed_relative and processed_relative.endswith(".wav")
+    assert processed_relative == payload["audio_path"]
+
+
+def test_upload_audio_respects_mastering_setting(temp_config):
+    repository, lecture_id, _module_id = _create_sample_data(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    settings_response = client.get("/api/settings")
+    assert settings_response.status_code == 200
+    settings_payload = settings_response.json().get("settings", {})
+    settings_payload["audio_mastering_enabled"] = False
+
+    update_response = client.put("/api/settings", json=settings_payload)
+    assert update_response.status_code == 200
+
+    response = client.post(
+        f"/api/lectures/{lecture_id}/assets/audio",
+        files={"file": ("lecture.wav", _build_wav_bytes(), "audio/wav")},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload.get("processed_audio_path") is None
+    assert payload["audio_path"].endswith("lecture.wav")
+    audio_file = temp_config.storage_root / payload["audio_path"]
+    assert audio_file.exists()
+
+    updated = repository.get_lecture(lecture_id)
+    assert updated is not None
+    assert updated.processed_audio_path is None
+    assert updated.audio_path and updated.audio_path.endswith("lecture.wav")
+
 
 def test_upload_slides_auto_generates_archive(monkeypatch, temp_config):
     repository, lecture_id, _module_id = _create_sample_data(temp_config)
@@ -771,6 +804,7 @@ def test_get_settings_coerces_invalid_choices(temp_config):
     assert payload["whisper_model"] == "base"
     assert payload["slide_dpi"] == 200
     assert payload["language"] == "en"
+    assert payload["audio_mastering_enabled"] is True
 
 
 def test_update_settings_enforces_choices(temp_config):
