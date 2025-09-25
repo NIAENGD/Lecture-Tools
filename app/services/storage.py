@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
@@ -45,6 +46,9 @@ class LectureRecord:
 _MISSING = object()
 
 
+LOGGER = logging.getLogger(__name__)
+
+
 class LectureRepository:
     """Simple repository exposing CRUD helpers."""
 
@@ -52,6 +56,7 @@ class LectureRepository:
         self._db_path = config.database_file
 
     def _connect(self) -> sqlite3.Connection:
+        LOGGER.debug("Opening SQLite connection to %s", self._db_path)
         connection = sqlite3.connect(self._db_path)
         connection.row_factory = sqlite3.Row
         # SQLite requires enabling foreign key enforcement for each
@@ -60,6 +65,7 @@ class LectureRepository:
         # classes, modules or lectures that still have dependent records.
         # See https://sqlite.org/foreignkeys.html#fk_enable for details.
         connection.execute("PRAGMA foreign_keys = ON")
+        LOGGER.debug("SQLite connection ready with foreign_keys pragma enabled")
         return connection
 
     def _next_position(
@@ -80,30 +86,58 @@ class LectureRepository:
         if row is None:
             return 0
         next_value = row[0]
+        LOGGER.debug(
+            "Computed next position for %s (filter=%s) -> %s",
+            table,
+            filter_value if filter_field is not None else "<none>",
+            next_value,
+        )
         return int(next_value or 0)
 
     # ---------------------------------------------------------------------
     # Creation helpers
     # ---------------------------------------------------------------------
     def add_class(self, name: str, description: str = "") -> int:
+        LOGGER.debug(
+            "Adding class '%s' (description length=%s)",
+            name,
+            len(description or ""),
+        )
         with self._connect() as connection:
             position = self._next_position(connection, "classes")
             cursor = connection.execute(
                 "INSERT INTO classes(name, description, position) VALUES (?, ?, ?)",
                 (name, description, position),
             )
+            LOGGER.debug(
+                "Class '%s' inserted with id=%s at position=%s",
+                name,
+                cursor.lastrowid,
+                position,
+            )
             return int(cursor.lastrowid)
 
     def find_class_by_name(self, name: str) -> Optional[ClassRecord]:
+        LOGGER.debug("Looking up class by name '%s'", name)
         with self._connect() as connection:
             cursor = connection.execute(
                 "SELECT id, name, description, position FROM classes WHERE name = ?",
                 (name,),
             )
             row = cursor.fetchone()
+            if row:
+                LOGGER.debug("Class '%s' resolved to id=%s", name, row["id"])
+            else:
+                LOGGER.debug("Class '%s' not found", name)
             return ClassRecord(**row) if row else None
 
     def add_module(self, class_id: int, name: str, description: str = "") -> int:
+        LOGGER.debug(
+            "Adding module '%s' for class_id=%s (description length=%s)",
+            name,
+            class_id,
+            len(description or ""),
+        )
         with self._connect() as connection:
             position = self._next_position(
                 connection, "modules", filter_field="class_id", filter_value=class_id
@@ -112,15 +146,32 @@ class LectureRepository:
                 "INSERT INTO modules(class_id, name, description, position) VALUES (?, ?, ?, ?)",
                 (class_id, name, description, position),
             )
+            LOGGER.debug(
+                "Module '%s' inserted with id=%s at position=%s for class_id=%s",
+                name,
+                cursor.lastrowid,
+                position,
+                class_id,
+            )
             return int(cursor.lastrowid)
 
     def find_module_by_name(self, class_id: int, name: str) -> Optional[ModuleRecord]:
+        LOGGER.debug("Looking up module '%s' for class_id=%s", name, class_id)
         with self._connect() as connection:
             cursor = connection.execute(
                 "SELECT id, class_id, name, description, position FROM modules WHERE class_id = ? AND name = ?",
                 (class_id, name),
             )
             row = cursor.fetchone()
+            if row:
+                LOGGER.debug(
+                    "Module '%s' resolved to id=%s for class_id=%s",
+                    name,
+                    row["id"],
+                    class_id,
+                )
+            else:
+                LOGGER.debug("Module '%s' not found for class_id=%s", name, class_id)
             return ModuleRecord(**row) if row else None
 
     def add_lecture(
@@ -136,6 +187,12 @@ class LectureRepository:
         notes_path: Optional[str] = None,
         slide_image_dir: Optional[str] = None,
     ) -> int:
+        LOGGER.debug(
+            "Adding lecture '%s' to module_id=%s (description length=%s)",
+            name,
+            module_id,
+            len(description or ""),
+        )
         with self._connect() as connection:
             position = self._next_position(
                 connection, "lectures", filter_field="module_id", filter_value=module_id
@@ -168,9 +225,17 @@ class LectureRepository:
                     slide_image_dir,
                 ),
             )
+            LOGGER.debug(
+                "Lecture '%s' inserted with id=%s at position=%s for module_id=%s",
+                name,
+                cursor.lastrowid,
+                position,
+                module_id,
+            )
             return int(cursor.lastrowid)
 
     def find_lecture_by_name(self, module_id: int, name: str) -> Optional[LectureRecord]:
+        LOGGER.debug("Looking up lecture '%s' for module_id=%s", name, module_id)
         with self._connect() as connection:
             cursor = connection.execute(
                 """
@@ -192,20 +257,38 @@ class LectureRepository:
                 (module_id, name),
             )
             row = cursor.fetchone()
+            if row:
+                LOGGER.debug(
+                    "Lecture '%s' resolved to id=%s for module_id=%s",
+                    name,
+                    row["id"],
+                    module_id,
+                )
+            else:
+                LOGGER.debug("Lecture '%s' not found for module_id=%s", name, module_id)
             return LectureRecord(**row) if row else None
 
     # ------------------------------------------------------------------
     # Iteration helpers
     # ------------------------------------------------------------------
     def iter_classes(self) -> Iterable[ClassRecord]:
+        LOGGER.debug("Iterating over all classes")
         with self._connect() as connection:
             cursor = connection.execute(
                 "SELECT id, name, description, position FROM classes ORDER BY position, id"
             )
             for row in cursor.fetchall():
-                yield ClassRecord(**row)
+                record = ClassRecord(**row)
+                LOGGER.debug(
+                    "Yielding class id=%s name='%s' position=%s",
+                    record.id,
+                    record.name,
+                    record.position,
+                )
+                yield record
 
     def iter_modules(self, class_id: int) -> Iterable[ModuleRecord]:
+        LOGGER.debug("Iterating modules for class_id=%s", class_id)
         with self._connect() as connection:
             cursor = connection.execute(
                 """
@@ -217,9 +300,18 @@ class LectureRepository:
                 (class_id,),
             )
             for row in cursor.fetchall():
-                yield ModuleRecord(**row)
+                record = ModuleRecord(**row)
+                LOGGER.debug(
+                    "Yielding module id=%s name='%s' class_id=%s position=%s",
+                    record.id,
+                    record.name,
+                    record.class_id,
+                    record.position,
+                )
+                yield record
 
     def iter_lectures(self, module_id: int) -> Iterable[LectureRecord]:
+        LOGGER.debug("Iterating lectures for module_id=%s", module_id)
         with self._connect() as connection:
             cursor = connection.execute(
                 """
@@ -242,27 +334,51 @@ class LectureRepository:
                 (module_id,),
             )
             for row in cursor.fetchall():
-                yield LectureRecord(**row)
+                record = LectureRecord(**row)
+                LOGGER.debug(
+                    "Yielding lecture id=%s name='%s' module_id=%s position=%s",
+                    record.id,
+                    record.name,
+                    record.module_id,
+                    record.position,
+                )
+                yield record
 
     def get_class(self, class_id: int) -> Optional[ClassRecord]:
+        LOGGER.debug("Fetching class id=%s", class_id)
         with self._connect() as connection:
             cursor = connection.execute(
                 "SELECT id, name, description, position FROM classes WHERE id = ?",
                 (class_id,),
             )
             row = cursor.fetchone()
+            if row:
+                LOGGER.debug("Class id=%s resolved to name='%s'", class_id, row["name"])
+            else:
+                LOGGER.debug("Class id=%s not found", class_id)
             return ClassRecord(**row) if row else None
 
     def get_module(self, module_id: int) -> Optional[ModuleRecord]:
+        LOGGER.debug("Fetching module id=%s", module_id)
         with self._connect() as connection:
             cursor = connection.execute(
                 "SELECT id, class_id, name, description, position FROM modules WHERE id = ?",
                 (module_id,),
             )
             row = cursor.fetchone()
+            if row:
+                LOGGER.debug(
+                    "Module id=%s resolved to name='%s' (class_id=%s)",
+                    module_id,
+                    row["name"],
+                    row["class_id"],
+                )
+            else:
+                LOGGER.debug("Module id=%s not found", module_id)
             return ModuleRecord(**row) if row else None
 
     def get_lecture(self, lecture_id: int) -> Optional[LectureRecord]:
+        LOGGER.debug("Fetching lecture id=%s", lecture_id)
         with self._connect() as connection:
             cursor = connection.execute(
                 """
@@ -283,6 +399,15 @@ class LectureRepository:
                 (lecture_id,),
             )
             row = cursor.fetchone()
+            if row:
+                LOGGER.debug(
+                    "Lecture id=%s resolved to name='%s' (module_id=%s)",
+                    lecture_id,
+                    row["name"],
+                    row["module_id"],
+                )
+            else:
+                LOGGER.debug("Lecture id=%s not found", lecture_id)
             return LectureRecord(**row) if row else None
 
     def update_lecture(
@@ -295,6 +420,7 @@ class LectureRepository:
     ) -> None:
         current = self.get_lecture(lecture_id)
         if current is None:
+            LOGGER.debug("Skipping update for missing lecture id=%s", lecture_id)
             return
 
         assignments: List[str] = []
@@ -316,23 +442,33 @@ class LectureRepository:
                 )
                 assignments.append("position = ?")
                 params.append(new_position)
+                LOGGER.debug(
+                    "Lecture id=%s moving to module_id=%s at position=%s",
+                    lecture_id,
+                    module_id,
+                    new_position,
+                )
             elif module_id is not None:
                 assignments.append("module_id = ?")
                 params.append(module_id)
 
             if not assignments:
+                LOGGER.debug("No changes requested for lecture id=%s", lecture_id)
                 return
 
             params.append(lecture_id)
             query = "UPDATE lectures SET " + ", ".join(assignments) + " WHERE id = ?"
             connection.execute(query, params)
+            LOGGER.debug("Lecture id=%s updated with assignments=%s", lecture_id, assignments)
 
     def update_lecture_description(self, lecture_id: int, description: str) -> None:
+        LOGGER.debug("Updating lecture id=%s description (length=%s)", lecture_id, len(description))
         with self._connect() as connection:
             connection.execute(
                 "UPDATE lectures SET description = ? WHERE id = ?",
                 (description, lecture_id),
             )
+            LOGGER.debug("Lecture id=%s description updated", lecture_id)
 
     def update_lecture_assets(
         self,
@@ -372,35 +508,57 @@ class LectureRepository:
             params.append(slide_image_dir)
 
         if not assignments:
+            LOGGER.debug("No asset updates provided for lecture id=%s", lecture_id)
             return
 
         params.append(lecture_id)
         query = "UPDATE lectures SET " + ", ".join(assignments) + " WHERE id = ?"
         with self._connect() as connection:
             connection.execute(query, params)
+            LOGGER.debug(
+                "Lecture id=%s asset paths updated (%s)",
+                lecture_id,
+                ", ".join(assignments),
+            )
 
     def remove_class(self, class_id: int) -> None:
+        LOGGER.debug("Removing class id=%s", class_id)
         with self._connect() as connection:
             connection.execute("DELETE FROM classes WHERE id = ?", (class_id,))
+            LOGGER.debug("Class id=%s removed", class_id)
 
     def remove_module(self, module_id: int) -> None:
+        LOGGER.debug("Removing module id=%s", module_id)
         with self._connect() as connection:
             connection.execute("DELETE FROM modules WHERE id = ?", (module_id,))
+            LOGGER.debug("Module id=%s removed", module_id)
 
     def remove_lecture(self, lecture_id: int) -> None:
+        LOGGER.debug("Removing lecture id=%s", lecture_id)
         with self._connect() as connection:
             connection.execute("DELETE FROM lectures WHERE id = ?", (lecture_id,))
+            LOGGER.debug("Lecture id=%s removed", lecture_id)
 
     def reorder_lectures(self, module_orders: Dict[int, List[int]]) -> None:
         if not module_orders:
+            LOGGER.debug("No lecture reordering requested")
             return
         with self._connect() as connection:
             cursor = connection.cursor()
             for module_id, lecture_ids in module_orders.items():
+                LOGGER.debug(
+                    "Reordering %d lectures for module_id=%s", len(lecture_ids), module_id
+                )
                 for index, lecture_id in enumerate(lecture_ids):
                     cursor.execute(
                         "UPDATE lectures SET module_id = ?, position = ? WHERE id = ?",
                         (module_id, index, lecture_id),
+                    )
+                    LOGGER.debug(
+                        "Lecture id=%s assigned to module_id=%s position=%s",
+                        lecture_id,
+                        module_id,
+                        index,
                     )
 
 

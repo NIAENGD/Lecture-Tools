@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import logging
 import shutil
 import subprocess
 from pathlib import Path
 from typing import Optional, Tuple
 
 from .naming import build_timestamped_name
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 def ensure_wav(
@@ -26,7 +30,9 @@ def ensure_wav(
     whether a new file was created.
     """
 
+    LOGGER.debug("Ensuring WAV version for source %s", source)
     if source.suffix.lower() == ".wav":
+        LOGGER.debug("Source is already WAV; skipping conversion")
         return source, False
 
     ffmpeg_path = shutil.which("ffmpeg")
@@ -34,14 +40,17 @@ def ensure_wav(
         raise ValueError(
             "Audio conversion requires FFmpeg to be installed on the server."
         )
+    LOGGER.debug("Using FFmpeg binary at %s", ffmpeg_path)
 
     destination_dir = (output_dir or source.parent).resolve()
     destination_dir.mkdir(parents=True, exist_ok=True)
+    LOGGER.debug("Audio conversion destination directory: %s", destination_dir)
 
     base_stem = stem or source.stem or "audio"
     candidate = destination_dir / f"{base_stem}.wav"
 
     if candidate.exists():
+        LOGGER.debug("Destination %s already exists; applying timestamp/sequence", candidate)
         if timestamp:
             candidate = destination_dir / build_timestamped_name(
                 base_stem, timestamp=timestamp, extension=".wav"
@@ -58,6 +67,9 @@ def ensure_wav(
                 if not candidate.exists():
                     break
                 sequence += 1
+                LOGGER.debug(
+                    "Candidate already existed; trying sequence=%s -> %s", sequence, candidate
+                )
 
     command = [
         ffmpeg_path,
@@ -72,6 +84,7 @@ def ensure_wav(
         str(candidate),
     ]
 
+    LOGGER.debug("Executing FFmpeg command: %s", " ".join(command))
     try:
         completed = subprocess.run(
             command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False
@@ -84,10 +97,17 @@ def ensure_wav(
         stderr = completed.stderr.decode("utf-8", errors="ignore").strip()
         stdout = completed.stdout.decode("utf-8", errors="ignore").strip()
         details = (stderr or stdout or "FFmpeg exited with a non-zero status.").splitlines()
+        LOGGER.debug(
+            "FFmpeg conversion failed (code=%s). stderr=%s stdout=%s",
+            completed.returncode,
+            stderr,
+            stdout,
+        )
         raise ValueError(
             f"Unable to convert audio to WAV: {details[0] if details else 'Unknown error.'}"
         )
 
+    LOGGER.debug("FFmpeg conversion succeeded; output stored at %s", candidate)
     return candidate, True
 
 
