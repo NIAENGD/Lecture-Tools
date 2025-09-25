@@ -153,8 +153,9 @@ def overview(style: UIStyle = style_option) -> None:
     ui.run()
 
 
-@cli.command("test-mastering")
+@cli.command("test-mastering", context_settings={"allow_extra_args": True})
 def test_mastering(
+    ctx: typer.Context,
     audio: Optional[str] = typer.Argument(
         None,
         help="Path to the audio file that should be mastered.",
@@ -168,14 +169,30 @@ def test_mastering(
 ) -> None:
     """Run the mastering pipeline on *audio* and report progress."""
 
-    raw_audio = audio
-    if raw_audio is not None and audio_option is not None:
+    extras = list(ctx.args)
+
+    if audio is not None and audio_option is not None:
         raise typer.BadParameter(
             "Provide the audio file either as a positional argument or via --audio, not both.",
             param_hint="AUDIO",
         )
-    if raw_audio is None:
-        raw_audio = audio_option
+
+    if extras:
+        if audio is not None or audio_option is not None:
+            unexpected = " ".join(extras)
+            raise typer.BadParameter(
+                f"Unexpected extra arguments: {unexpected}",
+                param_hint="AUDIO",
+            )
+        if len(extras) > 1:
+            unexpected = " ".join(extras)
+            raise typer.BadParameter(
+                f"Audio path must be provided as a single argument (got: {unexpected}).",
+                param_hint="AUDIO",
+            )
+        raw_audio = extras[0]
+    else:
+        raw_audio = audio_option if audio is None else audio
     if raw_audio is None:
         raise typer.BadParameter(
             "Missing required audio file argument.",

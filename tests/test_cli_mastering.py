@@ -89,3 +89,25 @@ def test_mastering_requires_audio_argument() -> None:
 
     assert result.exit_code != 0
     assert "Missing required audio file argument" in result.stdout
+
+def test_mastering_rejects_duplicate_audio_sources(tmp_path) -> None:
+    audio_path = tmp_path / "input.wav"
+    audio_path.write_bytes(b"fake")
+
+    result = runner.invoke(
+        run.cli,
+        ["test-mastering", str(audio_path), "--audio", str(audio_path)],
+    )
+
+    assert result.exit_code != 0
+    assert "Provide the audio file either as a positional argument" in result.stdout
+
+
+def test_mastering_rejects_unexpected_extra_arguments(tmp_path) -> None:
+    audio_path = tmp_path / "input.wav"
+    audio_path.write_bytes(b"fake")
+
+    result = runner.invoke(run.cli, ["test-mastering", str(audio_path), "extra"])
+
+    assert result.exit_code != 0
+    assert "Unexpected extra arguments" in result.stdout
