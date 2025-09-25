@@ -30,6 +30,7 @@ from app.services.ingestion import LectureIngestor
 from app.services.naming import build_timestamped_name
 from app.services.progress import (
     AUDIO_MASTERING_TOTAL_STEPS,
+    build_mastering_stage_progress_message,
     format_progress_message,
 )
 from app.services.storage import LectureRepository
@@ -262,13 +263,27 @@ def test_mastering(
             )
         completed_steps += 1.0
 
-        typer.echo(
-            format_progress_message(
-                "====> Reducing background noise and balancing speech…",
-                completed_steps,
-                total_steps,
-            )
+        stage_message, stage_description, stage_index, total_stage_count = (
+            build_mastering_stage_progress_message(completed_steps, total_steps)
         )
+        typer.echo(stage_message)
+        for detail in stage_description.detail_lines:
+            typer.echo(f"        • {detail}")
+        if LOGGER.isEnabledFor(logging.INFO):
+            LOGGER.info(
+                "Mastering stage %s/%s operations: %s",
+                stage_index,
+                total_stage_count,
+                "; ".join(stage_description.detail_lines),
+            )
+            LOGGER.info(
+                "Mastering stage %s/%s parameters: %s",
+                stage_index,
+                total_stage_count,
+                ", ".join(
+                    f"{name}={value}" for name, value in stage_description.parameters.items()
+                ),
+            )
         processed = preprocess_audio(samples, sample_rate)
         if LOGGER.isEnabledFor(logging.DEBUG):
             LOGGER.debug(
