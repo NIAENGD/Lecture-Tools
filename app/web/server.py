@@ -31,6 +31,7 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 from ..config import AppConfig
 from ..processing import (
     PyMuPDFSlideConverter,
+    describe_audio_debug_stats,
     load_wav_file,
     preprocess_audio,
     save_preprocessed_wav,
@@ -1491,6 +1492,12 @@ def create_app(
                         "====> Analysing uploaded audio…",
                     )
                     samples, sample_rate = load_wav_file(target)
+                    if LOGGER.isEnabledFor(logging.DEBUG):
+                        LOGGER.debug(
+                            "Audio mastering diagnostics before preprocessing for lecture %s: %s",
+                            lecture_id,
+                            describe_audio_debug_stats(samples, sample_rate),
+                        )
                     processing_tracker.update(
                         lecture_id,
                         1.5,
@@ -1498,6 +1505,12 @@ def create_app(
                         "====> Reducing background noise and balancing speech…",
                     )
                     processed = preprocess_audio(samples, sample_rate)
+                    if LOGGER.isEnabledFor(logging.DEBUG):
+                        LOGGER.debug(
+                            "Audio mastering diagnostics after preprocessing for lecture %s: %s",
+                            lecture_id,
+                            describe_audio_debug_stats(processed, sample_rate),
+                        )
                     processing_tracker.update(
                         lecture_id,
                         2.5,

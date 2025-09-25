@@ -16,6 +16,87 @@ def _db_to_amplitude(value: float) -> float:
     return float(10 ** (value / 20))
 
 
+def _summarise_audio(array: np.ndarray) -> Tuple[int, int, np.ndarray]:
+    """Return (frames, channels, flattened view) for *array*.
+
+    The helper gracefully handles mono and multi-channel PCM arrays and ensures a
+    contiguous ``float32`` view that downstream diagnostics can use without
+    mutating the original signal.
+    """
+
+    audio = np.asarray(array, dtype=np.float32)
+    if audio.ndim == 0:
+        audio = audio.reshape(1)
+
+    if audio.ndim == 1:
+        frames = int(audio.size)
+        channels = 1
+        flattened = audio.reshape(-1)
+    else:
+        frames = int(audio.shape[0])
+        channels = int(np.prod(audio.shape[1:]))
+        flattened = np.ascontiguousarray(audio.reshape(frames, channels)).reshape(-1)
+
+    return frames, channels, flattened
+
+
+def describe_audio_debug_stats(audio: np.ndarray, sample_rate: int) -> str:
+    """Return a human-readable summary of key statistics for ``audio``.
+
+    The summary is designed for debug logging and highlights properties that are
+    useful when diagnosing mastering quality issues (levels, dynamic range,
+    clipping, and data validity). All calculations ignore non-finite values to
+    avoid contaminating aggregate statistics.
+    """
+
+    frames, channels, flattened = _summarise_audio(audio)
+    duration = float(frames) / float(sample_rate) if sample_rate > 0 else 0.0
+
+    finite_mask = np.isfinite(flattened)
+    finite_count = int(np.count_nonzero(finite_mask))
+    invalid_count = int(flattened.size - finite_count)
+    if finite_count:
+        finite = flattened[finite_mask]
+        minimum = float(np.min(finite))
+        maximum = float(np.max(finite))
+        abs_peak = float(np.max(np.abs(finite)))
+        mean = float(np.mean(finite))
+        std = float(np.std(finite))
+        median = float(np.median(finite))
+        rms = float(np.sqrt(np.mean(np.square(finite))))
+        abs_p95 = float(np.percentile(np.abs(finite), 95))
+        abs_p99 = float(np.percentile(np.abs(finite), 99))
+        clipped = int(np.count_nonzero(np.abs(finite) >= 0.999))
+    else:
+        minimum = maximum = abs_peak = mean = std = median = rms = abs_p95 = abs_p99 = 0.0
+        clipped = 0
+
+    return (
+        "sample_rate={rate}Hz, channels={channels}, frames={frames}, duration={duration:.3f}s, "
+        "min={minimum:+.4f}, max={maximum:+.4f}, abs_peak={abs_peak:.4f}, rms={rms:.4f}, "
+        "mean={mean:+.4f}, std={std:.4f}, median={median:+.4f}, abs_p95={abs_p95:.4f}, "
+        "abs_p99={abs_p99:.4f}, clipped_samples={clipped}/{finite_count}, "
+        "nonfinite_samples={invalid_count}"
+    ).format(
+        rate=sample_rate,
+        channels=channels,
+        frames=frames,
+        duration=duration,
+        minimum=minimum,
+        maximum=maximum,
+        abs_peak=abs_peak,
+        rms=rms,
+        mean=mean,
+        std=std,
+        median=median,
+        abs_p95=abs_p95,
+        abs_p99=abs_p99,
+        clipped=clipped,
+        finite_count=finite_count,
+        invalid_count=invalid_count,
+    )
+
+
 def load_wav_file(path: Path) -> Tuple[np.ndarray, int]:
     """Return the PCM samples and sample rate stored in *path*.
 
