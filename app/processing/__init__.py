@@ -9,6 +9,7 @@ from .audio import (
 )
 from .recording import (
     check_audio_mastering_cli_availability,
+    describe_audio_debug_stats,
     load_wav_file,
     preprocess_audio,
     save_preprocessed_wav,
@@ -23,6 +24,7 @@ __all__ = [
     "check_gpu_whisper_availability",
     "check_audio_mastering_cli_availability",
     "PyMuPDFSlideConverter",
+    "describe_audio_debug_stats",
     "load_wav_file",
     "preprocess_audio",
     "save_preprocessed_wav",

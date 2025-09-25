@@ -20,6 +20,7 @@ from app.logging_utils import DEFAULT_LOG_FORMAT, configure_logging, get_log_fil
 from app.processing import (
     FasterWhisperTranscription,
     PyMuPDFSlideConverter,
+    describe_audio_debug_stats,
     load_wav_file,
     preprocess_audio,
     save_preprocessed_wav,
@@ -31,6 +32,9 @@ from app.services.storage import LectureRepository
 from app.ui.console import ConsoleUI
 from app.ui.modern import ModernUI
 from app.web import create_app
+
+
+LOGGER = logging.getLogger("lecture_tools.mastering")
 
 
 cli = typer.Typer(add_completion=False, help="Lecture Tools management commands")
@@ -180,9 +184,21 @@ def test_mastering(
 
         typer.echo("====> Analysing uploaded audio…")
         samples, sample_rate = load_wav_file(wav_path)
+        if LOGGER.isEnabledFor(logging.DEBUG):
+            LOGGER.debug(
+                "Audio mastering diagnostics before preprocessing for '%s': %s",
+                audio_path,
+                describe_audio_debug_stats(samples, sample_rate),
+            )
 
         typer.echo("====> Reducing background noise and balancing speech…")
         processed = preprocess_audio(samples, sample_rate)
+        if LOGGER.isEnabledFor(logging.DEBUG):
+            LOGGER.debug(
+                "Audio mastering diagnostics after preprocessing for '%s': %s",
+                audio_path,
+                describe_audio_debug_stats(processed, sample_rate),
+            )
 
         typer.echo("====> Rendering mastered waveform…")
         base_stem = audio_path.stem or "audio"
