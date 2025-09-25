@@ -772,6 +772,9 @@
         padding: 8px 16px;
         font-weight: 600;
         font-size: 0.95rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
         cursor: pointer;
         transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease,
           filter 0.2s ease;
@@ -2077,7 +2080,13 @@
           <input id="upload-dialog-input" class="sr-only" type="file" />
           <strong id="upload-dropzone-prompt"></strong>
           <p id="upload-dropzone-help"></p>
-          <button id="upload-browse-button" type="button" class="dialog-button secondary"></button>
+          <label
+            id="upload-browse-button"
+            for="upload-dialog-input"
+            class="dialog-button secondary"
+            role="button"
+            tabindex="0"
+          ></label>
         </div>
         <div id="upload-file-info" class="upload-file-info hidden">
           <div>
@@ -4822,6 +4831,7 @@
               }
               if (dialog.browse) {
                 dialog.browse.removeEventListener('click', handleBrowseClick);
+                dialog.browse.removeEventListener('keydown', handleDropzoneKeyDown);
               }
               if (dialog.input) {
                 dialog.input.removeEventListener('change', handleInputChange);
@@ -5303,6 +5313,7 @@
             }
             if (dialog.browse) {
               dialog.browse.addEventListener('click', handleBrowseClick);
+              dialog.browse.addEventListener('keydown', handleDropzoneKeyDown);
             }
             if (dialog.input) {
               dialog.input.addEventListener('change', handleInputChange);
