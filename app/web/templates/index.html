@@ -2405,6 +2405,9 @@
                 waiting: 'Select a file to continue.',
                 preparing: 'Preparing file…',
                 uploading: 'Uploading…',
+                processing: 'Processing upload…',
+                processingAction: 'Processing…',
+                processingAudio: 'Processing audio…',
                 success: 'Upload completed.',
                 failure: 'Upload failed. Please try again.',
                 progress: 'Upload progress',
@@ -2773,6 +2776,9 @@
                 waiting: '请选择一个文件。',
                 preparing: '准备文件…',
                 uploading: '正在上传…',
+                processing: '正在处理上传…',
+                processingAction: '正在处理…',
+                processingAudio: '正在处理音频…',
                 success: '上传完成。',
                 failure: '上传失败，请重试。',
                 progress: '上传进度',
@@ -3145,6 +3151,9 @@
                 waiting: 'Selecciona un archivo para continuar.',
                 preparing: 'Preparando archivo…',
                 uploading: 'Subiendo…',
+                processing: 'Procesando carga…',
+                processingAction: 'Procesando…',
+                processingAudio: 'Procesando audio…',
                 success: 'Subida completada.',
                 failure: 'La subida falló. Vuelve a intentarlo.',
                 progress: 'Progreso de subida',
@@ -3518,6 +3527,9 @@
                 waiting: 'Sélectionnez un fichier pour continuer.',
                 preparing: 'Préparation du fichier…',
                 uploading: 'Téléversement…',
+                processing: 'Traitement du téléversement…',
+                processingAction: 'Traitement…',
+                processingAudio: 'Traitement de l’audio…',
                 success: 'Téléversement terminé.',
                 failure: 'Le téléversement a échoué. Réessayez.',
                 progress: 'Progression du téléversement',
@@ -4783,6 +4795,7 @@
             let uploading = false;
             let uploadComplete = false;
             let uploadResult = null;
+            let uploadStage = 'idle';
 
             const labels = {
               title: options.title || t('dialogs.upload.title'),
@@ -4794,6 +4807,9 @@
               waiting: options.waiting || t('dialogs.upload.waiting'),
               preparing: options.preparing || t('dialogs.upload.preparing'),
               uploading: options.uploading || t('dialogs.upload.uploading'),
+              processing: options.processing || t('dialogs.upload.processing'),
+              processingAction:
+                options.processingAction || t('dialogs.upload.processingAction'),
               success: options.success || t('dialogs.upload.success'),
               failure: options.failure || t('dialogs.upload.failure'),
               progress: options.progressLabel || t('dialogs.upload.progress'),
@@ -4898,6 +4914,7 @@
                 dialog.progress.setAttribute('aria-valuenow', '0');
                 dialog.progress.setAttribute('aria-label', labels.progress);
               }
+              uploadStage = 'idle';
             }
 
             function updateProgress(ratio) {
@@ -4915,6 +4932,16 @@
               if (dialog.progress) {
                 dialog.progress.setAttribute('aria-valuenow', String(percent));
               }
+              if (
+                labels.processing &&
+                uploading &&
+                uploadStage !== 'processing' &&
+                percent >= 100
+              ) {
+                uploadStage = 'processing';
+                setStatus(labels.processing);
+                updateActionState();
+              }
             }
 
             function updateActionState() {
@@ -4922,7 +4949,11 @@
                 return;
               }
               if (uploading) {
-                dialog.confirm.textContent = labels.uploading;
+                const buttonLabel =
+                  uploadStage === 'processing'
+                    ? labels.processingAction || labels.processing || labels.uploading
+                    : labels.uploading;
+                dialog.confirm.textContent = buttonLabel;
                 dialog.confirm.disabled = true;
                 if (dialog.cancel) {
                   dialog.cancel.disabled = true;
@@ -5161,8 +5192,9 @@
               }
               uploading = true;
               uploadComplete = false;
-              updateActionState();
               resetProgress();
+              uploadStage = 'uploading';
+              updateActionState();
               setStatus(labels.uploading);
               try {
                 const result = await uploadHandler(selectedFile, {
@@ -5176,6 +5208,7 @@
                 uploadResult = result ?? null;
                 uploadComplete = true;
                 uploading = false;
+                uploadStage = 'idle';
                 updateProgress(1);
                 setStatus(labels.success, 'success');
                 updateActionState();
@@ -5183,6 +5216,7 @@
                 uploading = false;
                 uploadComplete = false;
                 uploadResult = null;
+                uploadStage = 'idle';
                 const message =
                   error instanceof Error && error.message ? error.message : labels.failure;
                 setStatus(message, 'error');
@@ -7504,6 +7538,9 @@
             browseLabel: t('dialogs.upload.browse'),
             clearLabel: t('dialogs.upload.clear'),
             uploadLabel: t('dialogs.upload.action'),
+            processing:
+              kind === 'audio' ? t('dialogs.upload.processingAudio') : undefined,
+            processingAction: t('dialogs.upload.processingAction'),
             onFileSelected:
               kind === 'slides'
                 ? async (file) => {
