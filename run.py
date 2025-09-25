@@ -65,7 +65,7 @@ def main(ctx: typer.Context) -> None:
     """Launch the web server when no explicit command is provided."""
 
     if ctx.invoked_subcommand is None:
-        ctx.invoke(serve, host=DEFAULT_HOST, port=DEFAULT_PORT)
+        ctx.invoke(serve, host=DEFAULT_HOST, port=DEFAULT_PORT, root_path=None)
 
 
 DEFAULT_HOST = "127.0.0.1"
