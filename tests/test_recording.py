@@ -11,6 +11,7 @@ from app.processing.recording import (
     load_wav_file,
     preprocess_audio,
     save_preprocessed_wav,
+    _shape_frequency_response,
 )
 
 
@@ -96,3 +97,40 @@ def test_mastering_cli_probe_reports_output(monkeypatch, tmp_path: Path) -> None
     assert status["binary"] == str(fake_binary)
     assert status["message"] == "Audio mastering ready"
     assert status["output"] == "Audio mastering ready\nAll good"
+
+
+def test_frequency_shaping_operates_in_frames() -> None:
+    sample_rate = 24_000
+    duration = 1.0
+    times = np.linspace(0, duration, int(sample_rate * duration), endpoint=False)
+
+    low = np.sin(2 * np.pi * 60 * times)
+    presence = np.sin(2 * np.pi * 2_500 * times)
+    high = np.sin(2 * np.pi * 9_000 * times)
+    signal = (0.6 * low + 0.4 * presence + 0.6 * high).astype(np.float32)
+
+    shaped = _shape_frequency_response(
+        signal,
+        sample_rate,
+        highpass_hz=200.0,
+        lowpass_hz=6_000.0,
+        presence_low_hz=2_000.0,
+        presence_high_hz=3_000.0,
+        presence_gain_db=6.0,
+        frame_ms=64.0,
+    )
+
+    assert shaped.dtype == np.float32
+    spectrum = np.fft.rfft(shaped)
+    freqs = np.fft.rfftfreq(shaped.size, d=1.0 / sample_rate)
+
+    def magnitude_at(target: float) -> float:
+        index = int(np.argmin(np.abs(freqs - target)))
+        return float(np.abs(spectrum[index]))
+
+    low_mag = magnitude_at(60.0)
+    presence_mag = magnitude_at(2_500.0)
+    high_mag = magnitude_at(9_000.0)
+
+    assert presence_mag > low_mag * 3
+    assert presence_mag > high_mag * 1.8
