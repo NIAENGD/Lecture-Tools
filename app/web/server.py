@@ -39,6 +39,10 @@ from ..processing import (
 from ..services.audio_conversion import ensure_wav
 from ..services.ingestion import LecturePaths
 from ..services.naming import build_asset_stem, build_timestamped_name, slugify
+from ..services.progress import (
+    AUDIO_MASTERING_TOTAL_STEPS,
+    format_progress_message,
+)
 from ..services.settings import SettingsStore, UISettings
 from ..services.storage import ClassRecord, LectureRecord, LectureRepository, ModuleRecord
 from ..logging_utils import DEFAULT_LOG_FORMAT
@@ -1452,6 +1456,7 @@ def create_app(
         relative = target.relative_to(config.storage_root).as_posix()
         update_kwargs: Dict[str, Optional[str]] = {attribute: relative}
         processed_relative: Optional[str] = None
+        completion_message: Optional[str] = None
 
         if asset_key == "audio":
             original_target = target
@@ -1479,17 +1484,27 @@ def create_app(
             audio_mastering_enabled = getattr(settings, "audio_mastering_enabled", True)
 
             if audio_mastering_enabled:
+                total_steps = float(AUDIO_MASTERING_TOTAL_STEPS)
                 processing_tracker.start(
-                    lecture_id, "====> Preparing audio mastering…"
+                    lecture_id,
+                    format_progress_message(
+                        "====> Preparing audio mastering…",
+                        0.0,
+                        total_steps,
+                    ),
                 )
 
-                def _process_audio() -> str:
-                    total_steps = 3.0
+                def _process_audio() -> Tuple[str, str]:
+                    completed_steps = 1.0
                     processing_tracker.update(
                         lecture_id,
-                        1.0,
+                        completed_steps,
                         total_steps,
-                        "====> Analysing uploaded audio…",
+                        format_progress_message(
+                            "====> Analysing uploaded audio…",
+                            completed_steps,
+                            total_steps,
+                        ),
                     )
                     samples, sample_rate = load_wav_file(target)
                     if LOGGER.isEnabledFor(logging.DEBUG):
@@ -1498,11 +1513,16 @@ def create_app(
                             lecture_id,
                             describe_audio_debug_stats(samples, sample_rate),
                         )
+                    completed_steps += 1.0
                     processing_tracker.update(
                         lecture_id,
-                        1.5,
+                        completed_steps,
                         total_steps,
-                        "====> Reducing background noise and balancing speech…",
+                        format_progress_message(
+                            "====> Reducing background noise and balancing speech…",
+                            completed_steps,
+                            total_steps,
+                        ),
                     )
                     processed = preprocess_audio(samples, sample_rate)
                     if LOGGER.isEnabledFor(logging.DEBUG):
@@ -1511,11 +1531,16 @@ def create_app(
                             lecture_id,
                             describe_audio_debug_stats(processed, sample_rate),
                         )
+                    completed_steps += 1.0
                     processing_tracker.update(
                         lecture_id,
-                        2.5,
+                        completed_steps,
                         total_steps,
-                        "====> Rendering mastered waveform…",
+                        format_progress_message(
+                            "====> Rendering mastered waveform…",
+                            completed_steps,
+                            total_steps,
+                        ),
                     )
 
                     lecture_paths.processed_audio_dir.mkdir(parents=True, exist_ok=True)
@@ -1534,10 +1559,27 @@ def create_app(
                     if processed_target != target:
                         with contextlib.suppress(OSError):
                             target.unlink(missing_ok=True)
-                    return processed_target.relative_to(config.storage_root).as_posix()
+                    completed_steps = total_steps
+                    completion_message = format_progress_message(
+                        "====> Audio mastering completed.",
+                        completed_steps,
+                        total_steps,
+                    )
+                    processing_tracker.update(
+                        lecture_id,
+                        completed_steps,
+                        total_steps,
+                        completion_message,
+                    )
+                    return (
+                        processed_target.relative_to(config.storage_root).as_posix(),
+                        completion_message,
+                    )
 
                 try:
-                    processed_relative = await asyncio.to_thread(_process_audio)
+                    processed_relative, completion_message = await asyncio.to_thread(
+                        _process_audio
+                    )
                 except ValueError as error:
                     processing_tracker.fail(lecture_id, f"====> {error}")
                     raise HTTPException(status_code=400, detail=str(error)) from error
@@ -1545,9 +1587,13 @@ def create_app(
                     processing_tracker.fail(lecture_id, f"====> {error}")
                     raise HTTPException(status_code=500, detail=str(error)) from error
                 else:
-                    processing_tracker.finish(
-                        lecture_id, "====> Audio mastering completed."
-                    )
+                    if completion_message is None:
+                        completion_message = format_progress_message(
+                            "====> Audio mastering completed.",
+                            total_steps,
+                            total_steps,
+                        )
+                    processing_tracker.finish(lecture_id, completion_message)
                     relative = processed_relative
                     update_kwargs[attribute] = processed_relative
                     update_kwargs["processed_audio_path"] = processed_relative
