@@ -176,6 +176,7 @@ def test_mastering(
             "Provide the audio file either as a positional argument or via --audio, not both.",
             param_hint="AUDIO",
         )
+
     if extras:
         if audio is not None or audio_option is not None:
             unexpected = " ".join(extras)
@@ -192,7 +193,6 @@ def test_mastering(
         raw_audio = extras[0]
     else:
         raw_audio = audio_option if audio is None else audio
-
     if raw_audio is None:
         raise typer.BadParameter(
             "Missing required audio file argument.",

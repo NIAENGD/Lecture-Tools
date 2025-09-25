@@ -90,7 +90,6 @@ def test_mastering_requires_audio_argument() -> None:
     assert result.exit_code != 0
     assert "Missing required audio file argument" in result.stdout
 
-
 def test_mastering_rejects_duplicate_audio_sources(tmp_path) -> None:
     audio_path = tmp_path / "input.wav"
     audio_path.write_bytes(b"fake")
