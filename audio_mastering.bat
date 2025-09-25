@@ -49,29 +49,15 @@ set "FIRST_ARG=%~1"
 set "FORWARDED_ARGS="
 set "AUDIO_PATH="
 set "FIRST_ARG_IS_OPTION="
-
-for %%I in ("--audio" "-a") do (
-    if /I "!FIRST_ARG!"=="%%~I" (
-        set "FIRST_ARG_IS_OPTION=1"
-    )
+if /I "!FIRST_ARG!"=="--audio" (
+    set "FIRST_ARG_IS_OPTION=1"
+) else if /I "!FIRST_ARG!"=="-a" (
+    set "FIRST_ARG_IS_OPTION=1"
 )
 
 if defined FIRST_ARG_IS_OPTION (
     set "FORWARDED_ARGS=%ORIGINAL_ARGS%"
-    set "EXPECT_AUDIO="
-    for %%I in (%*) do (
-        if defined EXPECT_AUDIO (
-            set "AUDIO_PATH=%%~I"
-            set "EXPECT_AUDIO="
-            goto :found_audio_option
-        )
-        if /I "%%~I"=="--audio" (
-            set "EXPECT_AUDIO=1"
-        ) else if /I "%%~I"=="-a" (
-            set "EXPECT_AUDIO=1"
-        )
-    )
-:found_audio_option
+    call :find_audio_from_options %*
 ) else if "%FIRST_ARG:~0,1%"=="-" (
     set "FORWARDED_ARGS=%ORIGINAL_ARGS%"
 ) else (
@@ -124,6 +110,26 @@ echo.
 echo Press any key to close this window...
 pause >nul
 goto :cleanup
+
+:find_audio_from_options
+set "EXPECT_AUDIO="
+:scan_options
+if "%~1"=="" goto :end_scan
+if defined EXPECT_AUDIO (
+    if not defined AUDIO_PATH set "AUDIO_PATH=%~1"
+    set "EXPECT_AUDIO="
+    goto :continue_scan
+)
+if /I "%~1"=="--audio" (
+    set "EXPECT_AUDIO=1"
+) else if /I "%~1"=="-a" (
+    set "EXPECT_AUDIO=1"
+)
+:continue_scan
+shift
+goto :scan_options
+:end_scan
+exit /b 0
 
 :setup_python
 if not exist "%SCRIPT_DIR%assets" mkdir "%SCRIPT_DIR%assets" >nul
