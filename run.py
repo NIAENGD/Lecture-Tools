@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import shutil
 import threading
 import time
 import webbrowser
@@ -199,6 +200,49 @@ def ingest(
         typer.echo(f"  Transcript: {lecture.transcript_path}")
     if lecture.slide_image_dir:
         typer.echo(f"  Slide images: {lecture.slide_image_dir}")
+
+
+@cli.command()
+def transcribe_audio(
+    audio: Path = typer.Argument(
+        ...,
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        resolve_path=True,
+        help="Path to the audio file to transcribe.",
+    ),
+    whisper_model: str = typer.Option("base", help="Whisper model size to download"),
+) -> None:
+    """Transcribe *audio* using the standard Lecture Tools pipeline."""
+
+    config = initialize_app()
+    _prepare_logging(config.storage_root)
+
+    typer.echo(f"Transcribing audio: {audio}")
+
+    transcription = FasterWhisperTranscription(
+        whisper_model,
+        download_root=config.assets_root,
+    )
+
+    audio_path = audio.resolve()
+    output_dir = audio_path.parent / f"{audio_path.stem}_transcription"
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    typer.echo(f"Writing intermediate results to: {output_dir}")
+    result = transcription.transcribe(audio_path, output_dir)
+
+    final_transcript = audio_path.parent / f"{audio_path.stem}_transcript.txt"
+    shutil.copy2(result.text_path, final_transcript)
+    typer.echo(f"Transcript saved to: {final_transcript}")
+
+    if result.segments_path is not None and result.segments_path.exists():
+        final_segments = audio_path.parent / f"{audio_path.stem}_segments.json"
+        shutil.copy2(result.segments_path, final_segments)
+        typer.echo(f"Segment breakdown saved to: {final_segments}")
+
+    typer.echo("Transcription completed successfully.")
 
 
 if __name__ == "__main__":

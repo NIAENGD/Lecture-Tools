@@ -149,6 +149,23 @@ Visit **Settings → Appearance** in the web UI to tailor the ambience:
 
 ## 🛠️ Core Workflows
 
+### Transcribe a standalone audio file
+
+Run the same faster-whisper pipeline the application uses, store artefacts in a
+temporary workspace, and copy the final transcript/segments beside the source
+audio:
+
+```bash
+python run.py transcribe-audio path/to/lecture.wav --whisper-model base
+```
+
+- **`--whisper-model`** is optional; choose any faster-whisper model tag (e.g.
+  `small`, `medium`, `large-v2`).
+- Intermediate files (logits, timings, etc.) live in a sibling directory named
+  `<audio>_transcription` so you can inspect the raw pipeline output.
+- The completed transcript (`<audio>_transcript.txt`) and optional segment
+  breakdown (`<audio>_segments.json`) land alongside the original audio file.
+
 ### Ingest a lecture
 ```bash
 python run.py ingest \
