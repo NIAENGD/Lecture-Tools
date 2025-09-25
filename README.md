@@ -189,18 +189,19 @@ During transcription, Lecture Tools automatically benchmarks GPU availability an
 
 ### 🎧 Verify the audio mastering CLI (optional)
 
-The Windows-friendly mastering helper that ships under `cli/` can be tested without launching the full app. Run the diagnostic probe to confirm the binary is detected and functional:
+Run the mastering pipeline end-to-end against a sample file to confirm the helper binary works on your machine:
 
 ```bash
-python - <<'PY'
-from pprint import pprint
-from app.processing import check_audio_mastering_cli_availability
-
-pprint(check_audio_mastering_cli_availability())
-PY
+python run.py test-mastering path/to/audio.wav
 ```
 
-A healthy setup reports `{"supported": True, ...}` along with the resolved binary path and the banner text emitted by the helper. If the binary is missing or incompatible for your OS, the message field explains what to fix (for example, copying an updated `main.exe` into `cli/`).
+Prefer a flag-style invocation? The command also understands `-testmastering`:
+
+```bash
+python run.py -testmastering path/to/audio.wav
+```
+
+Progress mirrors the web upload flow, reporting each step (analysis, noise reduction, render). When the run completes the terminal prints the mastered file location alongside the untouched original.
 
 ---
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import shutil
+import sys
 import threading
 import time
 import webbrowser
@@ -16,8 +17,16 @@ import typer
 
 from app.bootstrap import initialize_app
 from app.logging_utils import DEFAULT_LOG_FORMAT, configure_logging, get_log_file_path
-from app.processing import FasterWhisperTranscription, PyMuPDFSlideConverter
+from app.processing import (
+    FasterWhisperTranscription,
+    PyMuPDFSlideConverter,
+    load_wav_file,
+    preprocess_audio,
+    save_preprocessed_wav,
+)
+from app.services.audio_conversion import ensure_wav
 from app.services.ingestion import LectureIngestor
+from app.services.naming import build_timestamped_name
 from app.services.storage import LectureRepository
 from app.ui.console import ConsoleUI
 from app.ui.modern import ModernUI
@@ -140,6 +149,70 @@ def overview(style: UIStyle = style_option) -> None:
     ui.run()
 
 
+@cli.command("test-mastering")
+def test_mastering(
+    audio: Path = typer.Argument(
+        ..., exists=True, file_okay=True, dir_okay=False, resolve_path=True
+    ),
+) -> None:
+    """Run the mastering pipeline on *audio* and report progress."""
+
+    config = initialize_app()
+    _prepare_logging(config.storage_root)
+
+    audio_path = audio.resolve()
+    typer.echo("====> Preparing audio mastering…")
+    typer.echo(f"Source audio: {audio_path}")
+
+    timestamp = time.strftime("%Y%m%d-%H%M%S")
+    wav_path: Optional[Path] = None
+    converted = False
+    processed_target: Optional[Path] = None
+
+    try:
+        typer.echo("====> Ensuring WAV input…")
+        wav_path, converted = ensure_wav(
+            audio_path,
+            output_dir=audio_path.parent,
+            stem=audio_path.stem or "audio",
+            timestamp=timestamp,
+        )
+
+        typer.echo("====> Analysing uploaded audio…")
+        samples, sample_rate = load_wav_file(wav_path)
+
+        typer.echo("====> Reducing background noise and balancing speech…")
+        processed = preprocess_audio(samples, sample_rate)
+
+        typer.echo("====> Rendering mastered waveform…")
+        base_stem = audio_path.stem or "audio"
+        candidate = wav_path.parent / f"{base_stem}-master.wav"
+        if candidate.exists():
+            candidate = candidate.parent / build_timestamped_name(
+                f"{base_stem}-master",
+                timestamp=timestamp,
+                extension=".wav",
+            )
+
+        save_preprocessed_wav(candidate, processed, sample_rate)
+        processed_target = candidate
+
+    except ValueError as error:
+        typer.echo(f"Audio mastering failed: {error}")
+        raise typer.Exit(code=1) from error
+    except Exception as error:  # noqa: BLE001 - surfacing unexpected issues
+        typer.echo(f"Unexpected mastering failure: {error}")
+        raise typer.Exit(code=1) from error
+    finally:
+        if converted and wav_path and wav_path.exists() and wav_path != audio_path:
+            wav_path.unlink(missing_ok=True)
+
+    typer.echo("====> Audio mastering completed.")
+    if processed_target is not None:
+        typer.echo(f"Mastered audio saved to: {processed_target}")
+    typer.echo(f"Original audio remains at: {audio_path}")
+
+
 @cli.command()
 def ingest(
     class_name: str = typer.Option(..., help="Class name"),
@@ -246,4 +319,10 @@ def transcribe_audio(
 
 
 if __name__ == "__main__":
+    if len(sys.argv) > 1 and sys.argv[1] in {
+        "-testmastering",
+        "--testmastering",
+        "--test-mastering",
+    }:
+        sys.argv[1] = "test-mastering"
     cli()
