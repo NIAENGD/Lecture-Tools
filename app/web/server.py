@@ -41,6 +41,7 @@ from ..services.ingestion import LecturePaths
 from ..services.naming import build_asset_stem, build_timestamped_name, slugify
 from ..services.progress import (
     AUDIO_MASTERING_TOTAL_STEPS,
+    build_mastering_stage_progress_message,
     format_progress_message,
 )
 from ..services.settings import SettingsStore, UISettings
@@ -1514,16 +1515,37 @@ def create_app(
                             describe_audio_debug_stats(samples, sample_rate),
                         )
                     completed_steps += 1.0
+                    (
+                        stage_message,
+                        stage_description,
+                        stage_index,
+                        total_stage_count,
+                    ) = build_mastering_stage_progress_message(
+                        completed_steps,
+                        total_steps,
+                    )
                     processing_tracker.update(
                         lecture_id,
                         completed_steps,
                         total_steps,
-                        format_progress_message(
-                            "====> Reducing background noise and balancing speech…",
-                            completed_steps,
-                            total_steps,
-                        ),
+                        stage_message,
                     )
+                    if LOGGER.isEnabledFor(logging.INFO):
+                        LOGGER.info(
+                            "Mastering stage %s/%s operations: %s",
+                            stage_index,
+                            total_stage_count,
+                            "; ".join(stage_description.detail_lines),
+                        )
+                        LOGGER.info(
+                            "Mastering stage %s/%s parameters: %s",
+                            stage_index,
+                            total_stage_count,
+                            ", ".join(
+                                f"{name}={value}"
+                                for name, value in stage_description.parameters.items()
+                            ),
+                        )
                     processed = preprocess_audio(samples, sample_rate)
                     if LOGGER.isEnabledFor(logging.DEBUG):
                         LOGGER.debug(

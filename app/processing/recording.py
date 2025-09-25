@@ -5,8 +5,10 @@ from __future__ import annotations
 import math
 import subprocess
 import wave
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Dict, Mapping, Optional, Tuple
+from types import MappingProxyType
 
 import numpy as np
 from numpy.lib import stride_tricks
@@ -207,6 +209,91 @@ def preprocess_audio(
     mono = _normalise_signal(mono, target_peak_db=target_peak_db, target_lufs_db=target_lufs_db)
     mono = np.clip(mono, -1.0, 1.0)
     return mono.astype(np.float32)
+
+
+@dataclass(frozen=True)
+class PreprocessAudioStageDescription:
+    """Human friendly breakdown of the mastering chain."""
+
+    summary: str
+    headline: str
+    detail_lines: Tuple[str, ...]
+    parameters: Mapping[str, float]
+
+
+def describe_preprocess_audio_stage(
+    *,
+    highpass_hz: float = 80.0,
+    lowpass_hz: float = 12_000.0,
+    presence_low_hz: float = 2_000.0,
+    presence_high_hz: float = 4_000.0,
+    presence_gain_db: float = 2.0,
+    noise_reduction_db: float = 12.0,
+    noise_sensitivity: float = 1.2,
+    compressor_threshold_db: float = -20.0,
+    compressor_ratio: float = 3.0,
+    compressor_attack_ms: float = 12.0,
+    compressor_release_ms: float = 120.0,
+    target_peak_db: float = -1.0,
+    target_lufs_db: float = -16.0,
+) -> PreprocessAudioStageDescription:
+    """Return a structured description of the mastering stage."""
+
+    headline_steps = (
+        "downmix to mono",
+        "spectral noise gating",
+        "speech-focused EQ",
+        "dynamic compression",
+        "loudness normalisation",
+    )
+    headline = " \u2192 ".join(headline_steps)
+
+    detail_lines = (
+        "Downmixing multi-channel input to mono for a consistent reference track.",
+        (
+            "Applying spectral noise gating to remove stationary background noise "
+            f"(~{noise_reduction_db:.0f} dB target reduction, sensitivity {noise_sensitivity})."
+        ),
+        (
+            "Shaping the frequency response for speech intelligibility: "
+            f"high-pass {highpass_hz:.0f} Hz, low-pass {lowpass_hz:.0f} Hz, "
+            f"+{presence_gain_db:.1f} dB presence boost between {presence_low_hz:.0f}-{presence_high_hz:.0f} Hz."
+        ),
+        (
+            f"Compressing dynamics with a {compressor_ratio}:1 ratio at "
+            f"{compressor_threshold_db:.0f} dBFS, attack {compressor_attack_ms:.0f} ms, "
+            f"release {compressor_release_ms:.0f} ms to even out levels."
+        ),
+        (
+            f"Normalising loudness to {target_lufs_db:.0f} LUFS with a {target_peak_db:.0f} dBFS peak "
+            "ceiling for consistent playback volume."
+        ),
+    )
+
+    parameters: Mapping[str, float] = MappingProxyType(
+        {
+            "highpass_hz": float(highpass_hz),
+            "lowpass_hz": float(lowpass_hz),
+            "presence_low_hz": float(presence_low_hz),
+            "presence_high_hz": float(presence_high_hz),
+            "presence_gain_db": float(presence_gain_db),
+            "noise_reduction_db": float(noise_reduction_db),
+            "noise_sensitivity": float(noise_sensitivity),
+            "compressor_threshold_db": float(compressor_threshold_db),
+            "compressor_ratio": float(compressor_ratio),
+            "compressor_attack_ms": float(compressor_attack_ms),
+            "compressor_release_ms": float(compressor_release_ms),
+            "target_peak_db": float(target_peak_db),
+            "target_lufs_db": float(target_lufs_db),
+        }
+    )
+
+    return PreprocessAudioStageDescription(
+        summary="Applying mastering chain",
+        headline=headline,
+        detail_lines=detail_lines,
+        parameters=parameters,
+    )
 
 
 def save_preprocessed_wav(path: Path, audio: np.ndarray, sample_rate: int) -> None:
