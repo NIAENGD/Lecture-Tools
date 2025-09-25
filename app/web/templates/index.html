@@ -3500,6 +3500,8 @@
           return String(count);
         }
 
+        let activeSlideRangeDialog = null;
+
         function applyTranslations(language) {
           currentLanguage = language && translations[language] ? language : DEFAULT_LANGUAGE;
           const locale = getLocale(currentLanguage);
@@ -4268,7 +4270,6 @@
         }
 
         const dialogState = { active: false };
-        let activeSlideRangeDialog = null;
 
         function syncSettingsForm(settings) {
           const themeValue = settings?.theme ?? 'system';
