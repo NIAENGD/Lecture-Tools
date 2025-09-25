@@ -155,16 +155,43 @@ def overview(style: UIStyle = style_option) -> None:
 
 @cli.command("test-mastering")
 def test_mastering(
-    audio: Path = typer.Argument(
-        ..., exists=True, file_okay=True, dir_okay=False, resolve_path=True
+    audio: Optional[str] = typer.Argument(
+        None,
+        help="Path to the audio file that should be mastered.",
+    ),
+    audio_option: Optional[str] = typer.Option(
+        None,
+        "--audio",
+        "-a",
+        help="Path to the audio file that should be mastered.",
     ),
 ) -> None:
     """Run the mastering pipeline on *audio* and report progress."""
 
+    raw_audio = audio
+    if raw_audio is not None and audio_option is not None:
+        raise typer.BadParameter(
+            "Provide the audio file either as a positional argument or via --audio, not both.",
+            param_hint="AUDIO",
+        )
+    if raw_audio is None:
+        raw_audio = audio_option
+    if raw_audio is None:
+        raise typer.BadParameter(
+            "Missing required audio file argument.",
+            param_hint="AUDIO",
+        )
+
+    audio_path = Path(raw_audio).expanduser()
+    if not audio_path.exists() or not audio_path.is_file():
+        raise typer.BadParameter(
+            f"File '{audio_path}' does not exist or is not a file.",
+            param_hint="AUDIO",
+        )
+    audio_path = audio_path.resolve()
+
     config = initialize_app()
     _prepare_logging(config.storage_root)
-
-    audio_path = audio.resolve()
     typer.echo("====> Preparing audio mastering…")
     typer.echo(f"Source audio: {audio_path}")
 
