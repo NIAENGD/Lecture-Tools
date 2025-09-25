@@ -438,6 +438,7 @@ class SettingsPayload(BaseModel):
     whisper_beam_size: int = Field(5, ge=1, le=10)
     slide_dpi: Literal[*_SLIDE_DPI_OPTIONS] = 200
     language: Literal[*_LANGUAGE_OPTIONS] = _DEFAULT_UI_SETTINGS.language
+    audio_mastering_enabled: bool = True
 
 
 class ForwardedRootPathMiddleware:
@@ -1340,61 +1341,72 @@ def create_app(
                     with contextlib.suppress(OSError):
                         original_target.unlink(missing_ok=True)
 
-            processing_tracker.start(
-                lecture_id, "====> Preparing audio mastering…"
-            )
+            settings = _load_ui_settings()
+            audio_mastering_enabled = getattr(settings, "audio_mastering_enabled", True)
 
-            def _process_audio() -> str:
-                total_steps = 3.0
-                processing_tracker.update(
-                    lecture_id,
-                    1.0,
-                    total_steps,
-                    "====> Analysing uploaded audio…",
-                )
-                samples, sample_rate = load_wav_file(target)
-                processing_tracker.update(
-                    lecture_id,
-                    1.5,
-                    total_steps,
-                    "====> Reducing background noise and balancing speech…",
-                )
-                processed = preprocess_audio(samples, sample_rate)
-                processing_tracker.update(
-                    lecture_id,
-                    2.5,
-                    total_steps,
-                    "====> Rendering mastered waveform…",
+            if audio_mastering_enabled:
+                processing_tracker.start(
+                    lecture_id, "====> Preparing audio mastering…"
                 )
 
-                lecture_paths.processed_audio_dir.mkdir(parents=True, exist_ok=True)
-                base_stem = Path(candidate_name).stem if candidate_name else stem
-                processed_name = f"{base_stem}-master.wav"
-                processed_target = lecture_paths.processed_audio_dir / processed_name
-                if processed_target.exists():
-                    processed_name = build_timestamped_name(
-                        f"{base_stem}-master",
-                        timestamp=timestamp,
-                        extension=".wav",
+                def _process_audio() -> str:
+                    total_steps = 3.0
+                    processing_tracker.update(
+                        lecture_id,
+                        1.0,
+                        total_steps,
+                        "====> Analysing uploaded audio…",
                     )
+                    samples, sample_rate = load_wav_file(target)
+                    processing_tracker.update(
+                        lecture_id,
+                        1.5,
+                        total_steps,
+                        "====> Reducing background noise and balancing speech…",
+                    )
+                    processed = preprocess_audio(samples, sample_rate)
+                    processing_tracker.update(
+                        lecture_id,
+                        2.5,
+                        total_steps,
+                        "====> Rendering mastered waveform…",
+                    )
+
+                    lecture_paths.processed_audio_dir.mkdir(parents=True, exist_ok=True)
+                    base_stem = Path(candidate_name).stem if candidate_name else stem
+                    processed_name = f"{base_stem}-master.wav"
                     processed_target = lecture_paths.processed_audio_dir / processed_name
+                    if processed_target.exists():
+                        processed_name = build_timestamped_name(
+                            f"{base_stem}-master",
+                            timestamp=timestamp,
+                            extension=".wav",
+                        )
+                        processed_target = lecture_paths.processed_audio_dir / processed_name
 
-                save_preprocessed_wav(processed_target, processed, sample_rate)
-                return processed_target.relative_to(config.storage_root).as_posix()
+                    save_preprocessed_wav(processed_target, processed, sample_rate)
+                    if processed_target != target:
+                        with contextlib.suppress(OSError):
+                            target.unlink(missing_ok=True)
+                    return processed_target.relative_to(config.storage_root).as_posix()
 
-            try:
-                processed_relative = await asyncio.to_thread(_process_audio)
-            except ValueError as error:
-                processing_tracker.fail(lecture_id, f"====> {error}")
-                raise HTTPException(status_code=400, detail=str(error)) from error
-            except Exception as error:  # noqa: BLE001 - processing may raise
-                processing_tracker.fail(lecture_id, f"====> {error}")
-                raise HTTPException(status_code=500, detail=str(error)) from error
+                try:
+                    processed_relative = await asyncio.to_thread(_process_audio)
+                except ValueError as error:
+                    processing_tracker.fail(lecture_id, f"====> {error}")
+                    raise HTTPException(status_code=400, detail=str(error)) from error
+                except Exception as error:  # noqa: BLE001 - processing may raise
+                    processing_tracker.fail(lecture_id, f"====> {error}")
+                    raise HTTPException(status_code=500, detail=str(error)) from error
+                else:
+                    processing_tracker.finish(
+                        lecture_id, "====> Audio mastering completed."
+                    )
+                    relative = processed_relative
+                    update_kwargs[attribute] = processed_relative
+                    update_kwargs["processed_audio_path"] = processed_relative
             else:
-                processing_tracker.finish(
-                    lecture_id, "====> Audio mastering completed."
-                )
-                update_kwargs["processed_audio_path"] = processed_relative
+                update_kwargs["processed_audio_path"] = None
 
         if asset_key == "slides":
             slide_archive = _generate_slide_archive(
@@ -1469,6 +1481,7 @@ def create_app(
         )
         settings.whisper_beam_size = payload.whisper_beam_size
         settings.slide_dpi = _normalize_slide_dpi(payload.slide_dpi)
+        settings.audio_mastering_enabled = bool(payload.audio_mastering_enabled)
         settings_store.save(settings)
         return {"settings": asdict(settings)}
 

@@ -24,6 +24,7 @@ class UISettings:
     whisper_compute_type: str = "int8"
     whisper_beam_size: int = 5
     slide_dpi: int = 200
+    audio_mastering_enabled: bool = True
 
 
 class SettingsStore:

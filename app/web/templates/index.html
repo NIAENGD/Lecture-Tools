@@ -1818,6 +1818,18 @@
                 </div>
               </fieldset>
               <fieldset>
+                <legend data-i18n="settings.audio.legend">Audio</legend>
+                <div class="field-inline">
+                  <label for="settings-audio-mastering" data-i18n="settings.audio.masteringLabel">
+                    Enable mastered audio
+                  </label>
+                  <input id="settings-audio-mastering" type="checkbox" />
+                </div>
+                <p class="field-help" data-i18n="settings.audio.masteringDescription">
+                  Automatically enhance uploaded audio for clarity.
+                </p>
+              </fieldset>
+              <fieldset>
                 <legend data-i18n="settings.slides.legend">Slides</legend>
                 <div class="field-inline">
                   <label for="settings-slide-dpi" data-i18n="settings.slides.dpiLabel">
@@ -2083,6 +2095,11 @@
                   test: 'Test support',
                   retry: 'Re-run test',
                 },
+              },
+              audio: {
+                legend: 'Audio',
+                masteringLabel: 'Enable mastered audio',
+                masteringDescription: 'Automatically enhance uploaded audio for clarity.',
               },
               slides: {
                 legend: 'Slides',
@@ -2432,6 +2449,11 @@
                   retry: '重新测试',
                 },
               },
+              audio: {
+                legend: '音频',
+                masteringLabel: '启用音频优化',
+                masteringDescription: '自动增强上传的音频以提高清晰度。',
+              },
               slides: {
                 legend: '课件',
                 dpiLabel: '渲染 DPI',
@@ -2775,6 +2797,11 @@
                   test: 'Probar compatibilidad',
                   retry: 'Volver a probar',
                 },
+              },
+              audio: {
+                legend: 'Audio',
+                masteringLabel: 'Habilitar audio masterizado',
+                masteringDescription: 'Mejora automáticamente el audio subido para mayor claridad.',
               },
               slides: {
                 legend: 'Diapositivas',
@@ -3124,6 +3151,11 @@
                   test: 'Tester la prise en charge',
                   retry: 'Relancer le test',
                 },
+              },
+              audio: {
+                legend: 'Audio',
+                masteringLabel: 'Activer l’audio optimisé',
+                masteringDescription: 'Améliore automatiquement l’audio importé pour une meilleure clarté.',
               },
               slides: {
                 legend: 'Diapositives',
@@ -3662,6 +3694,7 @@
           settingsWhisperGpuStatus: document.getElementById('settings-whisper-gpu-status'),
           settingsWhisperGpuTest: document.getElementById('settings-whisper-gpu-test'),
           settingsSlideDpi: document.getElementById('settings-slide-dpi'),
+          settingsAudioMastering: document.getElementById('settings-audio-mastering'),
           settingsExitApp: document.getElementById('settings-exit-app'),
           settingsExport: document.getElementById('settings-export'),
           settingsImport: document.getElementById('settings-import'),
@@ -4283,6 +4316,7 @@
             Math.min(10, Number(settings?.whisper_beam_size) || 5),
           );
           const dpiValue = normalizeSlideDpi(settings?.slide_dpi);
+          const masteringEnabled = settings?.audio_mastering_enabled !== false;
 
           const effectiveModel =
             requestedModel === GPU_MODEL && !state.gpuWhisper.supported
@@ -4295,6 +4329,9 @@
           dom.settingsWhisperCompute.value = computeValue;
           dom.settingsWhisperBeam.value = String(beamNumber);
           dom.settingsSlideDpi.value = dpiValue;
+          if (dom.settingsAudioMastering) {
+            dom.settingsAudioMastering.checked = masteringEnabled;
+          }
           dom.transcribeModel.value = effectiveModel;
 
           state.settings = {
@@ -4305,6 +4342,7 @@
             whisper_compute_type: computeValue,
             whisper_beam_size: beamNumber,
             slide_dpi: Number(dpiValue),
+            audio_mastering_enabled: masteringEnabled,
           };
 
           applyTheme(themeValue);
@@ -6315,6 +6353,12 @@
           dom.assetList.innerHTML = '';
           assetDefinitions.forEach((definition) => {
             const value = lecture[definition.key];
+            if (
+              definition.type === 'processed_audio' &&
+              (!value || value === lecture.audio_path)
+            ) {
+              return;
+            }
             const item = document.createElement('li');
             item.className = 'asset-item';
             const header = document.createElement('div');
@@ -6533,7 +6577,9 @@
               stopProcessingProgress();
               state.lastProgressMessage = '';
               state.lastProgressRatio = null;
-              startProcessingProgress(lectureId);
+              if (state.settings?.audio_mastering_enabled !== false) {
+                startProcessingProgress(lectureId);
+              }
             }
 
             await request(endpoint, {
@@ -6978,6 +7024,9 @@
               Math.min(10, Number(dom.settingsWhisperBeam.value) || 5),
             );
             const dpiValue = Number(normalizeSlideDpi(dom.settingsSlideDpi.value));
+            const masteringEnabled = dom.settingsAudioMastering
+              ? Boolean(dom.settingsAudioMastering.checked)
+              : true;
 
             try {
               const response = await request('/api/settings', {
@@ -6990,6 +7039,7 @@
                   whisper_compute_type: computeValue,
                   whisper_beam_size: beamValue,
                   slide_dpi: dpiValue,
+                  audio_mastering_enabled: masteringEnabled,
                 }),
               });
               const updatedSettings = response?.settings ?? {
@@ -6999,6 +7049,7 @@
                 whisper_compute_type: computeValue,
                 whisper_beam_size: beamValue,
                 slide_dpi: dpiValue,
+                audio_mastering_enabled: masteringEnabled,
               };
               syncSettingsForm(updatedSettings);
               if (modelValue === GPU_MODEL) {
