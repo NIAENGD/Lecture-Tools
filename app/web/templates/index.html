@@ -2408,6 +2408,8 @@
                 processing: 'Processing upload…',
                 processingAction: 'Processing…',
                 processingAudio: 'Processing audio…',
+                backgroundProcessing:
+                  'Audio mastering will continue in the background. You can close this dialog while it finishes.',
                 success: 'Upload completed.',
                 failure: 'Upload failed. Please try again.',
                 progress: 'Upload progress',
@@ -2779,6 +2781,7 @@
                 processing: '正在处理上传…',
                 processingAction: '正在处理…',
                 processingAudio: '正在处理音频…',
+                backgroundProcessing: '音频母带处理会在后台继续进行。您可以放心关闭此对话框。',
                 success: '上传完成。',
                 failure: '上传失败，请重试。',
                 progress: '上传进度',
@@ -3154,6 +3157,8 @@
                 processing: 'Procesando carga…',
                 processingAction: 'Procesando…',
                 processingAudio: 'Procesando audio…',
+                backgroundProcessing:
+                  'El procesamiento de audio continuará en segundo plano. Puedes cerrar este cuadro de diálogo con seguridad.',
                 success: 'Subida completada.',
                 failure: 'La subida falló. Vuelve a intentarlo.',
                 progress: 'Progreso de subida',
@@ -3530,6 +3535,8 @@
                 processing: 'Traitement du téléversement…',
                 processingAction: 'Traitement…',
                 processingAudio: 'Traitement de l’audio…',
+                backgroundProcessing:
+                  'Le traitement audio se poursuit en arrière-plan. Vous pouvez fermer cette boîte de dialogue en toute sécurité.',
                 success: 'Téléversement terminé.',
                 failure: 'Le téléversement a échoué. Réessayez.',
                 progress: 'Progression du téléversement',
@@ -4796,6 +4803,11 @@
             let uploadComplete = false;
             let uploadResult = null;
             let uploadStage = 'idle';
+            let processingInBackground = false;
+
+            const allowBackgroundProcessing = options.allowBackgroundProcessing === true;
+            const backgroundProcessingMessage =
+              typeof options.backgroundProcessing === 'string' ? options.backgroundProcessing : '';
 
             const labels = {
               title: options.title || t('dialogs.upload.title'),
@@ -4810,10 +4822,13 @@
               processing: options.processing || t('dialogs.upload.processing'),
               processingAction:
                 options.processingAction || t('dialogs.upload.processingAction'),
+              backgroundProcessing:
+                backgroundProcessingMessage || t('dialogs.upload.backgroundProcessing'),
               success: options.success || t('dialogs.upload.success'),
               failure: options.failure || t('dialogs.upload.failure'),
               progress: options.progressLabel || t('dialogs.upload.progress'),
               action: options.uploadLabel || t('dialogs.upload.action'),
+              close: options.closeLabel || t('common.actions.close'),
             };
 
             const accept = typeof options.accept === 'string' ? options.accept : '';
@@ -4915,6 +4930,7 @@
                 dialog.progress.setAttribute('aria-label', labels.progress);
               }
               uploadStage = 'idle';
+              processingInBackground = false;
             }
 
             function updateProgress(ratio) {
@@ -4939,13 +4955,36 @@
                 percent >= 100
               ) {
                 uploadStage = 'processing';
-                setStatus(labels.processing);
-                updateActionState();
+                if (allowBackgroundProcessing) {
+                  enterProcessingStage();
+                } else {
+                  setStatus(labels.processing);
+                  updateActionState();
+                }
               }
+            }
+
+            function enterProcessingStage() {
+              if (processingInBackground || !allowBackgroundProcessing) {
+                return;
+              }
+              processingInBackground = true;
+              const message = labels.backgroundProcessing || labels.processing || labels.uploading;
+              setStatus(message, 'info');
+              updateActionState();
             }
 
             function updateActionState() {
               if (!dialog.confirm) {
+                return;
+              }
+              if (processingInBackground && allowBackgroundProcessing && uploading) {
+                dialog.confirm.textContent = labels.close;
+                dialog.confirm.disabled = false;
+                if (dialog.cancel) {
+                  dialog.cancel.textContent = labels.close;
+                  dialog.cancel.disabled = false;
+                }
                 return;
               }
               if (uploading) {
@@ -4956,6 +4995,7 @@
                 dialog.confirm.textContent = buttonLabel;
                 dialog.confirm.disabled = true;
                 if (dialog.cancel) {
+                  dialog.cancel.textContent = t('dialog.cancel');
                   dialog.cancel.disabled = true;
                 }
                 return;
@@ -4964,6 +5004,7 @@
                 dialog.confirm.textContent = t('dialog.confirm');
                 dialog.confirm.disabled = false;
                 if (dialog.cancel) {
+                  dialog.cancel.textContent = t('dialog.cancel');
                   dialog.cancel.disabled = false;
                 }
                 return;
@@ -4971,6 +5012,7 @@
               dialog.confirm.textContent = labels.action;
               dialog.confirm.disabled = !selectedFile || !uploadHandler;
               if (dialog.cancel) {
+                dialog.cancel.textContent = t('dialog.cancel');
                 dialog.cancel.disabled = false;
               }
             }
@@ -5209,6 +5251,7 @@
                 uploadComplete = true;
                 uploading = false;
                 uploadStage = 'idle';
+                processingInBackground = false;
                 updateProgress(1);
                 setStatus(labels.success, 'success');
                 updateActionState();
@@ -5217,6 +5260,7 @@
                 uploadComplete = false;
                 uploadResult = null;
                 uploadStage = 'idle';
+                processingInBackground = false;
                 const message =
                   error instanceof Error && error.message ? error.message : labels.failure;
                 setStatus(message, 'error');
@@ -5272,6 +5316,17 @@
 
             function handleConfirm(event) {
               event.preventDefault();
+              if (processingInBackground && allowBackgroundProcessing && uploading) {
+                resolveAndClose({
+                  confirmed: false,
+                  uploaded: uploadComplete,
+                  file: selectedFile,
+                  result: uploadResult,
+                  meta: selectedMeta,
+                  processing: true,
+                });
+                return;
+              }
               if (uploadComplete) {
                 resolveAndClose({
                   confirmed: true,
@@ -5293,6 +5348,7 @@
                 file: selectedFile,
                 result: uploadResult,
                 meta: selectedMeta,
+                processing: processingInBackground && uploading,
               });
             }
 
@@ -6248,10 +6304,12 @@
           }
         }
 
-        function handleProgressUpdate(progress) {
+        async function handleProgressUpdate(progress, context = {}) {
           if (!progress) {
             return;
           }
+          const source = context?.source || 'transcription';
+          const lectureId = context?.lectureId || null;
           const message = progress.message || '';
           const variant = progress.error ? 'error' : 'info';
           const finished = Boolean(progress.finished);
@@ -6271,7 +6329,25 @@
             state.lastProgressRatio = ratio;
           }
           if (finished) {
-            stopTranscriptionProgress({ preserveMessage: true });
+            if (source === 'processing') {
+              stopProcessingProgress({ preserveMessage: true });
+              if (lectureId) {
+                try {
+                  await refreshData();
+                  if (state.selectedLectureId === lectureId) {
+                    await selectLecture(lectureId);
+                  }
+                } catch (error) {
+                  const detail =
+                    error instanceof Error && error.message
+                      ? error.message
+                      : t('status.storageLoadFailed');
+                  showStatus(detail, 'error');
+                }
+              }
+            } else {
+              stopTranscriptionProgress({ preserveMessage: true });
+            }
           }
         }
 
@@ -6281,14 +6357,25 @@
             return;
           }
           state.transcriptionProgressLectureId = lectureId;
+          let polling = false;
           const poll = async () => {
-            const progress = await fetchTranscriptionProgress(lectureId);
-            if (progress) {
-              handleProgressUpdate(progress);
+            if (polling) {
+              return;
+            }
+            polling = true;
+            try {
+              const progress = await fetchTranscriptionProgress(lectureId);
+              if (progress) {
+                await handleProgressUpdate(progress, { source: 'transcription', lectureId });
+              }
+            } finally {
+              polling = false;
             }
           };
-          poll();
-          state.transcriptionProgressTimer = window.setInterval(poll, 1200);
+          void poll();
+          state.transcriptionProgressTimer = window.setInterval(() => {
+            void poll();
+          }, 1200);
         }
 
         function startProcessingProgress(lectureId) {
@@ -6297,14 +6384,25 @@
             return;
           }
           state.processingProgressLectureId = lectureId;
+          let polling = false;
           const poll = async () => {
-            const progress = await fetchProcessingProgress(lectureId);
-            if (progress) {
-              handleProgressUpdate(progress);
+            if (polling) {
+              return;
+            }
+            polling = true;
+            try {
+              const progress = await fetchProcessingProgress(lectureId);
+              if (progress) {
+                await handleProgressUpdate(progress, { source: 'processing', lectureId });
+              }
+            } finally {
+              polling = false;
             }
           };
-          poll();
-          state.processingProgressTimer = window.setInterval(poll, 900);
+          void poll();
+          state.processingProgressTimer = window.setInterval(() => {
+            void poll();
+          }, 900);
         }
 
         function clearDetailPanel() {
@@ -7541,6 +7639,10 @@
             processing:
               kind === 'audio' ? t('dialogs.upload.processingAudio') : undefined,
             processingAction: t('dialogs.upload.processingAction'),
+            allowBackgroundProcessing:
+              kind === 'audio' && state.settings?.audio_mastering_enabled !== false,
+            backgroundProcessing:
+              kind === 'audio' ? t('dialogs.upload.backgroundProcessing') : undefined,
             onFileSelected:
               kind === 'slides'
                 ? async (file) => {
@@ -7611,7 +7713,9 @@
             },
           });
 
-          if (!dialogResult || !dialogResult.uploaded) {
+          const backgroundProcessingActive = Boolean(dialogResult && dialogResult.processing);
+
+          if (!dialogResult || (!dialogResult.uploaded && !backgroundProcessingActive)) {
             if (kind === 'audio' && audioProcessingStarted) {
               stopProcessingProgress();
             }
@@ -7619,10 +7723,12 @@
           }
 
           if (!dialogResult.confirmed) {
-            await refreshData();
-            await selectLecture(lectureId);
-            if (kind === 'audio' && audioProcessingStarted) {
-              stopProcessingProgress({ preserveMessage: true });
+            if (!backgroundProcessingActive) {
+              await refreshData();
+              await selectLecture(lectureId);
+              if (kind === 'audio' && audioProcessingStarted) {
+                stopProcessingProgress({ preserveMessage: true });
+              }
             }
             return;
           }
@@ -7634,7 +7740,7 @@
           }
           await refreshData();
           await selectLecture(lectureId);
-          if (kind === 'audio' && audioProcessingStarted) {
+          if (kind === 'audio' && audioProcessingStarted && !backgroundProcessingActive) {
             stopProcessingProgress({ preserveMessage: true });
           }
         }
