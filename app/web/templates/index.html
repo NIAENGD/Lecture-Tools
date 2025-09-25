@@ -201,6 +201,112 @@
         max-height: min(90vh, 760px);
       }
 
+      .upload-dialog-window {
+        width: min(420px, 100%);
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .upload-dialog-window .dialog-header {
+        margin-bottom: -8px;
+      }
+
+      .upload-dropzone {
+        border: 2px dashed var(--panel-border);
+        border-radius: 12px;
+        padding: 32px 24px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        align-items: center;
+        justify-content: center;
+        background: rgba(148, 163, 184, 0.08);
+        cursor: pointer;
+        transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+      }
+
+      .upload-dropzone:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+      }
+
+      .upload-dropzone.active,
+      .upload-dropzone:hover {
+        border-color: var(--accent);
+        background: rgba(37, 99, 235, 0.08);
+        transform: translateY(-1px);
+      }
+
+      .upload-dropzone strong {
+        font-size: 1rem;
+      }
+
+      .upload-dropzone p {
+        margin: 0;
+        font-size: 0.9rem;
+        color: var(--muted);
+      }
+
+      .upload-dropzone button {
+        pointer-events: none;
+      }
+
+      .upload-file-info {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px 14px;
+        border-radius: 10px;
+        border: 1px solid var(--panel-border);
+        background: rgba(148, 163, 184, 0.12);
+      }
+
+      .upload-file-name {
+        font-weight: 600;
+        word-break: break-word;
+      }
+
+      .upload-progress {
+        width: 100%;
+        height: 8px;
+        border-radius: 999px;
+        background: var(--status-progress-track);
+        overflow: hidden;
+      }
+
+      .upload-progress-fill {
+        height: 100%;
+        width: 0;
+        border-radius: inherit;
+        background: linear-gradient(90deg, var(--accent), #7c3aed);
+        transition: width 0.2s ease;
+      }
+
+      .upload-progress-text {
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      .upload-status-message {
+        font-size: 0.9rem;
+      }
+
+      .upload-status-message.error {
+        color: var(--status-error-text);
+      }
+
+      .upload-status-message.success {
+        color: var(--status-success-text);
+      }
+
+      .upload-dialog-hidden {
+        display: none !important;
+      }
+
       .slide-range-body {
         display: flex;
         flex-direction: column;
@@ -1360,37 +1466,6 @@
         color: var(--muted);
       }
 
-      .file-input {
-        position: relative;
-        overflow: hidden;
-        display: inline-flex;
-        align-items: center;
-        border-radius: 6px;
-        border: 1px dashed var(--panel-border);
-        padding: 0;
-        cursor: pointer;
-        color: var(--accent);
-        background: transparent;
-      }
-
-      .file-input span {
-        display: inline-block;
-        padding: 6px 10px;
-        font-size: 0.9rem;
-        font-weight: 600;
-      }
-
-      .file-input:hover {
-        border-color: var(--accent);
-      }
-
-      .file-input input[type='file'] {
-        position: absolute;
-        inset: 0;
-        opacity: 0;
-        cursor: pointer;
-      }
-
       .actions-row {
         display: flex;
         flex-wrap: wrap;
@@ -1861,10 +1936,14 @@
                   <button id="settings-export" type="button" class="secondary" data-i18n="settings.archive.export">
                     Export archive
                   </button>
-                  <label class="file-input">
-                    <span data-i18n="settings.archive.import">Import archive</span>
-                    <input id="settings-import" type="file" accept=".zip" />
-                  </label>
+                  <button
+                    id="settings-import"
+                    type="button"
+                    class="secondary"
+                    data-i18n="settings.archive.import"
+                  >
+                    Import archive
+                  </button>
                   <label class="inline" for="settings-import-mode" data-i18n="settings.archive.modeLabel">
                     Import mode
                     <select id="settings-import-mode">
@@ -1971,6 +2050,59 @@
         <div class="dialog-actions">
           <button type="button" id="slide-range-cancel" class="dialog-button secondary"></button>
           <button type="button" id="slide-range-confirm" class="dialog-button primary"></button>
+        </div>
+      </div>
+    </div>
+    <div id="upload-dialog" class="dialog hidden" aria-hidden="true" tabindex="-1">
+      <div id="upload-dialog-backdrop" class="dialog-backdrop"></div>
+      <div
+        id="upload-dialog-window"
+        class="dialog-window upload-dialog-window"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="upload-dialog-title"
+        aria-describedby="upload-dialog-description"
+      >
+        <div class="dialog-header">
+          <h2 id="upload-dialog-title" class="dialog-title"></h2>
+        </div>
+        <p id="upload-dialog-description" class="dialog-message"></p>
+        <div
+          id="upload-dropzone"
+          class="upload-dropzone"
+          tabindex="0"
+          role="button"
+          aria-describedby="upload-dropzone-help"
+        >
+          <input id="upload-dialog-input" class="sr-only" type="file" />
+          <strong id="upload-dropzone-prompt"></strong>
+          <p id="upload-dropzone-help"></p>
+          <button id="upload-browse-button" type="button" class="dialog-button secondary"></button>
+        </div>
+        <div id="upload-file-info" class="upload-file-info hidden">
+          <div>
+            <div id="upload-file-name" class="upload-file-name"></div>
+            <div id="upload-file-size" class="upload-progress-text"></div>
+          </div>
+          <button id="upload-clear" type="button" class="dialog-button secondary"></button>
+        </div>
+        <div id="upload-progress-container" class="hidden">
+          <div
+            id="upload-progress"
+            class="upload-progress"
+            role="progressbar"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="0"
+          >
+            <div id="upload-progress-fill" class="upload-progress-fill"></div>
+          </div>
+          <div id="upload-progress-text" class="upload-progress-text"></div>
+        </div>
+        <div id="upload-status-message" class="upload-status-message"></div>
+        <div class="dialog-actions">
+          <button type="button" id="upload-cancel" class="dialog-button secondary"></button>
+          <button type="button" id="upload-confirm" class="dialog-button primary"></button>
         </div>
       </div>
     </div>
@@ -2253,6 +2385,25 @@
                 allPages: 'Processing all pages in the document.',
                 pageLabel: 'Page {{page}}',
                 confirm: 'Process selection',
+              },
+              upload: {
+                title: 'Upload file',
+                description: 'Drag a file here or browse to select one from your computer.',
+                prompt: 'Drag and drop a file',
+                help: 'You can also click to choose a file.',
+                browse: 'Select file',
+                clear: 'Remove',
+                waiting: 'Select a file to continue.',
+                preparing: 'Preparing file…',
+                uploading: 'Uploading…',
+                success: 'Upload completed.',
+                failure: 'Upload failed. Please try again.',
+                progress: 'Upload progress',
+                action: 'Upload',
+                assetTitle: 'Upload {{asset}}',
+                assetDescription: 'Choose a new file to attach to this resource.',
+                archiveTitle: 'Import archive',
+                archiveDescription: 'Select a Lecture Tools export (.zip) to import.',
               },
               descriptionOptional: 'Description (optional)',
               descriptionPlaceholder: 'Add a short summary…',
@@ -2602,6 +2753,25 @@
                 allPages: '将处理文档中的全部页面。',
                 pageLabel: '第 {{page}} 页',
                 confirm: '处理所选页面',
+              },
+              upload: {
+                title: '上传文件',
+                description: '将文件拖到此处或浏览电脑进行选择。',
+                prompt: '拖放文件',
+                help: '也可以点击选择文件。',
+                browse: '选择文件',
+                clear: '移除',
+                waiting: '请选择一个文件。',
+                preparing: '准备文件…',
+                uploading: '正在上传…',
+                success: '上传完成。',
+                failure: '上传失败，请重试。',
+                progress: '上传进度',
+                action: '上传',
+                assetTitle: '上传 {{asset}}',
+                assetDescription: '为此资源选择一个新文件。',
+                archiveTitle: '导入归档',
+                archiveDescription: '选择一个 Lecture Tools 导出的压缩包（.zip）。',
               },
               descriptionOptional: '描述（可选）',
               descriptionPlaceholder: '添加简短摘要…',
@@ -2956,6 +3126,25 @@
                 pageLabel: 'Página {{page}}',
                 confirm: 'Procesar selección',
               },
+              upload: {
+                title: 'Subir archivo',
+                description: 'Arrastra un archivo aquí o examina tu equipo para seleccionarlo.',
+                prompt: 'Arrastra y suelta un archivo',
+                help: 'También puedes hacer clic para elegir un archivo.',
+                browse: 'Seleccionar archivo',
+                clear: 'Quitar',
+                waiting: 'Selecciona un archivo para continuar.',
+                preparing: 'Preparando archivo…',
+                uploading: 'Subiendo…',
+                success: 'Subida completada.',
+                failure: 'La subida falló. Vuelve a intentarlo.',
+                progress: 'Progreso de subida',
+                action: 'Subir',
+                assetTitle: 'Subir {{asset}}',
+                assetDescription: 'Elige un archivo nuevo para este recurso.',
+                archiveTitle: 'Importar archivo comprimido',
+                archiveDescription: 'Selecciona un archivo exportado de Lecture Tools (.zip).',
+              },
               descriptionOptional: 'Descripción (opcional)',
               descriptionPlaceholder: 'Agrega un breve resumen…',
             },
@@ -3308,6 +3497,26 @@
                 allPages: 'Traitement de toutes les pages du document.',
                 pageLabel: 'Page {{page}}',
                 confirm: 'Traiter la sélection',
+              },
+              upload: {
+                title: 'Téléverser un fichier',
+                description:
+                  'Glissez un fichier ici ou parcourez votre ordinateur pour le sélectionner.',
+                prompt: 'Glissez-déposez un fichier',
+                help: 'Vous pouvez aussi cliquer pour choisir un fichier.',
+                browse: 'Sélectionner un fichier',
+                clear: 'Retirer',
+                waiting: 'Sélectionnez un fichier pour continuer.',
+                preparing: 'Préparation du fichier…',
+                uploading: 'Téléversement…',
+                success: 'Téléversement terminé.',
+                failure: 'Le téléversement a échoué. Réessayez.',
+                progress: 'Progression du téléversement',
+                action: 'Téléverser',
+                assetTitle: 'Téléverser {{asset}}',
+                assetDescription: 'Choisissez un nouveau fichier à associer à cette ressource.',
+                archiveTitle: 'Importer une archive',
+                archiveDescription: 'Sélectionnez une archive Lecture Tools exportée (.zip).',
               },
               descriptionOptional: 'Description (optionnel)',
               descriptionPlaceholder: 'Ajoutez un court résumé…',
@@ -3746,6 +3955,29 @@
             summary: document.getElementById('slide-range-summary'),
             confirm: document.getElementById('slide-range-confirm'),
             cancel: document.getElementById('slide-range-cancel'),
+          },
+          uploadDialog: {
+            root: document.getElementById('upload-dialog'),
+            backdrop: document.getElementById('upload-dialog-backdrop'),
+            window: document.getElementById('upload-dialog-window'),
+            title: document.getElementById('upload-dialog-title'),
+            description: document.getElementById('upload-dialog-description'),
+            dropzone: document.getElementById('upload-dropzone'),
+            input: document.getElementById('upload-dialog-input'),
+            prompt: document.getElementById('upload-dropzone-prompt'),
+            help: document.getElementById('upload-dropzone-help'),
+            browse: document.getElementById('upload-browse-button'),
+            fileInfo: document.getElementById('upload-file-info'),
+            fileName: document.getElementById('upload-file-name'),
+            fileSize: document.getElementById('upload-file-size'),
+            clear: document.getElementById('upload-clear'),
+            progressContainer: document.getElementById('upload-progress-container'),
+            progress: document.getElementById('upload-progress'),
+            progressFill: document.getElementById('upload-progress-fill'),
+            progressText: document.getElementById('upload-progress-text'),
+            status: document.getElementById('upload-status-message'),
+            cancel: document.getElementById('upload-cancel'),
+            confirm: document.getElementById('upload-confirm'),
           },
         };
 
@@ -4302,7 +4534,7 @@
           }
         }
 
-        const dialogState = { active: false };
+        const dialogState = { active: false, uploadActive: false };
 
         function syncSettingsForm(settings) {
           const themeValue = settings?.theme ?? 'system';
@@ -4365,7 +4597,7 @@
         } = {}) {
           return new Promise((resolve) => {
             const dialog = dom.dialog;
-            if (!dialog.root || dialogState.active) {
+            if (!dialog.root || dialogState.active || dialogState.uploadActive) {
               resolve({ confirmed: false, value: null });
               return;
             }
@@ -4526,11 +4758,564 @@
           return typeof result.value === 'string' ? result.value : '';
         }
 
+        async function showUploadDialog(options = {}) {
+          return new Promise((resolve) => {
+            const dialog = dom.uploadDialog;
+            if (!dialog || !dialog.root || dialogState.uploadActive) {
+              resolve({ confirmed: false, uploaded: false, file: null, result: null, meta: null });
+              return;
+            }
+
+            dialogState.uploadActive = true;
+            let closed = false;
+            let selectedFile = null;
+            let selectedMeta = null;
+            let selecting = false;
+            let uploading = false;
+            let uploadComplete = false;
+            let uploadResult = null;
+
+            const labels = {
+              title: options.title || t('dialogs.upload.title'),
+              description: options.description || t('dialogs.upload.description'),
+              prompt: options.prompt || t('dialogs.upload.prompt'),
+              help: options.help || t('dialogs.upload.help'),
+              browse: options.browseLabel || t('dialogs.upload.browse'),
+              clear: options.clearLabel || t('dialogs.upload.clear'),
+              waiting: options.waiting || t('dialogs.upload.waiting'),
+              preparing: options.preparing || t('dialogs.upload.preparing'),
+              uploading: options.uploading || t('dialogs.upload.uploading'),
+              success: options.success || t('dialogs.upload.success'),
+              failure: options.failure || t('dialogs.upload.failure'),
+              progress: options.progressLabel || t('dialogs.upload.progress'),
+              action: options.uploadLabel || t('dialogs.upload.action'),
+            };
+
+            const accept = typeof options.accept === 'string' ? options.accept : '';
+            const uploadHandler = typeof options.onUpload === 'function' ? options.onUpload : null;
+            const fileSelectedHandler =
+              typeof options.onFileSelected === 'function' ? options.onFileSelected : null;
+
+            const previousActive =
+              document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+            function cleanup() {
+              closed = true;
+              if (dialog.confirm) {
+                dialog.confirm.removeEventListener('click', handleConfirm);
+              }
+              if (dialog.cancel) {
+                dialog.cancel.removeEventListener('click', handleCancel);
+              }
+              if (dialog.backdrop) {
+                dialog.backdrop.removeEventListener('click', handleCancel);
+              }
+              if (dialog.window) {
+                dialog.window.removeEventListener('keydown', handleKeyDown);
+              }
+              if (dialog.dropzone) {
+                dialog.dropzone.removeEventListener('click', handleBrowseClick);
+                dialog.dropzone.removeEventListener('keydown', handleDropzoneKeyDown);
+                dialog.dropzone.removeEventListener('dragover', handleDragOver);
+                dialog.dropzone.removeEventListener('dragleave', handleDragLeave);
+                dialog.dropzone.removeEventListener('drop', handleDrop);
+              }
+              if (dialog.input) {
+                dialog.input.removeEventListener('change', handleInputChange);
+              }
+              if (dialog.clear) {
+                dialog.clear.removeEventListener('click', handleClearSelection);
+              }
+              resetProgress();
+              setStatus('');
+              if (dialog.fileInfo) {
+                dialog.fileInfo.classList.add('hidden');
+              }
+              if (dialog.fileName) {
+                dialog.fileName.textContent = '';
+              }
+              if (dialog.fileSize) {
+                dialog.fileSize.textContent = '';
+              }
+              if (dialog.dropzone) {
+                dialog.dropzone.classList.remove('active');
+              }
+              if (dialog.input) {
+                dialog.input.value = '';
+              }
+              if (dialog.root) {
+                dialog.root.classList.add('hidden');
+                dialog.root.classList.remove('upload-dialog-hidden');
+                dialog.root.setAttribute('aria-hidden', 'true');
+              }
+              document.body.classList.remove('dialog-open');
+              dialogState.uploadActive = false;
+              if (previousActive) {
+                previousActive.focus({ preventScroll: true });
+              }
+            }
+
+            function resolveAndClose(payload) {
+              cleanup();
+              resolve(payload);
+            }
+
+            function setStatus(message, variant = '') {
+              if (!dialog.status) {
+                return;
+              }
+              dialog.status.classList.remove('error', 'success');
+              if (variant) {
+                dialog.status.classList.add(variant);
+              }
+              dialog.status.textContent = message || '';
+            }
+
+            function resetProgress() {
+              if (dialog.progressContainer) {
+                dialog.progressContainer.classList.add('hidden');
+              }
+              if (dialog.progressFill) {
+                dialog.progressFill.style.width = '0%';
+              }
+              if (dialog.progressText) {
+                dialog.progressText.textContent = '';
+              }
+              if (dialog.progress) {
+                dialog.progress.setAttribute('aria-valuenow', '0');
+                dialog.progress.setAttribute('aria-label', labels.progress);
+              }
+            }
+
+            function updateProgress(ratio) {
+              const value = Number.isFinite(ratio) ? Math.max(0, Math.min(1, ratio)) : 0;
+              const percent = Math.round(value * 100);
+              if (dialog.progressContainer) {
+                dialog.progressContainer.classList.remove('hidden');
+              }
+              if (dialog.progressFill) {
+                dialog.progressFill.style.width = `${percent}%`;
+              }
+              if (dialog.progressText) {
+                dialog.progressText.textContent = `${percent}%`;
+              }
+              if (dialog.progress) {
+                dialog.progress.setAttribute('aria-valuenow', String(percent));
+              }
+            }
+
+            function updateActionState() {
+              if (!dialog.confirm) {
+                return;
+              }
+              if (uploading) {
+                dialog.confirm.textContent = labels.uploading;
+                dialog.confirm.disabled = true;
+                if (dialog.cancel) {
+                  dialog.cancel.disabled = true;
+                }
+                return;
+              }
+              if (uploadComplete) {
+                dialog.confirm.textContent = t('dialog.confirm');
+                dialog.confirm.disabled = false;
+                if (dialog.cancel) {
+                  dialog.cancel.disabled = false;
+                }
+                return;
+              }
+              dialog.confirm.textContent = labels.action;
+              dialog.confirm.disabled = !selectedFile || !uploadHandler;
+              if (dialog.cancel) {
+                dialog.cancel.disabled = false;
+              }
+            }
+
+            async function runWithSuspendedDialog(task) {
+              if (typeof task !== 'function') {
+                return null;
+              }
+              if (dialog.root) {
+                dialog.root.classList.add('upload-dialog-hidden');
+                dialog.root.setAttribute('aria-hidden', 'true');
+              }
+              document.body.classList.remove('dialog-open');
+              dialogState.uploadActive = false;
+              try {
+                return await task();
+              } finally {
+                if (!closed) {
+                  dialogState.uploadActive = true;
+                  if (dialog.root) {
+                    dialog.root.classList.remove('upload-dialog-hidden');
+                    dialog.root.classList.remove('hidden');
+                    dialog.root.setAttribute('aria-hidden', 'false');
+                  }
+                  document.body.classList.add('dialog-open');
+                  window.requestAnimationFrame(() => {
+                    if (!closed && dialog.dropzone instanceof HTMLElement) {
+                      dialog.dropzone.focus({ preventScroll: true });
+                    }
+                  });
+                }
+              }
+            }
+
+            async function setSelectedFile(file) {
+              if (selecting) {
+                return;
+              }
+              selecting = true;
+              try {
+                if (!file) {
+                  selectedFile = null;
+                  selectedMeta = null;
+                  if (dialog.fileInfo) {
+                    dialog.fileInfo.classList.add('hidden');
+                  }
+                  if (dialog.fileName) {
+                    dialog.fileName.textContent = '';
+                  }
+                  if (dialog.fileSize) {
+                    dialog.fileSize.textContent = '';
+                  }
+                  if (dialog.input) {
+                    dialog.input.value = '';
+                  }
+                  resetProgress();
+                  setStatus(labels.waiting);
+                  uploadComplete = false;
+                  updateActionState();
+                  return;
+                }
+
+                let meta = null;
+                let summary = '';
+                if (fileSelectedHandler) {
+                  setStatus(labels.preparing);
+                  try {
+                    const result = await runWithSuspendedDialog(() => fileSelectedHandler(file));
+                    if (closed) {
+                      return;
+                    }
+                    if (
+                      result === false ||
+                      (result && result.cancelled === true) ||
+                      (result && result.confirmed === false)
+                    ) {
+                      if (dialog.input) {
+                        dialog.input.value = '';
+                      }
+                      setStatus(labels.waiting);
+                      uploadComplete = false;
+                      selectedFile = null;
+                      selectedMeta = null;
+                      updateActionState();
+                      return;
+                    }
+                    if (result && typeof result === 'object' && 'meta' in result) {
+                      meta = result.meta;
+                      if (typeof result.summary === 'string') {
+                        summary = result.summary;
+                      }
+                    } else if (result && typeof result === 'object') {
+                      meta = result;
+                    }
+                  } catch (error) {
+                    const message =
+                      error instanceof Error && error.message ? error.message : labels.failure;
+                    setStatus(message, 'error');
+                    uploadComplete = false;
+                    selectedFile = null;
+                    selectedMeta = null;
+                    updateActionState();
+                    return;
+                  }
+                }
+
+                selectedFile = file;
+                selectedMeta = meta && typeof meta === 'object' ? meta : null;
+                if (dialog.fileInfo) {
+                  dialog.fileInfo.classList.remove('hidden');
+                }
+                if (dialog.fileName) {
+                  dialog.fileName.textContent = file.name;
+                }
+                if (dialog.fileSize) {
+                  const sizeText =
+                    typeof file.size === 'number' && Number.isFinite(file.size)
+                      ? formatBytes(file.size)
+                      : '';
+                  dialog.fileSize.textContent = sizeText;
+                }
+                if (dialog.input) {
+                  dialog.input.value = '';
+                }
+                uploadComplete = false;
+                resetProgress();
+                if (summary) {
+                  setStatus(summary);
+                } else {
+                  setStatus(labels.waiting);
+                }
+                updateActionState();
+              } finally {
+                selecting = false;
+              }
+            }
+
+            async function handleDrop(event) {
+              event.preventDefault();
+              if (dialog.dropzone) {
+                dialog.dropzone.classList.remove('active');
+              }
+              const files = event.dataTransfer?.files;
+              if (files && files.length > 0) {
+                await setSelectedFile(files[0]);
+              }
+            }
+
+            async function handleInputChange(event) {
+              const files = event.target?.files;
+              if (files && files.length > 0) {
+                await setSelectedFile(files[0]);
+              }
+            }
+
+            async function handleClearSelection(event) {
+              event.preventDefault();
+              await setSelectedFile(null);
+            }
+
+            function handleBrowseClick(event) {
+              event?.preventDefault?.();
+              if (dialog.input) {
+                dialog.input.click();
+              }
+            }
+
+            function handleDropzoneKeyDown(event) {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                handleBrowseClick(event);
+              }
+            }
+
+            function handleDragOver(event) {
+              event.preventDefault();
+              if (event.dataTransfer) {
+                event.dataTransfer.dropEffect = 'copy';
+              }
+              if (dialog.dropzone) {
+                dialog.dropzone.classList.add('active');
+              }
+            }
+
+            function handleDragLeave(event) {
+              event.preventDefault();
+              if (dialog.dropzone) {
+                dialog.dropzone.classList.remove('active');
+              }
+            }
+
+            async function performUpload() {
+              if (!uploadHandler || !selectedFile || uploading) {
+                return;
+              }
+              uploading = true;
+              uploadComplete = false;
+              updateActionState();
+              resetProgress();
+              setStatus(labels.uploading);
+              try {
+                const result = await uploadHandler(selectedFile, {
+                  reportProgress: (ratio) => {
+                    if (typeof ratio === 'number') {
+                      updateProgress(ratio);
+                    }
+                  },
+                  meta: selectedMeta,
+                });
+                uploadResult = result ?? null;
+                uploadComplete = true;
+                uploading = false;
+                updateProgress(1);
+                setStatus(labels.success, 'success');
+                updateActionState();
+              } catch (error) {
+                uploading = false;
+                uploadComplete = false;
+                uploadResult = null;
+                const message =
+                  error instanceof Error && error.message ? error.message : labels.failure;
+                setStatus(message, 'error');
+                resetProgress();
+                updateActionState();
+              }
+            }
+
+            function getFocusableElements() {
+              const elements = [];
+              if (dialog.dropzone instanceof HTMLElement) {
+                elements.push(dialog.dropzone);
+              }
+              if (
+                dialog.fileInfo &&
+                !dialog.fileInfo.classList.contains('hidden') &&
+                dialog.clear instanceof HTMLElement
+              ) {
+                elements.push(dialog.clear);
+              }
+              if (dialog.cancel instanceof HTMLElement) {
+                elements.push(dialog.cancel);
+              }
+              if (dialog.confirm instanceof HTMLElement) {
+                elements.push(dialog.confirm);
+              }
+              return elements.filter((element) => !element.disabled);
+            }
+
+            function handleKeyDown(event) {
+              if (event.key === 'Escape') {
+                event.preventDefault();
+                handleCancel(event);
+                return;
+              }
+              if (event.key === 'Tab') {
+                const focusable = getFocusableElements();
+                if (!focusable.length) {
+                  return;
+                }
+                const index = focusable.indexOf(document.activeElement);
+                const nextIndex = event.shiftKey
+                  ? index <= 0
+                    ? focusable.length - 1
+                    : index - 1
+                  : index === focusable.length - 1
+                  ? 0
+                  : index + 1;
+                focusable[nextIndex].focus();
+                event.preventDefault();
+              }
+            }
+
+            function handleConfirm(event) {
+              event.preventDefault();
+              if (uploadComplete) {
+                resolveAndClose({
+                  confirmed: true,
+                  uploaded: true,
+                  file: selectedFile,
+                  result: uploadResult,
+                  meta: selectedMeta,
+                });
+                return;
+              }
+              performUpload();
+            }
+
+            function handleCancel(event) {
+              event?.preventDefault?.();
+              resolveAndClose({
+                confirmed: false,
+                uploaded: uploadComplete,
+                file: selectedFile,
+                result: uploadResult,
+                meta: selectedMeta,
+              });
+            }
+
+            if (dialog.root) {
+              dialog.root.classList.remove('hidden');
+              dialog.root.classList.remove('upload-dialog-hidden');
+              dialog.root.setAttribute('aria-hidden', 'false');
+            }
+            document.body.classList.add('dialog-open');
+
+            if (dialog.title) {
+              dialog.title.textContent = labels.title;
+            }
+            if (dialog.description) {
+              dialog.description.textContent = labels.description;
+            }
+            if (dialog.prompt) {
+              dialog.prompt.textContent = labels.prompt;
+            }
+            if (dialog.dropzone) {
+              dialog.dropzone.setAttribute('aria-label', labels.prompt);
+            }
+            if (dialog.help) {
+              dialog.help.textContent = labels.help;
+            }
+            if (dialog.browse) {
+              dialog.browse.textContent = labels.browse;
+            }
+            if (dialog.clear) {
+              dialog.clear.textContent = labels.clear;
+            }
+            if (dialog.input) {
+              dialog.input.accept = accept;
+              dialog.input.value = '';
+            }
+            if (dialog.progress) {
+              dialog.progress.setAttribute('aria-label', labels.progress);
+              dialog.progress.setAttribute('aria-valuenow', '0');
+            }
+            if (dialog.status) {
+              dialog.status.classList.remove('error', 'success');
+              dialog.status.textContent = '';
+            }
+            if (dialog.fileInfo) {
+              dialog.fileInfo.classList.add('hidden');
+            }
+            selectedFile = null;
+            selectedMeta = null;
+            uploading = false;
+            uploadComplete = false;
+            uploadResult = null;
+            resetProgress();
+            setStatus(labels.waiting);
+            updateActionState();
+
+            if (dialog.confirm) {
+              dialog.confirm.addEventListener('click', handleConfirm);
+            }
+            if (dialog.cancel) {
+              dialog.cancel.textContent = t('dialog.cancel');
+              dialog.cancel.addEventListener('click', handleCancel);
+            }
+            if (dialog.backdrop) {
+              dialog.backdrop.addEventListener('click', handleCancel);
+            }
+            if (dialog.window) {
+              dialog.window.addEventListener('keydown', handleKeyDown);
+            }
+            if (dialog.dropzone) {
+              dialog.dropzone.addEventListener('click', handleBrowseClick);
+              dialog.dropzone.addEventListener('keydown', handleDropzoneKeyDown);
+              dialog.dropzone.addEventListener('dragover', handleDragOver);
+              dialog.dropzone.addEventListener('dragleave', handleDragLeave);
+              dialog.dropzone.addEventListener('drop', handleDrop);
+            }
+            if (dialog.input) {
+              dialog.input.addEventListener('change', handleInputChange);
+            }
+            if (dialog.clear) {
+              dialog.clear.addEventListener('click', handleClearSelection);
+            }
+
+            window.requestAnimationFrame(() => {
+              const target = dialog.dropzone instanceof HTMLElement ? dialog.dropzone : dialog.confirm;
+              target?.focus?.({ preventScroll: true });
+            });
+          });
+        }
+
         async function showSlideRangeDialog(file) {
           return new Promise((resolve) => {
             const dialog = dom.slideRangeDialog;
-            if (!dialog || !dialog.root || dialogState.active) {
-              resolve({ confirmed: false, pageStart: null, pageEnd: null });
+            if (!dialog || !dialog.root || dialogState.active || dialogState.uploadActive) {
+              resolve({ confirmed: false, pageStart: null, pageEnd: null, pageTotal: null });
               return;
             }
 
@@ -4781,14 +5566,24 @@
               }
               const payload =
                 pageCount > 0 && !previewFailed
-                  ? { confirmed: true, pageStart: startPage, pageEnd: endPage }
-                  : { confirmed: true, pageStart: null, pageEnd: null };
+                  ? {
+                      confirmed: true,
+                      pageStart: startPage,
+                      pageEnd: endPage,
+                      pageTotal: pageCount,
+                    }
+                  : { confirmed: true, pageStart: null, pageEnd: null, pageTotal: pageCount || null };
               resolveAndClose(payload);
             }
 
             function handleCancel(event) {
               event?.preventDefault?.();
-              resolveAndClose({ confirmed: false, pageStart: null, pageEnd: null });
+              resolveAndClose({
+                confirmed: false,
+                pageStart: null,
+                pageEnd: null,
+                pageTotal: pageCount > 0 ? pageCount : null,
+              });
             }
 
             function getFocusableElements() {
@@ -5210,6 +6005,78 @@
             .map((segment) => encodeURIComponent(segment))
             .join('/');
           return resolveAppUrl(`/storage/${encodedPath}`);
+        }
+
+        async function uploadWithProgress(url, options = {}) {
+          const resolvedUrl = resolveAppUrl(url);
+          const method = typeof options.method === 'string' ? options.method.toUpperCase() : 'POST';
+          const headers = options.headers && typeof options.headers === 'object' ? options.headers : {};
+          const body = options.body ?? null;
+          const onProgress = typeof options.onProgress === 'function' ? options.onProgress : null;
+
+          return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open(method, resolvedUrl);
+            xhr.responseType = 'json';
+
+            Object.entries(headers).forEach(([key, value]) => {
+              if (typeof key === 'string' && typeof value === 'string') {
+                xhr.setRequestHeader(key, value);
+              }
+            });
+
+            xhr.upload.addEventListener('progress', (event) => {
+              if (!onProgress) {
+                return;
+              }
+              if (event.lengthComputable && event.total > 0) {
+                onProgress(event.loaded / event.total);
+              }
+            });
+
+            xhr.addEventListener('load', () => {
+              if (onProgress) {
+                onProgress(1);
+              }
+              if (xhr.status >= 200 && xhr.status < 300) {
+                const responseBody = xhr.response ?? null;
+                resolve(responseBody);
+                return;
+              }
+              let detail = `${xhr.status} ${xhr.statusText || ''}`.trim();
+              const responseBody = xhr.response ?? null;
+              if (responseBody && typeof responseBody === 'object' && responseBody.detail) {
+                detail = responseBody.detail;
+              } else if (!responseBody && xhr.responseText) {
+                try {
+                  const parsed = JSON.parse(xhr.responseText);
+                  if (parsed && parsed.detail) {
+                    detail = parsed.detail;
+                  }
+                } catch (error) {
+                  // Ignore parse errors.
+                }
+              }
+              if (!detail) {
+                detail = 'Upload failed.';
+              }
+              reject(new Error(detail));
+            });
+
+            xhr.addEventListener('error', () => {
+              reject(new Error('Network error during upload.'));
+            });
+
+            xhr.addEventListener('abort', () => {
+              reject(new Error('Upload was aborted.'));
+            });
+
+            try {
+              xhr.send(body);
+            } catch (error) {
+              reject(error instanceof Error ? error : new Error('Unable to start upload.'));
+            }
+          });
         }
 
         async function request(url, options = {}) {
@@ -6392,24 +7259,14 @@
             actions.className = 'asset-actions';
 
             if (definition.accept) {
-              const wrapper = document.createElement('label');
-              wrapper.className = 'file-input';
-              const span = document.createElement('span');
-              span.textContent = t('assets.actions.upload');
-              const input = document.createElement('input');
-              input.type = 'file';
-              input.accept = definition.accept;
-              input.addEventListener('change', (event) => {
-                const target = event.target;
-                const file = target.files && target.files[0];
-                target.value = '';
-                if (file) {
-                  handleAssetUpload(definition.type, file);
-                }
+              const uploadButton = document.createElement('button');
+              uploadButton.type = 'button';
+              uploadButton.className = 'secondary';
+              uploadButton.textContent = t('assets.actions.upload');
+              uploadButton.addEventListener('click', () => {
+                handleAssetUpload(definition);
               });
-              wrapper.appendChild(span);
-              wrapper.appendChild(input);
-              actions.appendChild(wrapper);
+              actions.appendChild(uploadButton);
             }
 
             const link = document.createElement('a');
@@ -6550,59 +7407,157 @@
           }
         }
 
-        async function handleAssetUpload(kind, file) {
-          if (!state.selectedLectureId) {
+        async function handleAssetUpload(definition) {
+          if (!definition || !state.selectedLectureId) {
             return;
           }
-          const lectureId = state.selectedLectureId;
-          const formData = new FormData();
-          formData.append('file', file);
-          let endpoint = `/api/lectures/${lectureId}/assets/${kind}`;
-          if (kind === 'slides') {
-            const selection = await showSlideRangeDialog(file);
-            if (!selection || !selection.confirmed) {
-              return;
-            }
-            endpoint = `/api/lectures/${lectureId}/process-slides`;
-            if (typeof selection.pageStart === 'number' && Number.isFinite(selection.pageStart)) {
-              formData.append('page_start', String(selection.pageStart));
-            }
-            if (typeof selection.pageEnd === 'number' && Number.isFinite(selection.pageEnd)) {
-              formData.append('page_end', String(selection.pageEnd));
-            }
-          }
-          try {
-            if (kind === 'audio') {
-              stopTranscriptionProgress();
-              stopProcessingProgress();
-              state.lastProgressMessage = '';
-              state.lastProgressRatio = null;
-              if (state.settings?.audio_mastering_enabled !== false) {
-                startProcessingProgress(lectureId);
-              }
-            }
 
-            await request(endpoint, {
-              method: 'POST',
-              body: formData,
-            });
-            const successMessage =
-              kind === 'slides'
-                ? t('status.slidesProcessed')
-                : t('status.assetUploaded');
-            if (kind !== 'audio') {
-              showStatus(successMessage, 'success');
+          const lectureId = state.selectedLectureId;
+          const kind = definition.type;
+          const assetLabel = t(definition.labelKey);
+          let audioProcessingStarted = false;
+
+          function formatSlideSummary(selection) {
+            if (!selection) {
+              return '';
             }
+            const total =
+              typeof selection.pageTotal === 'number' && Number.isFinite(selection.pageTotal)
+                ? selection.pageTotal
+                : null;
+            const start =
+              typeof selection.pageStart === 'number' && Number.isFinite(selection.pageStart)
+                ? selection.pageStart
+                : null;
+            const end =
+              typeof selection.pageEnd === 'number' && Number.isFinite(selection.pageEnd)
+                ? selection.pageEnd
+                : null;
+            if (!total || !start || !end) {
+              return t('dialogs.slideRange.allPages');
+            }
+            const normalizedStart = Math.min(start, end);
+            const normalizedEnd = Math.max(start, end);
+            if (normalizedStart === 1 && normalizedEnd === total) {
+              return t('dialogs.slideRange.allPages');
+            }
+            if (normalizedStart === normalizedEnd) {
+              return t('dialogs.slideRange.summarySingle', {
+                start: normalizedStart,
+                total,
+              });
+            }
+            return t('dialogs.slideRange.summary', {
+              start: normalizedStart,
+              end: normalizedEnd,
+              total,
+            });
+          }
+
+          const dialogResult = await showUploadDialog({
+            accept: definition.accept || '',
+            title: t('dialogs.upload.assetTitle', { asset: assetLabel }),
+            description: t('dialogs.upload.assetDescription'),
+            prompt: t('dialogs.upload.prompt'),
+            help: t('dialogs.upload.help'),
+            browseLabel: t('dialogs.upload.browse'),
+            clearLabel: t('dialogs.upload.clear'),
+            uploadLabel: t('dialogs.upload.action'),
+            onFileSelected:
+              kind === 'slides'
+                ? async (file) => {
+                    const selection = await showSlideRangeDialog(file);
+                    if (!selection || !selection.confirmed) {
+                      return { cancelled: true };
+                    }
+                    const meta = {};
+                    if (typeof selection.pageStart === 'number' && Number.isFinite(selection.pageStart)) {
+                      meta.pageStart = selection.pageStart;
+                    }
+                    if (typeof selection.pageEnd === 'number' && Number.isFinite(selection.pageEnd)) {
+                      meta.pageEnd = selection.pageEnd;
+                    }
+                    if (typeof selection.pageTotal === 'number' && Number.isFinite(selection.pageTotal)) {
+                      meta.pageTotal = selection.pageTotal;
+                    }
+                    return {
+                      meta,
+                      summary: formatSlideSummary(selection),
+                    };
+                  }
+                : null,
+            onUpload: async (file, helpers) => {
+              const formData = new FormData();
+              formData.append('file', file);
+              let endpoint = `/api/lectures/${lectureId}/assets/${kind}`;
+
+              if (kind === 'slides') {
+                endpoint = `/api/lectures/${lectureId}/process-slides`;
+                const meta = helpers?.meta || {};
+                if (typeof meta.pageStart === 'number' && Number.isFinite(meta.pageStart)) {
+                  formData.append('page_start', String(meta.pageStart));
+                }
+                if (typeof meta.pageEnd === 'number' && Number.isFinite(meta.pageEnd)) {
+                  formData.append('page_end', String(meta.pageEnd));
+                }
+              }
+
+              if (kind === 'audio') {
+                stopTranscriptionProgress();
+                stopProcessingProgress();
+                state.lastProgressMessage = '';
+                state.lastProgressRatio = null;
+                if (state.settings?.audio_mastering_enabled !== false) {
+                  startProcessingProgress(lectureId);
+                  audioProcessingStarted = true;
+                } else {
+                  audioProcessingStarted = false;
+                }
+              }
+
+              try {
+                const response = await uploadWithProgress(endpoint, {
+                  method: 'POST',
+                  body: formData,
+                  onProgress: (ratio) => {
+                    helpers?.reportProgress?.(ratio);
+                  },
+                });
+                return response;
+              } catch (error) {
+                if (kind === 'audio' && audioProcessingStarted) {
+                  stopProcessingProgress();
+                }
+                throw error;
+              }
+            },
+          });
+
+          if (!dialogResult || !dialogResult.uploaded) {
+            if (kind === 'audio' && audioProcessingStarted) {
+              stopProcessingProgress();
+            }
+            return;
+          }
+
+          if (!dialogResult.confirmed) {
             await refreshData();
             await selectLecture(lectureId);
-            if (kind === 'audio') {
+            if (kind === 'audio' && audioProcessingStarted) {
               stopProcessingProgress({ preserveMessage: true });
             }
-          } catch (error) {
-            if (kind === 'audio') {
-              stopProcessingProgress();
-            }
-            showStatus(error.message, 'error');
+            return;
+          }
+
+          const successMessage =
+            kind === 'slides' ? t('status.slidesProcessed') : t('status.assetUploaded');
+          if (kind !== 'audio') {
+            showStatus(successMessage, 'success');
+          }
+          await refreshData();
+          await selectLecture(lectureId);
+          if (kind === 'audio' && audioProcessingStarted) {
+            stopProcessingProgress({ preserveMessage: true });
           }
         }
 
@@ -6919,28 +7874,55 @@
         }
 
         if (dom.settingsImport) {
-          dom.settingsImport.addEventListener('change', async (event) => {
-            const input = event.target;
-            const files = input?.files || [];
-            if (!files.length) {
+          dom.settingsImport.addEventListener('click', async () => {
+            if (dom.settingsImport.disabled) {
               return;
             }
-            const file = files[0];
-            const formData = new FormData();
-            formData.append('file', file);
-            if (dom.settingsImportMode) {
-              formData.append('mode', dom.settingsImportMode.value || 'merge');
+
+            const dialogResult = await showUploadDialog({
+              accept: '.zip',
+              title: t('dialogs.upload.archiveTitle'),
+              description: t('dialogs.upload.archiveDescription'),
+              prompt: t('dialogs.upload.prompt'),
+              help: t('dialogs.upload.help'),
+              browseLabel: t('dialogs.upload.browse'),
+              clearLabel: t('dialogs.upload.clear'),
+              uploadLabel: t('dialogs.upload.action'),
+              onUpload: async (file, helpers) => {
+                const formData = new FormData();
+                formData.append('file', file);
+                if (dom.settingsImportMode) {
+                  formData.append('mode', dom.settingsImportMode.value || 'merge');
+                }
+                dom.settingsImport.disabled = true;
+                if (dom.settingsExport) {
+                  dom.settingsExport.disabled = true;
+                }
+                showStatus(t('status.importing'), 'info');
+                try {
+                  const response = await uploadWithProgress('/api/settings/import', {
+                    method: 'POST',
+                    body: formData,
+                    onProgress: (ratio) => {
+                      helpers?.reportProgress?.(ratio);
+                    },
+                  });
+                  return response;
+                } finally {
+                  dom.settingsImport.disabled = false;
+                  if (dom.settingsExport) {
+                    dom.settingsExport.disabled = false;
+                  }
+                }
+              },
+            });
+
+            if (!dialogResult || !dialogResult.uploaded || !dialogResult.confirmed) {
+              return;
             }
-            dom.settingsImport.disabled = true;
-            if (dom.settingsExport) {
-              dom.settingsExport.disabled = true;
-            }
-            showStatus(t('status.importing'), 'info');
+
             try {
-              const payload = await request('/api/settings/import', {
-                method: 'POST',
-                body: formData,
-              });
+              const payload = dialogResult.result;
               const summary = payload?.import;
               if (summary) {
                 const count = Number(summary.lectures || 0);
@@ -6954,13 +7936,7 @@
               }
               await refreshData();
             } catch (error) {
-              showStatus(error.message, 'error');
-            } finally {
-              dom.settingsImport.value = '';
-              dom.settingsImport.disabled = false;
-              if (dom.settingsExport) {
-                dom.settingsExport.disabled = false;
-              }
+              showStatus(error instanceof Error ? error.message : String(error), 'error');
             }
           });
         }
