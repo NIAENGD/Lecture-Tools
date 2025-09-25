@@ -1,4 +1,7 @@
-FROM python:3.11-slim AS base
+# Use the AWS hosted mirror of the official Python image to avoid Docker Hub
+# authentication/rate limiting issues when building the container in
+# environments without Docker Hub credentials.
+FROM public.ecr.aws/docker/library/python:3.11-slim AS base
 
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1
