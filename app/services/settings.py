@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Literal
@@ -12,6 +13,9 @@ from ..config import AppConfig
 
 ThemeName = Literal["dark", "light", "system"]
 LanguageCode = Literal["en", "zh", "es", "fr"]
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 @dataclass
@@ -41,23 +45,27 @@ class SettingsStore:
 
     def load(self) -> UISettings:
         if not self._path.exists():
+            LOGGER.debug("Settings file %s does not exist; using defaults", self._path)
             return UISettings()
 
         try:
             payload = json.loads(self._path.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
+            LOGGER.debug("Settings file %s is invalid JSON; using defaults", self._path)
             return UISettings()
 
         settings = UISettings()
         for field, value in payload.items():
             if hasattr(settings, field):
                 setattr(settings, field, value)
+                LOGGER.debug("Loaded UI setting %s=%s", field, value)
         return settings
 
     def save(self, settings: UISettings) -> None:
         self._path.parent.mkdir(parents=True, exist_ok=True)
         data = asdict(settings)
         self._path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+        LOGGER.debug("Persisted UI settings to %s", self._path)
 
 
 __all__ = ["SettingsStore", "ThemeName", "UISettings"]
