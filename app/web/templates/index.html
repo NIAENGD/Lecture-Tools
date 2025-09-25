@@ -251,7 +251,7 @@
       }
 
       .upload-dropzone button {
-        pointer-events: none;
+        pointer-events: auto;
       }
 
       .upload-file-info {
@@ -4820,6 +4820,9 @@
                 dialog.dropzone.removeEventListener('dragleave', handleDragLeave);
                 dialog.dropzone.removeEventListener('drop', handleDrop);
               }
+              if (dialog.browse) {
+                dialog.browse.removeEventListener('click', handleBrowseClick);
+              }
               if (dialog.input) {
                 dialog.input.removeEventListener('change', handleInputChange);
               }
@@ -5089,6 +5092,7 @@
 
             function handleBrowseClick(event) {
               event?.preventDefault?.();
+              event?.stopPropagation?.();
               if (dialog.input) {
                 dialog.input.click();
               }
@@ -5296,6 +5300,9 @@
               dialog.dropzone.addEventListener('dragover', handleDragOver);
               dialog.dropzone.addEventListener('dragleave', handleDragLeave);
               dialog.dropzone.addEventListener('drop', handleDrop);
+            }
+            if (dialog.browse) {
+              dialog.browse.addEventListener('click', handleBrowseClick);
             }
             if (dialog.input) {
               dialog.input.addEventListener('change', handleInputChange);
