@@ -195,6 +195,13 @@ Run the mastering pipeline end-to-end against a sample file to confirm the helpe
 python run.py test-mastering path/to/audio.wav
 ```
 
+Windows users can run the exact same mastering pipeline without touching
+Python by launching the dedicated batch helper:
+
+```bat
+audio_mastering.bat "C:\Lectures\week1.wav"
+```
+
 Prefer a flag-style invocation? The command also understands `-testmastering`:
 
 ```bash
