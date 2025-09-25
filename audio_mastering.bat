@@ -44,17 +44,60 @@ if exist requirements-dev.txt (
 echo.
 if "%~1"=="" goto :usage
 
-set "AUDIO_PATH=%~1"
-if not exist "%AUDIO_PATH%" (
-    echo Provided audio file was not found: %~1
-    goto :error
+set "ORIGINAL_ARGS=%*"
+set "FIRST_ARG=%~1"
+set "FORWARDED_ARGS="
+set "AUDIO_PATH="
+set "FIRST_ARG_IS_OPTION="
+
+for %%I in ("--audio" "-a") do (
+    if /I "!FIRST_ARG!"=="%%~I" (
+        set "FIRST_ARG_IS_OPTION=1"
+    )
 )
 
-shift
-set "REMAINING_ARGS=%*"
+if defined FIRST_ARG_IS_OPTION (
+    set "FORWARDED_ARGS=%ORIGINAL_ARGS%"
+    set "EXPECT_AUDIO="
+    for %%I in (%*) do (
+        if defined EXPECT_AUDIO (
+            set "AUDIO_PATH=%%~I"
+            set "EXPECT_AUDIO="
+            goto :found_audio_option
+        )
+        if /I "%%~I"=="--audio" (
+            set "EXPECT_AUDIO=1"
+        ) else if /I "%%~I"=="-a" (
+            set "EXPECT_AUDIO=1"
+        )
+    )
+:found_audio_option
+) else if "%FIRST_ARG:~0,1%"=="-" (
+    set "FORWARDED_ARGS=%ORIGINAL_ARGS%"
+) else (
+    set "AUDIO_PATH=%~1"
+    if not exist "%AUDIO_PATH%" (
+        echo Provided audio file was not found: %~1
+        goto :error
+    )
+    shift
+    set "REMAINING_ARGS=%*"
+    set "FORWARDED_ARGS=--audio "%AUDIO_PATH%""
+    if not "%REMAINING_ARGS%"=="" (
+        set "FORWARDED_ARGS=%FORWARDED_ARGS% %REMAINING_ARGS%"
+    )
+)
 
-echo Launching mastering pipeline for "%AUDIO_PATH%"...
-"%VENV_PY%" "%SCRIPT_DIR%run.py" test-mastering "%AUDIO_PATH%" %REMAINING_ARGS%
+if not defined FORWARDED_ARGS (
+    set "FORWARDED_ARGS=%ORIGINAL_ARGS%"
+)
+
+if defined AUDIO_PATH (
+    echo Launching mastering pipeline for "%AUDIO_PATH%"...
+) else (
+    echo Launching mastering pipeline...
+)
+"%VENV_PY%" "%SCRIPT_DIR%run.py" test-mastering %FORWARDED_ARGS%
 set "EXIT_CODE=%ERRORLEVEL%"
 if not "%EXIT_CODE%"=="0" goto :error
 

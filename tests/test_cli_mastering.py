@@ -58,3 +58,57 @@ def test_mastering_command_reports_progress(monkeypatch, tmp_path) -> None:
 
     saved_target, _, _ = calls["save"]
     assert saved_target == audio_path.parent / "input-master.wav"
+
+
+def test_mastering_accepts_audio_option(monkeypatch, tmp_path) -> None:
+    audio_path = tmp_path / "input.mp3"
+    audio_path.write_bytes(b"fake")
+
+    class DummyConfig:
+        def __init__(self, storage_root: Path) -> None:
+            self.storage_root = storage_root
+
+    dummy_config = DummyConfig(tmp_path / "logs")
+
+    monkeypatch.setattr(run, "initialize_app", lambda: dummy_config)
+    monkeypatch.setattr(run, "_prepare_logging", lambda _: None)
+
+    monkeypatch.setattr(run, "ensure_wav", lambda *args, **kwargs: (audio_path, False))
+    monkeypatch.setattr(run, "load_wav_file", lambda _: (np.zeros(1, dtype=np.float32), 16_000))
+    monkeypatch.setattr(run, "preprocess_audio", lambda *args, **kwargs: np.zeros(1, dtype=np.float32))
+    monkeypatch.setattr(run, "save_preprocessed_wav", lambda *args, **kwargs: None)
+
+    result = runner.invoke(run.cli, ["test-mastering", "--audio", str(audio_path)])
+
+    assert result.exit_code == 0
+    assert "Source audio" in result.stdout
+
+
+def test_mastering_requires_audio_argument() -> None:
+    result = runner.invoke(run.cli, ["test-mastering"])
+
+    assert result.exit_code != 0
+    assert "Missing required audio file argument" in result.stdout
+
+
+def test_mastering_rejects_duplicate_audio_sources(tmp_path) -> None:
+    audio_path = tmp_path / "input.wav"
+    audio_path.write_bytes(b"fake")
+
+    result = runner.invoke(
+        run.cli,
+        ["test-mastering", str(audio_path), "--audio", str(audio_path)],
+    )
+
+    assert result.exit_code != 0
+    assert "Provide the audio file either as a positional argument" in result.stdout
+
+
+def test_mastering_rejects_unexpected_extra_arguments(tmp_path) -> None:
+    audio_path = tmp_path / "input.wav"
+    audio_path.write_bytes(b"fake")
+
+    result = runner.invoke(run.cli, ["test-mastering", str(audio_path), "extra"])
+
+    assert result.exit_code != 0
+    assert "Unexpected extra arguments" in result.stdout
