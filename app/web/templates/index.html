@@ -250,7 +250,7 @@
         color: var(--muted);
       }
 
-      .upload-dropzone button {
+      .upload-dropzone .dialog-button {
         pointer-events: auto;
       }
 
@@ -2070,24 +2070,24 @@
           <h2 id="upload-dialog-title" class="dialog-title"></h2>
         </div>
         <p id="upload-dialog-description" class="dialog-message"></p>
-        <div
+        <input id="upload-dialog-input" class="sr-only" type="file" />
+        <label
           id="upload-dropzone"
           class="upload-dropzone"
           tabindex="0"
           role="button"
           aria-describedby="upload-dropzone-help"
+          for="upload-dialog-input"
         >
-          <input id="upload-dialog-input" class="sr-only" type="file" />
           <strong id="upload-dropzone-prompt"></strong>
           <p id="upload-dropzone-help"></p>
-          <label
+          <span
             id="upload-browse-button"
-            for="upload-dialog-input"
             class="dialog-button secondary"
             role="button"
             tabindex="0"
-          ></label>
-        </div>
+          ></span>
+        </label>
         <div id="upload-file-info" class="upload-file-info hidden">
           <div>
             <div id="upload-file-name" class="upload-file-name"></div>
@@ -5100,12 +5100,35 @@
               await setSelectedFile(null);
             }
 
+            function openFilePicker(input) {
+              if (!input) {
+                return;
+              }
+              try {
+                if (typeof input.showPicker === 'function') {
+                  input.showPicker();
+                  return;
+                }
+              } catch (error) {
+                // Ignore errors from showPicker to allow fallback behaviour.
+              }
+              try {
+                input.click();
+              } catch (error) {
+                // Swallow blocked click attempts quietly for keyboard activation.
+              }
+            }
+
             function handleBrowseClick(event) {
+              if (!dialog.input) {
+                return;
+              }
+              if (typeof event?.detail === 'number' && event.detail > 0) {
+                return;
+              }
               event?.preventDefault?.();
               event?.stopPropagation?.();
-              if (dialog.input) {
-                dialog.input.click();
-              }
+              openFilePicker(dialog.input);
             }
 
             function handleDropzoneKeyDown(event) {
