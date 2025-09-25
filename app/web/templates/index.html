@@ -13,6 +13,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.min.js" crossorigin="anonymous"></script>
     <style>
       :root {
         color-scheme: light;
@@ -193,6 +194,211 @@
         display: flex;
         flex-direction: column;
         gap: 16px;
+      }
+
+      .slide-range-window {
+        width: min(960px, 100%);
+        max-height: min(90vh, 760px);
+      }
+
+      .slide-range-body {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .slide-range-preview {
+        border: 1px solid var(--panel-border);
+        border-radius: 10px;
+        background: var(--background);
+        padding: 16px;
+        max-height: 60vh;
+        overflow-y: auto;
+        box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.08);
+      }
+
+      .slide-range-preview::-webkit-scrollbar {
+        width: 10px;
+      }
+
+      .slide-range-preview::-webkit-scrollbar-thumb {
+        background: var(--accent-muted);
+        border-radius: 999px;
+      }
+
+      .slide-range-preview::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      .slide-range-loading,
+      .slide-range-error {
+        font-size: 0.95rem;
+        padding: 24px 8px;
+        text-align: center;
+      }
+
+      .slide-range-loading {
+        color: var(--muted);
+      }
+
+      .slide-range-error {
+        color: var(--status-error-text);
+        background: var(--status-error-bg);
+        border-radius: 8px;
+        margin-bottom: 16px;
+      }
+
+      .slide-range-pages {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .slide-preview-page {
+        background: var(--panel-bg);
+        border-radius: 10px;
+        border: 1px solid transparent;
+        padding: 12px;
+        box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+        transition: border-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease,
+          transform 0.2s ease;
+        cursor: pointer;
+        opacity: 0.55;
+        outline: none;
+      }
+
+      .slide-preview-page.selected {
+        border-color: var(--accent);
+        box-shadow: 0 10px 24px rgba(37, 99, 235, 0.18);
+        opacity: 1;
+      }
+
+      .slide-preview-page:focus {
+        border-color: var(--accent);
+        box-shadow: 0 10px 24px rgba(37, 99, 235, 0.18);
+        opacity: 1;
+      }
+
+      .slide-preview-page-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--muted);
+        margin-bottom: 8px;
+      }
+
+      .slide-preview-page canvas {
+        width: 100%;
+        height: auto;
+        border-radius: 6px;
+        background: #fff;
+      }
+
+      .slide-range-controls {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .page-inputs {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .page-inputs label {
+        display: flex;
+        flex-direction: column;
+        font-size: 0.85rem;
+        color: var(--muted);
+        gap: 6px;
+        min-width: 140px;
+      }
+
+      .page-inputs input[type='number'] {
+        padding: 8px 10px;
+        border-radius: 6px;
+        border: 1px solid var(--panel-border);
+        background: var(--panel-bg);
+        color: var(--text);
+        font-size: 0.95rem;
+        font-weight: 500;
+      }
+
+      .page-range-slider {
+        position: relative;
+        height: 36px;
+        margin-top: 4px;
+      }
+
+      .page-range-track {
+        position: absolute;
+        inset: 0;
+        height: 6px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(148, 163, 184, 0.35);
+        border-radius: 999px;
+      }
+
+      .page-range-fill {
+        position: absolute;
+        top: 50%;
+        height: 6px;
+        background: var(--accent);
+        border-radius: 999px;
+        transform: translateY(-50%);
+      }
+
+      .page-range-slider input[type='range'] {
+        -webkit-appearance: none;
+        appearance: none;
+        background: transparent;
+        position: absolute;
+        inset: 0;
+        margin: 0;
+        pointer-events: none;
+      }
+
+      .page-range-slider input[type='range']::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        height: 18px;
+        width: 18px;
+        border-radius: 50%;
+        background: var(--accent);
+        border: 2px solid var(--panel-bg);
+        box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+        pointer-events: auto;
+        cursor: pointer;
+      }
+
+      .page-range-slider input[type='range']::-moz-range-thumb {
+        height: 18px;
+        width: 18px;
+        border-radius: 50%;
+        background: var(--accent);
+        border: 2px solid var(--panel-bg);
+        box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+        pointer-events: auto;
+        cursor: pointer;
+      }
+
+      .page-range-slider input[type='range']::-webkit-slider-runnable-track {
+        background: transparent;
+      }
+
+      .page-range-slider input[type='range']::-moz-range-track {
+        background: transparent;
+      }
+
+      .page-range-summary {
+        font-size: 0.95rem;
+        font-weight: 500;
+        color: var(--text);
+      }
+
+      .slide-range-hint {
+        font-size: 0.85rem;
+        color: var(--muted);
       }
 
       .storage-page {
@@ -1709,6 +1915,53 @@
         </div>
       </div>
     </div>
+    <div id="slide-range-dialog" class="dialog hidden" aria-hidden="true" tabindex="-1">
+      <div id="slide-range-backdrop" class="dialog-backdrop"></div>
+      <div
+        id="slide-range-window"
+        class="dialog-window slide-range-window"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="slide-range-title"
+        aria-describedby="slide-range-description"
+      >
+        <div class="dialog-header">
+          <h2 id="slide-range-title" class="dialog-title"></h2>
+        </div>
+        <p id="slide-range-description" class="dialog-message"></p>
+        <div class="slide-range-body">
+          <div id="slide-range-preview" class="slide-range-preview">
+            <div id="slide-range-loading" class="slide-range-loading"></div>
+            <div id="slide-range-error" class="slide-range-error hidden"></div>
+            <div id="slide-range-pages" class="slide-range-pages"></div>
+          </div>
+          <div class="slide-range-controls">
+            <div class="page-inputs">
+              <label for="slide-range-start">
+                <span id="slide-range-start-label"></span>
+                <input id="slide-range-start" type="number" min="1" value="1" />
+              </label>
+              <label for="slide-range-end">
+                <span id="slide-range-end-label"></span>
+                <input id="slide-range-end" type="number" min="1" value="1" />
+              </label>
+            </div>
+            <div class="page-range-slider" aria-hidden="true">
+              <div class="page-range-track"></div>
+              <div id="slide-range-slider-fill" class="page-range-fill"></div>
+              <input id="slide-range-slider-start" type="range" min="1" value="1" step="1" />
+              <input id="slide-range-slider-end" type="range" min="1" value="1" step="1" />
+            </div>
+            <p id="slide-range-hint" class="slide-range-hint"></p>
+            <p id="slide-range-summary" class="page-range-summary"></p>
+          </div>
+        </div>
+        <div class="dialog-actions">
+          <button type="button" id="slide-range-cancel" class="dialog-button secondary"></button>
+          <button type="button" id="slide-range-confirm" class="dialog-button primary"></button>
+        </div>
+      </div>
+    </div>
     <script>
       (async function () {
         const translations = {
@@ -1781,6 +2034,7 @@
                 open: 'Open',
                 revealFolder: 'Reveal folder',
                 revealLocation: 'Reveal location',
+                downloadArchive: 'Download archive',
               },
             },
             create: {
@@ -1967,6 +2221,22 @@
                 title: 'Exit application',
                 message: 'Stop the Lecture Tools server and close this tab?',
               },
+              slideRange: {
+                title: 'Select pages to process',
+                description:
+                  'Preview the uploaded PDF and choose which pages to convert into slide images.',
+                loading: 'Loading preview…',
+                error:
+                  'We were unable to load the PDF preview. All pages will be processed.',
+                startLabel: 'Start page',
+                endLabel: 'End page',
+                rangeHint: 'Use the sliders, inputs, or page previews to adjust the selection.',
+                summary: 'Processing pages {{start}}–{{end}} of {{total}}.',
+                summarySingle: 'Processing page {{start}} of {{total}}.',
+                allPages: 'Processing all pages in the document.',
+                pageLabel: 'Page {{page}}',
+                confirm: 'Process selection',
+              },
               descriptionOptional: 'Description (optional)',
               descriptionPlaceholder: 'Add a short summary…',
             },
@@ -2112,6 +2382,7 @@
                 open: '打开',
                 revealFolder: '在文件夹中显示',
                 revealLocation: '显示文件位置',
+                downloadArchive: '下载压缩包',
               },
             },
             create: {
@@ -2296,6 +2567,20 @@
                 title: '退出应用',
                 message: '停止 Lecture Tools 服务器并关闭此标签页？',
               },
+              slideRange: {
+                title: '选择要处理的页面',
+                description: '预览上传的 PDF，选择要转换为课件图像的页面范围。',
+                loading: '正在加载预览…',
+                error: '无法加载 PDF 预览，将处理文档的全部页面。',
+                startLabel: '起始页',
+                endLabel: '结束页',
+                rangeHint: '可通过滑块、输入框或页面预览调整选择范围。',
+                summary: '将处理第 {{start}}–{{end}} 页，共 {{total}} 页。',
+                summarySingle: '将处理第 {{start}} 页，共 {{total}} 页。',
+                allPages: '将处理文档中的全部页面。',
+                pageLabel: '第 {{page}} 页',
+                confirm: '处理所选页面',
+              },
               descriptionOptional: '描述（可选）',
               descriptionPlaceholder: '添加简短摘要…',
             },
@@ -2441,6 +2726,7 @@
                 open: 'Abrir',
                 revealFolder: 'Mostrar carpeta',
                 revealLocation: 'Mostrar ubicación',
+                downloadArchive: 'Descargar archivo',
               },
             },
             create: {
@@ -2627,6 +2913,22 @@
                 title: 'Salir de la aplicación',
                 message: '¿Detener el servidor de Lecture Tools y cerrar esta pestaña?',
               },
+              slideRange: {
+                title: 'Seleccionar páginas a procesar',
+                description:
+                  'Previsualiza el PDF cargado y elige qué páginas convertir en imágenes de diapositivas.',
+                loading: 'Cargando vista previa…',
+                error: 'No se pudo cargar la vista previa del PDF. Se procesarán todas las páginas.',
+                startLabel: 'Página inicial',
+                endLabel: 'Página final',
+                rangeHint:
+                  'Usa los controles deslizantes, los campos o la vista previa para ajustar la selección.',
+                summary: 'Se procesarán las páginas {{start}}–{{end}} de {{total}}.',
+                summarySingle: 'Se procesará la página {{start}} de {{total}}.',
+                allPages: 'Se procesarán todas las páginas del documento.',
+                pageLabel: 'Página {{page}}',
+                confirm: 'Procesar selección',
+              },
               descriptionOptional: 'Descripción (opcional)',
               descriptionPlaceholder: 'Agrega un breve resumen…',
             },
@@ -2773,6 +3075,7 @@
                 open: 'Ouvrir',
                 revealFolder: 'Afficher le dossier',
                 revealLocation: 'Afficher l’emplacement',
+                downloadArchive: 'Télécharger l’archive',
               },
             },
             create: {
@@ -2959,6 +3262,21 @@
                 title: 'Quitter l’application',
                 message: 'Arrêter le serveur Lecture Tools et fermer cet onglet ?',
               },
+              slideRange: {
+                title: 'Sélectionner les pages à traiter',
+                description:
+                  'Prévisualisez le PDF téléversé et choisissez les pages à convertir en images de diapositives.',
+                loading: 'Chargement de l’aperçu…',
+                error: 'Impossible de charger l’aperçu du PDF. Toutes les pages seront traitées.',
+                startLabel: 'Page de début',
+                endLabel: 'Page de fin',
+                rangeHint: 'Utilisez les curseurs, les champs ou l’aperçu pour ajuster la sélection.',
+                summary: 'Traitement des pages {{start}} à {{end}} sur {{total}}.',
+                summarySingle: 'Traitement de la page {{start}} sur {{total}}.',
+                allPages: 'Traitement de toutes les pages du document.',
+                pageLabel: 'Page {{page}}',
+                confirm: 'Traiter la sélection',
+              },
               descriptionOptional: 'Description (optionnel)',
               descriptionPlaceholder: 'Ajoutez un court résumé…',
             },
@@ -3077,6 +3395,11 @@
         })();
 
         window.__LECTURE_TOOLS_BASE_PATH__ = BASE_PATH;
+
+        if (window.pdfjsLib && window.pdfjsLib.GlobalWorkerOptions) {
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.worker.min.js';
+        }
 
         function resolveAppUrl(target) {
           if (!target || typeof target !== 'string') {
@@ -3209,6 +3532,11 @@
             resolveTranslation(fallback, 'document.title');
           if (typeof titleTranslation === 'string') {
             document.title = titleTranslation;
+          }
+
+          if (activeSlideRangeDialog) {
+            activeSlideRangeDialog.updateTexts();
+            activeSlideRangeDialog.updateRangeSummary();
           }
         }
 
@@ -3361,6 +3689,28 @@
             input: document.getElementById('dialog-input'),
             confirm: document.getElementById('dialog-confirm'),
             cancel: document.getElementById('dialog-cancel'),
+          },
+          slideRangeDialog: {
+            root: document.getElementById('slide-range-dialog'),
+            backdrop: document.getElementById('slide-range-backdrop'),
+            window: document.getElementById('slide-range-window'),
+            title: document.getElementById('slide-range-title'),
+            description: document.getElementById('slide-range-description'),
+            preview: document.getElementById('slide-range-preview'),
+            loading: document.getElementById('slide-range-loading'),
+            error: document.getElementById('slide-range-error'),
+            pages: document.getElementById('slide-range-pages'),
+            startLabel: document.getElementById('slide-range-start-label'),
+            endLabel: document.getElementById('slide-range-end-label'),
+            startInput: document.getElementById('slide-range-start'),
+            endInput: document.getElementById('slide-range-end'),
+            startSlider: document.getElementById('slide-range-slider-start'),
+            endSlider: document.getElementById('slide-range-slider-end'),
+            sliderFill: document.getElementById('slide-range-slider-fill'),
+            hint: document.getElementById('slide-range-hint'),
+            summary: document.getElementById('slide-range-summary'),
+            confirm: document.getElementById('slide-range-confirm'),
+            cancel: document.getElementById('slide-range-cancel'),
           },
         };
 
@@ -3770,7 +4120,7 @@
             labelKey: 'assets.labels.slideImages',
             accept: null,
             type: 'slide_images',
-            reveal: 'folder',
+            downloadKey: 'assets.actions.downloadArchive',
           },
         ];
 
@@ -3918,6 +4268,7 @@
         }
 
         const dialogState = { active: false };
+        let activeSlideRangeDialog = null;
 
         function syncSettingsForm(settings) {
           const themeValue = settings?.theme ?? 'system';
@@ -4134,6 +4485,649 @@
             return null;
           }
           return typeof result.value === 'string' ? result.value : '';
+        }
+
+        async function showSlideRangeDialog(file) {
+          return new Promise((resolve) => {
+            const dialog = dom.slideRangeDialog;
+            if (!dialog || !dialog.root || dialogState.active) {
+              resolve({ confirmed: false, pageStart: null, pageEnd: null });
+              return;
+            }
+
+            dialogState.active = true;
+            let cancelled = false;
+            let pdfDocument = null;
+            let pageCount = 0;
+            let startPage = 1;
+            let endPage = 1;
+            let anchorPage = 1;
+            let previewFailed = false;
+            const pageEntries = [];
+
+            const previousActive =
+              document.activeElement instanceof HTMLElement
+                ? document.activeElement
+                : null;
+
+            function clampPage(value) {
+              if (!pageCount || pageCount < 1) {
+                return 1;
+              }
+              const numeric =
+                typeof value === 'number'
+                  ? value
+                  : Number.parseInt(String(value ?? ''), 10);
+              if (!Number.isFinite(numeric)) {
+                return 1;
+              }
+              return Math.min(pageCount, Math.max(1, Math.round(numeric)));
+            }
+
+            function updateTexts() {
+              if (dialog.title) {
+                dialog.title.textContent = t('dialogs.slideRange.title');
+              }
+              if (dialog.description) {
+                dialog.description.textContent = t('dialogs.slideRange.description');
+              }
+              if (dialog.startLabel) {
+                dialog.startLabel.textContent = t('dialogs.slideRange.startLabel');
+              }
+              if (dialog.endLabel) {
+                dialog.endLabel.textContent = t('dialogs.slideRange.endLabel');
+              }
+              if (dialog.hint) {
+                dialog.hint.textContent = t('dialogs.slideRange.rangeHint');
+              }
+              if (dialog.loading) {
+                dialog.loading.textContent = t('dialogs.slideRange.loading');
+              }
+              if (dialog.confirm) {
+                dialog.confirm.textContent = t('dialogs.slideRange.confirm');
+              }
+              if (dialog.cancel) {
+                dialog.cancel.textContent = t('dialog.cancel');
+              }
+              if (previewFailed && dialog.error) {
+                dialog.error.textContent = t('dialogs.slideRange.error');
+              }
+              pageEntries.forEach(({ label, pageNumber }) => {
+                if (label) {
+                  label.textContent = t('dialogs.slideRange.pageLabel', {
+                    page: pageNumber,
+                  });
+                }
+              });
+            }
+
+            function updateRangeSummary() {
+              if (dialog.summary) {
+                if (!pageCount || pageCount < 1) {
+                  dialog.summary.textContent = t('dialogs.slideRange.allPages');
+                }
+              }
+              if (dialog.sliderFill) {
+                if (!pageCount || pageCount < 2) {
+                  dialog.sliderFill.style.left = '0%';
+                  dialog.sliderFill.style.width = '100%';
+                }
+              }
+              if (!pageCount || pageCount < 1) {
+                pageEntries.forEach(({ element }) => {
+                  element.classList.add('selected');
+                });
+                return;
+              }
+
+              const lower = clampPage(startPage);
+              const upper = clampPage(endPage);
+              startPage = Math.min(lower, upper);
+              endPage = Math.max(lower, upper);
+              anchorPage = startPage;
+
+              if (dialog.startInput) {
+                dialog.startInput.value = String(startPage);
+              }
+              if (dialog.endInput) {
+                dialog.endInput.value = String(endPage);
+              }
+              if (dialog.startSlider) {
+                dialog.startSlider.value = String(startPage);
+              }
+              if (dialog.endSlider) {
+                dialog.endSlider.value = String(endPage);
+              }
+
+              if (dialog.sliderFill && pageCount > 1) {
+                const denominator = pageCount - 1;
+                const percentStart = ((startPage - 1) / denominator) * 100;
+                const percentEnd = ((endPage - 1) / denominator) * 100;
+                dialog.sliderFill.style.left = `${percentStart}%`;
+                dialog.sliderFill.style.width = `${Math.max(
+                  0,
+                  percentEnd - percentStart,
+                )}%`;
+              }
+
+              if (dialog.summary) {
+                const key =
+                  startPage === endPage
+                    ? 'dialogs.slideRange.summarySingle'
+                    : 'dialogs.slideRange.summary';
+                dialog.summary.textContent = t(key, {
+                  start: startPage,
+                  end: endPage,
+                  total: pageCount,
+                });
+              }
+
+              pageEntries.forEach(({ element, pageNumber }) => {
+                const selected = pageNumber >= startPage && pageNumber <= endPage;
+                element.classList.toggle('selected', selected);
+              });
+            }
+
+            function disableControls() {
+              if (dialog.startInput) {
+                dialog.startInput.disabled = true;
+              }
+              if (dialog.endInput) {
+                dialog.endInput.disabled = true;
+              }
+              if (dialog.startSlider) {
+                dialog.startSlider.disabled = true;
+              }
+              if (dialog.endSlider) {
+                dialog.endSlider.disabled = true;
+              }
+              if (dialog.confirm) {
+                dialog.confirm.disabled = true;
+              }
+            }
+
+            function enableControls() {
+              if (dialog.startInput) {
+                dialog.startInput.disabled = pageCount <= 0;
+              }
+              if (dialog.endInput) {
+                dialog.endInput.disabled = pageCount <= 0;
+              }
+              if (dialog.startSlider) {
+                dialog.startSlider.disabled = pageCount <= 1;
+              }
+              if (dialog.endSlider) {
+                dialog.endSlider.disabled = pageCount <= 1;
+              }
+              if (dialog.confirm) {
+                dialog.confirm.disabled = false;
+              }
+            }
+
+            function enableConfirmOnly() {
+              if (dialog.confirm) {
+                dialog.confirm.disabled = false;
+              }
+            }
+
+            function cleanup() {
+              cancelled = true;
+              activeSlideRangeDialog = null;
+              if (dialog.confirm) {
+                dialog.confirm.removeEventListener('click', handleConfirm);
+              }
+              if (dialog.cancel) {
+                dialog.cancel.removeEventListener('click', handleCancel);
+              }
+              if (dialog.backdrop) {
+                dialog.backdrop.removeEventListener('click', handleCancel);
+              }
+              if (dialog.window) {
+                dialog.window.removeEventListener('keydown', handleKeyDown);
+              }
+              if (dialog.startInput) {
+                dialog.startInput.removeEventListener('input', handleStartInput);
+                dialog.startInput.removeEventListener('blur', handleStartBlur);
+              }
+              if (dialog.endInput) {
+                dialog.endInput.removeEventListener('input', handleEndInput);
+                dialog.endInput.removeEventListener('blur', handleEndBlur);
+              }
+              if (dialog.startSlider) {
+                dialog.startSlider.removeEventListener('input', handleStartSlider);
+              }
+              if (dialog.endSlider) {
+                dialog.endSlider.removeEventListener('input', handleEndSlider);
+              }
+              if (dialog.root) {
+                dialog.root.classList.add('hidden');
+                dialog.root.setAttribute('aria-hidden', 'true');
+              }
+              if (dialog.preview) {
+                dialog.preview.scrollTop = 0;
+              }
+              if (dialog.pages) {
+                dialog.pages.innerHTML = '';
+              }
+              if (dialog.error) {
+                dialog.error.classList.add('hidden');
+                dialog.error.textContent = '';
+              }
+              if (dialog.loading) {
+                dialog.loading.classList.remove('hidden');
+              }
+              if (dialog.summary) {
+                dialog.summary.textContent = '';
+              }
+              document.body.classList.remove('dialog-open');
+              dialogState.active = false;
+              if (pdfDocument && typeof pdfDocument.destroy === 'function') {
+                pdfDocument.destroy();
+              }
+              pdfDocument = null;
+              if (previousActive) {
+                previousActive.focus({ preventScroll: true });
+              }
+            }
+
+            function resolveAndClose(result) {
+              cleanup();
+              resolve(result);
+            }
+
+            function handleConfirm(event) {
+              event.preventDefault();
+              if (dialog.confirm && dialog.confirm.disabled) {
+                return;
+              }
+              const payload =
+                pageCount > 0 && !previewFailed
+                  ? { confirmed: true, pageStart: startPage, pageEnd: endPage }
+                  : { confirmed: true, pageStart: null, pageEnd: null };
+              resolveAndClose(payload);
+            }
+
+            function handleCancel(event) {
+              event?.preventDefault?.();
+              resolveAndClose({ confirmed: false, pageStart: null, pageEnd: null });
+            }
+
+            function getFocusableElements() {
+              return [
+                dialog.startInput,
+                dialog.endInput,
+                dialog.startSlider,
+                dialog.endSlider,
+                dialog.cancel,
+                dialog.confirm,
+              ].filter((element) => element instanceof HTMLElement && !element.disabled);
+            }
+
+            function handleKeyDown(event) {
+              if (event.key === 'Escape') {
+                event.preventDefault();
+                handleCancel(event);
+                return;
+              }
+              if (event.key === 'Tab') {
+                const focusable = getFocusableElements();
+                if (!focusable.length) {
+                  return;
+                }
+                const currentIndex = focusable.indexOf(document.activeElement);
+                const nextIndex = event.shiftKey
+                  ? currentIndex <= 0
+                    ? focusable.length - 1
+                    : currentIndex - 1
+                  : currentIndex === focusable.length - 1
+                    ? 0
+                    : currentIndex + 1;
+                focusable[nextIndex].focus({ preventScroll: true });
+                event.preventDefault();
+              }
+            }
+
+            function handleStartInput(event) {
+              if (!pageCount) {
+                return;
+              }
+              const newValue = clampPage(event.target.value);
+              if (!Number.isFinite(newValue)) {
+                return;
+              }
+              startPage = newValue;
+              anchorPage = startPage;
+              updateRangeSummary();
+            }
+
+            function handleStartBlur() {
+              if (!pageCount) {
+                return;
+              }
+              startPage = clampPage(dialog.startInput?.value);
+              anchorPage = startPage;
+              updateRangeSummary();
+            }
+
+            function handleEndInput(event) {
+              if (!pageCount) {
+                return;
+              }
+              const newValue = clampPage(event.target.value);
+              if (!Number.isFinite(newValue)) {
+                return;
+              }
+              endPage = newValue;
+              updateRangeSummary();
+            }
+
+            function handleEndBlur() {
+              if (!pageCount) {
+                return;
+              }
+              endPage = clampPage(dialog.endInput?.value);
+              updateRangeSummary();
+            }
+
+            function handleStartSlider(event) {
+              if (!pageCount) {
+                return;
+              }
+              startPage = clampPage(event.target.value);
+              anchorPage = startPage;
+              updateRangeSummary();
+            }
+
+            function handleEndSlider(event) {
+              if (!pageCount) {
+                return;
+              }
+              endPage = clampPage(event.target.value);
+              updateRangeSummary();
+            }
+
+            function handlePageSelection(pageNumber, extend) {
+              if (!pageCount) {
+                return;
+              }
+              const clamped = clampPage(pageNumber);
+              if (extend) {
+                const lower = Math.min(anchorPage, clamped);
+                const upper = Math.max(anchorPage, clamped);
+                startPage = lower;
+                endPage = upper;
+              } else {
+                startPage = clamped;
+                endPage = clamped;
+                anchorPage = clamped;
+              }
+              updateRangeSummary();
+            }
+
+            async function renderPages(pdf) {
+              if (!dialog.pages) {
+                return;
+              }
+              dialog.pages.innerHTML = '';
+              pageEntries.length = 0;
+              for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+                if (cancelled) {
+                  return;
+                }
+                const page = await pdf.getPage(pageNumber);
+                if (cancelled) {
+                  return;
+                }
+                const baseViewport = page.getViewport({ scale: 1 });
+                const containerWidth = Math.max(
+                  320,
+                  (dialog.preview?.clientWidth ?? baseViewport.width) - 32,
+                );
+                const scale = Math.min(1.5, containerWidth / baseViewport.width);
+                const viewport = page.getViewport({ scale });
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d', { alpha: false });
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+                canvas.style.width = '100%';
+                canvas.style.height = 'auto';
+                const wrapper = document.createElement('div');
+                wrapper.className = 'slide-preview-page';
+                wrapper.dataset.pageNumber = String(pageNumber);
+                wrapper.tabIndex = 0;
+                const label = document.createElement('div');
+                label.className = 'slide-preview-page-label';
+                label.textContent = t('dialogs.slideRange.pageLabel', { page: pageNumber });
+                wrapper.appendChild(label);
+                wrapper.appendChild(canvas);
+                dialog.pages.appendChild(wrapper);
+                pageEntries.push({ element: wrapper, label, pageNumber });
+                const renderTask = page.render({ canvasContext: context, viewport });
+                try {
+                  await renderTask.promise;
+                } catch (error) {
+                  if (!cancelled) {
+                    throw error;
+                  }
+                  return;
+                }
+                if (cancelled) {
+                  return;
+                }
+                wrapper.addEventListener('click', (event) => {
+                  handlePageSelection(pageNumber, event.shiftKey);
+                });
+                wrapper.addEventListener('keydown', (event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    handlePageSelection(pageNumber, event.shiftKey);
+                  }
+                });
+              }
+            }
+
+            activeSlideRangeDialog = {
+              updateTexts,
+              updateRangeSummary,
+            };
+
+            if (dialog.pages) {
+              dialog.pages.innerHTML = '';
+            }
+            if (dialog.summary) {
+              dialog.summary.textContent = '';
+            }
+            if (dialog.error) {
+              dialog.error.classList.add('hidden');
+              dialog.error.textContent = '';
+            }
+            if (dialog.loading) {
+              dialog.loading.classList.remove('hidden');
+            }
+            if (dialog.startInput) {
+              dialog.startInput.value = '1';
+            }
+            if (dialog.endInput) {
+              dialog.endInput.value = '1';
+            }
+            if (dialog.startSlider) {
+              dialog.startSlider.value = '1';
+            }
+            if (dialog.endSlider) {
+              dialog.endSlider.value = '1';
+            }
+
+            disableControls();
+            updateTexts();
+            updateRangeSummary();
+
+            if (dialog.root) {
+              dialog.root.classList.remove('hidden');
+              dialog.root.setAttribute('aria-hidden', 'false');
+            }
+            document.body.classList.add('dialog-open');
+            if (dialog.preview) {
+              dialog.preview.scrollTop = 0;
+            }
+
+            if (dialog.confirm) {
+              dialog.confirm.addEventListener('click', handleConfirm);
+            }
+            if (dialog.cancel) {
+              dialog.cancel.addEventListener('click', handleCancel);
+            }
+            if (dialog.backdrop) {
+              dialog.backdrop.addEventListener('click', handleCancel);
+            }
+            if (dialog.window) {
+              dialog.window.addEventListener('keydown', handleKeyDown);
+            }
+            if (dialog.startInput) {
+              dialog.startInput.addEventListener('input', handleStartInput);
+              dialog.startInput.addEventListener('blur', handleStartBlur);
+            }
+            if (dialog.endInput) {
+              dialog.endInput.addEventListener('input', handleEndInput);
+              dialog.endInput.addEventListener('blur', handleEndBlur);
+            }
+            if (dialog.startSlider) {
+              dialog.startSlider.addEventListener('input', handleStartSlider);
+            }
+            if (dialog.endSlider) {
+              dialog.endSlider.addEventListener('input', handleEndSlider);
+            }
+
+            window.requestAnimationFrame(() => {
+              if (dialog.startInput && !dialog.startInput.disabled) {
+                dialog.startInput.focus({ preventScroll: true });
+                dialog.startInput.select();
+              } else if (dialog.cancel) {
+                dialog.cancel.focus({ preventScroll: true });
+              } else if (dialog.confirm && !dialog.confirm.disabled) {
+                dialog.confirm.focus({ preventScroll: true });
+              }
+            });
+
+            (async () => {
+              if (!window.pdfjsLib) {
+                previewFailed = true;
+                updateTexts();
+                if (dialog.loading) {
+                  dialog.loading.classList.add('hidden');
+                }
+                if (dialog.error) {
+                  dialog.error.classList.remove('hidden');
+                }
+                enableConfirmOnly();
+                updateRangeSummary();
+                window.requestAnimationFrame(() => {
+                  dialog.confirm?.focus({ preventScroll: true });
+                });
+                return;
+              }
+
+              try {
+                const buffer = await file.arrayBuffer();
+                if (cancelled) {
+                  return;
+                }
+                pdfDocument = await window.pdfjsLib
+                  .getDocument({ data: buffer })
+                  .promise;
+                if (cancelled) {
+                  return;
+                }
+                pageCount = pdfDocument.numPages || 0;
+                if (pageCount < 1) {
+                  previewFailed = true;
+                  updateTexts();
+                  if (dialog.loading) {
+                    dialog.loading.classList.add('hidden');
+                  }
+                  if (dialog.error) {
+                    dialog.error.classList.remove('hidden');
+                  }
+                  enableConfirmOnly();
+                  updateRangeSummary();
+                  window.requestAnimationFrame(() => {
+                    dialog.confirm?.focus({ preventScroll: true });
+                  });
+                  return;
+                }
+
+                if (dialog.startInput) {
+                  dialog.startInput.min = '1';
+                  dialog.startInput.max = String(pageCount);
+                }
+                if (dialog.endInput) {
+                  dialog.endInput.min = '1';
+                  dialog.endInput.max = String(pageCount);
+                }
+                if (dialog.startSlider) {
+                  dialog.startSlider.min = '1';
+                  dialog.startSlider.max = String(pageCount);
+                  dialog.startSlider.value = '1';
+                }
+                if (dialog.endSlider) {
+                  dialog.endSlider.min = '1';
+                  dialog.endSlider.max = String(pageCount);
+                  dialog.endSlider.value = String(pageCount);
+                }
+
+                startPage = 1;
+                endPage = pageCount;
+                anchorPage = 1;
+
+                await renderPages(pdfDocument);
+                if (cancelled) {
+                  return;
+                }
+
+                if (dialog.loading) {
+                  dialog.loading.classList.add('hidden');
+                }
+                previewFailed = false;
+                updateTexts();
+                enableControls();
+                updateRangeSummary();
+                window.requestAnimationFrame(() => {
+                  if (dialog.startInput && !dialog.startInput.disabled) {
+                    dialog.startInput.focus({ preventScroll: true });
+                    dialog.startInput.select();
+                  } else if (dialog.confirm && !dialog.confirm.disabled) {
+                    dialog.confirm.focus({ preventScroll: true });
+                  } else if (dialog.cancel) {
+                    dialog.cancel.focus({ preventScroll: true });
+                  }
+                });
+              } catch (error) {
+                if (cancelled) {
+                  return;
+                }
+                previewFailed = true;
+                updateTexts();
+                if (dialog.loading) {
+                  dialog.loading.classList.add('hidden');
+                }
+                if (dialog.error) {
+                  dialog.error.classList.remove('hidden');
+                }
+                enableConfirmOnly();
+                updateRangeSummary();
+                window.requestAnimationFrame(() => {
+                  dialog.confirm?.focus({ preventScroll: true });
+                });
+              } finally {
+                if (pdfDocument && typeof pdfDocument.cleanup === 'function') {
+                  try {
+                    pdfDocument.cleanup();
+                  } catch (cleanupError) {
+                    // Ignore cleanup errors.
+                  }
+                }
+              }
+            })();
+          });
         }
 
         function formatNumber(value) {
@@ -5385,6 +6379,30 @@
             }
             actions.appendChild(link);
 
+            if (definition.downloadKey) {
+              const downloadButton = document.createElement('button');
+              downloadButton.type = 'button';
+              downloadButton.className = 'secondary';
+              downloadButton.textContent = t(definition.downloadKey);
+              downloadButton.disabled = !value;
+              downloadButton.addEventListener('click', () => {
+                if (!value) {
+                  return;
+                }
+                const downloadUrl = buildStorageURL(value);
+                const fileName = value.split('/').pop() || 'slides.zip';
+                const anchor = document.createElement('a');
+                anchor.href = downloadUrl;
+                anchor.download = fileName;
+                anchor.rel = 'noopener';
+                anchor.style.display = 'none';
+                document.body.appendChild(anchor);
+                anchor.click();
+                anchor.remove();
+              });
+              actions.appendChild(downloadButton);
+            }
+
             if (definition.reveal) {
               const revealButton = document.createElement('button');
               revealButton.type = 'button';
@@ -5494,6 +6512,20 @@
           const lectureId = state.selectedLectureId;
           const formData = new FormData();
           formData.append('file', file);
+          let endpoint = `/api/lectures/${lectureId}/assets/${kind}`;
+          if (kind === 'slides') {
+            const selection = await showSlideRangeDialog(file);
+            if (!selection || !selection.confirmed) {
+              return;
+            }
+            endpoint = `/api/lectures/${lectureId}/process-slides`;
+            if (typeof selection.pageStart === 'number' && Number.isFinite(selection.pageStart)) {
+              formData.append('page_start', String(selection.pageStart));
+            }
+            if (typeof selection.pageEnd === 'number' && Number.isFinite(selection.pageEnd)) {
+              formData.append('page_end', String(selection.pageEnd));
+            }
+          }
           try {
             if (kind === 'audio') {
               stopTranscriptionProgress();
@@ -5503,7 +6535,7 @@
               startProcessingProgress(lectureId);
             }
 
-            await request(`/api/lectures/${lectureId}/assets/${kind}`, {
+            await request(endpoint, {
               method: 'POST',
               body: formData,
             });
