@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Dict, Optional, Tuple
 
 import numpy as np
+from numpy.lib import stride_tricks
 
 
 def _db_to_amplitude(value: float) -> float:
@@ -180,32 +181,42 @@ def _reduce_noise(
     if pad_length <= 0:
         pad_length = frame_length
     pad_amount = max(0, pad_length - len(signal))
-    padded = np.pad(signal, (0, pad_amount), mode="reflect") if pad_amount else signal
+    if pad_amount:
+        padded = np.pad(signal, (0, pad_amount), mode="reflect")
+    else:
+        padded = signal
 
-    spectra: list[np.ndarray] = []
-    for start in range(0, len(padded) - frame_length + 1, hop_length):
-        frame = padded[start : start + frame_length]
-        spectrum = np.fft.rfft(frame * window)
-        spectra.append(np.abs(spectrum))
+    padded = np.ascontiguousarray(padded, dtype=np.float32)
 
-    if not spectra:
-        return signal
+    frame_count = 1 + (len(padded) - frame_length) // hop_length
+    if frame_count <= 0:
+        return signal.astype(np.float32)
 
-    noise_profile = np.median(np.stack(spectra, axis=0), axis=0)
+    frames = stride_tricks.as_strided(
+        padded,
+        shape=(frame_count, frame_length),
+        strides=(padded.strides[0] * hop_length, padded.strides[0]),
+    )
+    windowed = frames * window
+    spectra = np.fft.rfft(windowed, axis=1)
+
+    magnitude = np.abs(spectra)
+    noise_profile = np.median(magnitude, axis=0, keepdims=True)
     min_gain = _db_to_amplitude(-reduction_db)
+
+    floor = noise_profile * sensitivity
+    gain = np.clip((magnitude - floor) / np.maximum(magnitude, 1e-9), min_gain, 1.0)
+    processed_frames = np.fft.irfft(spectra * gain, n=frame_length, axis=1).astype(np.float32)
 
     output = np.zeros_like(padded, dtype=np.float32)
     window_accumulator = np.zeros_like(padded, dtype=np.float32)
+    window_squared = window * window
 
-    for start in range(0, len(padded) - frame_length + 1, hop_length):
-        frame = padded[start : start + frame_length]
-        spectrum = np.fft.rfft(frame * window)
-        magnitude = np.abs(spectrum)
-        floor = noise_profile * sensitivity
-        gain = np.clip((magnitude - floor) / np.maximum(magnitude, 1e-9), min_gain, 1.0)
-        processed = np.fft.irfft(spectrum * gain, n=frame_length).astype(np.float32)
-        output[start : start + frame_length] += processed * window
-        window_accumulator[start : start + frame_length] += window * window
+    for index in range(frame_count):
+        start = index * hop_length
+        stop = start + frame_length
+        output[start:stop] += processed_frames[index] * window
+        window_accumulator[start:stop] += window_squared
 
     valid = window_accumulator > 1e-6
     output[valid] /= window_accumulator[valid]
