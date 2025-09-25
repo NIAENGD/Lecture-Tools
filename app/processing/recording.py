@@ -442,13 +442,44 @@ def _shape_frequency_response(
     presence_low_hz: float,
     presence_high_hz: float,
     presence_gain_db: float,
+    frame_ms: float = 32.0,
 ) -> np.ndarray:
     if signal.size == 0:
         return signal
 
-    spectrum = np.fft.rfft(signal)
-    freqs = np.fft.rfftfreq(signal.size, d=1.0 / sample_rate)
-    weights = np.ones_like(freqs)
+    # Process the waveform in overlapping FFT frames so that very long inputs do
+    # not require a single massive transform (which previously caused the
+    # mastering pipeline to appear to hang on hour-long recordings).
+    frame_length = max(int(sample_rate * frame_ms / 1_000), 1)
+    if frame_length & (frame_length - 1):
+        frame_length = 1 << (frame_length - 1).bit_length()
+    hop_length = max(frame_length // 2, 1)
+    window = np.hanning(frame_length).astype(np.float32)
+
+    pad_length = ((len(signal) - frame_length) // hop_length + 1) * hop_length + frame_length
+    if pad_length <= 0:
+        pad_length = frame_length
+    pad_amount = max(0, pad_length - len(signal))
+    if pad_amount:
+        padded = np.pad(signal, (0, pad_amount), mode="reflect")
+    else:
+        padded = signal
+
+    padded = np.ascontiguousarray(padded, dtype=np.float32)
+    frame_count = 1 + (len(padded) - frame_length) // hop_length
+    if frame_count <= 0:
+        return signal.astype(np.float32)
+
+    frames = stride_tricks.as_strided(
+        padded,
+        shape=(frame_count, frame_length),
+        strides=(padded.strides[0] * hop_length, padded.strides[0]),
+    )
+    windowed = frames * window
+    spectra = np.fft.rfft(windowed, axis=1)
+
+    freqs = np.fft.rfftfreq(frame_length, d=1.0 / sample_rate)
+    weights = np.ones_like(freqs, dtype=np.float32)
 
     if highpass_hz > 0:
         mask = freqs < highpass_hz
@@ -465,8 +496,22 @@ def _shape_frequency_response(
         if np.any(mask):
             weights[mask] *= _db_to_amplitude(presence_gain_db)
 
-    shaped = np.fft.irfft(spectrum * weights, n=signal.size)
-    return shaped.astype(np.float32)
+    processed_frames = np.fft.irfft(spectra * weights, n=frame_length, axis=1).astype(np.float32)
+
+    output = np.zeros_like(padded, dtype=np.float32)
+    window_accumulator = np.zeros_like(padded, dtype=np.float32)
+    window_squared = window * window
+
+    for index in range(frame_count):
+        start = index * hop_length
+        stop = start + frame_length
+        output[start:stop] += processed_frames[index] * window
+        window_accumulator[start:stop] += window_squared
+
+    valid = window_accumulator > 1e-6
+    output[valid] /= window_accumulator[valid]
+    trimmed = output[: signal.size] if output.size > signal.size else output
+    return np.asarray(trimmed, dtype=np.float32)
 
 
 def _find_mastering_cli_binary() -> Optional[Path]:
