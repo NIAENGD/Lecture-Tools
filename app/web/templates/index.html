@@ -196,6 +196,102 @@
         gap: 16px;
       }
 
+      body.debug-enabled {
+        padding-right: min(33vw, 520px);
+      }
+
+      body.debug-enabled .dialog {
+        right: min(33vw, 520px);
+      }
+
+      body.debug-enabled .dialog-backdrop {
+        right: min(33vw, 520px);
+      }
+
+      body.debug-enabled .status-bar {
+        margin-right: min(33vw, 520px);
+      }
+
+      .debug-pane {
+        position: fixed;
+        inset: 0 0 0 auto;
+        width: min(33vw, 520px);
+        min-width: 320px;
+        max-width: 520px;
+        background: #020617;
+        color: #e2e8f0;
+        border-left: 2px solid rgba(148, 163, 184, 0.24);
+        box-shadow: -12px 0 24px rgba(15, 23, 42, 0.45);
+        padding: 18px 20px;
+        display: none;
+        flex-direction: column;
+        gap: 12px;
+        font-family: 'JetBrains Mono', 'SFMono-Regular', Menlo, Monaco, Consolas,
+          'Liberation Mono', 'Courier New', monospace;
+        z-index: 2000;
+      }
+
+      body.debug-enabled .debug-pane {
+        display: flex;
+      }
+
+      .debug-pane-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .debug-pane-title {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 600;
+      }
+
+      .debug-indicator {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #22d3ee;
+      }
+
+      .debug-log-window {
+        flex: 1;
+        background: rgba(15, 23, 42, 0.8);
+        border: 1px solid rgba(51, 65, 85, 0.6);
+        border-radius: 8px;
+        padding: 12px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .debug-log-window:focus {
+        outline: 2px solid rgba(56, 189, 248, 0.6);
+        outline-offset: 2px;
+      }
+
+      .debug-log-line {
+        margin: 0;
+        font-size: 0.82rem;
+        line-height: 1.4;
+        color: #e2e8f0;
+      }
+
+      .debug-log-line + .debug-log-line {
+        margin-top: 4px;
+      }
+
+      .debug-log-empty {
+        font-size: 0.85rem;
+        color: rgba(226, 232, 240, 0.7);
+      }
+
+      .debug-log-status {
+        font-size: 0.8rem;
+        color: #fbbf24;
+        min-height: 1em;
+      }
+
       .slide-range-window {
         width: min(960px, 100%);
         max-height: min(90vh, 760px);
@@ -1847,6 +1943,16 @@
                 </div>
               </fieldset>
               <fieldset>
+                <legend data-i18n="settings.debug.legend">Debugging</legend>
+                <label class="field-inline" for="settings-debug-enabled">
+                  <input id="settings-debug-enabled" type="checkbox" />
+                  <span data-i18n="settings.debug.enable">Enable debug mode</span>
+                </label>
+                <p class="field-help" data-i18n="settings.debug.description">
+                  Show a live console on the right that streams detailed program output.
+                </p>
+              </fieldset>
+              <fieldset>
                 <legend data-i18n="settings.whisper.legend">Whisper transcription</legend>
                 <div class="field-inline">
                   <label for="settings-whisper-model" data-i18n="settings.whisper.modelLabel">
@@ -1972,6 +2078,32 @@
         </section>
       </section>
     </main>
+    <aside
+      id="debug-pane"
+      class="debug-pane"
+      role="region"
+      aria-live="polite"
+      aria-label="Debug console"
+      hidden
+    >
+      <div class="debug-pane-header">
+        <h2 class="debug-pane-title" data-i18n="debug.title">Debug console</h2>
+        <span class="debug-indicator" data-i18n="debug.live">Live</span>
+      </div>
+      <div
+        id="debug-log-window"
+        class="debug-log-window"
+        role="log"
+        aria-live="polite"
+        aria-atomic="false"
+        tabindex="0"
+      >
+        <div id="debug-log-empty" class="debug-log-empty" data-i18n="debug.empty">
+          Enable debug mode to inspect program activity in real time.
+        </div>
+      </div>
+      <div id="debug-log-status" class="debug-log-status" hidden></div>
+    </aside>
     <div id="dialog-root" class="dialog hidden" aria-hidden="true" tabindex="-1">
       <div id="dialog-backdrop" class="dialog-backdrop"></div>
       <div
@@ -2217,6 +2349,12 @@
                   fr: 'Français (French)',
                 },
               },
+              debug: {
+                legend: 'Debugging',
+                enable: 'Enable debug mode',
+                description:
+                  'Show a live console on the right that streams detailed program output.',
+              },
               whisper: {
                 legend: 'Whisper transcription',
                 modelLabel: 'Default model',
@@ -2313,6 +2451,12 @@
               unnamedClass: 'Untitled class',
               unnamedModule: 'Untitled module',
               unnamedLecture: 'Untitled lecture',
+            },
+            debug: {
+              title: 'Debug console',
+              live: 'Live',
+              empty: 'Enable debug mode to inspect program activity in real time.',
+              error: 'Unable to load debug output.',
             },
             dialog: {
               cancel: 'Cancel',
@@ -2594,6 +2738,11 @@
                   fr: 'Français（法语）',
                 },
               },
+              debug: {
+                legend: '调试',
+                enable: '启用调试模式',
+                description: '在右侧显示实时程序输出的控制台。',
+              },
               whisper: {
                 legend: 'Whisper 转录',
                 modelLabel: '默认模型',
@@ -2688,6 +2837,12 @@
               unnamedClass: '未命名班级',
               unnamedModule: '未命名模块',
               unnamedLecture: '未命名讲座',
+            },
+            debug: {
+              title: '调试控制台',
+              live: '实时',
+              empty: '启用调试模式以实时查看程序活动。',
+              error: '无法加载调试输出。',
             },
             dialog: {
               cancel: '取消',
@@ -2966,6 +3121,12 @@
                   fr: 'Français (Francés)',
                 },
               },
+              debug: {
+                legend: 'Depuración',
+                enable: 'Activar modo de depuración',
+                description:
+                  'Muestra en la derecha una consola en vivo con la salida detallada del programa.',
+              },
               whisper: {
                 legend: 'Transcripción Whisper',
                 modelLabel: 'Modelo predeterminado',
@@ -3062,6 +3223,13 @@
               unnamedClass: 'Clase sin nombre',
               unnamedModule: 'Módulo sin nombre',
               unnamedLecture: 'Sesión sin nombre',
+            },
+            debug: {
+              title: 'Consola de depuración',
+              live: 'En vivo',
+              empty:
+                'Activa el modo de depuración para ver la actividad del programa en tiempo real.',
+              error: 'No se pudo cargar la salida de depuración.',
             },
             dialog: {
               cancel: 'Cancelar',
@@ -3344,6 +3512,12 @@
                   fr: 'Français',
                 },
               },
+              debug: {
+                legend: 'Débogage',
+                enable: 'Activer le mode débogage',
+                description:
+                  'Affiche sur la droite une console en direct avec la sortie détaillée du programme.',
+              },
               whisper: {
                 legend: 'Transcription Whisper',
                 modelLabel: 'Modèle par défaut',
@@ -3440,6 +3614,13 @@
               unnamedClass: 'Cours sans nom',
               unnamedModule: 'Module sans nom',
               unnamedLecture: 'Séance sans nom',
+            },
+            debug: {
+              title: 'Console de débogage',
+              live: 'En direct',
+              empty:
+                "Activez le mode débogage pour suivre l’activité du programme en temps réel.",
+              error: 'Impossible de charger la sortie de débogage.',
             },
             dialog: {
               cancel: 'Annuler',
@@ -3824,6 +4005,8 @@
         const SLIDE_DPI_CHOICES = new Set(['150', '200', '300', '400', '600']);
         const DEFAULT_SLIDE_DPI = '200';
         const LANGUAGE_CHOICES = new Set(['en', 'zh', 'es', 'fr']);
+        const DEBUG_POLL_INTERVAL_MS = 2000;
+        const MAX_DEBUG_LOG_ENTRIES = 500;
 
         function normalizeWhisperModel(value) {
           const candidate =
@@ -3887,6 +4070,13 @@
             purging: false,
             initialized: false,
           },
+          debug: {
+            enabled: false,
+            timer: null,
+            lastId: 0,
+            pending: false,
+            autoScroll: true,
+          },
         };
 
         const dom = {
@@ -3932,11 +4122,16 @@
           settingsWhisperGpuTest: document.getElementById('settings-whisper-gpu-test'),
           settingsSlideDpi: document.getElementById('settings-slide-dpi'),
           settingsAudioMastering: document.getElementById('settings-audio-mastering'),
+          settingsDebugEnabled: document.getElementById('settings-debug-enabled'),
           settingsExitApp: document.getElementById('settings-exit-app'),
           settingsExport: document.getElementById('settings-export'),
           settingsImport: document.getElementById('settings-import'),
           settingsImportMode: document.getElementById('settings-import-mode'),
           gpuModelOptions: Array.from(document.querySelectorAll('option.gpu-only')),
+          debugPane: document.getElementById('debug-pane'),
+          debugLog: document.getElementById('debug-log-window'),
+          debugEmpty: document.getElementById('debug-log-empty'),
+          debugStatus: document.getElementById('debug-log-status'),
           storage: {
             container: document.getElementById('view-storage'),
             path: document.getElementById('storage-path'),
@@ -4008,6 +4203,14 @@
             confirm: document.getElementById('upload-confirm'),
           },
         };
+
+        if (dom.debugLog) {
+          dom.debugLog.addEventListener('scroll', () => {
+            const element = dom.debugLog;
+            const remaining = element.scrollHeight - element.scrollTop - element.clientHeight;
+            state.debug.autoScroll = remaining <= 40;
+          });
+        }
 
 
         function renderStorageUsage() {
@@ -4562,6 +4765,167 @@
           }
         }
 
+        function ensureDebugPlaceholder() {
+          if (!dom.debugLog || !dom.debugEmpty) {
+            return;
+          }
+          if (!dom.debugEmpty.parentElement) {
+            dom.debugLog.appendChild(dom.debugEmpty);
+          }
+        }
+
+        function updateDebugStatus(message) {
+          if (!dom.debugStatus) {
+            return;
+          }
+          if (message) {
+            dom.debugStatus.hidden = false;
+            dom.debugStatus.textContent = message;
+          } else {
+            dom.debugStatus.hidden = true;
+            dom.debugStatus.textContent = '';
+          }
+        }
+
+        function appendDebugLogs(entries, { reset = false } = {}) {
+          if (!dom.debugLog) {
+            return;
+          }
+          if (reset) {
+            dom.debugLog.innerHTML = '';
+            ensureDebugPlaceholder();
+            if (dom.debugEmpty) {
+              dom.debugEmpty.hidden = false;
+            }
+          }
+          const list = Array.isArray(entries) ? entries : [];
+          if (!list.length) {
+            if (dom.debugEmpty) {
+              const hasEntries = Array.from(dom.debugLog.children).some(
+                (child) => child !== dom.debugEmpty,
+              );
+              dom.debugEmpty.hidden = hasEntries;
+            }
+            return;
+          }
+
+          ensureDebugPlaceholder();
+          if (dom.debugEmpty) {
+            dom.debugEmpty.hidden = true;
+          }
+
+          list.forEach((entry) => {
+            if (!entry || typeof entry !== 'object') {
+              return;
+            }
+            const line = document.createElement('p');
+            line.className = 'debug-log-line';
+            line.textContent = String(entry.message || '');
+            dom.debugLog.appendChild(line);
+          });
+
+          const rendered = Array.from(dom.debugLog.children).filter(
+            (child) => child !== dom.debugEmpty,
+          );
+          let excess = rendered.length - MAX_DEBUG_LOG_ENTRIES;
+          for (const child of rendered) {
+            if (excess <= 0) {
+              break;
+            }
+            dom.debugLog.removeChild(child);
+            excess -= 1;
+          }
+
+          if (state.debug.autoScroll) {
+            dom.debugLog.scrollTop = dom.debugLog.scrollHeight;
+          }
+        }
+
+        async function fetchDebugLogs(reset = false) {
+          if (!state.debug.enabled || state.debug.pending) {
+            return;
+          }
+          state.debug.pending = true;
+          try {
+            let url = '/api/debug/logs';
+            if (!reset && state.debug.lastId) {
+              url += `?after=${encodeURIComponent(state.debug.lastId)}`;
+            }
+            const payload = await request(url);
+            const logs = Array.isArray(payload?.logs) ? payload.logs : [];
+            appendDebugLogs(logs, { reset });
+            if (typeof payload?.next === 'number') {
+              state.debug.lastId = payload.next;
+            } else if (logs.length) {
+              const lastEntry = logs[logs.length - 1];
+              if (lastEntry && typeof lastEntry.id === 'number') {
+                state.debug.lastId = lastEntry.id;
+              }
+            }
+            updateDebugStatus('');
+          } catch (error) {
+            const base = t('debug.error');
+            const detail = error instanceof Error ? error.message : String(error || '');
+            updateDebugStatus(detail ? `${base} ${detail}` : base);
+          } finally {
+            state.debug.pending = false;
+          }
+        }
+
+        function startDebugPolling() {
+          stopDebugPolling();
+          if (!state.debug.enabled) {
+            return;
+          }
+          fetchDebugLogs(state.debug.lastId === 0);
+          state.debug.timer = window.setInterval(() => {
+            fetchDebugLogs(false);
+          }, DEBUG_POLL_INTERVAL_MS);
+        }
+
+        function stopDebugPolling() {
+          if (state.debug.timer) {
+            window.clearInterval(state.debug.timer);
+            state.debug.timer = null;
+          }
+        }
+
+        function setDebugMode(enabled) {
+          const active = Boolean(enabled);
+          if (state.debug.enabled === active) {
+            document.body.classList.toggle('debug-enabled', active);
+            if (dom.debugPane) {
+              dom.debugPane.hidden = !active;
+            }
+            if (active && state.debug.timer === null) {
+              startDebugPolling();
+            }
+            return;
+          }
+
+          state.debug.enabled = active;
+          document.body.classList.toggle('debug-enabled', active);
+          if (dom.debugPane) {
+            dom.debugPane.hidden = !active;
+          }
+
+          if (active) {
+            state.debug.lastId = 0;
+            state.debug.autoScroll = true;
+            state.debug.pending = false;
+            appendDebugLogs([], { reset: true });
+            updateDebugStatus('');
+            startDebugPolling();
+          } else {
+            stopDebugPolling();
+            updateDebugStatus('');
+            if (dom.debugEmpty) {
+              ensureDebugPlaceholder();
+              dom.debugEmpty.hidden = false;
+            }
+          }
+        }
+
         const dialogState = { active: false, uploadActive: false };
 
         function syncSettingsForm(settings) {
@@ -4577,6 +4941,7 @@
           );
           const dpiValue = normalizeSlideDpi(settings?.slide_dpi);
           const masteringEnabled = settings?.audio_mastering_enabled !== false;
+          const debugEnabled = Boolean(settings?.debug_enabled);
 
           const effectiveModel =
             requestedModel === GPU_MODEL && !state.gpuWhisper.supported
@@ -4592,6 +4957,9 @@
           if (dom.settingsAudioMastering) {
             dom.settingsAudioMastering.checked = masteringEnabled;
           }
+          if (dom.settingsDebugEnabled) {
+            dom.settingsDebugEnabled.checked = debugEnabled;
+          }
           dom.transcribeModel.value = effectiveModel;
 
           state.settings = {
@@ -4603,6 +4971,7 @@
             whisper_beam_size: beamNumber,
             slide_dpi: Number(dpiValue),
             audio_mastering_enabled: masteringEnabled,
+            debug_enabled: debugEnabled,
           };
 
           applyTheme(themeValue);
@@ -4610,6 +4979,7 @@
           applyTranslations(languageValue);
           renderStorage();
           updateEditModeUI();
+          setDebugMode(debugEnabled);
         }
 
         function showDialog({
@@ -8187,6 +8557,9 @@
             const masteringEnabled = dom.settingsAudioMastering
               ? Boolean(dom.settingsAudioMastering.checked)
               : true;
+            const debugEnabled = dom.settingsDebugEnabled
+              ? Boolean(dom.settingsDebugEnabled.checked)
+              : false;
 
             try {
               const response = await request('/api/settings', {
@@ -8200,6 +8573,7 @@
                   whisper_beam_size: beamValue,
                   slide_dpi: dpiValue,
                   audio_mastering_enabled: masteringEnabled,
+                  debug_enabled: debugEnabled,
                 }),
               });
               const updatedSettings = response?.settings ?? {
@@ -8210,6 +8584,7 @@
                 whisper_beam_size: beamValue,
                 slide_dpi: dpiValue,
                 audio_mastering_enabled: masteringEnabled,
+                debug_enabled: debugEnabled,
               };
               syncSettingsForm(updatedSettings);
               if (modelValue === GPU_MODEL) {
@@ -8221,6 +8596,9 @@
             }
           });
         }
+        window.addEventListener('beforeunload', () => {
+          stopDebugPolling();
+        });
         setActiveView(state.activeView);
         updateEditModeUI();
         clearDetailPanel();

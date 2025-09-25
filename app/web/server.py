@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
+import logging
 import platform
 import shutil
 import stat
@@ -12,11 +13,12 @@ import subprocess
 import threading
 import time
 import zipfile
+from collections import deque
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any, Dict, List, Literal, Optional, Set, Tuple
+from typing import Any, Deque, Dict, List, Literal, Optional, Set, Tuple
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Response, Request
 from fastapi import status
@@ -38,6 +40,7 @@ from ..services.ingestion import LecturePaths
 from ..services.naming import build_asset_stem, build_timestamped_name, slugify
 from ..services.settings import SettingsStore, UISettings
 from ..services.storage import ClassRecord, LectureRecord, LectureRepository, ModuleRecord
+from ..logging_utils import DEFAULT_LOG_FORMAT
 
 try:  # pragma: no cover - optional dependency imported lazily
     from ..processing import (
@@ -61,6 +64,47 @@ _SLIDE_DPI_SET = set(_SLIDE_DPI_OPTIONS)
 _LANGUAGE_OPTIONS: Tuple[str, ...] = ("en", "zh", "es", "fr")
 _LANGUAGE_SET = set(_LANGUAGE_OPTIONS)
 _DEFAULT_UI_SETTINGS = UISettings()
+
+LOGGER = logging.getLogger(__name__)
+
+
+class DebugLogHandler(logging.Handler):
+    """In-memory log handler used to power the live debug console."""
+
+    def __init__(self, capacity: int = 500) -> None:
+        super().__init__(level=logging.INFO)
+        self._entries: Deque[Dict[str, Any]] = deque(maxlen=capacity)
+        self._lock = threading.Lock()
+        self._last_id = 0
+        self.setFormatter(logging.Formatter(DEFAULT_LOG_FORMAT))
+
+    def emit(self, record: logging.LogRecord) -> None:  # noqa: D401 - inherited documentation
+        message = self.format(record)
+        entry = {
+            "id": None,
+            "timestamp": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(),
+            "level": record.levelname,
+            "message": message,
+        }
+        with self._lock:
+            self._last_id += 1
+            entry["id"] = self._last_id
+            self._entries.append(entry)
+
+    def collect(self, after: Optional[int] = None, limit: int = 200) -> List[Dict[str, Any]]:
+        with self._lock:
+            if after is None or after <= 0:
+                data = list(self._entries)
+            else:
+                data = [entry for entry in self._entries if entry["id"] > after]
+        if not data:
+            return []
+        return data[-limit:]
+
+    @property
+    def last_id(self) -> int:
+        with self._lock:
+            return self._last_id
 
 
 class TranscriptionProgressTracker:
@@ -93,6 +137,7 @@ class TranscriptionProgressTracker:
                 }
             )
             self._states[lecture_id] = state
+        LOGGER.debug("Progress start", extra={"lecture_id": lecture_id, "message": message})
 
     def update(
         self,
@@ -119,6 +164,15 @@ class TranscriptionProgressTracker:
                 }
             )
             self._states[lecture_id] = state
+        LOGGER.debug(
+            "Progress update",
+            extra={
+                "lecture_id": lecture_id,
+                "current": current,
+                "total": total,
+                "message": message,
+            },
+        )
 
     def note(self, lecture_id: int, message: str) -> None:
         self.update(lecture_id, None, None, message)
@@ -135,6 +189,7 @@ class TranscriptionProgressTracker:
                 }
             )
             self._states[lecture_id] = state
+        LOGGER.debug("Progress finish", extra={"lecture_id": lecture_id, "message": message})
 
     def fail(self, lecture_id: int, message: str) -> None:
         with self._lock:
@@ -149,6 +204,7 @@ class TranscriptionProgressTracker:
                 }
             )
             self._states[lecture_id] = state
+        LOGGER.debug("Progress failure", extra={"lecture_id": lecture_id, "message": message})
 
     def get(self, lecture_id: int) -> Dict[str, Any]:
         with self._lock:
@@ -439,6 +495,7 @@ class SettingsPayload(BaseModel):
     slide_dpi: Literal[*_SLIDE_DPI_OPTIONS] = 200
     language: Literal[*_LANGUAGE_OPTIONS] = _DEFAULT_UI_SETTINGS.language
     audio_mastering_enabled: bool = True
+    debug_enabled: bool = False
 
 
 class ForwardedRootPathMiddleware:
@@ -620,6 +677,16 @@ def create_app(
         root_path=normalized_root,
     )
     app.state.server = None
+    root_logger = logging.getLogger()
+    debug_handler = next(
+        (handler for handler in root_logger.handlers if isinstance(handler, DebugLogHandler)),
+        None,
+    )
+    if debug_handler is None:
+        debug_handler = DebugLogHandler()
+        root_logger.addHandler(debug_handler)
+    app.state.debug_log_handler = debug_handler
+    app.state.debug_enabled = False
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
@@ -667,6 +734,23 @@ def create_app(
         safe_value = json.dumps(resolved)[1:-1]
         return index_html.replace("__LECTURE_TOOLS_ROOT_PATH__", safe_value)
 
+    def _log_event(message: str, **context: Any) -> None:
+        if context:
+            context_details = ", ".join(f"{key}={value}" for key, value in context.items())
+            LOGGER.debug("%s (%s)", message, context_details)
+        else:
+            LOGGER.debug(message)
+
+    def _update_debug_state(enabled: bool) -> None:
+        target_level = logging.DEBUG if enabled else logging.INFO
+        if root_logger.level != target_level:
+            root_logger.setLevel(target_level)
+        previously_enabled = getattr(app.state, "debug_enabled", False)
+        app.state.debug_enabled = bool(enabled)
+        if previously_enabled != app.state.debug_enabled:
+            state_text = "enabled" if app.state.debug_enabled else "disabled"
+            logging.getLogger("lecture_tools.debug").info("Debug mode %s", state_text)
+
     def _load_ui_settings() -> UISettings:
         try:
             settings = settings_store.load()
@@ -675,6 +759,7 @@ def create_app(
         settings.whisper_model = _normalize_whisper_model(settings.whisper_model)
         settings.slide_dpi = _normalize_slide_dpi(settings.slide_dpi)
         settings.language = _normalize_language(getattr(settings, "language", None))
+        settings.debug_enabled = bool(getattr(settings, "debug_enabled", False))
         return settings
 
     def _record_gpu_probe(probe: Dict[str, Any], *, checked: bool = True) -> Dict[str, Any]:
@@ -1016,6 +1101,7 @@ def create_app(
 
     @app.get("/api/classes")
     async def list_classes() -> Dict[str, Any]:
+        _log_event("Listing classes")
         classes = [_serialize_class(repository, record) for record in repository.iter_classes()]
         total_modules = sum(item["module_count"] for item in classes)
         total_lectures = sum(
@@ -1035,14 +1121,20 @@ def create_app(
                 klass["asset_counts"]["slide_images"] for klass in classes
             ),
         }
+        _log_event(
+            "Summarised classes",
+            class_count=len(classes),
+            module_count=total_modules,
+            lecture_count=total_lectures,
+        )
         return {
             "classes": classes,
             "stats": {
                 "class_count": len(classes),
                 "module_count": total_modules,
-                "lecture_count": total_lectures,
-                **total_asset_counts,
-            },
+            "lecture_count": total_lectures,
+            **total_asset_counts,
+        },
         }
 
     @app.post("/api/classes", status_code=status.HTTP_201_CREATED)
@@ -1051,6 +1143,7 @@ def create_app(
         if not name:
             raise HTTPException(status_code=400, detail="Class name is required")
 
+        _log_event("Creating class", name=name)
         try:
             class_id = repository.add_class(name, payload.description.strip())
         except Exception as error:  # noqa: BLE001 - propagate integrity issues
@@ -1060,6 +1153,7 @@ def create_app(
         if record is None:
             raise HTTPException(status_code=500, detail="Class creation failed")
 
+        _log_event("Created class", class_id=class_id)
         return {"class": _serialize_class(repository, record)}
 
     @app.delete(
@@ -1068,6 +1162,7 @@ def create_app(
         response_class=Response,
     )
     async def delete_class(class_id: int) -> Response:
+        _log_event("Deleting class", class_id=class_id)
         record = repository.get_class(class_id)
         if record is None:
             raise HTTPException(status_code=404, detail="Class not found")
@@ -1083,6 +1178,7 @@ def create_app(
                 detail=f"Failed to remove class files: {error}",
             ) from error
         repository.remove_class(class_id)
+        _log_event("Deleted class", class_id=class_id, module_count=len(modules))
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     @app.post("/api/modules", status_code=status.HTTP_201_CREATED)
@@ -1095,6 +1191,7 @@ def create_app(
         if not name:
             raise HTTPException(status_code=400, detail="Module name is required")
 
+        _log_event("Creating module", class_id=payload.class_id, name=name)
         try:
             module_id = repository.add_module(
                 payload.class_id,
@@ -1108,6 +1205,7 @@ def create_app(
         if record is None:
             raise HTTPException(status_code=500, detail="Module creation failed")
 
+        _log_event("Created module", module_id=module_id, class_id=payload.class_id)
         return {"module": _serialize_module(repository, record)}
 
     @app.delete(
@@ -1116,6 +1214,7 @@ def create_app(
         response_class=Response,
     )
     async def delete_module(module_id: int) -> Response:
+        _log_event("Deleting module", module_id=module_id)
         record = repository.get_module(module_id)
         if record is None:
             raise HTTPException(status_code=404, detail="Module not found")
@@ -1130,6 +1229,7 @@ def create_app(
                 detail=f"Failed to remove module files: {error}",
             ) from error
         repository.remove_module(module_id)
+        _log_event("Deleted module", module_id=module_id, class_id=record.class_id)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     @app.post("/api/lectures", status_code=status.HTTP_201_CREATED)
@@ -1138,6 +1238,7 @@ def create_app(
         if module is None:
             raise HTTPException(status_code=404, detail="Module not found")
 
+        _log_event("Creating lecture", module_id=payload.module_id)
         try:
             lecture_id = repository.add_lecture(
                 payload.module_id,
@@ -1151,10 +1252,12 @@ def create_app(
         if lecture is None:
             raise HTTPException(status_code=500, detail="Lecture creation failed")
 
+        _log_event("Created lecture", lecture_id=lecture_id, module_id=payload.module_id)
         return {"lecture": _serialize_lecture(lecture)}
 
     @app.get("/api/lectures/{lecture_id}")
     async def get_lecture(lecture_id: int) -> Dict[str, Any]:
+        _log_event("Fetching lecture", lecture_id=lecture_id)
         lecture = repository.get_lecture(lecture_id)
         if lecture is None:
             raise HTTPException(status_code=404, detail="Lecture not found")
@@ -1183,6 +1286,7 @@ def create_app(
 
     @app.put("/api/lectures/{lecture_id}")
     async def update_lecture(lecture_id: int, payload: LectureUpdatePayload) -> Dict[str, Any]:
+        _log_event("Updating lecture", lecture_id=lecture_id)
         lecture = repository.get_lecture(lecture_id)
         if lecture is None:
             raise HTTPException(status_code=404, detail="Lecture not found")
@@ -1204,6 +1308,11 @@ def create_app(
         updated = repository.get_lecture(lecture_id)
         if updated is None:
             raise HTTPException(status_code=500, detail="Lecture update failed")
+        _log_event(
+            "Updated lecture",
+            lecture_id=lecture_id,
+            module_id=updated.module_id,
+        )
         return {"lecture": _serialize_lecture(updated)}
 
     @app.post("/api/lectures/reorder")
@@ -1211,6 +1320,7 @@ def create_app(
         if not payload.modules:
             return {"modules": []}
 
+        _log_event("Reordering lectures", module_count=len(payload.modules))
         module_orders: Dict[int, List[int]] = {}
         seen_lectures: Set[int] = set()
 
@@ -1239,6 +1349,7 @@ def create_app(
             if module is not None:
                 updated_modules.append(_serialize_module(repository, module))
 
+        _log_event("Reordered lectures", affected_modules=len(updated_modules))
         return {"modules": updated_modules}
 
     @app.delete(
@@ -1247,6 +1358,7 @@ def create_app(
         response_class=Response,
     )
     async def delete_lecture(lecture_id: int) -> Response:
+        _log_event("Deleting lecture", lecture_id=lecture_id)
         lecture = repository.get_lecture(lecture_id)
         if lecture is None:
             raise HTTPException(status_code=404, detail="Lecture not found")
@@ -1259,6 +1371,12 @@ def create_app(
                 detail=f"Failed to remove lecture files: {error}",
             ) from error
         repository.remove_lecture(lecture_id)
+        _log_event(
+            "Deleted lecture",
+            lecture_id=lecture_id,
+            module_id=module.id,
+            class_id=class_record.id,
+        )
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     @app.post("/api/lectures/{lecture_id}/assets/{asset_type}")
@@ -1267,6 +1385,7 @@ def create_app(
         asset_type: str,
         file: UploadFile = File(...),
     ) -> Dict[str, Any]:
+        _log_event("Uploading asset", lecture_id=lecture_id, asset_type=asset_type)
         lecture = repository.get_lecture(lecture_id)
         if lecture is None:
             raise HTTPException(status_code=404, detail="Lecture not found")
@@ -1423,10 +1542,17 @@ def create_app(
             response["processed_audio_path"] = processed_relative
         if asset_key == "slides":
             response["slide_image_dir"] = update_kwargs.get("slide_image_dir")
+        _log_event(
+            "Uploaded asset",
+            lecture_id=lecture_id,
+            asset_type=asset_key,
+            path=relative,
+        )
         return response
 
     @app.get("/api/settings/whisper-gpu/status")
     async def get_gpu_status() -> Dict[str, Any]:
+        _log_event("Fetching GPU status")
         if check_gpu_whisper_availability is None:
             state = dict(gpu_support_state)
             state.update(
@@ -1440,10 +1566,12 @@ def create_app(
             return {"status": state}
         state = dict(gpu_support_state)
         state.setdefault("unavailable", False)
+        _log_event("GPU status resolved", supported=state.get("supported"), checked=state.get("checked"))
         return {"status": state}
 
     @app.post("/api/settings/whisper-gpu/test")
     async def test_gpu_status() -> Dict[str, Any]:
+        _log_event("Testing GPU support")
         if check_gpu_whisper_availability is None:
             raise HTTPException(
                 status_code=503,
@@ -1451,16 +1579,37 @@ def create_app(
             )
         probe = check_gpu_whisper_availability(config.assets_root)
         state = _record_gpu_probe(probe)
+        _log_event("GPU probe completed", supported=state.get("supported"))
         return {"status": state}
 
     @app.get("/api/settings")
     async def get_settings() -> Dict[str, Any]:
         settings = _load_ui_settings()
+        LOGGER.debug("Loaded UI settings (debug_enabled=%s)", settings.debug_enabled)
         return {"settings": asdict(settings)}
+
+    @app.get("/api/debug/logs")
+    async def get_debug_logs(after: Optional[int] = None) -> Dict[str, Any]:
+        handler = getattr(app.state, "debug_log_handler", None)
+        enabled = bool(getattr(app.state, "debug_enabled", False))
+        if handler is None:
+            return {"logs": [], "next": after or 0, "enabled": enabled}
+        try:
+            after_id = int(after) if after is not None else None
+        except (TypeError, ValueError):
+            after_id = None
+        entries = handler.collect(after_id)
+        if entries:
+            LOGGER.debug(
+                "Streaming %s debug log entr%s", len(entries), "y" if len(entries) == 1 else "ies"
+            )
+        next_marker = handler.last_id if entries else (after_id or handler.last_id)
+        return {"logs": entries, "next": next_marker, "enabled": enabled}
 
     @app.put("/api/settings")
     async def update_settings(payload: SettingsPayload) -> Dict[str, Any]:
         settings = _load_ui_settings()
+        LOGGER.debug("Received settings update request")
         settings.theme = payload.theme
         settings.language = _normalize_language(payload.language)
         desired_model = _normalize_whisper_model(payload.whisper_model)
@@ -1482,11 +1631,21 @@ def create_app(
         settings.whisper_beam_size = payload.whisper_beam_size
         settings.slide_dpi = _normalize_slide_dpi(payload.slide_dpi)
         settings.audio_mastering_enabled = bool(payload.audio_mastering_enabled)
+        settings.debug_enabled = bool(payload.debug_enabled)
         settings_store.save(settings)
+        _update_debug_state(settings.debug_enabled)
+        LOGGER.debug(
+            "Persisted settings (theme=%s, language=%s, whisper_model=%s, debug=%s)",
+            settings.theme,
+            settings.language,
+            settings.whisper_model,
+            settings.debug_enabled,
+        )
         return {"settings": asdict(settings)}
 
     @app.post("/api/settings/export")
     async def export_archive() -> Dict[str, Any]:
+        _log_event("Starting archive export")
         archive_root = config.archive_root
         archive_root.mkdir(parents=True, exist_ok=True)
         metadata = _collect_archive_metadata()
@@ -1524,6 +1683,13 @@ def create_app(
             for module in item.get("modules", [])
         )
 
+        _log_event(
+            "Export archive prepared",
+            filename=filename,
+            size=info.st_size,
+            class_count=class_count,
+        )
+
         return {
             "archive": {
                 "filename": filename,
@@ -1544,6 +1710,7 @@ def create_app(
         if normalized_mode not in {"merge", "replace"}:
             raise HTTPException(status_code=400, detail="Unsupported import mode")
 
+        _log_event("Importing archive", mode=normalized_mode)
         payload = await file.read()
         await file.close()
         if not payload:
@@ -1682,6 +1849,13 @@ def create_app(
                         )
                         imported_lectures += 1
 
+        _log_event(
+            "Imported archive",
+            mode=normalized_mode,
+            classes=imported_classes,
+            modules=imported_modules,
+            lectures=imported_lectures,
+        )
         return {
             "import": {
                 "mode": normalized_mode,
@@ -1693,6 +1867,7 @@ def create_app(
 
     @app.get("/api/lectures/{lecture_id}/preview")
     async def get_lecture_preview(lecture_id: int) -> Dict[str, Any]:
+        _log_event("Generating lecture preview", lecture_id=lecture_id)
         lecture = repository.get_lecture(lecture_id)
         if lecture is None:
             raise HTTPException(status_code=404, detail="Lecture not found")
@@ -1701,6 +1876,12 @@ def create_app(
             config.storage_root, lecture.transcript_path
         )
         notes_preview = _safe_preview_for_path(config.storage_root, lecture.notes_path)
+        _log_event(
+            "Preview prepared",
+            lecture_id=lecture_id,
+            has_transcript=bool(transcript_preview),
+            has_notes=bool(notes_preview),
+        )
         return {
             "transcript": transcript_preview,
             "notes": notes_preview,
@@ -1708,16 +1889,19 @@ def create_app(
 
     @app.get("/api/lectures/{lecture_id}/transcription-progress")
     async def get_transcription_progress(lecture_id: int) -> Dict[str, Any]:
+        _log_event("Polling transcription progress", lecture_id=lecture_id)
         progress = progress_tracker.get(lecture_id)
         return {"progress": progress}
 
     @app.get("/api/lectures/{lecture_id}/processing-progress")
     async def get_processing_progress(lecture_id: int) -> Dict[str, Any]:
+        _log_event("Polling processing progress", lecture_id=lecture_id)
         progress = processing_tracker.get(lecture_id)
         return {"progress": progress}
 
     @app.post("/api/lectures/{lecture_id}/transcribe")
     async def transcribe_audio(lecture_id: int, payload: TranscriptionRequest) -> Dict[str, Any]:
+        _log_event("Starting transcription", lecture_id=lecture_id, model=payload.model)
         lecture = repository.get_lecture(lecture_id)
         if lecture is None:
             raise HTTPException(status_code=404, detail="Lecture not found")
@@ -1818,6 +2002,12 @@ def create_app(
             response["fallback_model"] = fallback_model
             if fallback_reason:
                 response["fallback_reason"] = fallback_reason
+        _log_event(
+            "Transcription finished",
+            lecture_id=lecture_id,
+            transcript_path=transcript_relative,
+            fallback=fallback_model,
+        )
         return response
 
     @app.post("/api/lectures/{lecture_id}/process-slides")
@@ -1827,6 +2017,12 @@ def create_app(
         page_start: Optional[int] = Form(None),
         page_end: Optional[int] = Form(None),
     ) -> Dict[str, Any]:
+        _log_event(
+            "Processing slides",
+            lecture_id=lecture_id,
+            page_start=page_start,
+            page_end=page_end,
+        )
         lecture = repository.get_lecture(lecture_id)
         if lecture is None:
             raise HTTPException(status_code=404, detail="Lecture not found")
@@ -1883,6 +2079,12 @@ def create_app(
         if updated is None:
             raise HTTPException(status_code=500, detail="Lecture update failed")
 
+        _log_event(
+            "Slides processed",
+            lecture_id=lecture_id,
+            slide_path=slide_relative,
+            slide_image_dir=slide_image_relative,
+        )
         return {
             "lecture": _serialize_lecture(updated),
             "slide_path": slide_relative,
@@ -1891,7 +2093,9 @@ def create_app(
 
     @app.get("/api/storage/usage")
     async def get_storage_usage() -> Dict[str, Any]:
+        _log_event("Computing storage usage")
         usage = shutil.disk_usage(config.storage_root)
+        _log_event("Storage usage calculated", total=usage.total, used=usage.used)
         return {
             "usage": {
                 "total": usage.total,
@@ -1902,6 +2106,7 @@ def create_app(
 
     @app.get("/api/storage/list")
     async def list_storage(path: str = "") -> StorageListResponse:
+        _log_event("Listing storage", path=path or "./")
         if path:
             try:
                 target = _resolve_storage_path(config.storage_root, path)
@@ -1940,10 +2145,13 @@ def create_app(
 
         entries.sort(key=lambda entry: (not entry.is_dir, entry.name.lower()))
 
-        return StorageListResponse(path=relative_path, parent=parent_relative, entries=entries)
+        response = StorageListResponse(path=relative_path, parent=parent_relative, entries=entries)
+        _log_event("Storage listing prepared", path=response.path, entries=len(entries))
+        return response
 
     @app.get("/api/storage/overview")
     async def get_storage_overview() -> StorageOverviewResponse:
+        _log_event("Building storage overview")
         classes: List[ClassStorageSummary] = []
         eligible_total = 0
 
@@ -2020,10 +2228,16 @@ def create_app(
                 )
             )
 
+        _log_event(
+            "Storage overview ready",
+            classes=len(classes),
+            eligible_audio_total=eligible_total,
+        )
         return StorageOverviewResponse(classes=classes, eligible_audio_total=eligible_total)
 
     @app.delete("/api/storage")
     async def delete_storage(payload: StorageDeleteRequest) -> Dict[str, str]:
+        _log_event("Deleting storage path", path=payload.path)
         try:
             target = _resolve_storage_path(config.storage_root, payload.path)
         except ValueError as error:
@@ -2037,10 +2251,12 @@ def create_app(
 
         _delete_storage_path(target)
 
+        _log_event("Deleted storage path", path=payload.path)
         return {"status": "deleted"}
 
     @app.post("/api/storage/purge-audio")
     async def purge_transcribed_audio() -> Dict[str, int]:
+        _log_event("Purging processed audio")
         deleted = 0
         for class_record in repository.iter_classes():
             for module in repository.iter_modules(class_record.id):
@@ -2052,6 +2268,7 @@ def create_app(
                         _delete_storage_path(audio_path)
                     repository.update_lecture_assets(lecture.id, audio_path=None)
                     deleted += 1
+        _log_event("Purged processed audio", deleted=deleted)
         return {"deleted": deleted}
 
     @app.post(
@@ -2060,6 +2277,7 @@ def create_app(
         response_class=Response,
     )
     async def reveal_asset(payload: RevealRequest) -> Response:
+        _log_event("Revealing asset", path=payload.path, select=payload.select)
         try:
             target = _resolve_storage_path(config.storage_root, payload.path)
         except ValueError as error:
@@ -2070,10 +2288,12 @@ def create_app(
         except RuntimeError as error:
             raise HTTPException(status_code=500, detail=str(error)) from error
 
+        _log_event("Asset revealed", path=payload.path)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     @app.post("/api/system/shutdown", status_code=status.HTTP_202_ACCEPTED)
     async def shutdown_application() -> Dict[str, str]:
+        _log_event("Shutdown requested")
         server = getattr(app.state, "server", None)
         if server is None:
             raise HTTPException(status_code=503, detail="Shutdown is unavailable.")
@@ -2082,12 +2302,14 @@ def create_app(
         if hasattr(server, "force_exit"):
             server.force_exit = True
 
+        _log_event("Shutdown initiated")
         return {"status": "shutting_down"}
 
     @app.get("/{requested_path:path}", response_class=HTMLResponse)
     async def spa_fallback(request: Request, requested_path: str) -> HTMLResponse:
         """Serve the UI for non-API paths when the app lives under a prefix."""
 
+        _log_event("Serving SPA fallback", path=requested_path)
         if not requested_path or requested_path == "index.html":
             return HTMLResponse(_render_index_html(request))
 
@@ -2098,7 +2320,11 @@ def create_app(
         if normalized.startswith("api/") or normalized.startswith("storage/"):
             raise HTTPException(status_code=404, detail="Not Found")
 
+        _log_event("SPA fallback resolved", path=requested_path)
         return HTMLResponse(_render_index_html(request))
+
+    initial_settings = _load_ui_settings()
+    _update_debug_state(initial_settings.debug_enabled)
 
     return app
 

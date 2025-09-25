@@ -25,6 +25,7 @@ class UISettings:
     whisper_beam_size: int = 5
     slide_dpi: int = 200
     audio_mastering_enabled: bool = True
+    debug_enabled: bool = False
 
 
 class SettingsStore:
