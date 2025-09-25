@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import wave
 from pathlib import Path
+from typing import Tuple
 
 import numpy as np
 
 from app.processing.recording import (
+    check_audio_mastering_cli_availability,
     load_wav_file,
     preprocess_audio,
     save_preprocessed_wav,
@@ -60,3 +62,37 @@ def test_load_wav_file_round_trip(tmp_path: Path) -> None:
     assert loaded.shape == waveform.shape
     assert loaded.dtype == np.float32
     assert np.allclose(loaded[:100], waveform[:100], atol=1e-3)
+
+
+def test_mastering_cli_probe_handles_missing_binary(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "app.processing.recording._find_mastering_cli_binary", lambda: None
+    )
+
+    status = check_audio_mastering_cli_availability()
+    assert status["supported"] is False
+    assert "binary" not in status
+    assert "CLI binary not found" in status["message"]
+
+
+def test_mastering_cli_probe_reports_output(monkeypatch, tmp_path: Path) -> None:
+    fake_binary = tmp_path / "main.exe"
+    fake_binary.write_text("exe", encoding="utf-8")
+
+    monkeypatch.setattr(
+        "app.processing.recording._find_mastering_cli_binary",
+        lambda: fake_binary,
+    )
+
+    def fake_probe(_binary: Path) -> Tuple[bool, str]:
+        return True, "Audio mastering ready\nAll good"
+
+    monkeypatch.setattr(
+        "app.processing.recording._probe_mastering_cli", fake_probe
+    )
+
+    status = check_audio_mastering_cli_availability()
+    assert status["supported"] is True
+    assert status["binary"] == str(fake_binary)
+    assert status["message"] == "Audio mastering ready"
+    assert status["output"] == "Audio mastering ready\nAll good"

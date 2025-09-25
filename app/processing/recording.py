@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import math
+import subprocess
 import wave
 from pathlib import Path
-from typing import Tuple
+from typing import Dict, Optional, Tuple
 
 import numpy as np
 
@@ -289,4 +290,64 @@ def _shape_frequency_response(
     return shaped.astype(np.float32)
 
 
-__all__ = ["load_wav_file", "preprocess_audio", "save_preprocessed_wav"]
+def _find_mastering_cli_binary() -> Optional[Path]:
+    cli_root = Path(__file__).resolve().parent.parent / "cli"
+    candidates = [cli_root / "main.exe", cli_root / "main"]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def _probe_mastering_cli(binary: Path) -> Tuple[bool, str]:
+    try:
+        result = subprocess.run(
+            [str(binary)],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False, ""
+
+    combined = (result.stdout + result.stderr).strip()
+    return bool(combined), combined
+
+
+def check_audio_mastering_cli_availability() -> Dict[str, object]:
+    """Return diagnostic information about the audio mastering CLI."""
+
+    binary = _find_mastering_cli_binary()
+    if binary is None:
+        return {
+            "supported": False,
+            "message": "Audio mastering CLI binary not found.",
+            "output": "",
+        }
+
+    supported, output = _probe_mastering_cli(binary)
+    if not supported:
+        return {
+            "supported": False,
+            "message": "Audio mastering CLI produced no output on this platform.",
+            "output": output,
+        }
+
+    success_message = (
+        output.splitlines()[0] if output else "Audio mastering CLI is available."
+    )
+    return {
+        "supported": True,
+        "message": success_message,
+        "output": output,
+        "binary": str(binary),
+    }
+
+
+__all__ = [
+    "check_audio_mastering_cli_availability",
+    "load_wav_file",
+    "preprocess_audio",
+    "save_preprocessed_wav",
+]
