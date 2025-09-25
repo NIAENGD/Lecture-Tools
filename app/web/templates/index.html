@@ -286,6 +286,47 @@
         color: rgba(226, 232, 240, 0.7);
       }
 
+      .debug-stream-window {
+        background: rgba(15, 23, 42, 0.65);
+        border: 1px solid rgba(51, 65, 85, 0.5);
+        border-radius: 8px;
+        padding: 10px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 0.8rem;
+        color: rgba(226, 232, 240, 0.85);
+      }
+
+      .debug-stream-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 8px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: rgba(125, 211, 252, 0.9);
+      }
+
+      .debug-stream-entries {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-height: 1.5em;
+      }
+
+      .debug-stream-line {
+        margin: 0;
+        line-height: 1.4;
+        color: rgba(226, 232, 240, 0.9);
+      }
+
+      .debug-stream-empty {
+        color: rgba(148, 163, 184, 0.85);
+        font-style: italic;
+      }
+
       .debug-log-status {
         font-size: 0.8rem;
         color: #fbbf24;
@@ -2102,6 +2143,22 @@
           Enable debug mode to inspect program activity in real time.
         </div>
       </div>
+      <div
+        id="debug-stream-window"
+        class="debug-stream-window"
+        role="status"
+        aria-live="polite"
+        aria-atomic="false"
+      >
+        <div class="debug-stream-header">
+          <span class="debug-stream-title" data-i18n="debug.stream.title">Server activity</span>
+        </div>
+        <div id="debug-stream-entries" class="debug-stream-entries">
+          <div id="debug-stream-empty" class="debug-stream-empty" data-i18n="debug.stream.empty">
+            Waiting for server activity…
+          </div>
+        </div>
+      </div>
       <div id="debug-log-status" class="debug-log-status" hidden></div>
     </aside>
     <div id="dialog-root" class="dialog hidden" aria-hidden="true" tabindex="-1">
@@ -2457,6 +2514,10 @@
               live: 'Live',
               empty: 'Enable debug mode to inspect program activity in real time.',
               error: 'Unable to load debug output.',
+              stream: {
+                title: 'Server activity',
+                empty: 'Waiting for server activity…',
+              },
             },
             dialog: {
               cancel: 'Cancel',
@@ -2843,6 +2904,10 @@
               live: '实时',
               empty: '启用调试模式以实时查看程序活动。',
               error: '无法加载调试输出。',
+              stream: {
+                title: '服务器活动',
+                empty: '等待服务器活动…',
+              },
             },
             dialog: {
               cancel: '取消',
@@ -3230,6 +3295,10 @@
               empty:
                 'Activa el modo de depuración para ver la actividad del programa en tiempo real.',
               error: 'No se pudo cargar la salida de depuración.',
+              stream: {
+                title: 'Actividad del servidor',
+                empty: 'Esperando actividad del servidor…',
+              },
             },
             dialog: {
               cancel: 'Cancelar',
@@ -3621,6 +3690,10 @@
               empty:
                 "Activez le mode débogage pour suivre l’activité du programme en temps réel.",
               error: 'Impossible de charger la sortie de débogage.',
+              stream: {
+                title: 'Activité du serveur',
+                empty: 'En attente d’activité du serveur…',
+              },
             },
             dialog: {
               cancel: 'Annuler',
@@ -4007,6 +4080,8 @@
         const LANGUAGE_CHOICES = new Set(['en', 'zh', 'es', 'fr']);
         const DEBUG_POLL_INTERVAL_MS = 2000;
         const MAX_DEBUG_LOG_ENTRIES = 500;
+        const MAX_SERVER_STREAM_ENTRIES = 20;
+        const SERVER_LOG_CATEGORY = 'server';
 
         function normalizeWhisperModel(value) {
           const candidate =
@@ -4076,6 +4151,7 @@
             lastId: 0,
             pending: false,
             autoScroll: true,
+            serverEntries: [],
           },
         };
 
@@ -4132,6 +4208,9 @@
           debugLog: document.getElementById('debug-log-window'),
           debugEmpty: document.getElementById('debug-log-empty'),
           debugStatus: document.getElementById('debug-log-status'),
+          debugStream: document.getElementById('debug-stream-window'),
+          debugStreamEntries: document.getElementById('debug-stream-entries'),
+          debugStreamEmpty: document.getElementById('debug-stream-empty'),
           storage: {
             container: document.getElementById('view-storage'),
             path: document.getElementById('storage-path'),
@@ -4787,6 +4866,59 @@
           }
         }
 
+        function updateServerStream(entries, { reset = false } = {}) {
+          if (reset || !Array.isArray(state.debug.serverEntries)) {
+            state.debug.serverEntries = [];
+          }
+          const items = Array.isArray(entries) ? entries : [];
+          if (items.length) {
+            const messages = items
+              .map((entry) => {
+                if (!entry || typeof entry !== 'object') {
+                  return '';
+                }
+                const value = entry.message;
+                if (typeof value === 'string') {
+                  return value;
+                }
+                if (value == null) {
+                  return '';
+                }
+                return String(value);
+              })
+              .filter((value) => value);
+            if (messages.length) {
+              state.debug.serverEntries = state.debug.serverEntries
+                .concat(messages)
+                .slice(-MAX_SERVER_STREAM_ENTRIES);
+            }
+          }
+
+          if (!dom.debugStreamEntries) {
+            return;
+          }
+
+          dom.debugStreamEntries.innerHTML = '';
+          if (!state.debug.serverEntries.length) {
+            if (dom.debugStreamEmpty) {
+              dom.debugStreamEmpty.hidden = false;
+              dom.debugStreamEntries.appendChild(dom.debugStreamEmpty);
+            }
+            return;
+          }
+
+          if (dom.debugStreamEmpty) {
+            dom.debugStreamEmpty.hidden = true;
+          }
+
+          state.debug.serverEntries.forEach((value) => {
+            const line = document.createElement('p');
+            line.className = 'debug-stream-line';
+            line.textContent = value;
+            dom.debugStreamEntries.appendChild(line);
+          });
+        }
+
         function appendDebugLogs(entries, { reset = false } = {}) {
           if (!dom.debugLog) {
             return;
@@ -4799,12 +4931,30 @@
             }
           }
           const list = Array.isArray(entries) ? entries : [];
-          if (!list.length) {
+          const serverLogs = [];
+          const regularLogs = [];
+          list.forEach((entry) => {
+            if (!entry || typeof entry !== 'object') {
+              return;
+            }
+            if (entry.category === SERVER_LOG_CATEGORY) {
+              serverLogs.push(entry);
+              return;
+            }
+            regularLogs.push(entry);
+          });
+
+          updateServerStream(serverLogs, { reset });
+
+          if (!regularLogs.length) {
             if (dom.debugEmpty) {
               const hasEntries = Array.from(dom.debugLog.children).some(
                 (child) => child !== dom.debugEmpty,
               );
-              dom.debugEmpty.hidden = hasEntries;
+              const hasServerEntries = Array.isArray(state.debug.serverEntries)
+                ? state.debug.serverEntries.length > 0
+                : false;
+              dom.debugEmpty.hidden = hasEntries || hasServerEntries;
             }
             return;
           }
@@ -4814,10 +4964,7 @@
             dom.debugEmpty.hidden = true;
           }
 
-          list.forEach((entry) => {
-            if (!entry || typeof entry !== 'object') {
-              return;
-            }
+          regularLogs.forEach((entry) => {
             const line = document.createElement('p');
             line.className = 'debug-log-line';
             line.textContent = String(entry.message || '');
@@ -4919,6 +5066,7 @@
           } else {
             stopDebugPolling();
             updateDebugStatus('');
+            updateServerStream([], { reset: true });
             if (dom.debugEmpty) {
               ensureDebugPlaceholder();
               dom.debugEmpty.hidden = false;

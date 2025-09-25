@@ -64,6 +64,7 @@ _SLIDE_DPI_SET = set(_SLIDE_DPI_OPTIONS)
 _LANGUAGE_OPTIONS: Tuple[str, ...] = ("en", "zh", "es", "fr")
 _LANGUAGE_SET = set(_LANGUAGE_OPTIONS)
 _DEFAULT_UI_SETTINGS = UISettings()
+_SERVER_LOGGER_PREFIXES: Tuple[str, ...] = ("uvicorn", "gunicorn", "hypercorn", "werkzeug")
 
 LOGGER = logging.getLogger(__name__)
 
@@ -85,6 +86,10 @@ class DebugLogHandler(logging.Handler):
             "timestamp": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(),
             "level": record.levelname,
             "message": message,
+            "logger": record.name,
+            "category": "server"
+            if any(record.name.startswith(prefix) for prefix in _SERVER_LOGGER_PREFIXES)
+            else "application",
         }
         with self._lock:
             self._last_id += 1
@@ -137,7 +142,10 @@ class TranscriptionProgressTracker:
                 }
             )
             self._states[lecture_id] = state
-        LOGGER.debug("Progress start", extra={"lecture_id": lecture_id, "message": message})
+        LOGGER.debug(
+            "Progress start",
+            extra={"lecture_id": lecture_id, "progress_message": message},
+        )
 
     def update(
         self,
@@ -170,7 +178,7 @@ class TranscriptionProgressTracker:
                 "lecture_id": lecture_id,
                 "current": current,
                 "total": total,
-                "message": message,
+                "progress_message": message,
             },
         )
 
@@ -189,7 +197,10 @@ class TranscriptionProgressTracker:
                 }
             )
             self._states[lecture_id] = state
-        LOGGER.debug("Progress finish", extra={"lecture_id": lecture_id, "message": message})
+        LOGGER.debug(
+            "Progress finish",
+            extra={"lecture_id": lecture_id, "progress_message": message},
+        )
 
     def fail(self, lecture_id: int, message: str) -> None:
         with self._lock:
@@ -204,7 +215,10 @@ class TranscriptionProgressTracker:
                 }
             )
             self._states[lecture_id] = state
-        LOGGER.debug("Progress failure", extra={"lecture_id": lecture_id, "message": message})
+        LOGGER.debug(
+            "Progress failure",
+            extra={"lecture_id": lecture_id, "progress_message": message},
+        )
 
     def get(self, lecture_id: int) -> Dict[str, Any]:
         with self._lock:
