@@ -6,6 +6,8 @@
     <title data-i18n="document.title">Lecture Tools</title>
     <script>
       window.__LECTURE_TOOLS_SERVER_ROOT_PATH__ = "__LECTURE_TOOLS_ROOT_PATH__";
+      window.__LECTURE_TOOLS_PDFJS_SCRIPT__ = "__LECTURE_TOOLS_PDFJS_SCRIPT__";
+      window.__LECTURE_TOOLS_PDFJS_WORKER__ = "__LECTURE_TOOLS_PDFJS_WORKER__";
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -13,7 +15,7 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.min.js" crossorigin="anonymous"></script>
+    <script src="__LECTURE_TOOLS_PDFJS_SCRIPT__" crossorigin="anonymous"></script>
     <style>
       :root {
         color-scheme: light;
@@ -2311,7 +2313,10 @@
       (async function () {
         if (window.pdfjsLib && window.pdfjsLib.GlobalWorkerOptions) {
           const workerSrc =
-            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.worker.min.js';
+            typeof window.__LECTURE_TOOLS_PDFJS_WORKER__ === 'string' &&
+            window.__LECTURE_TOOLS_PDFJS_WORKER__ !== '__LECTURE_TOOLS_PDFJS_WORKER__'
+              ? window.__LECTURE_TOOLS_PDFJS_WORKER__
+              : '/static/pdfjs/pdf.worker.min.js';
           if (window.pdfjsLib.GlobalWorkerOptions.workerSrc !== workerSrc) {
             window.pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
           }
@@ -3942,8 +3947,12 @@
         window.__LECTURE_TOOLS_BASE_PATH__ = BASE_PATH;
 
         if (window.pdfjsLib && window.pdfjsLib.GlobalWorkerOptions) {
-          window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.worker.min.js';
+          const workerSource =
+            typeof window.__LECTURE_TOOLS_PDFJS_WORKER__ === 'string' &&
+            window.__LECTURE_TOOLS_PDFJS_WORKER__ !== '__LECTURE_TOOLS_PDFJS_WORKER__'
+              ? window.__LECTURE_TOOLS_PDFJS_WORKER__
+              : resolveAppUrl('/static/pdfjs/pdf.worker.min.js');
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc = workerSource;
         }
 
         function resolveAppUrl(target) {
