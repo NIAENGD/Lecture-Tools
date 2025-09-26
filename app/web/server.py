@@ -18,7 +18,7 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any, Deque, Dict, List, Literal, Optional, Set, Tuple
+from typing import Any, Callable, Deque, Dict, List, Literal, Optional, Set, Tuple
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Response, Request
 from fastapi import status
@@ -1096,6 +1096,7 @@ def create_app(
         converter: PyMuPDFSlideConverter,
         *,
         page_range: Optional[Tuple[int, int]] = None,
+        progress_callback: Optional[Callable[[int, Optional[int]], None]] = None,
     ) -> Optional[str]:
         existing_items: List[Path] = []
         if lecture_paths.slide_dir.exists():
@@ -1107,6 +1108,7 @@ def create_app(
                     pdf_path,
                     lecture_paths.slide_dir,
                     page_range=page_range,
+                    progress_callback=progress_callback,
                 )
             )
         except SlideConversionDependencyError as error:
@@ -2174,12 +2176,58 @@ def create_app(
             selected_range = (start, end)
 
         slide_relative = slide_destination.relative_to(config.storage_root).as_posix()
-        slide_image_relative = _generate_slide_archive(
-            slide_destination,
-            lecture_paths,
-            _make_slide_converter(),
-            page_range=selected_range,
+        processing_tracker.start(
+            lecture_id,
+            "====> Preparing slide conversion…",
         )
+
+        progress_total: Optional[float] = None
+
+        def _handle_slide_progress(processed: int, total: Optional[int]) -> None:
+            nonlocal progress_total
+            if total and total > 0:
+                progress_total = float(total)
+                current = float(max(0, min(processed, total)))
+                message = format_progress_message(
+                    "====> Rendering slide images…",
+                    current,
+                    progress_total,
+                )
+                processing_tracker.update(
+                    lecture_id,
+                    current,
+                    progress_total,
+                    message,
+                )
+            else:
+                processing_tracker.note(lecture_id, "====> Rendering slide images…")
+
+        try:
+            slide_image_relative = await asyncio.to_thread(
+                _generate_slide_archive,
+                slide_destination,
+                lecture_paths,
+                _make_slide_converter(),
+                page_range=selected_range,
+                progress_callback=_handle_slide_progress,
+            )
+        except HTTPException as error:
+            detail = getattr(error, "detail", str(error))
+            processing_tracker.fail(lecture_id, f"====> {detail}")
+            raise
+        except Exception as error:  # noqa: BLE001 - conversion may raise arbitrary errors
+            processing_tracker.fail(lecture_id, f"====> {error}")
+            raise HTTPException(status_code=500, detail=str(error)) from error
+        else:
+            if progress_total and progress_total > 0:
+                completion_message = format_progress_message(
+                    "====> Slide conversion completed.",
+                    progress_total,
+                    progress_total,
+                )
+            else:
+                completion_message = "====> Slide conversion completed."
+            processing_tracker.finish(lecture_id, completion_message)
 
         repository.update_lecture_assets(
             lecture_id,

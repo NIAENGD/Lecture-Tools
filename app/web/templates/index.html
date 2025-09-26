@@ -2309,6 +2309,14 @@
     </div>
     <script>
       (async function () {
+        if (window.pdfjsLib && window.pdfjsLib.GlobalWorkerOptions) {
+          const workerSrc =
+            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.worker.min.js';
+          if (window.pdfjsLib.GlobalWorkerOptions.workerSrc !== workerSrc) {
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
+          }
+        }
+
         const translations = {
           en: {
             document: {
@@ -2616,8 +2624,11 @@
                 processing: 'Processing upload…',
                 processingAction: 'Processing…',
                 processingAudio: 'Processing audio…',
+                processingSlides: 'Processing slides…',
                 backgroundProcessing:
                   'Audio mastering will continue in the background. You can close this dialog while it finishes.',
+                backgroundProcessingSlides:
+                  'Slide conversion will continue in the background. You can close this dialog while it finishes.',
                 success: 'Upload completed.',
                 failure: 'Upload failed. Please try again.',
                 progress: 'Upload progress',
@@ -3004,7 +3015,9 @@
                 processing: '正在处理上传…',
                 processingAction: '正在处理…',
                 processingAudio: '正在处理音频…',
+                processingSlides: '正在处理课件…',
                 backgroundProcessing: '音频母带处理会在后台继续进行。您可以放心关闭此对话框。',
+                backgroundProcessingSlides: '课件转换将在后台继续进行。您可以放心关闭此对话框。',
                 success: '上传完成。',
                 failure: '上传失败，请重试。',
                 progress: '上传进度',
@@ -3397,8 +3410,11 @@
                 processing: 'Procesando carga…',
                 processingAction: 'Procesando…',
                 processingAudio: 'Procesando audio…',
+                processingSlides: 'Procesando diapositivas…',
                 backgroundProcessing:
                   'El procesamiento de audio continuará en segundo plano. Puedes cerrar este cuadro de diálogo con seguridad.',
+                backgroundProcessingSlides:
+                  'La conversión de diapositivas continuará en segundo plano. Puedes cerrar este cuadro de diálogo mientras finaliza.',
                 success: 'Subida completada.',
                 failure: 'La subida falló. Vuelve a intentarlo.',
                 progress: 'Progreso de subida',
@@ -3792,8 +3808,11 @@
                 processing: 'Traitement du téléversement…',
                 processingAction: 'Traitement…',
                 processingAudio: 'Traitement de l’audio…',
+                processingSlides: 'Traitement des diapositives…',
                 backgroundProcessing:
                   'Le traitement audio se poursuit en arrière-plan. Vous pouvez fermer cette boîte de dialogue en toute sécurité.',
+                backgroundProcessingSlides:
+                  'La conversion des diapositives se poursuit en arrière-plan. Vous pouvez fermer cette boîte de dialogue pendant le traitement.',
                 success: 'Téléversement terminé.',
                 failure: 'Le téléversement a échoué. Réessayez.',
                 progress: 'Progression du téléversement',
@@ -8110,6 +8129,7 @@
           const kind = definition.type;
           const assetLabel = t(definition.labelKey);
           let audioProcessingStarted = false;
+          let slideProcessingStarted = false;
 
           function formatSlideSummary(selection) {
             if (!selection) {
@@ -8148,6 +8168,22 @@
             });
           }
 
+          const allowAudioBackground =
+            kind === 'audio' && state.settings?.audio_mastering_enabled !== false;
+          const allowBackgroundProcessing = allowAudioBackground || kind === 'slides';
+          const processingLabel =
+            kind === 'audio'
+              ? t('dialogs.upload.processingAudio')
+              : kind === 'slides'
+              ? t('dialogs.upload.processingSlides')
+              : undefined;
+          const backgroundProcessingLabel =
+            kind === 'audio'
+              ? t('dialogs.upload.backgroundProcessing')
+              : kind === 'slides'
+              ? t('dialogs.upload.backgroundProcessingSlides')
+              : undefined;
+
           const dialogResult = await showUploadDialog({
             accept: definition.accept || '',
             title: t('dialogs.upload.assetTitle', { asset: assetLabel }),
@@ -8157,13 +8193,10 @@
             browseLabel: t('dialogs.upload.browse'),
             clearLabel: t('dialogs.upload.clear'),
             uploadLabel: t('dialogs.upload.action'),
-            processing:
-              kind === 'audio' ? t('dialogs.upload.processingAudio') : undefined,
+            processing: processingLabel,
             processingAction: t('dialogs.upload.processingAction'),
-            allowBackgroundProcessing:
-              kind === 'audio' && state.settings?.audio_mastering_enabled !== false,
-            backgroundProcessing:
-              kind === 'audio' ? t('dialogs.upload.backgroundProcessing') : undefined,
+            allowBackgroundProcessing,
+            backgroundProcessing: backgroundProcessingLabel,
             onFileSelected:
               kind === 'slides'
                 ? async (file) => {
@@ -8208,12 +8241,18 @@
                 stopProcessingProgress();
                 state.lastProgressMessage = '';
                 state.lastProgressRatio = null;
-                if (state.settings?.audio_mastering_enabled !== false) {
+                if (allowAudioBackground) {
                   startProcessingProgress(lectureId);
                   audioProcessingStarted = true;
                 } else {
                   audioProcessingStarted = false;
                 }
+              } else if (kind === 'slides') {
+                stopProcessingProgress();
+                state.lastProgressMessage = '';
+                state.lastProgressRatio = null;
+                startProcessingProgress(lectureId);
+                slideProcessingStarted = true;
               }
 
               try {
@@ -8228,6 +8267,11 @@
               } catch (error) {
                 if (kind === 'audio' && audioProcessingStarted) {
                   stopProcessingProgress();
+                  audioProcessingStarted = false;
+                }
+                if (kind === 'slides' && slideProcessingStarted) {
+                  stopProcessingProgress();
+                  slideProcessingStarted = false;
                 }
                 throw error;
               }
@@ -8239,6 +8283,11 @@
           if (!dialogResult || (!dialogResult.uploaded && !backgroundProcessingActive)) {
             if (kind === 'audio' && audioProcessingStarted) {
               stopProcessingProgress();
+              audioProcessingStarted = false;
+            }
+            if (kind === 'slides' && slideProcessingStarted) {
+              stopProcessingProgress();
+              slideProcessingStarted = false;
             }
             return;
           }
@@ -8249,6 +8298,11 @@
               await selectLecture(lectureId);
               if (kind === 'audio' && audioProcessingStarted) {
                 stopProcessingProgress({ preserveMessage: true });
+                audioProcessingStarted = false;
+              }
+              if (kind === 'slides' && slideProcessingStarted) {
+                stopProcessingProgress({ preserveMessage: true });
+                slideProcessingStarted = false;
               }
             }
             return;
@@ -8263,6 +8317,11 @@
           await selectLecture(lectureId);
           if (kind === 'audio' && audioProcessingStarted && !backgroundProcessingActive) {
             stopProcessingProgress({ preserveMessage: true });
+            audioProcessingStarted = false;
+          }
+          if (kind === 'slides' && slideProcessingStarted && !backgroundProcessingActive) {
+            stopProcessingProgress({ preserveMessage: true });
+            slideProcessingStarted = false;
           }
         }
 

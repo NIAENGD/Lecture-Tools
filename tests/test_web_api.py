@@ -582,7 +582,14 @@ def test_upload_slides_gracefully_handles_missing_converter(monkeypatch, temp_co
     repository, lecture_id, _module_id = _create_sample_data(temp_config)
 
     class DummyConverter:
-        def convert(self, slide_path, output_dir, *, page_range=None):  # noqa: ARG002
+        def convert(
+            self,
+            slide_path,
+            output_dir,
+            *,
+            page_range=None,
+            progress_callback=None,
+        ):  # noqa: ARG002
             raise SlideConversionDependencyError("PyMuPDF (fitz) is not installed")
 
     monkeypatch.setattr(web_server, "PyMuPDFSlideConverter", lambda: DummyConverter())
@@ -604,7 +611,14 @@ def test_process_slides_generates_archive(monkeypatch, temp_config):
     repository, lecture_id, _module_id = _create_sample_data(temp_config)
 
     class DummyConverter:
-        def convert(self, slide_path, output_dir, *, page_range=None):
+        def convert(
+            self,
+            slide_path,
+            output_dir,
+            *,
+            page_range=None,
+            progress_callback=None,
+        ):
             output_dir.mkdir(parents=True, exist_ok=True)
             archive = output_dir / "slides.zip"
             archive.write_bytes(b"zip")
@@ -631,7 +645,14 @@ def test_process_slides_gracefully_handles_missing_converter(monkeypatch, temp_c
     repository, lecture_id, _module_id = _create_sample_data(temp_config)
 
     class DummyConverter:
-        def convert(self, slide_path, output_dir, *, page_range=None):  # noqa: ARG002
+        def convert(
+            self,
+            slide_path,
+            output_dir,
+            *,
+            page_range=None,
+            progress_callback=None,
+        ):  # noqa: ARG002
             raise SlideConversionDependencyError("PyMuPDF (fitz) is not installed")
 
     monkeypatch.setattr(web_server, "PyMuPDFSlideConverter", lambda: DummyConverter())
