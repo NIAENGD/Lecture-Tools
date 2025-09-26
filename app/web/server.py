@@ -6,6 +6,7 @@ import asyncio
 import contextlib
 import json
 import logging
+import mimetypes
 import platform
 import shutil
 import stat
@@ -75,6 +76,11 @@ _DEFAULT_UI_SETTINGS = UISettings()
 _SERVER_LOGGER_PREFIXES: Tuple[str, ...] = ("uvicorn", "gunicorn", "hypercorn", "werkzeug")
 
 LOGGER = logging.getLogger(__name__)
+
+
+# Ensure PDF.js module assets are served with the correct MIME type for dynamic import.
+mimetypes.add_type("text/javascript", ".mjs")
+mimetypes.add_type("application/javascript", ".mjs")
 
 
 class DebugLogHandler(logging.Handler):

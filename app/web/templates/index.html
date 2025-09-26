@@ -2351,6 +2351,18 @@
           return '/static/pdfjs/pdf.worker.min.js';
         }
 
+        function resolvePdfjsScriptUrl() {
+          const candidate = window.__LECTURE_TOOLS_PDFJS_SCRIPT_URL__;
+          if (
+            typeof candidate === 'string' &&
+            candidate &&
+            candidate !== '__LECTURE_TOOLS_PDFJS_SCRIPT__'
+          ) {
+            return candidate;
+          }
+          return '/static/pdfjs/pdf.min.js';
+        }
+
         function resolvePdfjsModuleUrl() {
           const candidate = window.__LECTURE_TOOLS_PDFJS_MODULE_URL__;
           if (
@@ -2379,11 +2391,12 @@
           return '/static/pdfjs/pdf.worker.min.mjs';
         }
 
-        function configurePdfjsWorker(pdfjsLib) {
+        function configurePdfjsWorker(pdfjsLib, options = {}) {
           if (!pdfjsLib || !pdfjsLib.GlobalWorkerOptions) {
             return;
           }
-          const workerModuleUrl = resolvePdfjsWorkerModuleUrl();
+          const preferModule = options.preferModule !== false;
+          const workerModuleUrl = preferModule ? resolvePdfjsWorkerModuleUrl() : null;
           let configured = false;
           if (workerModuleUrl) {
             try {
@@ -2415,9 +2428,58 @@
 
         const pdfjsLoaderState = { promise: null };
 
+        const pdfjsScriptLoaderState = { promise: null, url: null };
+
+        async function loadPdfjsScript(scriptUrl) {
+          if (window.pdfjsLib && typeof window.pdfjsLib.getDocument === 'function') {
+            return window.pdfjsLib;
+          }
+          const source = typeof scriptUrl === 'string' && scriptUrl ? scriptUrl : null;
+          if (!source) {
+            return null;
+          }
+          if (pdfjsScriptLoaderState.promise && pdfjsScriptLoaderState.url === source) {
+            return pdfjsScriptLoaderState.promise;
+          }
+
+          pdfjsScriptLoaderState.url = source;
+          pdfjsScriptLoaderState.promise = new Promise((resolve) => {
+            const existing = Array.from(
+              document.querySelectorAll('script[data-pdfjs-script]'),
+            ).find((element) => element.getAttribute('data-pdfjs-script') === source);
+            if (existing) {
+              existing.addEventListener(
+                'load',
+                () => resolve(window.pdfjsLib || null),
+                { once: true },
+              );
+              existing.addEventListener('error', () => resolve(null), { once: true });
+              return;
+            }
+            const script = document.createElement('script');
+            script.src = source;
+            script.async = true;
+            script.setAttribute('data-pdfjs-script', source);
+            script.addEventListener('load', () => {
+              resolve(window.pdfjsLib || null);
+            });
+            script.addEventListener('error', () => {
+              console.error('Failed to load PDF.js classic script', source);
+              resolve(null);
+            });
+            document.head.appendChild(script);
+          });
+
+          const loaded = await pdfjsScriptLoaderState.promise;
+          if (!loaded) {
+            pdfjsScriptLoaderState.promise = null;
+          }
+          return loaded;
+        }
+
         async function loadPdfjsLibrary() {
           if (window.pdfjsLib && typeof window.pdfjsLib.getDocument === 'function') {
-            configurePdfjsWorker(window.pdfjsLib);
+            configurePdfjsWorker(window.pdfjsLib, { preferModule: false });
             return window.pdfjsLib;
           }
 
@@ -2445,11 +2507,20 @@
               if (!pdfjsLib || typeof pdfjsLib.getDocument !== 'function') {
                 return null;
               }
-              configurePdfjsWorker(pdfjsLib);
+              configurePdfjsWorker(pdfjsLib, { preferModule: true });
               return pdfjsLib;
             } catch (error) {
               console.error('Failed to load PDF.js module', error);
-              return null;
+              const scriptUrl = resolvePdfjsScriptUrl();
+              if (scriptUrl) {
+                console.info('Falling back to classic PDF.js bundle');
+              }
+              const pdfjsLib = await loadPdfjsScript(scriptUrl);
+              if (!pdfjsLib || typeof pdfjsLib.getDocument !== 'function') {
+                return null;
+              }
+              configurePdfjsWorker(pdfjsLib, { preferModule: false });
+              return pdfjsLib;
             }
           })();
 
@@ -2460,7 +2531,7 @@
           return loaded;
         }
 
-        configurePdfjsWorker(window.pdfjsLib);
+        configurePdfjsWorker(window.pdfjsLib, { preferModule: false });
 
         const translations = {
           en: {
