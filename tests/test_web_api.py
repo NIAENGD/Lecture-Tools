@@ -721,6 +721,91 @@ def test_process_slides_generates_archive(monkeypatch, temp_config):
     assert slide_asset.exists()
 
 
+def test_slide_preview_lifecycle(temp_config):
+    repository, lecture_id, _module_id = _create_sample_data(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    response = client.post(
+        f"/api/lectures/{lecture_id}/slides/previews",
+        files={"file": ("deck.pdf", b"%PDF-1.4\n", "application/pdf")},
+    )
+    assert response.status_code == 201
+    payload = response.json()
+    preview_id = payload["preview_id"]
+    preview_url = payload["preview_url"]
+
+    lecture_paths = LecturePaths.build(
+        temp_config.storage_root,
+        "Astronomy",
+        "Stellar Physics",
+        "Stellar Evolution",
+    )
+    preview_dir = lecture_paths.raw_dir / ".previews"
+    stored_files = list(preview_dir.iterdir())
+    assert stored_files
+    assert preview_id in stored_files[0].name
+
+    preview_response = client.get(preview_url)
+    assert preview_response.status_code == 200
+    assert preview_response.headers["content-type"].startswith("application/pdf")
+
+    delete_response = client.delete(preview_url)
+    assert delete_response.status_code == 204
+    assert not preview_dir.exists() or not any(preview_dir.iterdir())
+
+
+def test_process_slides_with_preview_token(monkeypatch, temp_config):
+    repository, lecture_id, _module_id = _create_sample_data(temp_config)
+
+    class DummyConverter:
+        def convert(
+            self,
+            slide_path,
+            output_dir,
+            *,
+            page_range=None,
+            progress_callback=None,
+        ):
+            output_dir.mkdir(parents=True, exist_ok=True)
+            archive = output_dir / "slides.zip"
+            archive.write_bytes(b"zip")
+            return [archive]
+
+    monkeypatch.setattr(web_server, "PyMuPDFSlideConverter", lambda: DummyConverter())
+
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    preview = client.post(
+        f"/api/lectures/{lecture_id}/slides/previews",
+        files={"file": ("deck.pdf", b"%PDF-1.4\n", "application/pdf")},
+    )
+    assert preview.status_code == 201
+    preview_id = preview.json()["preview_id"]
+
+    response = client.post(
+        f"/api/lectures/{lecture_id}/process-slides",
+        data={"preview_token": preview_id, "page_start": "1", "page_end": "1"},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["slide_image_dir"].endswith("slides.zip")
+
+    slide_path = temp_config.storage_root / payload["slide_path"]
+    assert slide_path.exists()
+    assert slide_path.read_bytes().startswith(b"%PDF")
+
+    lecture_paths = LecturePaths.build(
+        temp_config.storage_root,
+        "Astronomy",
+        "Stellar Physics",
+        "Stellar Evolution",
+    )
+    preview_dir = lecture_paths.raw_dir / ".previews"
+    assert not preview_dir.exists() or not any(preview_dir.iterdir())
+
+
 def test_process_slides_gracefully_handles_missing_converter(monkeypatch, temp_config):
     repository, lecture_id, _module_id = _create_sample_data(temp_config)
 
