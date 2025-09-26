@@ -14,6 +14,7 @@ pytest.importorskip("httpx")
 
 from fastapi.testclient import TestClient
 
+from app.processing import SlideConversionDependencyError
 from app.web import create_app
 from app.web import server as web_server
 from app.services.storage import LectureRepository
@@ -568,13 +569,35 @@ def test_upload_slides_auto_generates_archive(monkeypatch, temp_config):
     )
     assert response.status_code == 200
     payload = response.json()
-    assert payload["slide_path"].endswith("deck.pdf")
+    assert payload["slide_path"].endswith(".pdf")
     assert payload["slide_image_dir"].endswith("slides.zip")
     slide_asset = temp_config.storage_root / payload["slide_image_dir"]
     assert slide_asset.exists()
     updated = repository.get_lecture(lecture_id)
     assert updated.slide_path and updated.slide_path.endswith("deck.pdf")
     assert updated.slide_image_dir and updated.slide_image_dir.endswith("slides.zip")
+
+
+def test_upload_slides_gracefully_handles_missing_converter(monkeypatch, temp_config):
+    repository, lecture_id, _module_id = _create_sample_data(temp_config)
+
+    class DummyConverter:
+        def convert(self, slide_path, output_dir, *, page_range=None):  # noqa: ARG002
+            raise SlideConversionDependencyError("PyMuPDF (fitz) is not installed")
+
+    monkeypatch.setattr(web_server, "PyMuPDFSlideConverter", lambda: DummyConverter())
+
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    response = client.post(
+        f"/api/lectures/{lecture_id}/assets/slides",
+        files={"file": ("deck.pdf", b"%PDF-1.4", "application/pdf")},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["slide_path"].endswith(".pdf")
+    assert payload.get("slide_image_dir") is None
 
 
 def test_process_slides_generates_archive(monkeypatch, temp_config):
@@ -602,6 +625,28 @@ def test_process_slides_generates_archive(monkeypatch, temp_config):
     assert payload["slide_image_dir"].endswith("slides.zip")
     slide_asset = temp_config.storage_root / payload["slide_image_dir"]
     assert slide_asset.exists()
+
+
+def test_process_slides_gracefully_handles_missing_converter(monkeypatch, temp_config):
+    repository, lecture_id, _module_id = _create_sample_data(temp_config)
+
+    class DummyConverter:
+        def convert(self, slide_path, output_dir, *, page_range=None):  # noqa: ARG002
+            raise SlideConversionDependencyError("PyMuPDF (fitz) is not installed")
+
+    monkeypatch.setattr(web_server, "PyMuPDFSlideConverter", lambda: DummyConverter())
+
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    response = client.post(
+        f"/api/lectures/{lecture_id}/process-slides",
+        files={"file": ("deck.pdf", b"%PDF-1.4", "application/pdf")},
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["slide_path"].endswith(".pdf")
+    assert payload.get("slide_image_dir") is None
 
 
 def test_transcribe_audio_uses_backend(monkeypatch, temp_config):

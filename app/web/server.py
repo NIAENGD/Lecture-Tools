@@ -31,6 +31,7 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 from ..config import AppConfig
 from ..processing import (
     PyMuPDFSlideConverter,
+    SlideConversionDependencyError,
     describe_audio_debug_stats,
     load_wav_file,
     preprocess_audio,
@@ -1076,6 +1077,19 @@ def create_app(
         for directory in _iter_module_dirs(class_record, module):
             _delete_storage_path(directory)
 
+    def _reuse_existing_slide_archive(candidates: List[Path]) -> Optional[str]:
+        prioritized: List[Path] = []
+        prioritized.extend([path for path in candidates if path.suffix.lower() == ".zip"])
+        prioritized.extend([path for path in candidates if path.suffix.lower() != ".zip"])
+        for candidate in prioritized:
+            try:
+                if not candidate.exists():
+                    continue
+                return candidate.relative_to(config.storage_root).as_posix()
+            except ValueError:
+                continue
+        return None
+
     def _generate_slide_archive(
         pdf_path: Path,
         lecture_paths: LecturePaths,
@@ -1095,6 +1109,9 @@ def create_app(
                     page_range=page_range,
                 )
             )
+        except SlideConversionDependencyError as error:
+            LOGGER.warning("Slide conversion unavailable: %s", error)
+            return _reuse_existing_slide_archive(existing_items)
         except Exception as error:  # noqa: BLE001 - propagate conversion errors
             raise HTTPException(status_code=500, detail=str(error)) from error
 

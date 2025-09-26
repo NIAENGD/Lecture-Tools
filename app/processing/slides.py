@@ -16,6 +16,14 @@ from ..services.ingestion import SlideConverter
 LOGGER = logging.getLogger(__name__)
 
 
+class SlideConversionError(RuntimeError):
+    """Base class for slide conversion errors."""
+
+
+class SlideConversionDependencyError(SlideConversionError):
+    """Raised when the configured converter cannot operate due to a missing dependency."""
+
+
 class PyMuPDFSlideConverter(SlideConverter):
     """Slide converter that renders PDF slides via :mod:`PyMuPDF`."""
 
@@ -40,7 +48,7 @@ class PyMuPDFSlideConverter(SlideConverter):
         try:
             import fitz  # type: ignore
         except ImportError as exc:  # pragma: no cover - runtime check
-            raise RuntimeError("PyMuPDF (fitz) is not installed") from exc
+            raise SlideConversionDependencyError("PyMuPDF (fitz) is not installed") from exc
 
         output_dir.mkdir(parents=True, exist_ok=True)
         scale = self._dpi / 72
@@ -100,4 +108,8 @@ class PyMuPDFSlideConverter(SlideConverter):
         return candidate
 
 
-__all__ = ["PyMuPDFSlideConverter"]
+__all__ = [
+    "PyMuPDFSlideConverter",
+    "SlideConversionDependencyError",
+    "SlideConversionError",
+]
