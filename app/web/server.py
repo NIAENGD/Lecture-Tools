@@ -8,11 +8,14 @@ import json
 import logging
 import mimetypes
 import platform
+import re
 import shutil
 import stat
+import sqlite3
 import subprocess
 import threading
 import time
+import uuid
 import zipfile
 from collections import deque
 from dataclasses import asdict
@@ -24,7 +27,7 @@ from typing import Any, Callable, Deque, Dict, List, Literal, Optional, Set, Tup
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Response, Request
 from fastapi import status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.types import ASGIApp, Receive, Scope, Send
@@ -74,6 +77,8 @@ _LANGUAGE_OPTIONS: Tuple[str, ...] = ("en", "zh", "es", "fr")
 _LANGUAGE_SET = set(_LANGUAGE_OPTIONS)
 _DEFAULT_UI_SETTINGS = UISettings()
 _SERVER_LOGGER_PREFIXES: Tuple[str, ...] = ("uvicorn", "gunicorn", "hypercorn", "werkzeug")
+_SLIDE_PREVIEW_DIR_NAME = ".previews"
+_SLIDE_PREVIEW_TOKEN_PATTERN = re.compile(r"^[a-f0-9]{16,64}$")
 
 LOGGER = logging.getLogger(__name__)
 
@@ -734,12 +739,6 @@ def create_app(
     }
 
     app.mount(
-        "/storage",
-        StaticFiles(directory=config.storage_root, check_dir=False),
-        name="storage",
-    )
-
-    app.mount(
         "/static",
         StaticFiles(directory=_STATIC_ROOT, check_dir=False),
         name="assets",
@@ -1118,6 +1117,45 @@ def create_app(
                 continue
         return None
 
+    def _get_preview_dir(lecture_paths: LecturePaths) -> Path:
+        preview_dir = lecture_paths.raw_dir / _SLIDE_PREVIEW_DIR_NAME
+        preview_dir.mkdir(parents=True, exist_ok=True)
+        return preview_dir
+
+    def _is_valid_preview_token(token: str) -> bool:
+        return bool(_SLIDE_PREVIEW_TOKEN_PATTERN.fullmatch(token))
+
+    def _resolve_preview_file(preview_dir: Path, token: str) -> Optional[Path]:
+        if not _is_valid_preview_token(token):
+            return None
+        if not preview_dir.exists() or not preview_dir.is_dir():
+            return None
+        prefix = f"{token}-"
+        for candidate in preview_dir.iterdir():
+            if candidate.is_file() and candidate.name.startswith(prefix):
+                return candidate
+        return None
+
+    def _delete_preview_file(preview_dir: Path, token: str) -> bool:
+        target = _resolve_preview_file(preview_dir, token)
+        if target is None:
+            return False
+        try:
+            target.unlink()
+        except FileNotFoundError:
+            return False
+        return True
+
+    def _prune_preview_dir(preview_dir: Path) -> None:
+        try:
+            if preview_dir.exists() and preview_dir.is_dir():
+                if any(preview_dir.iterdir()):
+                    return
+        except OSError:
+            return
+        with contextlib.suppress(OSError):
+            preview_dir.rmdir()
+
     def _generate_slide_archive(
         pdf_path: Path,
         lecture_paths: LecturePaths,
@@ -1137,6 +1175,14 @@ def create_app(
                     lecture_paths.slide_dir,
                     page_range=page_range,
                     progress_callback=progress_callback,
+                )
+            )
+        except TypeError:
+            generated = list(
+                converter.convert(
+                    pdf_path,
+                    lecture_paths.slide_dir,
+                    page_range=page_range,
                 )
             )
         except SlideConversionDependencyError as error:
@@ -1165,6 +1211,16 @@ def create_app(
     @app.get("/", response_class=HTMLResponse)
     async def index(request: Request) -> HTMLResponse:
         return HTMLResponse(_render_index_html(request))
+
+    @app.get("/storage/{path:path}")
+    async def serve_storage_file(path: str) -> FileResponse:
+        try:
+            target = _resolve_storage_path(config.storage_root, path)
+        except ValueError as error:
+            raise HTTPException(status_code=404, detail="File not found") from error
+        if not target.exists() or target.is_dir():
+            raise HTTPException(status_code=404, detail="File not found")
+        return FileResponse(target)
 
     @app.get("/api/classes")
     async def list_classes() -> Dict[str, Any]:
@@ -1969,7 +2025,13 @@ def create_app(
                         class_id = repository.add_class(name, description)
                         imported_classes += 1
                 else:
-                    class_id = repository.add_class(name, description)
+                    try:
+                        class_id = repository.add_class(name, description)
+                    except sqlite3.IntegrityError:
+                        existing_class = repository.find_class_by_name(name)
+                        if existing_class is None:
+                            raise
+                        class_id = existing_class.id
                     imported_classes += 1
 
                 for module_entry in modules_data:
@@ -1992,7 +2054,15 @@ def create_app(
                             module_id = repository.add_module(class_id, module_name, module_description)
                             imported_modules += 1
                     else:
-                        module_id = repository.add_module(class_id, module_name, module_description)
+                        try:
+                            module_id = repository.add_module(
+                                class_id, module_name, module_description
+                            )
+                        except sqlite3.IntegrityError:
+                            existing_module = repository.find_module_by_name(class_id, module_name)
+                            if existing_module is None:
+                                raise
+                            module_id = existing_module.id
                         imported_modules += 1
 
                     for lecture_entry in lectures_data:
@@ -2025,16 +2095,29 @@ def create_app(
                                     repository.update_lecture_assets(existing_lecture.id, **asset_updates)
                                 continue
 
-                        lecture_id = repository.add_lecture(
-                            module_id,
-                            lecture_name,
-                            lecture_description,
-                            audio_path=assets["audio_path"],
-                            slide_path=assets["slide_path"],
-                            transcript_path=assets["transcript_path"],
-                            notes_path=assets["notes_path"],
-                            slide_image_dir=assets["slide_image_dir"],
-                        )
+                        try:
+                            lecture_id = repository.add_lecture(
+                                module_id,
+                                lecture_name,
+                                lecture_description,
+                                audio_path=assets["audio_path"],
+                                slide_path=assets["slide_path"],
+                                transcript_path=assets["transcript_path"],
+                                notes_path=assets["notes_path"],
+                                slide_image_dir=assets["slide_image_dir"],
+                            )
+                        except sqlite3.IntegrityError:
+                            existing = repository.find_lecture_by_name(module_id, lecture_name)
+                            if existing is None:
+                                raise
+                            repository.update_lecture(
+                                existing.id,
+                                description=lecture_description if lecture_description else None,
+                            )
+                            asset_updates = {key: value for key, value in assets.items() if value}
+                            if asset_updates:
+                                repository.update_lecture_assets(existing.id, **asset_updates)
+                            lecture_id = existing.id
                         imported_lectures += 1
 
         _log_event(
@@ -2198,18 +2281,121 @@ def create_app(
         )
         return response
 
+    @app.post(
+        "/api/lectures/{lecture_id}/slides/previews",
+        status_code=status.HTTP_201_CREATED,
+    )
+    async def create_slide_preview(
+        lecture_id: int,
+        file: UploadFile = File(...),
+    ) -> Dict[str, Any]:
+        _log_event("Creating slide preview", lecture_id=lecture_id)
+        lecture = repository.get_lecture(lecture_id)
+        if lecture is None:
+            raise HTTPException(status_code=404, detail="Lecture not found")
+
+        class_record, module = _require_hierarchy(lecture)
+        lecture_paths = LecturePaths.build(
+            config.storage_root,
+            class_record.name,
+            module.name,
+            lecture.name,
+        )
+        lecture_paths.ensure()
+        preview_dir = _get_preview_dir(lecture_paths)
+
+        preview_token = uuid.uuid4().hex
+        original_name = Path(file.filename or "slides.pdf").name
+        suffix = Path(original_name).suffix.lower() or ".pdf"
+        if suffix != ".pdf":
+            suffix = ".pdf"
+        stem = slugify(Path(original_name).stem or "slides") or "slides"
+        preview_name = f"{preview_token}-{stem}{suffix}"
+        preview_path = preview_dir / preview_name
+
+        try:
+            with preview_path.open("wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+        finally:
+            await file.close()
+
+        relative_preview = preview_path.relative_to(config.storage_root).as_posix()
+        _log_event(
+            "Slide preview stored",
+            lecture_id=lecture_id,
+            preview_id=preview_token,
+            preview_path=relative_preview,
+        )
+
+        preview_url = f"/api/lectures/{lecture_id}/slides/previews/{preview_token}"
+        return {
+            "preview_id": preview_token,
+            "preview_url": preview_url,
+            "filename": original_name,
+        }
+
+    @app.get("/api/lectures/{lecture_id}/slides/previews/{preview_id}")
+    async def fetch_slide_preview(lecture_id: int, preview_id: str) -> FileResponse:
+        lecture = repository.get_lecture(lecture_id)
+        if lecture is None:
+            raise HTTPException(status_code=404, detail="Lecture not found")
+
+        class_record, module = _require_hierarchy(lecture)
+        lecture_paths = LecturePaths.build(
+            config.storage_root,
+            class_record.name,
+            module.name,
+            lecture.name,
+        )
+        preview_dir = lecture_paths.raw_dir / _SLIDE_PREVIEW_DIR_NAME
+        preview_path = _resolve_preview_file(preview_dir, preview_id)
+        if preview_path is None or not preview_path.exists():
+            raise HTTPException(status_code=404, detail="Preview not found")
+
+        return FileResponse(
+            preview_path,
+            media_type="application/pdf",
+            filename=preview_path.name,
+            headers={"Cache-Control": "no-store"},
+        )
+
+    @app.delete(
+        "/api/lectures/{lecture_id}/slides/previews/{preview_id}",
+        status_code=status.HTTP_204_NO_CONTENT,
+        response_class=Response,
+    )
+    async def delete_slide_preview(lecture_id: int, preview_id: str) -> Response:
+        lecture = repository.get_lecture(lecture_id)
+        if lecture is None:
+            raise HTTPException(status_code=404, detail="Lecture not found")
+
+        class_record, module = _require_hierarchy(lecture)
+        lecture_paths = LecturePaths.build(
+            config.storage_root,
+            class_record.name,
+            module.name,
+            lecture.name,
+        )
+        preview_dir = lecture_paths.raw_dir / _SLIDE_PREVIEW_DIR_NAME
+        removed = _delete_preview_file(preview_dir, preview_id)
+        if removed:
+            _prune_preview_dir(preview_dir)
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+
     @app.post("/api/lectures/{lecture_id}/process-slides")
     async def process_slides(
         lecture_id: int,
-        file: UploadFile = File(...),
+        file: Optional[UploadFile] = File(None),
         page_start: Optional[int] = Form(None),
         page_end: Optional[int] = Form(None),
+        preview_token: Optional[str] = Form(None),
     ) -> Dict[str, Any]:
         _log_event(
             "Processing slides",
             lecture_id=lecture_id,
             page_start=page_start,
             page_end=page_end,
+            preview_token=preview_token,
         )
         lecture = repository.get_lecture(lecture_id)
         if lecture is None:
@@ -2235,11 +2421,30 @@ def create_app(
         slide_destination = lecture_paths.raw_dir / slide_filename
         slide_destination.parent.mkdir(parents=True, exist_ok=True)
 
-        try:
-            with slide_destination.open("wb") as buffer:
-                shutil.copyfileobj(file.file, buffer)
-        finally:
-            await file.close()
+        preview_dir = lecture_paths.raw_dir / _SLIDE_PREVIEW_DIR_NAME
+        if preview_token:
+            preview_path = _resolve_preview_file(preview_dir, preview_token)
+            if preview_path is None or not preview_path.exists():
+                raise HTTPException(status_code=404, detail="Slide preview not found")
+            if file is not None:
+                await file.close()
+                file = None
+            try:
+                preview_path.replace(slide_destination)
+            except OSError as error:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Failed to store slide preview: {error}",
+                ) from error
+            _prune_preview_dir(preview_dir)
+        else:
+            if file is None:
+                raise HTTPException(status_code=400, detail="Slide file is required")
+            try:
+                with slide_destination.open("wb") as buffer:
+                    shutil.copyfileobj(file.file, buffer)
+            finally:
+                await file.close()
 
         selected_range: Optional[Tuple[int, int]] = None
         if page_start is not None or page_end is not None:

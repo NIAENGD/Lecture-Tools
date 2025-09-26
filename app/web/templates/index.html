@@ -499,8 +499,12 @@
       }
 
       .slide-range-pages {
-        display: flex;
-        flex-direction: column;
+        --slide-preview-min-width: 220px;
+        display: grid;
+        grid-template-columns: repeat(
+          auto-fill,
+          minmax(var(--slide-preview-min-width), 1fr)
+        );
         gap: 16px;
       }
 
@@ -541,6 +545,32 @@
         height: auto;
         border-radius: 6px;
         background: #fff;
+      }
+
+      .slide-range-zoom {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .slide-range-zoom-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      .slide-range-zoom-value {
+        font-weight: 600;
+        color: var(--text);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .slide-range-zoom input[type='range'] {
+        width: 100%;
+        accent-color: var(--accent);
       }
 
       .slide-range-controls {
@@ -2268,6 +2298,24 @@
               <input id="slide-range-slider-start" type="range" min="1" value="1" step="1" />
               <input id="slide-range-slider-end" type="range" min="1" value="1" step="1" />
             </div>
+            <div class="slide-range-zoom">
+              <div class="slide-range-zoom-header">
+                <label id="slide-range-zoom-label" for="slide-range-zoom"></label>
+                <span
+                  id="slide-range-zoom-value"
+                  class="slide-range-zoom-value"
+                  aria-live="polite"
+                ></span>
+              </div>
+              <input
+                id="slide-range-zoom"
+                type="range"
+                min="50"
+                max="200"
+                value="100"
+                step="10"
+              />
+            </div>
             <p id="slide-range-hint" class="slide-range-hint"></p>
             <p id="slide-range-summary" class="page-range-summary"></p>
           </div>
@@ -2824,6 +2872,8 @@
                 startLabel: 'Start page',
                 endLabel: 'End page',
                 rangeHint: 'Use the sliders, inputs, or page previews to adjust the selection.',
+                zoomLabel: 'Preview zoom',
+                zoomValue: '{{value}}% view',
                 summary: 'Processing pages {{start}}–{{end}} of {{total}}.',
                 summarySingle: 'Processing page {{start}} of {{total}}.',
                 allPages: 'Processing all pages in the document.',
@@ -3217,6 +3267,8 @@
                 startLabel: '起始页',
                 endLabel: '结束页',
                 rangeHint: '可通过滑块、输入框或页面预览调整选择范围。',
+                zoomLabel: '预览缩放',
+                zoomValue: '{{value}}% 视图',
                 summary: '将处理第 {{start}}–{{end}} 页，共 {{total}} 页。',
                 summarySingle: '将处理第 {{start}} 页，共 {{total}} 页。',
                 allPages: '将处理文档中的全部页面。',
@@ -3614,6 +3666,8 @@
                 endLabel: 'Página final',
                 rangeHint:
                   'Usa los controles deslizantes, los campos o la vista previa para ajustar la selección.',
+                zoomLabel: 'Zoom de la vista previa',
+                zoomValue: 'Vista al {{value}}%',
                 summary: 'Se procesarán las páginas {{start}}–{{end}} de {{total}}.',
                 summarySingle: 'Se procesará la página {{start}} de {{total}}.',
                 allPages: 'Se procesarán todas las páginas del documento.',
@@ -4013,6 +4067,8 @@
                 startLabel: 'Page de début',
                 endLabel: 'Page de fin',
                 rangeHint: 'Utilisez les curseurs, les champs ou l’aperçu pour ajuster la sélection.',
+                zoomLabel: 'Zoom de l’aperçu',
+                zoomValue: 'Vue à {{value}} %',
                 summary: 'Traitement des pages {{start}} à {{end}} sur {{total}}.',
                 summarySingle: 'Traitement de la page {{start}} sur {{total}}.',
                 allPages: 'Traitement de toutes les pages du document.',
@@ -4496,6 +4552,9 @@
             startSlider: document.getElementById('slide-range-slider-start'),
             endSlider: document.getElementById('slide-range-slider-end'),
             sliderFill: document.getElementById('slide-range-slider-fill'),
+            zoomLabel: document.getElementById('slide-range-zoom-label'),
+            zoomValue: document.getElementById('slide-range-zoom-value'),
+            zoomSlider: document.getElementById('slide-range-zoom'),
             hint: document.getElementById('slide-range-hint'),
             summary: document.getElementById('slide-range-summary'),
             confirm: document.getElementById('slide-range-confirm'),
@@ -5557,6 +5616,7 @@
             let closed = false;
             let selectedFile = null;
             let selectedMeta = null;
+            let selectedCleanup = null;
             let selecting = false;
             let uploading = false;
             let uploadComplete = false;
@@ -5568,6 +5628,10 @@
             const backgroundProcessingMessage =
               typeof options.backgroundProcessing === 'string' ? options.backgroundProcessing : '';
 
+            const actionLabelCandidate =
+              options.uploadLabel ||
+              t('dialogs.upload.action') ||
+              t('common.actions.upload');
             const labels = {
               title: options.title || t('dialogs.upload.title'),
               description: options.description || t('dialogs.upload.description'),
@@ -5586,8 +5650,8 @@
               success: options.success || t('dialogs.upload.success'),
               failure: options.failure || t('dialogs.upload.failure'),
               progress: options.progressLabel || t('dialogs.upload.progress'),
-              action: options.uploadLabel || t('dialogs.upload.action'),
-              close: options.closeLabel || t('common.actions.close'),
+              action: actionLabelCandidate || 'Upload',
+              close: options.closeLabel || t('common.actions.close') || 'Close',
             };
 
             const accept = typeof options.accept === 'string' ? options.accept : '';
@@ -5653,12 +5717,16 @@
               }
               document.body.classList.remove('dialog-open');
               dialogState.uploadActive = false;
+              selectedCleanup = null;
               if (previousActive) {
                 previousActive.focus({ preventScroll: true });
               }
             }
 
-            function resolveAndClose(payload) {
+            async function resolveAndClose(payload) {
+              if (!payload || payload.uploaded !== true) {
+                await runSelectedCleanup();
+              }
               cleanup();
               resolve(payload);
             }
@@ -5737,6 +5805,8 @@
               if (!dialog.confirm) {
                 return;
               }
+              dialog.confirm.classList.remove('hidden');
+              dialog.confirm.style.display = '';
               if (processingInBackground && allowBackgroundProcessing && uploading) {
                 dialog.confirm.textContent = labels.close;
                 dialog.confirm.disabled = false;
@@ -5768,7 +5838,9 @@
                 }
                 return;
               }
-              dialog.confirm.textContent = labels.action;
+              const readyLabel =
+                labels.action || t('dialogs.upload.action') || t('common.actions.upload') || 'Upload';
+              dialog.confirm.textContent = readyLabel;
               dialog.confirm.disabled = !selectedFile || !uploadHandler;
               if (dialog.cancel) {
                 dialog.cancel.textContent = t('dialog.cancel');
@@ -5806,6 +5878,19 @@
               }
             }
 
+            async function runSelectedCleanup() {
+              const cleanupFn = selectedCleanup;
+              selectedCleanup = null;
+              if (typeof cleanupFn !== 'function') {
+                return;
+              }
+              try {
+                await cleanupFn();
+              } catch (error) {
+                console.warn('Failed to clear upload selection metadata', error);
+              }
+            }
+
             async function setSelectedFile(file) {
               if (selecting) {
                 return;
@@ -5813,6 +5898,7 @@
               selecting = true;
               try {
                 if (!file) {
+                  await runSelectedCleanup();
                   selectedFile = null;
                   selectedMeta = null;
                   if (dialog.fileInfo) {
@@ -5834,8 +5920,13 @@
                   return;
                 }
 
+                if (selectedCleanup) {
+                  await runSelectedCleanup();
+                }
+
                 let meta = null;
                 let summary = '';
+                let cleanupFn = null;
                 if (fileSelectedHandler) {
                   setStatus(labels.preparing);
                   try {
@@ -5863,8 +5954,18 @@
                       if (typeof result.summary === 'string') {
                         summary = result.summary;
                       }
+                      if (typeof result.cleanup === 'function') {
+                        cleanupFn = result.cleanup;
+                      } else {
+                        cleanupFn = null;
+                      }
                     } else if (result && typeof result === 'object') {
                       meta = result;
+                      if (typeof result.cleanup === 'function') {
+                        cleanupFn = result.cleanup;
+                      } else {
+                        cleanupFn = null;
+                      }
                     }
                   } catch (error) {
                     const message =
@@ -5873,6 +5974,7 @@
                     uploadComplete = false;
                     selectedFile = null;
                     selectedMeta = null;
+                    selectedCleanup = null;
                     updateActionState();
                     return;
                   }
@@ -5880,6 +5982,7 @@
 
                 selectedFile = file;
                 selectedMeta = meta && typeof meta === 'object' ? meta : null;
+                selectedCleanup = cleanupFn;
                 if (dialog.fileInfo) {
                   dialog.fileInfo.classList.remove('hidden');
                 }
@@ -6076,7 +6179,7 @@
             function handleConfirm(event) {
               event.preventDefault();
               if (processingInBackground && allowBackgroundProcessing && uploading) {
-                resolveAndClose({
+                void resolveAndClose({
                   confirmed: false,
                   uploaded: uploadComplete,
                   file: selectedFile,
@@ -6087,7 +6190,7 @@
                 return;
               }
               if (uploadComplete) {
-                resolveAndClose({
+                void resolveAndClose({
                   confirmed: true,
                   uploaded: true,
                   file: selectedFile,
@@ -6101,7 +6204,7 @@
 
             function handleCancel(event) {
               event?.preventDefault?.();
-              resolveAndClose({
+              void resolveAndClose({
                 confirmed: false,
                 uploaded: uploadComplete,
                 file: selectedFile,
@@ -6201,7 +6304,7 @@
           });
         }
 
-        async function showSlideRangeDialog(file) {
+        async function showSlideRangeDialog(source) {
           return new Promise((resolve) => {
             const dialog = dom.slideRangeDialog;
             if (!dialog || !dialog.root || dialogState.active || dialogState.uploadActive) {
@@ -6218,6 +6321,14 @@
             let anchorPage = 1;
             let previewFailed = false;
             const pageEntries = [];
+            const BASE_PREVIEW_COLUMN_WIDTH = 220;
+            let previewZoom = 100;
+            const previewSource =
+              source instanceof Blob
+                ? { file: source }
+                : source && typeof source === 'object'
+                ? { ...source }
+                : null;
 
             const previousActive =
               document.activeElement instanceof HTMLElement
@@ -6238,6 +6349,45 @@
               return Math.min(pageCount, Math.max(1, Math.round(numeric)));
             }
 
+            function clampZoom(value) {
+              const numeric =
+                typeof value === 'number'
+                  ? value
+                  : Number.parseInt(String(value ?? ''), 10);
+              if (!Number.isFinite(numeric)) {
+                return 100;
+              }
+              return Math.min(200, Math.max(50, Math.round(numeric)));
+            }
+
+            function updateZoomDisplay() {
+              if (dialog.pages) {
+                const scale = clampZoom(previewZoom) / 100;
+                const minWidth = Math.round(BASE_PREVIEW_COLUMN_WIDTH * scale);
+                dialog.pages.style.setProperty(
+                  '--slide-preview-min-width',
+                  `${minWidth}px`,
+                );
+              }
+              const zoomText = t('dialogs.slideRange.zoomValue', {
+                value: clampZoom(previewZoom),
+              });
+              if (dialog.zoomValue) {
+                dialog.zoomValue.textContent = zoomText;
+              }
+              if (dialog.zoomSlider) {
+                dialog.zoomSlider.setAttribute('aria-valuetext', zoomText);
+              }
+            }
+
+            function handleZoomInput(event) {
+              previewZoom = clampZoom(event?.target?.value);
+              if (dialog.zoomSlider) {
+                dialog.zoomSlider.value = String(previewZoom);
+              }
+              updateZoomDisplay();
+            }
+
             function updateTexts() {
               if (dialog.title) {
                 dialog.title.textContent = t('dialogs.slideRange.title');
@@ -6250,6 +6400,9 @@
               }
               if (dialog.endLabel) {
                 dialog.endLabel.textContent = t('dialogs.slideRange.endLabel');
+              }
+              if (dialog.zoomLabel) {
+                dialog.zoomLabel.textContent = t('dialogs.slideRange.zoomLabel');
               }
               if (dialog.hint) {
                 dialog.hint.textContent = t('dialogs.slideRange.rangeHint');
@@ -6266,6 +6419,7 @@
               if (previewFailed && dialog.error) {
                 dialog.error.textContent = t('dialogs.slideRange.error');
               }
+              updateZoomDisplay();
               pageEntries.forEach(({ label, pageNumber }) => {
                 if (label) {
                   label.textContent = t('dialogs.slideRange.pageLabel', {
@@ -6358,6 +6512,9 @@
               if (dialog.confirm) {
                 dialog.confirm.disabled = true;
               }
+              if (dialog.zoomSlider) {
+                dialog.zoomSlider.disabled = true;
+              }
             }
 
             function enableControls() {
@@ -6376,11 +6533,17 @@
               if (dialog.confirm) {
                 dialog.confirm.disabled = false;
               }
+              if (dialog.zoomSlider) {
+                dialog.zoomSlider.disabled = !pageCount || previewFailed;
+              }
             }
 
             function enableConfirmOnly() {
               if (dialog.confirm) {
                 dialog.confirm.disabled = false;
+              }
+              if (dialog.zoomSlider) {
+                dialog.zoomSlider.disabled = true;
               }
             }
 
@@ -6413,6 +6576,9 @@
               if (dialog.endSlider) {
                 dialog.endSlider.removeEventListener('input', handleEndSlider);
               }
+              if (dialog.zoomSlider) {
+                dialog.zoomSlider.removeEventListener('input', handleZoomInput);
+              }
               if (dialog.root) {
                 dialog.root.classList.add('hidden');
                 dialog.root.setAttribute('aria-hidden', 'true');
@@ -6432,6 +6598,17 @@
               }
               if (dialog.summary) {
                 dialog.summary.textContent = '';
+              }
+              if (dialog.zoomSlider) {
+                dialog.zoomSlider.disabled = false;
+                dialog.zoomSlider.value = '100';
+              }
+              previewZoom = 100;
+              if (dialog.pages) {
+                dialog.pages.style.removeProperty('--slide-preview-min-width');
+              }
+              if (dialog.zoomValue) {
+                dialog.zoomValue.textContent = '';
               }
               document.body.classList.remove('dialog-open');
               dialogState.active = false;
@@ -6588,23 +6765,42 @@
               updateRangeSummary();
             }
 
-            async function loadPdfDocument(pdfjsLib, data) {
-              const baseOptions = { data };
+            async function loadPdfDocument(pdfjsLib, source) {
+              let options = null;
+              if (source instanceof ArrayBuffer || ArrayBuffer.isView(source)) {
+                options = { data: source };
+              } else if (typeof source === 'string') {
+                options = { url: source, withCredentials: true };
+              } else if (source && typeof source === 'object') {
+                if (source.data) {
+                  options = { data: source.data };
+                } else if (source.url) {
+                  const withCredentials =
+                    source.withCredentials === false ? false : true;
+                  options = { url: source.url, withCredentials };
+                }
+              }
+              if (!options) {
+                throw new Error('Unsupported PDF source');
+              }
               try {
-                return await pdfjsLib.getDocument(baseOptions).promise;
+                return await pdfjsLib.getDocument(options).promise;
               } catch (error) {
                 const message =
                   (error && typeof error.message === 'string'
                     ? error.message
                     : String(error)) || '';
                 const shouldFallback =
-                  /WorkerMessageHandler|Setting up fake worker|No "?GlobalWorkerOptions"?/i.test(message);
+                  Boolean(options.data) &&
+                  /WorkerMessageHandler|Setting up fake worker|No "?GlobalWorkerOptions"?/i.test(
+                    message,
+                  );
                 if (!shouldFallback) {
                   throw error;
                 }
                 console.warn('Falling back to workerless PDF rendering', error);
                 return await pdfjsLib
-                  .getDocument({ data, disableWorker: true })
+                  .getDocument({ data: options.data, disableWorker: true })
                   .promise;
               }
             }
@@ -6747,6 +6943,10 @@
             if (dialog.endSlider) {
               dialog.endSlider.addEventListener('input', handleEndSlider);
             }
+            if (dialog.zoomSlider) {
+              previewZoom = clampZoom(dialog.zoomSlider.value);
+              dialog.zoomSlider.addEventListener('input', handleZoomInput);
+            }
 
             window.requestAnimationFrame(() => {
               if (dialog.startInput && !dialog.startInput.disabled) {
@@ -6779,11 +6979,106 @@
               }
 
               try {
-                const buffer = await file.arrayBuffer();
-                if (cancelled) {
-                  return;
+                const sources = [];
+                let lastError = null;
+                let urlCandidate = null;
+                let hasFileCandidate = false;
+
+                if (
+                  previewSource &&
+                  typeof previewSource.url === 'string' &&
+                  previewSource.url
+                ) {
+                  const resolvedUrl = resolveAppUrl(previewSource.url);
+                  let absoluteUrl = resolvedUrl;
+                  try {
+                    absoluteUrl = new URL(resolvedUrl, window.location.origin).toString();
+                  } catch (urlError) {
+                    try {
+                      absoluteUrl = new URL(resolvedUrl, window.location.href).toString();
+                    } catch (fallbackError) {
+                      absoluteUrl = resolvedUrl;
+                    }
+                  }
+                  const withCredentials =
+                    previewSource.withCredentials === false ? false : true;
+                  urlCandidate = { url: absoluteUrl, withCredentials };
+                  if (typeof fetch === 'function') {
+                    try {
+                      const response = await fetch(absoluteUrl, {
+                        method: 'GET',
+                        credentials: withCredentials ? 'include' : 'omit',
+                        cache: 'no-store',
+                      });
+                      if (!response.ok) {
+                        lastError = new Error(`Unexpected response ${response.status}`);
+                      } else {
+                        const buffer = await response.arrayBuffer();
+                        if (cancelled) {
+                          return;
+                        }
+                        sources.push({ type: 'buffer', value: buffer });
+                      }
+                    } catch (error) {
+                      lastError = error instanceof Error ? error : new Error(String(error));
+                    }
+                  }
                 }
-                pdfDocument = await loadPdfDocument(pdfjsLib, buffer);
+
+                if (previewSource?.file instanceof Blob) {
+                  sources.push({ type: 'file', value: previewSource.file });
+                  hasFileCandidate = true;
+                }
+
+                if (!hasFileCandidate && source instanceof Blob) {
+                  sources.push({ type: 'file', value: source });
+                  hasFileCandidate = true;
+                }
+
+                if (urlCandidate) {
+                  sources.push({
+                    type: 'url',
+                    value: urlCandidate.url,
+                    withCredentials: urlCandidate.withCredentials,
+                  });
+                }
+
+                if (!sources.length) {
+                  throw new Error('No slide source available');
+                }
+
+                for (const candidate of sources) {
+                  if (cancelled) {
+                    return;
+                  }
+                  try {
+                    if (candidate.type === 'url') {
+                      pdfDocument = await loadPdfDocument(pdfjsLib, {
+                        url: candidate.value,
+                        withCredentials: candidate.withCredentials,
+                      });
+                    } else if (candidate.type === 'buffer') {
+                      pdfDocument = await loadPdfDocument(pdfjsLib, candidate.value);
+                    } else {
+                      const buffer = await candidate.value.arrayBuffer();
+                      if (cancelled) {
+                        return;
+                      }
+                      pdfDocument = await loadPdfDocument(pdfjsLib, buffer);
+                    }
+                    if (pdfDocument) {
+                      break;
+                    }
+                  } catch (error) {
+                    lastError = error instanceof Error ? error : new Error(String(error));
+                  }
+                }
+                if (!pdfDocument) {
+                  if (lastError) {
+                    throw lastError;
+                  }
+                  throw new Error('Unable to load slide preview');
+                }
                 if (cancelled) {
                   return;
                 }
@@ -7018,6 +7313,40 @@
             return await response.json();
           }
           return null;
+        }
+
+        async function createSlidePreview(lectureId, file) {
+          if (!lectureId || !(file instanceof Blob)) {
+            return null;
+          }
+          const formData = new FormData();
+          formData.append('file', file);
+          const payload = await request(
+            `/api/lectures/${lectureId}/slides/previews`,
+            { method: 'POST', body: formData },
+          );
+          if (!payload || !payload.preview_id || !payload.preview_url) {
+            return null;
+          }
+          return {
+            id: payload.preview_id,
+            url: resolveAppUrl(payload.preview_url),
+            filename: payload.filename || file.name || 'slides.pdf',
+          };
+        }
+
+        async function deleteSlidePreview(lectureId, previewId) {
+          if (!lectureId || !previewId) {
+            return;
+          }
+          try {
+            await request(
+              `/api/lectures/${lectureId}/slides/previews/${encodeURIComponent(previewId)}`,
+              { method: 'DELETE' },
+            );
+          } catch (error) {
+            console.warn('Failed to remove slide preview', error);
+          }
         }
 
         async function loadGpuWhisperStatus() {
@@ -8462,8 +8791,21 @@
             onFileSelected:
               kind === 'slides'
                 ? async (file) => {
-                    const selection = await showSlideRangeDialog(file);
+                    let preview = null;
+                    try {
+                      preview = await createSlidePreview(lectureId, file);
+                    } catch (error) {
+                      console.warn('Slide preview upload failed', error);
+                      preview = null;
+                    }
+                    const previewSource = preview
+                      ? { url: preview.url, file, withCredentials: true }
+                      : file;
+                    const selection = await showSlideRangeDialog(previewSource);
                     if (!selection || !selection.confirmed) {
+                      if (preview) {
+                        await deleteSlidePreview(lectureId, preview.id);
+                      }
                       return { cancelled: true };
                     }
                     const meta = {};
@@ -8476,15 +8818,28 @@
                     if (typeof selection.pageTotal === 'number' && Number.isFinite(selection.pageTotal)) {
                       meta.pageTotal = selection.pageTotal;
                     }
-                    return {
+                    if (preview) {
+                      meta.previewId = preview.id;
+                      meta.previewUrl = preview.url;
+                      meta.previewLectureId = lectureId;
+                    }
+                    const response = {
                       meta,
                       summary: formatSlideSummary(selection),
                     };
+                    if (preview) {
+                      response.cleanup = async () => {
+                        await deleteSlidePreview(lectureId, preview.id);
+                        meta.previewId = null;
+                        meta.previewUrl = null;
+                      };
+                    }
+                    return response;
                   }
                 : null,
             onUpload: async (file, helpers) => {
               const formData = new FormData();
-              formData.append('file', file);
+              let includeFile = true;
               let endpoint = `/api/lectures/${lectureId}/assets/${kind}`;
 
               if (kind === 'slides') {
@@ -8496,6 +8851,14 @@
                 if (typeof meta.pageEnd === 'number' && Number.isFinite(meta.pageEnd)) {
                   formData.append('page_end', String(meta.pageEnd));
                 }
+                if (typeof meta.previewId === 'string' && meta.previewId) {
+                  formData.append('preview_token', meta.previewId);
+                  includeFile = false;
+                }
+              }
+
+              if (includeFile) {
+                formData.append('file', file);
               }
 
               if (kind === 'audio') {
@@ -8535,12 +8898,29 @@
                   stopProcessingProgress();
                   slideProcessingStarted = false;
                 }
+                if (kind === 'slides') {
+                  const meta = helpers?.meta || {};
+                  if (typeof meta.previewId === 'string' && meta.previewId) {
+                    await deleteSlidePreview(lectureId, meta.previewId);
+                  }
+                }
                 throw error;
               }
             },
           });
 
           const backgroundProcessingActive = Boolean(dialogResult && dialogResult.processing);
+          const previewId =
+            kind === 'slides' && dialogResult && dialogResult.meta && dialogResult.meta.previewId
+              ? dialogResult.meta.previewId
+              : null;
+
+          async function cleanupPreviewAfterDialog() {
+            if (!previewId || kind !== 'slides') {
+              return;
+            }
+            await deleteSlidePreview(lectureId, previewId);
+          }
 
           if (!dialogResult || (!dialogResult.uploaded && !backgroundProcessingActive)) {
             if (kind === 'audio' && audioProcessingStarted) {
@@ -8550,6 +8930,9 @@
             if (kind === 'slides' && slideProcessingStarted) {
               stopProcessingProgress();
               slideProcessingStarted = false;
+            }
+            if (!backgroundProcessingActive) {
+              await cleanupPreviewAfterDialog();
             }
             return;
           }
@@ -8566,6 +8949,7 @@
                 stopProcessingProgress({ preserveMessage: true });
                 slideProcessingStarted = false;
               }
+              await cleanupPreviewAfterDialog();
             }
             return;
           }
