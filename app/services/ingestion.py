@@ -50,6 +50,7 @@ class SlideConverter(Protocol):
         output_dir: Path,
         *,
         page_range: Optional[tuple[int, int]] = None,
+        progress_callback: Optional[Callable[[int, Optional[int]], None]] = None,
     ) -> Iterable[Path]:
         """Convert *slide_path* into processed artefacts stored in *output_dir*."""
 

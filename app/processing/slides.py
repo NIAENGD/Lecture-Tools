@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from io import BytesIO
 from pathlib import Path
-from typing import Iterable, Optional, Tuple
+from typing import Callable, Iterable, Optional, Tuple
 from zipfile import ZIP_DEFLATED, ZipFile
 
 from PIL import Image
@@ -37,6 +37,7 @@ class PyMuPDFSlideConverter(SlideConverter):
         output_dir: Path,
         *,
         page_range: Optional[Tuple[int, int]] = None,
+        progress_callback: Optional[Callable[[int, Optional[int]], None]] = None,
     ) -> Iterable[Path]:
         LOGGER.debug(
             "Starting slide conversion for %s into %s (page_range=%s, dpi=%s)",
@@ -79,8 +80,17 @@ class PyMuPDFSlideConverter(SlideConverter):
             zip_path = self._prepare_destination(output_dir, stem)
             LOGGER.debug("Slide conversion output will be zipped to %s", zip_path)
 
+            total_pages = end_index - start_index + 1
+            if progress_callback is not None:
+                try:
+                    progress_callback(0, total_pages)
+                except Exception:  # pragma: no cover - defensive against callback errors
+                    LOGGER.exception("Slide conversion progress callback failed at start")
+
             with ZipFile(zip_path, "w", compression=ZIP_DEFLATED) as archive:
-                for page_number in range(start_index, end_index + 1):
+                for processed_index, page_number in enumerate(
+                    range(start_index, end_index + 1), start=1
+                ):
                     pix = document.load_page(page_number).get_pixmap(matrix=matrix, alpha=False)
                     image = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
                     buffer = BytesIO()
@@ -93,6 +103,13 @@ class PyMuPDFSlideConverter(SlideConverter):
                         pix.width,
                         pix.height,
                     )
+                    if progress_callback is not None:
+                        try:
+                            progress_callback(processed_index, total_pages)
+                        except Exception:  # pragma: no cover - defensive against callback errors
+                            LOGGER.exception(
+                                "Slide conversion progress callback failed mid-run"
+                            )
 
         return [zip_path]
 
