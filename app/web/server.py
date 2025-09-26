@@ -763,6 +763,12 @@ def create_app(
         ).replace(
             "__LECTURE_TOOLS_PDFJS_WORKER__",
             f"{static_base}/pdfjs/pdf.worker.min.js",
+        ).replace(
+            "__LECTURE_TOOLS_PDFJS_MODULE__",
+            f"{static_base}/pdfjs/pdf.min.mjs",
+        ).replace(
+            "__LECTURE_TOOLS_PDFJS_WORKER_MODULE__",
+            f"{static_base}/pdfjs/pdf.worker.min.mjs",
         )
 
         if not resolved:

@@ -8,6 +8,9 @@
       window.__LECTURE_TOOLS_SERVER_ROOT_PATH__ = "__LECTURE_TOOLS_ROOT_PATH__";
       window.__LECTURE_TOOLS_PDFJS_SCRIPT_URL__ = "__LECTURE_TOOLS_PDFJS_SCRIPT__";
       window.__LECTURE_TOOLS_PDFJS_WORKER_URL__ = "__LECTURE_TOOLS_PDFJS_WORKER__";
+      window.__LECTURE_TOOLS_PDFJS_MODULE_URL__ = "__LECTURE_TOOLS_PDFJS_MODULE__";
+      window.__LECTURE_TOOLS_PDFJS_WORKER_MODULE_URL__ =
+        "__LECTURE_TOOLS_PDFJS_WORKER_MODULE__";
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -15,7 +18,6 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <script src="__LECTURE_TOOLS_PDFJS_SCRIPT__" crossorigin="anonymous"></script>
     <style>
       :root {
         color-scheme: light;
@@ -2337,16 +2339,128 @@
     </div>
     <script>
       (async function () {
-        if (window.pdfjsLib && window.pdfjsLib.GlobalWorkerOptions) {
-          const workerSrc =
-            typeof window.__LECTURE_TOOLS_PDFJS_WORKER_URL__ === 'string' &&
-            window.__LECTURE_TOOLS_PDFJS_WORKER_URL__ !== '__LECTURE_TOOLS_PDFJS_WORKER__'
-              ? window.__LECTURE_TOOLS_PDFJS_WORKER_URL__
-              : '/static/pdfjs/pdf.worker.min.js';
-          if (window.pdfjsLib.GlobalWorkerOptions.workerSrc !== workerSrc) {
-            window.pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
+        function resolvePdfjsWorkerUrl() {
+          const candidate = window.__LECTURE_TOOLS_PDFJS_WORKER_URL__;
+          if (
+            typeof candidate === 'string' &&
+            candidate &&
+            candidate !== '__LECTURE_TOOLS_PDFJS_WORKER__'
+          ) {
+            return candidate;
+          }
+          return '/static/pdfjs/pdf.worker.min.js';
+        }
+
+        function resolvePdfjsModuleUrl() {
+          const candidate = window.__LECTURE_TOOLS_PDFJS_MODULE_URL__;
+          if (
+            typeof candidate === 'string' &&
+            candidate &&
+            candidate !== '__LECTURE_TOOLS_PDFJS_MODULE__'
+          ) {
+            return candidate;
+          }
+          const fallback = window.__LECTURE_TOOLS_PDFJS_SCRIPT_URL__;
+          if (typeof fallback === 'string' && fallback && fallback !== '__LECTURE_TOOLS_PDFJS_SCRIPT__') {
+            return fallback.replace(/\.js($|\?)/, '.mjs$1');
+          }
+          return '/static/pdfjs/pdf.min.mjs';
+        }
+
+        function resolvePdfjsWorkerModuleUrl() {
+          const candidate = window.__LECTURE_TOOLS_PDFJS_WORKER_MODULE_URL__;
+          if (
+            typeof candidate === 'string' &&
+            candidate &&
+            candidate !== '__LECTURE_TOOLS_PDFJS_WORKER_MODULE__'
+          ) {
+            return candidate;
+          }
+          return '/static/pdfjs/pdf.worker.min.mjs';
+        }
+
+        function configurePdfjsWorker(pdfjsLib) {
+          if (!pdfjsLib || !pdfjsLib.GlobalWorkerOptions) {
+            return;
+          }
+          const workerModuleUrl = resolvePdfjsWorkerModuleUrl();
+          let configured = false;
+          if (workerModuleUrl) {
+            try {
+              pdfjsLib.GlobalWorkerOptions.workerSrc = workerModuleUrl;
+              if ('workerType' in pdfjsLib.GlobalWorkerOptions) {
+                pdfjsLib.GlobalWorkerOptions.workerType = workerModuleUrl.endsWith('.mjs')
+                  ? 'module'
+                  : undefined;
+              }
+              configured = true;
+            } catch (error) {
+              console.warn('Unable to configure module worker for PDF.js', error);
+            }
+          }
+          if (!configured) {
+            const workerUrl = resolvePdfjsWorkerUrl();
+            if (workerUrl) {
+              try {
+                pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+                if ('workerType' in pdfjsLib.GlobalWorkerOptions) {
+                  pdfjsLib.GlobalWorkerOptions.workerType = undefined;
+                }
+              } catch (error) {
+                console.warn('Unable to configure classic worker for PDF.js', error);
+              }
+            }
           }
         }
+
+        const pdfjsLoaderState = { promise: null };
+
+        async function loadPdfjsLibrary() {
+          if (window.pdfjsLib && typeof window.pdfjsLib.getDocument === 'function') {
+            configurePdfjsWorker(window.pdfjsLib);
+            return window.pdfjsLib;
+          }
+
+          if (pdfjsLoaderState.promise) {
+            return pdfjsLoaderState.promise;
+          }
+
+          pdfjsLoaderState.promise = (async () => {
+            if (typeof Promise.withResolvers !== 'function') {
+              Promise.withResolvers = function withResolvers() {
+                let resolve;
+                let reject;
+                const promise = new Promise((res, rej) => {
+                  resolve = res;
+                  reject = rej;
+                });
+                return { promise, resolve, reject };
+              };
+            }
+
+            const moduleUrl = resolvePdfjsModuleUrl();
+            try {
+              const pdfjsModule = await import(/* @vite-ignore */ moduleUrl);
+              const pdfjsLib = pdfjsModule?.pdfjsLib || pdfjsModule?.default || pdfjsModule;
+              if (!pdfjsLib || typeof pdfjsLib.getDocument !== 'function') {
+                return null;
+              }
+              configurePdfjsWorker(pdfjsLib);
+              return pdfjsLib;
+            } catch (error) {
+              console.error('Failed to load PDF.js module', error);
+              return null;
+            }
+          })();
+
+          const loaded = await pdfjsLoaderState.promise;
+          if (!loaded) {
+            pdfjsLoaderState.promise = null;
+          }
+          return loaded;
+        }
+
+        configurePdfjsWorker(window.pdfjsLib);
 
         const translations = {
           en: {
@@ -3980,14 +4094,7 @@
 
         window.__LECTURE_TOOLS_BASE_PATH__ = BASE_PATH;
 
-        if (window.pdfjsLib && window.pdfjsLib.GlobalWorkerOptions) {
-          const workerSource =
-            typeof window.__LECTURE_TOOLS_PDFJS_WORKER_URL__ === 'string' &&
-            window.__LECTURE_TOOLS_PDFJS_WORKER_URL__ !== '__LECTURE_TOOLS_PDFJS_WORKER__'
-              ? window.__LECTURE_TOOLS_PDFJS_WORKER_URL__
-              : resolveAppUrl('/static/pdfjs/pdf.worker.min.js');
-          window.pdfjsLib.GlobalWorkerOptions.workerSrc = workerSource;
-        }
+        configurePdfjsWorker(window.pdfjsLib);
 
         function resolveAppUrl(target) {
           if (!target || typeof target !== 'string') {
@@ -6410,10 +6517,10 @@
               updateRangeSummary();
             }
 
-            async function loadPdfDocument(data) {
+            async function loadPdfDocument(pdfjsLib, data) {
               const baseOptions = { data };
               try {
-                return await window.pdfjsLib.getDocument(baseOptions).promise;
+                return await pdfjsLib.getDocument(baseOptions).promise;
               } catch (error) {
                 const message =
                   (error && typeof error.message === 'string'
@@ -6425,7 +6532,7 @@
                   throw error;
                 }
                 console.warn('Falling back to workerless PDF rendering', error);
-                return await window.pdfjsLib
+                return await pdfjsLib
                   .getDocument({ data, disableWorker: true })
                   .promise;
               }
@@ -6582,7 +6689,8 @@
             });
 
             (async () => {
-              if (!window.pdfjsLib) {
+              const pdfjsLib = await loadPdfjsLibrary();
+              if (!pdfjsLib) {
                 previewFailed = true;
                 updateTexts();
                 if (dialog.loading) {
@@ -6604,7 +6712,7 @@
                 if (cancelled) {
                   return;
                 }
-                pdfDocument = await loadPdfDocument(buffer);
+                pdfDocument = await loadPdfDocument(pdfjsLib, buffer);
                 if (cancelled) {
                   return;
                 }
