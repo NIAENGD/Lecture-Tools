@@ -16,7 +16,13 @@ from .recording import (
     preprocess_audio,
     save_preprocessed_wav,
 )
-from .slides import PyMuPDFSlideConverter, SlideConversionDependencyError, SlideConversionError
+from .slides import (
+    PyMuPDFSlideConverter,
+    SlideConversionDependencyError,
+    SlideConversionError,
+    get_pdf_page_count,
+    render_pdf_page,
+)
 
 __all__ = [
     "FasterWhisperTranscription",
@@ -28,6 +34,8 @@ __all__ = [
     "PyMuPDFSlideConverter",
     "SlideConversionDependencyError",
     "SlideConversionError",
+    "get_pdf_page_count",
+    "render_pdf_page",
     "describe_audio_debug_stats",
     "describe_preprocess_audio_stage",
     "load_wav_file",
