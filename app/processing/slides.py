@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from io import BytesIO
 from pathlib import Path
-from typing import Callable, Iterable, Optional, Tuple
+from typing import Callable, Iterable, Optional, Tuple, Union
 from zipfile import ZIP_DEFLATED, ZipFile
 
 from PIL import Image
@@ -22,6 +22,69 @@ class SlideConversionError(RuntimeError):
 
 class SlideConversionDependencyError(SlideConversionError):
     """Raised when the configured converter cannot operate due to a missing dependency."""
+
+
+def get_pdf_page_count(source: Union[Path, bytes]) -> int:
+    """Return the number of pages contained in a PDF document."""
+
+    try:
+        import fitz  # type: ignore
+    except ImportError as exc:  # pragma: no cover - runtime check
+        raise SlideConversionDependencyError("PyMuPDF (fitz) is not installed") from exc
+
+    document = None
+    try:
+        if isinstance(source, Path):
+            document = fitz.open(source)
+        else:
+            document = fitz.open(stream=source, filetype="pdf")
+        return int(document.page_count)
+    except Exception as error:  # pragma: no cover - defensive catch
+        raise SlideConversionError("Unable to inspect PDF document") from error
+    finally:
+        if document is not None:
+            document.close()
+
+
+def render_pdf_page(
+    source: Union[Path, bytes],
+    page_number: int,
+    *,
+    dpi: int = 200,
+) -> bytes:
+    """Render a single PDF page to PNG bytes."""
+
+    if page_number < 1:
+        raise SlideConversionError("Invalid PDF page index")
+
+    try:
+        import fitz  # type: ignore
+    except ImportError as exc:  # pragma: no cover - runtime check
+        raise SlideConversionDependencyError("PyMuPDF (fitz) is not installed") from exc
+
+    document = None
+    try:
+        if isinstance(source, Path):
+            document = fitz.open(source)
+        else:
+            document = fitz.open(stream=source, filetype="pdf")
+
+        total_pages = int(document.page_count)
+        if page_number > total_pages:
+            raise SlideConversionError("PDF page is out of range")
+
+        scale = float(dpi) / 72.0
+        matrix = fitz.Matrix(scale, scale)
+        page = document.load_page(page_number - 1)
+        pixmap = page.get_pixmap(matrix=matrix, alpha=False)
+        return pixmap.tobytes("png")
+    except SlideConversionError:
+        raise
+    except Exception as error:  # pragma: no cover - defensive catch
+        raise SlideConversionError("Unable to render PDF page") from error
+    finally:
+        if document is not None:
+            document.close()
 
 
 class PyMuPDFSlideConverter(SlideConverter):
@@ -129,4 +192,6 @@ __all__ = [
     "PyMuPDFSlideConverter",
     "SlideConversionDependencyError",
     "SlideConversionError",
+    "get_pdf_page_count",
+    "render_pdf_page",
 ]

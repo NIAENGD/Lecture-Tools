@@ -24,7 +24,16 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any, Callable, Deque, Dict, List, Literal, Optional, Set, Tuple
 
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Response, Request
+from fastapi import (
+    FastAPI,
+    HTTPException,
+    UploadFile,
+    File,
+    Form,
+    Query,
+    Response,
+    Request,
+)
 from fastapi import status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
@@ -36,9 +45,12 @@ from ..config import AppConfig
 from ..processing import (
     PyMuPDFSlideConverter,
     SlideConversionDependencyError,
+    SlideConversionError,
     describe_audio_debug_stats,
+    get_pdf_page_count,
     load_wav_file,
     preprocess_audio,
+    render_pdf_page,
     save_preprocessed_wav,
 )
 from ..services.audio_conversion import ensure_wav
@@ -148,9 +160,32 @@ class TranscriptionProgressTracker:
             "finished": False,
             "error": None,
             "timestamp": None,
+            "context": {},
         }
 
-    def start(self, lecture_id: int, message: str = "====> Preparing transcription…") -> None:
+    def _merge_context(
+        self, state: Dict[str, Any], context: Optional[Dict[str, Any]] = None
+    ) -> None:
+        if not context:
+            return
+        filtered = {
+            key: value for key, value in context.items() if key is not None and value is not None
+        }
+        if not filtered:
+            return
+        existing = state.get("context")
+        if not isinstance(existing, dict):
+            existing = {}
+        existing.update(filtered)
+        state["context"] = existing
+
+    def start(
+        self,
+        lecture_id: int,
+        message: str = "====> Preparing transcription…",
+        *,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> None:
         with self._lock:
             state = self._baseline()
             state.update(
@@ -160,6 +195,7 @@ class TranscriptionProgressTracker:
                     "timestamp": time.time(),
                 }
             )
+            self._merge_context(state, context)
             self._states[lecture_id] = state
         LOGGER.debug(
             "Progress start",
@@ -172,6 +208,8 @@ class TranscriptionProgressTracker:
         current: Optional[float],
         total: Optional[float],
         message: str,
+        *,
+        context: Optional[Dict[str, Any]] = None,
     ) -> None:
         with self._lock:
             state = self._states.get(lecture_id, self._baseline())
@@ -190,6 +228,7 @@ class TranscriptionProgressTracker:
                     "timestamp": time.time(),
                 }
             )
+            self._merge_context(state, context)
             self._states[lecture_id] = state
         LOGGER.debug(
             "Progress update",
@@ -201,10 +240,22 @@ class TranscriptionProgressTracker:
             },
         )
 
-    def note(self, lecture_id: int, message: str) -> None:
-        self.update(lecture_id, None, None, message)
+    def note(
+        self,
+        lecture_id: int,
+        message: str,
+        *,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        self.update(lecture_id, None, None, message, context=context)
 
-    def finish(self, lecture_id: int, message: Optional[str] = None) -> None:
+    def finish(
+        self,
+        lecture_id: int,
+        message: Optional[str] = None,
+        *,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> None:
         with self._lock:
             state = self._states.get(lecture_id, self._baseline())
             state.update(
@@ -215,13 +266,20 @@ class TranscriptionProgressTracker:
                     "timestamp": time.time(),
                 }
             )
+            self._merge_context(state, context)
             self._states[lecture_id] = state
         LOGGER.debug(
             "Progress finish",
             extra={"lecture_id": lecture_id, "progress_message": message},
         )
 
-    def fail(self, lecture_id: int, message: str) -> None:
+    def fail(
+        self,
+        lecture_id: int,
+        message: str,
+        *,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> None:
         with self._lock:
             state = self._states.get(lecture_id, self._baseline())
             state.update(
@@ -233,6 +291,7 @@ class TranscriptionProgressTracker:
                     "timestamp": time.time(),
                 }
             )
+            self._merge_context(state, context)
             self._states[lecture_id] = state
         LOGGER.debug(
             "Progress failure",
@@ -245,6 +304,14 @@ class TranscriptionProgressTracker:
             if state is None:
                 return self._baseline()
             return dict(state)
+
+    def all(self) -> Dict[int, Dict[str, Any]]:
+        with self._lock:
+            return {lecture_id: dict(state) for lecture_id, state in self._states.items()}
+
+    def clear(self, lecture_id: int) -> bool:
+        with self._lock:
+            return self._states.pop(lecture_id, None) is not None
 
 
 def _normalize_whisper_model(value: Any) -> str:
@@ -730,6 +797,8 @@ def create_app(
     settings_store = SettingsStore(config)
     progress_tracker = TranscriptionProgressTracker()
     processing_tracker = TranscriptionProgressTracker()
+    app.state.progress_tracker = progress_tracker
+    app.state.processing_tracker = processing_tracker
     gpu_support_state: Dict[str, Any] = {
         "supported": False,
         "checked": False,
@@ -788,6 +857,59 @@ def create_app(
             LOGGER.debug("%s (%s)", message, context_details)
         else:
             LOGGER.debug(message)
+
+    def _summarize_lecture(lecture_id: int) -> Optional[Dict[str, Any]]:
+        lecture_record = repository.get_lecture(lecture_id)
+        if lecture_record is None:
+            return None
+        module_record = repository.get_module(lecture_record.module_id)
+        class_record = (
+            repository.get_class(module_record.class_id) if module_record else None
+        )
+        return {
+            "id": lecture_record.id,
+            "name": lecture_record.name,
+            "module": module_record.name if module_record else None,
+            "module_id": module_record.id if module_record else None,
+            "class": class_record.name if class_record else None,
+            "class_id": class_record.id if class_record else None,
+        }
+
+    def _progress_entry(
+        kind: Literal["transcription", "processing"],
+        lecture_id: int,
+        state: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        lecture = _summarize_lecture(lecture_id)
+        context = state.get("context") if isinstance(state.get("context"), dict) else {}
+        operation = context.get("operation") or context.get("type")
+        retryable = False
+        if kind == "transcription":
+            if lecture:
+                lecture_record = repository.get_lecture(lecture_id)
+                if lecture_record and (
+                    lecture_record.audio_path or lecture_record.processed_audio_path
+                ):
+                    retryable = True
+        elif kind == "processing":
+            retryable = operation == "slide_conversion"
+
+        return {
+            "type": kind,
+            "lecture_id": lecture_id,
+            "message": state.get("message", ""),
+            "active": bool(state.get("active")),
+            "finished": bool(state.get("finished")),
+            "ratio": state.get("ratio"),
+            "current": state.get("current"),
+            "total": state.get("total"),
+            "error": state.get("error"),
+            "timestamp": state.get("timestamp"),
+            "lecture": lecture,
+            "context": context,
+            "retryable": retryable,
+            "dismissible": True,
+        }
 
     def _update_debug_state(enabled: bool) -> None:
         target_level = logging.DEBUG if enabled else logging.INFO
@@ -1596,6 +1718,7 @@ def create_app(
                         0.0,
                         total_steps,
                     ),
+                    context={"operation": "audio_mastering"},
                 )
 
                 def _process_audio() -> Tuple[str, str]:
@@ -2170,6 +2293,31 @@ def create_app(
         progress = processing_tracker.get(lecture_id)
         return {"progress": progress}
 
+    @app.get("/api/progress")
+    async def list_progress_entries() -> Dict[str, Any]:
+        entries: List[Dict[str, Any]] = []
+        for lecture_id, state in progress_tracker.all().items():
+            entries.append(_progress_entry("transcription", lecture_id, state))
+        for lecture_id, state in processing_tracker.all().items():
+            entries.append(_progress_entry("processing", lecture_id, state))
+        entries.sort(key=lambda entry: entry.get("timestamp") or 0, reverse=True)
+        return {"entries": entries}
+
+    @app.delete("/api/progress/{lecture_id}", status_code=status.HTTP_204_NO_CONTENT)
+    async def clear_progress_entry(
+        lecture_id: int,
+        entry_type: Optional[str] = Query(None, alias="type"),
+    ) -> Response:
+        cleared = False
+        normalized = (entry_type or "").strip().lower()
+        if not normalized or normalized == "transcription":
+            cleared = progress_tracker.clear(lecture_id) or cleared
+        if not normalized or normalized == "processing":
+            cleared = processing_tracker.clear(lecture_id) or cleared
+        if not cleared:
+            raise HTTPException(status_code=404, detail="Progress entry not found")
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+
     @app.post("/api/lectures/{lecture_id}/transcribe")
     async def transcribe_audio(lecture_id: int, payload: TranscriptionRequest) -> Dict[str, Any]:
         _log_event("Starting transcription", lecture_id=lecture_id, model=payload.model)
@@ -2203,7 +2351,10 @@ def create_app(
         compute_type = settings.whisper_compute_type or default_settings.whisper_compute_type
         beam_size = settings.whisper_beam_size or default_settings.whisper_beam_size
 
-        progress_tracker.start(lecture_id)
+        progress_tracker.start(
+            lecture_id,
+            context={"operation": "transcription", "model": payload.model},
+        )
         fallback_model: Optional[str] = None
         fallback_reason: Optional[str] = None
         error_reported = False
@@ -2359,6 +2510,79 @@ def create_app(
             headers={"Cache-Control": "no-store"},
         )
 
+    @app.get("/api/lectures/{lecture_id}/slides/previews/{preview_id}/metadata")
+    async def fetch_slide_preview_metadata(lecture_id: int, preview_id: str) -> Dict[str, Any]:
+        lecture = repository.get_lecture(lecture_id)
+        if lecture is None:
+            raise HTTPException(status_code=404, detail="Lecture not found")
+
+        class_record, module = _require_hierarchy(lecture)
+        lecture_paths = LecturePaths.build(
+            config.storage_root,
+            class_record.name,
+            module.name,
+            lecture.name,
+        )
+        preview_dir = lecture_paths.raw_dir / _SLIDE_PREVIEW_DIR_NAME
+        preview_path = _resolve_preview_file(preview_dir, preview_id)
+        if preview_path is None or not preview_path.exists():
+            raise HTTPException(status_code=404, detail="Preview not found")
+
+        try:
+            page_count = get_pdf_page_count(preview_path)
+        except SlideConversionDependencyError as error:
+            raise HTTPException(status_code=503, detail=str(error)) from error
+        except SlideConversionError as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
+        except Exception as error:  # pragma: no cover - defensive fallback
+            LOGGER.exception("Failed to inspect slide preview")
+            raise HTTPException(status_code=500, detail="Unable to inspect slide preview") from error
+
+        return {"page_count": page_count}
+
+    @app.get("/api/lectures/{lecture_id}/slides/previews/{preview_id}/pages/{page_number}")
+    async def fetch_slide_preview_page(
+        lecture_id: int,
+        preview_id: str,
+        page_number: int,
+    ) -> Response:
+        lecture = repository.get_lecture(lecture_id)
+        if lecture is None:
+            raise HTTPException(status_code=404, detail="Lecture not found")
+
+        class_record, module = _require_hierarchy(lecture)
+        lecture_paths = LecturePaths.build(
+            config.storage_root,
+            class_record.name,
+            module.name,
+            lecture.name,
+        )
+        preview_dir = lecture_paths.raw_dir / _SLIDE_PREVIEW_DIR_NAME
+        preview_path = _resolve_preview_file(preview_dir, preview_id)
+        if preview_path is None or not preview_path.exists():
+            raise HTTPException(status_code=404, detail="Preview not found")
+
+        if page_number < 1:
+            raise HTTPException(status_code=400, detail="Invalid page number")
+
+        try:
+            payload = await asyncio.to_thread(
+                render_pdf_page,
+                preview_path,
+                page_number,
+                dpi=200,
+            )
+        except SlideConversionDependencyError as error:
+            raise HTTPException(status_code=503, detail=str(error)) from error
+        except SlideConversionError as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
+        except Exception as error:  # pragma: no cover - defensive fallback
+            LOGGER.exception("Failed to render slide preview page")
+            raise HTTPException(status_code=500, detail="Unable to render preview page") from error
+
+        headers = {"Cache-Control": "no-store"}
+        return Response(content=payload, media_type="image/png", headers=headers)
+
     @app.delete(
         "/api/lectures/{lecture_id}/slides/previews/{preview_id}",
         status_code=status.HTTP_204_NO_CONTENT,
@@ -2458,6 +2682,16 @@ def create_app(
         processing_tracker.start(
             lecture_id,
             "====> Preparing slide conversion…",
+            context={
+                "operation": "slide_conversion",
+                "preview_token": preview_token,
+                "page_range": {
+                    "start": selected_range[0],
+                    "end": selected_range[1],
+                }
+                if selected_range
+                else None,
+            },
         )
 
         progress_total: Optional[float] = None

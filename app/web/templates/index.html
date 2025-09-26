@@ -498,6 +498,61 @@
         margin-bottom: 16px;
       }
 
+      .slide-range-fallback {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-bottom: 16px;
+        border: 1px solid var(--panel-border);
+        border-radius: 8px;
+        background: var(--panel-bg);
+        padding: 12px;
+      }
+
+      .slide-range-fallback.hidden {
+        display: none !important;
+      }
+
+      .slide-range-fallback-preview {
+        position: relative;
+        width: 100%;
+        padding-top: 62.5%;
+        border: 1px solid var(--panel-border);
+        border-radius: 6px;
+        overflow: hidden;
+        background: var(--background);
+      }
+
+      .slide-range-fallback-preview iframe {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        border: 0;
+        background: var(--panel-bg);
+      }
+
+      .slide-range-fallback-message {
+        font-size: 0.9rem;
+        color: var(--muted);
+        margin: 0;
+      }
+
+      .slide-range-fallback-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        align-self: flex-start;
+        color: var(--accent);
+        font-weight: 600;
+        text-decoration: none;
+      }
+
+      .slide-range-fallback-link:focus,
+      .slide-range-fallback-link:hover {
+        text-decoration: underline;
+      }
+
       .slide-range-pages {
         --slide-preview-min-width: 220px;
         display: grid;
@@ -540,11 +595,16 @@
         margin-bottom: 8px;
       }
 
-      .slide-preview-page canvas {
+      .slide-preview-page canvas,
+      .slide-preview-page img {
         width: 100%;
         height: auto;
         border-radius: 6px;
         background: #fff;
+      }
+
+      .slide-preview-page img {
+        display: block;
       }
 
       .slide-range-zoom {
@@ -1082,6 +1142,116 @@
 
       .view.active {
         display: block;
+      }
+
+      .progress-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .progress-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
+
+      .progress-description {
+        color: var(--muted);
+        font-size: 0.95rem;
+        margin: 0;
+      }
+
+      .progress-empty {
+        color: var(--muted);
+        font-style: italic;
+      }
+
+      .progress-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .progress-entry {
+        border: 1px solid var(--panel-border);
+        border-radius: 8px;
+        padding: 14px 16px;
+        background: var(--panel-bg);
+        box-shadow: var(--panel-shadow);
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .progress-entry[data-status='error'] {
+        border-color: var(--danger);
+      }
+
+      .progress-entry-title {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .progress-entry-title h3 {
+        margin: 0;
+      }
+
+      .progress-entry-status {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--muted);
+      }
+
+      .progress-entry[data-status='error'] .progress-entry-status {
+        color: var(--status-error-text);
+      }
+
+      .progress-entry[data-status='finished'] .progress-entry-status {
+        color: var(--status-success-text);
+      }
+
+      .progress-entry-meta {
+        color: var(--muted);
+        font-size: 0.85rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      .progress-entry-message {
+        margin: 0;
+        font-size: 0.95rem;
+      }
+
+      .progress-entry-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .progress-entry-actions button {
+        padding: 6px 12px;
+        font-size: 0.85rem;
+      }
+
+      .progress-entry-actions button.text {
+        background: transparent;
+        border-color: transparent;
+        color: var(--accent);
+        padding: 0;
+      }
+
+      .progress-entry-actions button.text:hover {
+        text-decoration: underline;
+        opacity: 1;
       }
 
       .edit-banner {
@@ -1857,6 +2027,15 @@
             <div class="top-bar-right">
               <button
                 type="button"
+                class="ghost"
+                data-view="progress"
+                aria-pressed="false"
+                data-i18n="topBar.progress"
+              >
+                Progress
+              </button>
+              <button
+                type="button"
                 data-view="create"
                 aria-pressed="false"
                 data-i18n="topBar.create"
@@ -1948,6 +2127,23 @@
                   </select>
                 </label>
               </div>
+            </section>
+          </div>
+          <div id="view-progress" class="view" data-view="progress" hidden>
+            <section class="panel progress-panel">
+              <div class="progress-header">
+                <h2 data-i18n="progress.title">Processing queue</h2>
+                <button id="progress-refresh" type="button" class="ghost" data-i18n="progress.refresh">
+                  Refresh
+                </button>
+              </div>
+              <p id="progress-description" class="progress-description" data-i18n="progress.description">
+                Track conversions, mastering, and transcriptions as they run.
+              </p>
+              <div id="progress-empty" class="progress-empty" data-i18n="progress.empty">
+                No active tasks.
+              </div>
+              <ul id="progress-list" class="progress-list" aria-live="polite" aria-busy="false"></ul>
             </section>
           </div>
           <div id="view-create" class="view" data-view="create" hidden>
@@ -2279,6 +2475,28 @@
           <div id="slide-range-preview" class="slide-range-preview">
             <div id="slide-range-loading" class="slide-range-loading"></div>
             <div id="slide-range-error" class="slide-range-error hidden"></div>
+            <div
+              id="slide-range-fallback"
+              class="slide-range-fallback hidden"
+              aria-live="polite"
+            >
+              <div class="slide-range-fallback-preview">
+                <iframe
+                  id="slide-range-fallback-frame"
+                  title=""
+                  loading="lazy"
+                  referrerpolicy="no-referrer"
+                ></iframe>
+              </div>
+              <p id="slide-range-fallback-message" class="slide-range-fallback-message"></p>
+              <a
+                id="slide-range-fallback-link"
+                class="slide-range-fallback-link hidden"
+                href="#"
+                target="_blank"
+                rel="noopener noreferrer"
+              ></a>
+            </div>
             <div id="slide-range-pages" class="slide-range-pages"></div>
           </div>
           <div class="slide-range-controls">
@@ -2599,6 +2817,7 @@
               details: 'Details',
               enableEdit: 'Enable edit mode',
               exitEdit: 'Exit edit mode',
+              progress: 'Progress',
               create: 'Create',
               storage: 'Storage',
               settings: 'Settings',
@@ -2651,6 +2870,28 @@
                 download: 'Download',
                 remove: 'Remove',
               },
+            },
+            progress: {
+              title: 'Processing queue',
+              description: 'Track conversions, mastering, and transcriptions as they run.',
+              empty: 'No active tasks.',
+              refresh: 'Refresh',
+              retry: 'Retry',
+              dismiss: 'Dismiss',
+              openLecture: 'Open lecture',
+              status: {
+                running: 'In progress',
+                finished: 'Completed',
+                error: 'Needs attention',
+              },
+              labels: {
+                transcription: 'Transcription',
+                slideConversion: 'Slide conversion',
+                audioMastering: 'Audio mastering',
+                processing: 'Processing task',
+                untitled: 'Untitled lecture',
+              },
+              retryUnavailable: 'Retry is not available for this task.',
             },
             create: {
               title: 'Create lecture',
@@ -2868,14 +3109,20 @@
                   'Preview the uploaded PDF and choose which pages to convert into slide images.',
                 loading: 'Loading preview…',
                 error:
-                  'We were unable to load the PDF preview. All pages will be processed.',
+                  'Interactive preview unavailable. Server-rendered pages are shown below—adjust the range manually if needed.',
                 startLabel: 'Start page',
                 endLabel: 'End page',
                 rangeHint: 'Use the sliders, inputs, or page previews to adjust the selection.',
                 zoomLabel: 'Preview zoom',
                 zoomValue: '{{value}}% view',
+                fallbackMessage:
+                  'If the preview does not load, open the PDF below in a new tab and use your local copy to decide which pages to process.',
+                fallbackLink: 'Open PDF in new tab',
+                fallbackFrameTitle: 'Fallback PDF preview',
                 summary: 'Processing pages {{start}}–{{end}} of {{total}}.',
                 summarySingle: 'Processing page {{start}} of {{total}}.',
+                summaryUnknown: 'Processing pages {{start}}–{{end}}.',
+                summarySingleUnknown: 'Processing page {{start}}.',
                 allPages: 'Processing all pages in the document.',
                 pageLabel: 'Page {{page}}',
                 confirm: 'Process selection',
@@ -3000,6 +3247,7 @@
               details: '详情',
               enableEdit: '开启编辑模式',
               exitEdit: '退出编辑模式',
+              progress: '进度',
               create: '新建',
               storage: '存储',
               settings: '设置',
@@ -3051,6 +3299,28 @@
                 download: '下载',
                 remove: '移除',
               },
+            },
+            progress: {
+              title: '处理队列',
+              description: '实时跟踪转换、音频优化和转录进度。',
+              empty: '当前没有任务。',
+              refresh: '刷新',
+              retry: '重试',
+              dismiss: '忽略',
+              openLecture: '打开课次',
+              status: {
+                running: '处理中',
+                finished: '已完成',
+                error: '需要关注',
+              },
+              labels: {
+                transcription: '音频转录',
+                slideConversion: '课件转换',
+                audioMastering: '音频优化',
+                processing: '处理任务',
+                untitled: '未命名讲座',
+              },
+              retryUnavailable: '此任务无法重试。',
             },
             create: {
               title: '创建讲座',
@@ -3263,14 +3533,20 @@
                 title: '选择要处理的页面',
                 description: '预览上传的 PDF，选择要转换为课件图像的页面范围。',
                 loading: '正在加载预览…',
-                error: '无法加载 PDF 预览，将处理文档的全部页面。',
+                error: '无法加载交互式预览。现已显示服务器生成的页面，请按需要调整处理范围。',
                 startLabel: '起始页',
                 endLabel: '结束页',
                 rangeHint: '可通过滑块、输入框或页面预览调整选择范围。',
                 zoomLabel: '预览缩放',
                 zoomValue: '{{value}}% 视图',
+                fallbackMessage:
+                  '如果预览仍未加载，请在下方打开 PDF 到新标签页，并使用你的本地文件确定需要处理的页码。',
+                fallbackLink: '在新标签页打开 PDF',
+                fallbackFrameTitle: '备用 PDF 预览',
                 summary: '将处理第 {{start}}–{{end}} 页，共 {{total}} 页。',
                 summarySingle: '将处理第 {{start}} 页，共 {{total}} 页。',
+                summaryUnknown: '正在处理第 {{start}}–{{end}} 页。',
+                summarySingleUnknown: '正在处理第 {{start}} 页。',
                 allPages: '将处理文档中的全部页面。',
                 pageLabel: '第 {{page}} 页',
                 confirm: '处理所选页面',
@@ -3393,6 +3669,7 @@
               details: 'Detalles',
               enableEdit: 'Activar modo edición',
               exitEdit: 'Salir del modo edición',
+              progress: 'Progreso',
               create: 'Crear',
               storage: 'Almacenamiento',
               settings: 'Configuración',
@@ -3444,6 +3721,28 @@
                 download: 'Descargar',
                 remove: 'Eliminar',
               },
+            },
+            progress: {
+              title: 'Cola de procesamiento',
+              description: 'Supervisa las conversiones, masterizaciones y transcripciones en ejecución.',
+              empty: 'No hay tareas activas.',
+              refresh: 'Actualizar',
+              retry: 'Reintentar',
+              dismiss: 'Descartar',
+              openLecture: 'Abrir clase',
+              status: {
+                running: 'En progreso',
+                finished: 'Completado',
+                error: 'Requiere atención',
+              },
+              labels: {
+                transcription: 'Transcripción',
+                slideConversion: 'Conversión de diapositivas',
+                audioMastering: 'Masterización de audio',
+                processing: 'Tarea de procesamiento',
+                untitled: 'Clase sin título',
+              },
+              retryUnavailable: 'No es posible reintentar esta tarea.',
             },
             create: {
               title: 'Crear clase',
@@ -3661,15 +3960,22 @@
                 description:
                   'Previsualiza el PDF cargado y elige qué páginas convertir en imágenes de diapositivas.',
                 loading: 'Cargando vista previa…',
-                error: 'No se pudo cargar la vista previa del PDF. Se procesarán todas las páginas.',
+                error:
+                  'No se pudo cargar la vista previa interactiva. Se muestran páginas generadas en el servidor; ajusta el rango si es necesario.',
                 startLabel: 'Página inicial',
                 endLabel: 'Página final',
                 rangeHint:
                   'Usa los controles deslizantes, los campos o la vista previa para ajustar la selección.',
                 zoomLabel: 'Zoom de la vista previa',
                 zoomValue: 'Vista al {{value}}%',
+                fallbackMessage:
+                  'Si la vista previa no se carga, abre el PDF de abajo en una pestaña nueva y usa tu copia local para decidir qué páginas procesar.',
+                fallbackLink: 'Abrir PDF en una pestaña nueva',
+                fallbackFrameTitle: 'Vista previa de PDF alternativa',
                 summary: 'Se procesarán las páginas {{start}}–{{end}} de {{total}}.',
                 summarySingle: 'Se procesará la página {{start}} de {{total}}.',
+                summaryUnknown: 'Procesando las páginas {{start}}–{{end}}.',
+                summarySingleUnknown: 'Procesando la página {{start}}.',
                 allPages: 'Se procesarán todas las páginas del documento.',
                 pageLabel: 'Página {{page}}',
                 confirm: 'Procesar selección',
@@ -3794,6 +4100,7 @@
               details: 'Détails',
               enableEdit: 'Activer le mode édition',
               exitEdit: 'Quitter le mode édition',
+              progress: 'Progression',
               create: 'Créer',
               storage: 'Stockage',
               settings: 'Paramètres',
@@ -3846,6 +4153,28 @@
                 download: 'Télécharger',
                 remove: 'Supprimer',
               },
+            },
+            progress: {
+              title: 'File de traitement',
+              description: 'Suivez les conversions, la masterisation et les transcriptions en cours.',
+              empty: 'Aucune tâche en cours.',
+              refresh: 'Actualiser',
+              retry: 'Réessayer',
+              dismiss: 'Ignorer',
+              openLecture: 'Ouvrir la leçon',
+              status: {
+                running: 'En cours',
+                finished: 'Terminé',
+                error: 'Nécessite une attention',
+              },
+              labels: {
+                transcription: 'Transcription',
+                slideConversion: 'Conversion des diapositives',
+                audioMastering: 'Masterisation audio',
+                processing: 'Tâche de traitement',
+                untitled: 'Leçon sans titre',
+              },
+              retryUnavailable: 'Impossible de relancer cette tâche.',
             },
             create: {
               title: 'Créer un cours',
@@ -4063,14 +4392,21 @@
                 description:
                   'Prévisualisez le PDF téléversé et choisissez les pages à convertir en images de diapositives.',
                 loading: 'Chargement de l’aperçu…',
-                error: 'Impossible de charger l’aperçu du PDF. Toutes les pages seront traitées.',
+                error:
+                  'Impossible de charger l’aperçu interactif. Des pages générées par le serveur sont affichées ci-dessous ; ajustez la plage si nécessaire.',
                 startLabel: 'Page de début',
                 endLabel: 'Page de fin',
                 rangeHint: 'Utilisez les curseurs, les champs ou l’aperçu pour ajuster la sélection.',
                 zoomLabel: 'Zoom de l’aperçu',
                 zoomValue: 'Vue à {{value}} %',
+                fallbackMessage:
+                  'Si l’aperçu ne se charge pas, ouvrez le PDF ci-dessous dans un nouvel onglet et servez-vous de votre copie locale pour choisir les pages à traiter.',
+                fallbackLink: 'Ouvrir le PDF dans un nouvel onglet',
+                fallbackFrameTitle: 'Aperçu PDF de secours',
                 summary: 'Traitement des pages {{start}} à {{end}} sur {{total}}.',
                 summarySingle: 'Traitement de la page {{start}} sur {{total}}.',
+                summaryUnknown: 'Traitement des pages {{start}} à {{end}}.',
+                summarySingleUnknown: 'Traitement de la page {{start}}.',
                 allPages: 'Traitement de toutes les pages du document.',
                 pageLabel: 'Page {{page}}',
                 confirm: 'Traiter la sélection',
@@ -4362,6 +4698,8 @@
             activeSlideRangeDialog.updateTexts();
             activeSlideRangeDialog.updateRangeSummary();
           }
+
+          renderProgressQueue();
         }
 
         const WHISPER_MODEL_CHOICES = new Set([
@@ -4444,6 +4782,11 @@
             purging: false,
             initialized: false,
           },
+          progress: {
+            entries: [],
+            loading: false,
+            timer: null,
+          },
           debug: {
             enabled: false,
             timer: null,
@@ -4483,6 +4826,7 @@
           viewButtons: Array.from(document.querySelectorAll('.top-bar [data-view]')),
           views: {
             details: document.getElementById('view-details'),
+            progress: document.getElementById('view-progress'),
             create: document.getElementById('view-create'),
             storage: document.getElementById('view-storage'),
             settings: document.getElementById('view-settings'),
@@ -4524,6 +4868,13 @@
             purge: document.getElementById('storage-purge'),
             purgeSummary: document.getElementById('storage-purge-summary'),
           },
+          progress: {
+            container: document.getElementById('view-progress'),
+            list: document.getElementById('progress-list'),
+            empty: document.getElementById('progress-empty'),
+            refresh: document.getElementById('progress-refresh'),
+            description: document.getElementById('progress-description'),
+          },
           dialog: {
             root: document.getElementById('dialog-root'),
             backdrop: document.getElementById('dialog-backdrop'),
@@ -4544,6 +4895,10 @@
             preview: document.getElementById('slide-range-preview'),
             loading: document.getElementById('slide-range-loading'),
             error: document.getElementById('slide-range-error'),
+            fallback: document.getElementById('slide-range-fallback'),
+            fallbackFrame: document.getElementById('slide-range-fallback-frame'),
+            fallbackLink: document.getElementById('slide-range-fallback-link'),
+            fallbackMessage: document.getElementById('slide-range-fallback-message'),
             pages: document.getElementById('slide-range-pages'),
             startLabel: document.getElementById('slide-range-start-label'),
             endLabel: document.getElementById('slide-range-end-label'),
@@ -4891,6 +5246,314 @@
           renderStorage();
         }
 
+        function resolveProgressOperationLabel(entry) {
+          if (!entry) {
+            return '';
+          }
+          if (entry.type === 'transcription') {
+            return t('progress.labels.transcription');
+          }
+          const operation = entry?.context?.operation || entry?.context?.type || '';
+          if (operation === 'slide_conversion') {
+            return t('progress.labels.slideConversion');
+          }
+          if (operation === 'audio_mastering') {
+            return t('progress.labels.audioMastering');
+          }
+          return t('progress.labels.processing');
+        }
+
+        function renderProgressQueue() {
+          if (!dom.progress || !dom.progress.list) {
+            return;
+          }
+          const entries = Array.isArray(state.progress.entries)
+            ? state.progress.entries
+            : [];
+          dom.progress.list.innerHTML = '';
+          const isLoading = Boolean(state.progress.loading);
+          if (dom.progress.container) {
+            dom.progress.container.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+          }
+          if (!entries.length) {
+            if (dom.progress.empty) {
+              dom.progress.empty.classList.remove('hidden');
+            }
+            return;
+          }
+          if (dom.progress.empty) {
+            dom.progress.empty.classList.add('hidden');
+          }
+          entries.forEach((entry) => {
+            const lectureId = Number(entry?.lecture_id);
+            const listItem = document.createElement('li');
+            listItem.className = 'progress-entry';
+            listItem.dataset.status = entry?.error
+              ? 'error'
+              : entry?.finished
+              ? 'finished'
+              : 'running';
+            listItem.dataset.progressType = entry?.type || '';
+            listItem.dataset.lectureId = Number.isFinite(lectureId)
+              ? String(lectureId)
+              : '';
+
+            const title = document.createElement('div');
+            title.className = 'progress-entry-title';
+            const heading = document.createElement('h3');
+            const lectureName = entry?.lecture?.name || t('progress.labels.untitled');
+            heading.textContent = lectureName;
+            const statusKey = entry?.error
+              ? 'error'
+              : entry?.finished
+              ? 'finished'
+              : 'running';
+            const statusLabel = document.createElement('span');
+            statusLabel.className = 'progress-entry-status';
+            statusLabel.textContent = t(`progress.status.${statusKey}`);
+            title.appendChild(heading);
+            title.appendChild(statusLabel);
+            listItem.appendChild(title);
+
+            const meta = document.createElement('div');
+            meta.className = 'progress-entry-meta';
+            const typeLabel = document.createElement('span');
+            typeLabel.textContent = resolveProgressOperationLabel(entry);
+            meta.appendChild(typeLabel);
+            const locationParts = [];
+            if (entry?.lecture?.class) {
+              locationParts.push(entry.lecture.class);
+            }
+            if (entry?.lecture?.module) {
+              locationParts.push(entry.lecture.module);
+            }
+            if (locationParts.length > 0) {
+              const location = document.createElement('span');
+              location.textContent = locationParts.join(' • ');
+              meta.appendChild(location);
+            }
+            listItem.appendChild(meta);
+
+            const messageText = entry?.message || '';
+            if (messageText) {
+              const message = document.createElement('p');
+              message.className = 'progress-entry-message';
+              message.textContent = messageText;
+              listItem.appendChild(message);
+            }
+
+            const ratio = Number.isFinite(entry?.ratio) ? Number(entry.ratio) : null;
+            if (ratio !== null) {
+              const percent = Math.max(0, Math.min(1, ratio)) * 100;
+              const bar = document.createElement('div');
+              bar.className = 'status-progress';
+              const track = document.createElement('div');
+              track.className = 'status-progress-track';
+              const fill = document.createElement('div');
+              fill.className = 'status-progress-fill';
+              fill.style.width = `${percent}%`;
+              track.appendChild(fill);
+              const percentLabel = document.createElement('span');
+              percentLabel.className = 'status-progress-text';
+              percentLabel.textContent = `${Math.round(percent)}%`;
+              bar.appendChild(track);
+              bar.appendChild(percentLabel);
+              listItem.appendChild(bar);
+            }
+
+            const actions = document.createElement('div');
+            actions.className = 'progress-entry-actions';
+            if (entry?.retryable) {
+              const retryButton = document.createElement('button');
+              retryButton.type = 'button';
+              retryButton.dataset.progressAction = 'retry';
+              retryButton.dataset.progressType = entry?.type || '';
+              retryButton.dataset.lectureId = listItem.dataset.lectureId || '';
+              retryButton.textContent = t('progress.retry');
+              actions.appendChild(retryButton);
+            }
+            if (entry?.lecture && Number.isFinite(lectureId)) {
+              const openButton = document.createElement('button');
+              openButton.type = 'button';
+              openButton.className = 'text';
+              openButton.dataset.progressAction = 'open';
+              openButton.dataset.progressType = entry?.type || '';
+              openButton.dataset.lectureId = listItem.dataset.lectureId || '';
+              openButton.textContent = t('progress.openLecture');
+              actions.appendChild(openButton);
+            }
+            const dismissButton = document.createElement('button');
+            dismissButton.type = 'button';
+            dismissButton.className = 'text';
+            dismissButton.dataset.progressAction = 'dismiss';
+            dismissButton.dataset.progressType = entry?.type || '';
+            dismissButton.dataset.lectureId = listItem.dataset.lectureId || '';
+            dismissButton.textContent = t('progress.dismiss');
+            actions.appendChild(dismissButton);
+            listItem.appendChild(actions);
+
+            dom.progress.list.appendChild(listItem);
+          });
+        }
+
+        async function refreshProgressQueue({ force = false, silent = false } = {}) {
+          if (state.progress.loading && !force) {
+            return;
+          }
+          if (!dom.progress) {
+            return;
+          }
+          state.progress.loading = true;
+          if (!silent) {
+            renderProgressQueue();
+          }
+          try {
+            const payload = await request('/api/progress');
+            state.progress.entries = Array.isArray(payload?.entries)
+              ? payload.entries
+              : [];
+          } catch (error) {
+            const detail = error instanceof Error ? error.message : String(error);
+            if (!silent && detail) {
+              showStatus(detail, 'error');
+            }
+          } finally {
+            state.progress.loading = false;
+            renderProgressQueue();
+          }
+        }
+
+        function stopProgressPolling() {
+          if (state.progress.timer !== null) {
+            window.clearInterval(state.progress.timer);
+          }
+          state.progress.timer = null;
+        }
+
+        function startProgressPolling() {
+          stopProgressPolling();
+          if (!dom.progress || !dom.progress.container) {
+            return;
+          }
+          let polling = false;
+          const poll = async () => {
+            if (polling) {
+              return;
+            }
+            polling = true;
+            try {
+              await refreshProgressQueue({ silent: true });
+            } finally {
+              polling = false;
+            }
+          };
+          void poll();
+          state.progress.timer = window.setInterval(() => {
+            void poll();
+          }, 2500);
+        }
+
+        async function dismissProgressEntry(entry) {
+          if (!entry) {
+            return;
+          }
+          const lectureId = Number(entry.lecture_id);
+          if (!Number.isFinite(lectureId)) {
+            return;
+          }
+          const type = entry.type ? `?type=${encodeURIComponent(entry.type)}` : '';
+          try {
+            await request(`/api/progress/${lectureId}${type}`, { method: 'DELETE' });
+            state.progress.entries = state.progress.entries.filter(
+              (item) =>
+                !(Number(item?.lecture_id) === lectureId && item?.type === entry.type),
+            );
+            renderProgressQueue();
+          } catch (error) {
+            const detail = error instanceof Error ? error.message : String(error);
+            showStatus(detail || t('status.processing'), 'error');
+          }
+        }
+
+        async function retryProgressEntry(entry) {
+          if (!entry) {
+            return;
+          }
+          const lectureId = Number(entry.lecture_id);
+          if (!Number.isFinite(lectureId)) {
+            return;
+          }
+          try {
+            if (entry.type === 'transcription') {
+              const model = entry?.context?.model || state.settings?.whisper_model || 'base';
+              await request(`/api/lectures/${lectureId}/transcribe`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ model }),
+              });
+              startTranscriptionProgress(lectureId);
+            } else if (entry.type === 'processing') {
+              const operation = entry?.context?.operation || entry?.context?.type;
+              if (operation === 'slide_conversion') {
+                const formData = new FormData();
+                if (entry?.context?.preview_token) {
+                  formData.append('preview_token', entry.context.preview_token);
+                }
+                const pageRange = entry?.context?.page_range;
+                if (pageRange?.start) {
+                  formData.append('page_start', String(pageRange.start));
+                }
+                if (pageRange?.end) {
+                  formData.append('page_end', String(pageRange.end));
+                }
+                await request(`/api/lectures/${lectureId}/process-slides`, {
+                  method: 'POST',
+                  body: formData,
+                });
+                startProcessingProgress(lectureId);
+              } else {
+                showStatus(t('progress.retryUnavailable'), 'info');
+                return;
+              }
+            }
+            await refreshProgressQueue({ force: true, silent: true });
+          } catch (error) {
+            const detail = error instanceof Error ? error.message : String(error);
+            showStatus(detail || t('status.processing'), 'error');
+          }
+        }
+
+        async function handleProgressAction(event) {
+          const target = event.target instanceof HTMLElement ? event.target : null;
+          if (!target) {
+            return;
+          }
+          const button = target.closest('button[data-progress-action]');
+          if (!button) {
+            return;
+          }
+          const action = button.dataset.progressAction || '';
+          const lectureId = Number(button.dataset.lectureId);
+          const type = button.dataset.progressType || '';
+          const entry = state.progress.entries.find(
+            (item) =>
+              Number(item?.lecture_id) === lectureId &&
+              (type ? item?.type === type : true),
+          );
+          if (action === 'retry') {
+            await retryProgressEntry(entry);
+            return;
+          }
+          if (action === 'dismiss') {
+            await dismissProgressEntry(entry);
+            return;
+          }
+          if (action === 'open' && Number.isFinite(lectureId)) {
+            await selectLecture(lectureId);
+            setActiveView('details');
+          }
+        }
+
         async function handlePurgeProcessedAudio() {
           if (!dom.storage || !dom.storage.purge) {
             return;
@@ -4928,6 +5591,8 @@
 
         applyTranslations(DEFAULT_LANGUAGE);
         renderStorage();
+        renderProgressQueue();
+        void refreshProgressQueue({ silent: true });
 
         const STATUS_DEFAULT_TIMEOUT = 5000;
 
@@ -6320,9 +6985,12 @@
             let endPage = 1;
             let anchorPage = 1;
             let previewFailed = false;
+            let manualSelectionMade = false;
             const pageEntries = [];
             const BASE_PREVIEW_COLUMN_WIDTH = 220;
             let previewZoom = 100;
+            let fallbackObjectUrl = null;
+            let fallbackPreviewUrl = null;
             const previewSource =
               source instanceof Blob
                 ? { file: source }
@@ -6336,9 +7004,6 @@
                 : null;
 
             function clampPage(value) {
-              if (!pageCount || pageCount < 1) {
-                return 1;
-              }
               const numeric =
                 typeof value === 'number'
                   ? value
@@ -6346,7 +7011,284 @@
               if (!Number.isFinite(numeric)) {
                 return 1;
               }
-              return Math.min(pageCount, Math.max(1, Math.round(numeric)));
+              const rounded = Math.max(1, Math.round(numeric));
+              if (!pageCount || pageCount < 1) {
+                return rounded;
+              }
+              return Math.min(pageCount, rounded);
+            }
+
+            function configureInputBounds(totalPages) {
+              const numeric =
+                typeof totalPages === 'number' && Number.isFinite(totalPages) && totalPages > 0
+                  ? Math.round(totalPages)
+                  : 0;
+              if (dialog.startInput) {
+                dialog.startInput.min = '1';
+                dialog.startInput.max = numeric > 0 ? String(numeric) : '';
+              }
+              if (dialog.endInput) {
+                dialog.endInput.min = '1';
+                dialog.endInput.max = numeric > 0 ? String(numeric) : '';
+              }
+              if (dialog.startSlider) {
+                dialog.startSlider.min = '1';
+                dialog.startSlider.max = numeric > 0 ? String(numeric) : '1';
+              }
+              if (dialog.endSlider) {
+                dialog.endSlider.min = '1';
+                dialog.endSlider.max = numeric > 0 ? String(numeric) : '1';
+              }
+            }
+
+            function resolvePreviewIdentifiers() {
+              if (!previewSource || typeof previewSource !== 'object') {
+                return { lectureId: null, previewId: null };
+              }
+
+              let previewId =
+                typeof previewSource.previewId === 'string' && previewSource.previewId
+                  ? previewSource.previewId
+                  : null;
+              let lectureId = null;
+              if (
+                typeof previewSource.lectureId === 'number' ||
+                (typeof previewSource.lectureId === 'string' && previewSource.lectureId)
+              ) {
+                lectureId = String(previewSource.lectureId).trim() || null;
+              }
+
+              if ((!previewId || !lectureId) && typeof previewSource.url === 'string') {
+                const match = previewSource.url.match(
+                  /\/api\/lectures\/(\d+)\/slides\/previews\/([^/?#]+)/,
+                );
+                if (match) {
+                  if (!lectureId) {
+                    lectureId = match[1];
+                  }
+                  if (!previewId) {
+                    try {
+                      previewId = decodeURIComponent(match[2]);
+                    } catch (decodeError) {
+                      previewId = match[2];
+                    }
+                  }
+                }
+              }
+
+              return { lectureId, previewId };
+            }
+
+            function updateFallbackVisibility() {
+              const hasUrl = Boolean(fallbackPreviewUrl);
+              if (dialog.fallbackFrame) {
+                dialog.fallbackFrame.src = hasUrl ? fallbackPreviewUrl : 'about:blank';
+                dialog.fallbackFrame.classList.toggle('hidden', !hasUrl);
+              }
+              if (dialog.fallbackLink) {
+                if (hasUrl) {
+                  dialog.fallbackLink.href = fallbackPreviewUrl;
+                  dialog.fallbackLink.classList.remove('hidden');
+                } else {
+                  dialog.fallbackLink.href = '#';
+                  dialog.fallbackLink.classList.add('hidden');
+                }
+              }
+              if (dialog.fallback) {
+                dialog.fallback.classList.toggle('hidden', !previewFailed);
+              }
+            }
+
+            function assignFallbackPreview(value, { isObjectUrl = false } = {}) {
+              const nextValue = value || null;
+              if (
+                fallbackObjectUrl &&
+                fallbackObjectUrl !== nextValue &&
+                typeof URL !== 'undefined' &&
+                typeof URL.revokeObjectURL === 'function'
+              ) {
+                try {
+                  URL.revokeObjectURL(fallbackObjectUrl);
+                } catch (error) {
+                  // Ignore revocation failures.
+                }
+              }
+              fallbackObjectUrl = isObjectUrl && nextValue ? nextValue : null;
+              fallbackPreviewUrl = nextValue;
+              updateFallbackVisibility();
+            }
+
+            function clearFallbackPreview() {
+              if (
+                fallbackObjectUrl &&
+                typeof URL !== 'undefined' &&
+                typeof URL.revokeObjectURL === 'function'
+              ) {
+                try {
+                  URL.revokeObjectURL(fallbackObjectUrl);
+                } catch (error) {
+                  // Ignore revocation failures.
+                }
+              }
+              fallbackObjectUrl = null;
+              fallbackPreviewUrl = null;
+              updateFallbackVisibility();
+            }
+
+            function resolveFallbackPreview() {
+              const canCreateObjectUrl =
+                typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function';
+              if (canCreateObjectUrl && previewSource?.file instanceof Blob) {
+                const url = URL.createObjectURL(previewSource.file);
+                return { url, isObjectUrl: true };
+              }
+              if (canCreateObjectUrl && source instanceof Blob) {
+                const url = URL.createObjectURL(source);
+                return { url, isObjectUrl: true };
+              }
+              if (previewSource && typeof previewSource.url === 'string' && previewSource.url) {
+                return { url: resolveAppUrl(previewSource.url), isObjectUrl: false };
+              }
+              const { lectureId, previewId } = resolvePreviewIdentifiers();
+              if (lectureId && previewId) {
+                const directUrl = `/api/lectures/${lectureId}/slides/previews/${encodeURIComponent(
+                  previewId,
+                )}`;
+                return { url: resolveAppUrl(directUrl), isObjectUrl: false };
+              }
+              return { url: null, isObjectUrl: false };
+            }
+
+            async function fetchPreviewPageCount() {
+              const { lectureId, previewId } = resolvePreviewIdentifiers();
+              if (!lectureId || !previewId) {
+                return null;
+              }
+
+              const credentials =
+                previewSource && previewSource.withCredentials === false ? 'omit' : 'include';
+
+              try {
+                const payload = await request(
+                  `/api/lectures/${lectureId}/slides/previews/${encodeURIComponent(previewId)}/metadata`,
+                  {
+                    method: 'GET',
+                    headers: { Accept: 'application/json' },
+                    credentials,
+                    cache: 'no-store',
+                  },
+                );
+                const value = payload?.page_count ?? payload?.pageCount;
+                const numeric = Number(value);
+                if (Number.isFinite(numeric) && numeric > 0) {
+                  return Math.round(numeric);
+                }
+              } catch (error) {
+                console.warn('Failed to load slide metadata', error);
+              }
+
+              return null;
+            }
+
+            function resolvePreviewImageUrl(pageNumber) {
+              const { lectureId, previewId } = resolvePreviewIdentifiers();
+              if (!lectureId || !previewId || !pageNumber) {
+                return null;
+              }
+              const encoded = encodeURIComponent(previewId);
+              const url = `/api/lectures/${lectureId}/slides/previews/${encoded}/pages/${pageNumber}`;
+              return resolveAppUrl(url);
+            }
+
+            async function renderServerPreviewPages(totalPages) {
+              if (!dialog.pages) {
+                return;
+              }
+              dialog.pages.innerHTML = '';
+              pageEntries.length = 0;
+              const count = Number.isFinite(totalPages) ? Number(totalPages) : 0;
+              if (count < 1) {
+                return;
+              }
+              for (let pageNumber = 1; pageNumber <= count; pageNumber += 1) {
+                if (cancelled) {
+                  return;
+                }
+                const wrapper = document.createElement('div');
+                wrapper.className = 'slide-preview-page';
+                wrapper.dataset.pageNumber = String(pageNumber);
+                wrapper.tabIndex = 0;
+                const label = document.createElement('div');
+                label.className = 'slide-preview-page-label';
+                label.textContent = t('dialogs.slideRange.pageLabel', { page: pageNumber });
+                const image = document.createElement('img');
+                image.loading = 'lazy';
+                image.decoding = 'async';
+                image.alt = t('dialogs.slideRange.pageLabel', { page: pageNumber });
+                const imageUrl = resolvePreviewImageUrl(pageNumber);
+                if (imageUrl) {
+                  image.src = imageUrl;
+                }
+                wrapper.appendChild(label);
+                wrapper.appendChild(image);
+                dialog.pages.appendChild(wrapper);
+                pageEntries.push({ element: wrapper, label, pageNumber });
+                wrapper.addEventListener('click', (event) => {
+                  handlePageSelection(pageNumber, event.shiftKey);
+                });
+                wrapper.addEventListener('keydown', (event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    handlePageSelection(pageNumber, event.shiftKey);
+                  }
+                });
+              }
+            }
+
+            async function enableServerRenderedPreview({ knownPageCount = null } = {}) {
+              previewFailed = true;
+              updateTexts();
+              if (cancelled) {
+                return;
+              }
+              let resolvedCount = Number.isFinite(knownPageCount)
+                ? Number(knownPageCount)
+                : null;
+              if (!resolvedCount || resolvedCount <= 0) {
+                try {
+                  resolvedCount = await fetchPreviewPageCount();
+                } catch (metadataError) {
+                  resolvedCount = null;
+                }
+              }
+              pageCount = Number.isFinite(resolvedCount) && resolvedCount > 0 ? resolvedCount : 0;
+              configureInputBounds(pageCount);
+              startPage = 1;
+              endPage = pageCount > 0 ? pageCount : 1;
+              anchorPage = 1;
+              manualSelectionMade = false;
+              const fallbackPreview = resolveFallbackPreview();
+              assignFallbackPreview(fallbackPreview.url, {
+                isObjectUrl: fallbackPreview.isObjectUrl,
+              });
+              if (dialog.loading) {
+                dialog.loading.classList.add('hidden');
+              }
+              if (dialog.error) {
+                dialog.error.textContent = t('dialogs.slideRange.error');
+                dialog.error.classList.remove('hidden');
+              }
+              await renderServerPreviewPages(pageCount);
+              enableControls();
+              updateRangeSummary();
+              window.requestAnimationFrame(() => {
+                if (dialog.startInput && !dialog.startInput.disabled) {
+                  dialog.startInput.focus({ preventScroll: true });
+                  dialog.startInput.select();
+                } else if (dialog.confirm) {
+                  dialog.confirm.focus({ preventScroll: true });
+                }
+              });
             }
 
             function clampZoom(value) {
@@ -6404,6 +7346,18 @@
               if (dialog.zoomLabel) {
                 dialog.zoomLabel.textContent = t('dialogs.slideRange.zoomLabel');
               }
+              if (dialog.fallbackMessage) {
+                dialog.fallbackMessage.textContent = t('dialogs.slideRange.fallbackMessage');
+              }
+              if (dialog.fallbackLink) {
+                dialog.fallbackLink.textContent = t('dialogs.slideRange.fallbackLink');
+              }
+              if (dialog.fallbackFrame) {
+                dialog.fallbackFrame.setAttribute(
+                  'title',
+                  t('dialogs.slideRange.fallbackFrameTitle'),
+                );
+              }
               if (dialog.hint) {
                 dialog.hint.textContent = t('dialogs.slideRange.rangeHint');
               }
@@ -6430,24 +7384,6 @@
             }
 
             function updateRangeSummary() {
-              if (dialog.summary) {
-                if (!pageCount || pageCount < 1) {
-                  dialog.summary.textContent = t('dialogs.slideRange.allPages');
-                }
-              }
-              if (dialog.sliderFill) {
-                if (!pageCount || pageCount < 2) {
-                  dialog.sliderFill.style.left = '0%';
-                  dialog.sliderFill.style.width = '100%';
-                }
-              }
-              if (!pageCount || pageCount < 1) {
-                pageEntries.forEach(({ element }) => {
-                  element.classList.add('selected');
-                });
-                return;
-              }
-
               const lower = clampPage(startPage);
               const upper = clampPage(endPage);
               startPage = Math.min(lower, upper);
@@ -6465,6 +7401,31 @@
               }
               if (dialog.endSlider) {
                 dialog.endSlider.value = String(endPage);
+              }
+
+              if (!pageCount || pageCount < 1) {
+                if (dialog.sliderFill) {
+                  dialog.sliderFill.style.left = '0%';
+                  dialog.sliderFill.style.width = '100%';
+                }
+                if (dialog.summary) {
+                  if (!manualSelectionMade) {
+                    dialog.summary.textContent = t('dialogs.slideRange.allPages');
+                  } else {
+                    const key =
+                      startPage === endPage
+                        ? 'dialogs.slideRange.summarySingleUnknown'
+                        : 'dialogs.slideRange.summaryUnknown';
+                    dialog.summary.textContent = t(key, {
+                      start: startPage,
+                      end: endPage,
+                    });
+                  }
+                }
+                pageEntries.forEach(({ element }) => {
+                  element.classList.add('selected');
+                });
+                return;
               }
 
               if (dialog.sliderFill && pageCount > 1) {
@@ -6518,23 +7479,25 @@
             }
 
             function enableControls() {
+              const hasPageCount = Boolean(pageCount && pageCount > 0);
+              const manualOnly = previewFailed && !hasPageCount;
               if (dialog.startInput) {
-                dialog.startInput.disabled = pageCount <= 0;
+                dialog.startInput.disabled = !manualOnly && !hasPageCount;
               }
               if (dialog.endInput) {
-                dialog.endInput.disabled = pageCount <= 0;
+                dialog.endInput.disabled = !manualOnly && !hasPageCount;
               }
               if (dialog.startSlider) {
-                dialog.startSlider.disabled = pageCount <= 1;
+                dialog.startSlider.disabled = !hasPageCount || pageCount <= 1;
               }
               if (dialog.endSlider) {
-                dialog.endSlider.disabled = pageCount <= 1;
+                dialog.endSlider.disabled = !hasPageCount || pageCount <= 1;
               }
               if (dialog.confirm) {
                 dialog.confirm.disabled = false;
               }
               if (dialog.zoomSlider) {
-                dialog.zoomSlider.disabled = !pageCount || previewFailed;
+                dialog.zoomSlider.disabled = !hasPageCount || previewFailed;
               }
             }
 
@@ -6550,6 +7513,8 @@
             function cleanup() {
               cancelled = true;
               activeSlideRangeDialog = null;
+              previewFailed = false;
+              clearFallbackPreview();
               if (dialog.confirm) {
                 dialog.confirm.removeEventListener('click', handleConfirm);
               }
@@ -6631,16 +7596,26 @@
               if (dialog.confirm && dialog.confirm.disabled) {
                 return;
               }
-              const payload =
-                pageCount > 0 && !previewFailed
-                  ? {
-                      confirmed: true,
-                      pageStart: startPage,
-                      pageEnd: endPage,
-                      pageTotal: pageCount,
-                    }
-                  : { confirmed: true, pageStart: null, pageEnd: null, pageTotal: pageCount || null };
-              resolveAndClose(payload);
+              if (previewFailed && (!pageCount || pageCount < 1) && !manualSelectionMade) {
+                resolveAndClose({
+                  confirmed: true,
+                  pageStart: null,
+                  pageEnd: null,
+                  pageTotal: null,
+                });
+                return;
+              }
+              startPage = clampPage(dialog.startInput?.value ?? startPage);
+              anchorPage = startPage;
+              endPage = clampPage(dialog.endInput?.value ?? endPage);
+              manualSelectionMade = manualSelectionMade || previewFailed;
+              updateRangeSummary();
+              resolveAndClose({
+                confirmed: true,
+                pageStart: startPage,
+                pageEnd: endPage,
+                pageTotal: pageCount > 0 ? pageCount : null,
+              });
             }
 
             function handleCancel(event) {
@@ -6689,7 +7664,7 @@
             }
 
             function handleStartInput(event) {
-              if (!pageCount) {
+              if (!pageCount && !previewFailed) {
                 return;
               }
               const newValue = clampPage(event.target.value);
@@ -6698,20 +7673,22 @@
               }
               startPage = newValue;
               anchorPage = startPage;
+              manualSelectionMade = true;
               updateRangeSummary();
             }
 
             function handleStartBlur() {
-              if (!pageCount) {
+              if (!pageCount && !previewFailed) {
                 return;
               }
               startPage = clampPage(dialog.startInput?.value);
               anchorPage = startPage;
+              manualSelectionMade = manualSelectionMade || previewFailed;
               updateRangeSummary();
             }
 
             function handleEndInput(event) {
-              if (!pageCount) {
+              if (!pageCount && !previewFailed) {
                 return;
               }
               const newValue = clampPage(event.target.value);
@@ -6719,14 +7696,16 @@
                 return;
               }
               endPage = newValue;
+              manualSelectionMade = true;
               updateRangeSummary();
             }
 
             function handleEndBlur() {
-              if (!pageCount) {
+              if (!pageCount && !previewFailed) {
                 return;
               }
               endPage = clampPage(dialog.endInput?.value);
+              manualSelectionMade = manualSelectionMade || previewFailed;
               updateRangeSummary();
             }
 
@@ -6736,6 +7715,7 @@
               }
               startPage = clampPage(event.target.value);
               anchorPage = startPage;
+              manualSelectionMade = true;
               updateRangeSummary();
             }
 
@@ -6744,6 +7724,7 @@
                 return;
               }
               endPage = clampPage(event.target.value);
+              manualSelectionMade = true;
               updateRangeSummary();
             }
 
@@ -6762,6 +7743,7 @@
                 endPage = clamped;
                 anchorPage = clamped;
               }
+              manualSelectionMade = true;
               updateRangeSummary();
             }
 
@@ -6897,12 +7879,14 @@
             if (dialog.endInput) {
               dialog.endInput.value = '1';
             }
+            configureInputBounds(0);
             if (dialog.startSlider) {
               dialog.startSlider.value = '1';
             }
             if (dialog.endSlider) {
               dialog.endSlider.value = '1';
             }
+            manualSelectionMade = false;
 
             disableControls();
             updateTexts();
@@ -6962,19 +7946,7 @@
             (async () => {
               const pdfjsLib = await loadPdfjsLibrary();
               if (!pdfjsLib) {
-                previewFailed = true;
-                updateTexts();
-                if (dialog.loading) {
-                  dialog.loading.classList.add('hidden');
-                }
-                if (dialog.error) {
-                  dialog.error.classList.remove('hidden');
-                }
-                enableConfirmOnly();
-                updateRangeSummary();
-                window.requestAnimationFrame(() => {
-                  dialog.confirm?.focus({ preventScroll: true });
-                });
+                await enableServerRenderedPreview();
                 return;
               }
 
@@ -7084,44 +8056,22 @@
                 }
                 pageCount = pdfDocument.numPages || 0;
                 if (pageCount < 1) {
-                  previewFailed = true;
-                  updateTexts();
-                  if (dialog.loading) {
-                    dialog.loading.classList.add('hidden');
-                  }
-                  if (dialog.error) {
-                    dialog.error.classList.remove('hidden');
-                  }
-                  enableConfirmOnly();
-                  updateRangeSummary();
-                  window.requestAnimationFrame(() => {
-                    dialog.confirm?.focus({ preventScroll: true });
-                  });
+                  await enableServerRenderedPreview({ knownPageCount: pageCount });
                   return;
                 }
 
-                if (dialog.startInput) {
-                  dialog.startInput.min = '1';
-                  dialog.startInput.max = String(pageCount);
-                }
-                if (dialog.endInput) {
-                  dialog.endInput.min = '1';
-                  dialog.endInput.max = String(pageCount);
-                }
+                configureInputBounds(pageCount);
                 if (dialog.startSlider) {
-                  dialog.startSlider.min = '1';
-                  dialog.startSlider.max = String(pageCount);
                   dialog.startSlider.value = '1';
                 }
                 if (dialog.endSlider) {
-                  dialog.endSlider.min = '1';
-                  dialog.endSlider.max = String(pageCount);
                   dialog.endSlider.value = String(pageCount);
                 }
 
                 startPage = 1;
                 endPage = pageCount;
                 anchorPage = 1;
+                manualSelectionMade = false;
 
                 await renderPages(pdfDocument);
                 if (cancelled) {
@@ -7132,6 +8082,7 @@
                   dialog.loading.classList.add('hidden');
                 }
                 previewFailed = false;
+                clearFallbackPreview();
                 updateTexts();
                 enableControls();
                 updateRangeSummary();
@@ -7149,19 +8100,8 @@
                 if (cancelled) {
                   return;
                 }
-                previewFailed = true;
-                updateTexts();
-                if (dialog.loading) {
-                  dialog.loading.classList.add('hidden');
-                }
-                if (dialog.error) {
-                  dialog.error.classList.remove('hidden');
-                }
-                enableConfirmOnly();
-                updateRangeSummary();
-                window.requestAnimationFrame(() => {
-                  dialog.confirm?.focus({ preventScroll: true });
-                });
+                console.warn('Slide preview failed, enabling manual page selection', error);
+                await enableServerRenderedPreview();
               } finally {
                 if (pdfDocument && typeof pdfDocument.cleanup === 'function') {
                   try {
@@ -7463,6 +8403,7 @@
               stopTranscriptionProgress({ preserveMessage: true });
             }
           }
+          await refreshProgressQueue({ silent: true });
         }
 
         function startTranscriptionProgress(lectureId) {
@@ -7578,6 +8519,12 @@
             } else {
               renderStorage();
             }
+            stopProgressPolling();
+          } else if (view === 'progress') {
+            void refreshProgressQueue({ force: true });
+            startProgressPolling();
+          } else {
+            stopProgressPolling();
           }
         }
 
@@ -8799,8 +9746,14 @@
                       preview = null;
                     }
                     const previewSource = preview
-                      ? { url: preview.url, file, withCredentials: true }
-                      : file;
+                      ? {
+                          url: preview.url,
+                          file,
+                          withCredentials: true,
+                          previewId: preview.id,
+                          lectureId,
+                        }
+                      : { file, lectureId };
                     const selection = await showSlideRangeDialog(previewSource);
                     if (!selection || !selection.confirmed) {
                       if (preview) {
@@ -8980,6 +9933,18 @@
         if (dom.storage && dom.storage.purge) {
           dom.storage.purge.addEventListener('click', () => {
             handlePurgeProcessedAudio();
+          });
+        }
+
+        if (dom.progress && dom.progress.refresh) {
+          dom.progress.refresh.addEventListener('click', () => {
+            void refreshProgressQueue({ force: true });
+          });
+        }
+
+        if (dom.progress && dom.progress.list) {
+          dom.progress.list.addEventListener('click', (event) => {
+            void handleProgressAction(event);
           });
         }
 

@@ -20,6 +20,19 @@ from app.web import server as web_server
 from app.services.storage import LectureRepository
 from app.services.ingestion import LecturePaths, TranscriptResult
 
+fitz = pytest.importorskip("fitz")
+
+
+def _build_sample_pdf(page_count: int = 2) -> bytes:
+    document = fitz.open()
+    for index in range(page_count):
+        page = document.new_page()
+        page.insert_text((72, 72 + (index * 18)), f"Sample page {index + 1}")
+    buffer = io.BytesIO()
+    document.save(buffer)
+    document.close()
+    return buffer.getvalue()
+
 
 def _create_sample_data(config) -> tuple[LectureRepository, int, int]:
     repository = LectureRepository(config)
@@ -43,9 +56,11 @@ def _create_sample_data(config) -> tuple[LectureRepository, int, int]:
     transcript_file = base_dir / "transcript.txt"
     notes_file = base_dir / "notes.md"
     audio_file = base_dir / "audio.mp3"
+    slide_file = base_dir / "slides.pdf"
     audio_file.write_bytes(b"audio")
     transcript_file.write_text("Line one\nLine two\nLine three\n", encoding="utf-8")
     notes_file.write_text("# Notes\nImportant points.\n", encoding="utf-8")
+    slide_file.write_bytes(_build_sample_pdf(3))
 
     return repository, lecture_id, module_id
 
@@ -728,7 +743,7 @@ def test_slide_preview_lifecycle(temp_config):
 
     response = client.post(
         f"/api/lectures/{lecture_id}/slides/previews",
-        files={"file": ("deck.pdf", b"%PDF-1.4\n", "application/pdf")},
+        files={"file": ("deck.pdf", _build_sample_pdf(2), "application/pdf")},
     )
     assert response.status_code == 201
     payload = response.json()
@@ -753,6 +768,101 @@ def test_slide_preview_lifecycle(temp_config):
     delete_response = client.delete(preview_url)
     assert delete_response.status_code == 204
     assert not preview_dir.exists() or not any(preview_dir.iterdir())
+
+
+def test_slide_preview_metadata(temp_config, monkeypatch):
+    repository, lecture_id, _module_id = _create_sample_data(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    response = client.post(
+        f"/api/lectures/{lecture_id}/slides/previews",
+        files={"file": ("deck.pdf", _build_sample_pdf(4), "application/pdf")},
+    )
+    assert response.status_code == 201
+    payload = response.json()
+    preview_id = payload["preview_id"]
+
+    called_with = {}
+
+    def fake_get_pdf_page_count(path):
+        called_with["path"] = path
+        return 7
+
+    monkeypatch.setattr(web_server, "get_pdf_page_count", fake_get_pdf_page_count)
+
+    metadata_response = client.get(
+        f"/api/lectures/{lecture_id}/slides/previews/{preview_id}/metadata"
+    )
+    assert metadata_response.status_code == 200
+    assert metadata_response.json() == {"page_count": 7}
+    assert "path" in called_with
+
+
+def test_slide_preview_metadata_dependency_error(temp_config, monkeypatch):
+    repository, lecture_id, _module_id = _create_sample_data(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    response = client.post(
+        f"/api/lectures/{lecture_id}/slides/previews",
+        files={"file": ("deck.pdf", _build_sample_pdf(1), "application/pdf")},
+    )
+    assert response.status_code == 201
+    preview_id = response.json()["preview_id"]
+
+    def fake_get_pdf_page_count(_path):
+        raise SlideConversionDependencyError("PyMuPDF (fitz) is not installed")
+
+    monkeypatch.setattr(web_server, "get_pdf_page_count", fake_get_pdf_page_count)
+
+    metadata_response = client.get(
+        f"/api/lectures/{lecture_id}/slides/previews/{preview_id}/metadata"
+    )
+    assert metadata_response.status_code == 503
+    assert "PyMuPDF" in metadata_response.json()["detail"]
+
+
+def test_slide_preview_page_image(temp_config):
+    repository, lecture_id, _module_id = _create_sample_data(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    response = client.post(
+        f"/api/lectures/{lecture_id}/slides/previews",
+        files={"file": ("deck.pdf", _build_sample_pdf(3), "application/pdf")},
+    )
+    assert response.status_code == 201
+    preview_id = response.json()["preview_id"]
+
+    image_response = client.get(
+        f"/api/lectures/{lecture_id}/slides/previews/{preview_id}/pages/2"
+    )
+    assert image_response.status_code == 200
+    assert image_response.headers["content-type"].startswith("image/png")
+    assert len(image_response.content) > 1000
+
+
+def test_progress_queue_endpoint(temp_config):
+    repository, lecture_id, _module_id = _create_sample_data(temp_config)
+    app = create_app(repository, config=temp_config)
+    tracker = app.state.progress_tracker
+    tracker.start(lecture_id, context={"operation": "transcription", "model": "base"})
+
+    client = TestClient(app)
+
+    response = client.get("/api/progress")
+    assert response.status_code == 200
+    entries = response.json()["entries"]
+    assert entries
+    assert entries[0]["lecture"]["id"] == lecture_id
+
+    delete_response = client.delete(f"/api/progress/{lecture_id}?type=transcription")
+    assert delete_response.status_code == 204
+
+    follow_up = client.get("/api/progress")
+    assert follow_up.status_code == 200
+    assert follow_up.json()["entries"] == []
 
 
 def test_process_slides_with_preview_token(monkeypatch, temp_config):
