@@ -62,6 +62,7 @@ except Exception:  # noqa: BLE001 - optional dependency may be absent
     GPUWhisperUnsupportedError = RuntimeError  # type: ignore[assignment]
     check_gpu_whisper_availability = None  # type: ignore[assignment]
 
+_STATIC_ROOT = Path(__file__).parent / "static"
 _TEMPLATE_PATH = Path(__file__).parent / "templates" / "index.html"
 _PREVIEW_LIMIT = 1200
 _WHISPER_MODEL_OPTIONS: Tuple[str, ...] = ("tiny", "base", "small", "medium", "large", "gpu")
@@ -732,6 +733,12 @@ def create_app(
         name="storage",
     )
 
+    app.mount(
+        "/static",
+        StaticFiles(directory=_STATIC_ROOT, check_dir=False),
+        name="assets",
+    )
+
     index_html = _TEMPLATE_PATH.read_text(encoding="utf-8")
 
     def _render_index_html(request: Request | None = None) -> str:
@@ -749,11 +756,20 @@ def create_app(
             if normalized:
                 resolved = normalized
                 break
+        static_base = f"{resolved}/static" if resolved else "/static"
+        rendered = index_html.replace(
+            "__LECTURE_TOOLS_PDFJS_SCRIPT__",
+            f"{static_base}/pdfjs/pdf.min.js",
+        ).replace(
+            "__LECTURE_TOOLS_PDFJS_WORKER__",
+            f"{static_base}/pdfjs/pdf.worker.min.js",
+        )
+
         if not resolved:
-            return index_html
+            return rendered
 
         safe_value = json.dumps(resolved)[1:-1]
-        return index_html.replace("__LECTURE_TOOLS_ROOT_PATH__", safe_value)
+        return rendered.replace("__LECTURE_TOOLS_ROOT_PATH__", safe_value)
 
     def _log_event(message: str, **context: Any) -> None:
         if context:
