@@ -1680,6 +1680,52 @@ def create_app(
         )
         return response
 
+    @app.delete("/api/lectures/{lecture_id}/assets/{asset_type}")
+    async def delete_asset(lecture_id: int, asset_type: str) -> Dict[str, Any]:
+        _log_event("Removing asset", lecture_id=lecture_id, asset_type=asset_type)
+        lecture = repository.get_lecture(lecture_id)
+        if lecture is None:
+            raise HTTPException(status_code=404, detail="Lecture not found")
+
+        asset_key = asset_type.lower()
+        removal_map: Dict[str, Tuple[str, ...]] = {
+            "audio": ("audio_path", "processed_audio_path"),
+            "processed_audio": ("processed_audio_path",),
+            "slides": ("slide_path", "slide_image_dir"),
+            "transcript": ("transcript_path",),
+            "notes": ("notes_path",),
+            "slide_images": ("slide_image_dir",),
+        }
+
+        if asset_key not in removal_map:
+            raise HTTPException(status_code=400, detail="Unsupported asset type")
+
+        attributes = removal_map[asset_key]
+        paths_to_remove: Set[str] = set()
+        update_kwargs: Dict[str, Optional[str]] = {}
+
+        for attribute in attributes:
+            current = getattr(lecture, attribute, None)
+            if current:
+                paths_to_remove.add(str(current))
+            update_kwargs[attribute] = None
+
+        for relative_path in paths_to_remove:
+            _delete_asset_path(relative_path)
+
+        repository.update_lecture_assets(lecture_id, **update_kwargs)
+        updated = repository.get_lecture(lecture_id)
+        if updated is None:
+            raise HTTPException(status_code=500, detail="Lecture update failed")
+
+        _log_event(
+            "Removed asset",
+            lecture_id=lecture_id,
+            asset_type=asset_key,
+            cleared=list(attributes),
+        )
+        return {"lecture": _serialize_lecture(updated)}
+
     @app.get("/api/settings/whisper-gpu/status")
     async def get_gpu_status() -> Dict[str, Any]:
         _log_event("Fetching GPU status")

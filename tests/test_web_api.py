@@ -518,6 +518,86 @@ def test_upload_audio_converts_non_wav(monkeypatch, temp_config):
     assert processed_relative == payload["audio_path"]
 
 
+def test_delete_asset_clears_path_and_file(temp_config):
+    repository, lecture_id, _module_id = _create_sample_data(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    target_file = temp_config.storage_root / "notes" / "summary.txt"
+    target_file.parent.mkdir(parents=True, exist_ok=True)
+    target_file.write_text("notes", encoding="utf-8")
+    relative_path = target_file.relative_to(temp_config.storage_root).as_posix()
+
+    repository.update_lecture_assets(lecture_id, notes_path=relative_path)
+
+    response = client.delete(f"/api/lectures/{lecture_id}/assets/notes")
+
+    assert response.status_code == 200
+    updated = repository.get_lecture(lecture_id)
+    assert updated is not None
+    assert updated.notes_path is None
+    assert not target_file.exists()
+
+
+def test_delete_audio_asset_removes_processed_audio(temp_config):
+    repository, lecture_id, _module_id = _create_sample_data(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    audio_file = temp_config.storage_root / "audio" / "lecture.wav"
+    audio_file.parent.mkdir(parents=True, exist_ok=True)
+    audio_file.write_bytes(b"raw")
+    processed_file = temp_config.storage_root / "audio" / "lecture-master.wav"
+    processed_file.parent.mkdir(parents=True, exist_ok=True)
+    processed_file.write_bytes(b"processed")
+
+    repository.update_lecture_assets(
+        lecture_id,
+        audio_path=audio_file.relative_to(temp_config.storage_root).as_posix(),
+        processed_audio_path=processed_file.relative_to(temp_config.storage_root).as_posix(),
+    )
+
+    response = client.delete(f"/api/lectures/{lecture_id}/assets/audio")
+
+    assert response.status_code == 200
+    updated = repository.get_lecture(lecture_id)
+    assert updated is not None
+    assert updated.audio_path is None
+    assert updated.processed_audio_path is None
+    assert not audio_file.exists()
+    assert not processed_file.exists()
+
+
+def test_delete_slides_asset_removes_related_files(temp_config):
+    repository, lecture_id, _module_id = _create_sample_data(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    slide_file = temp_config.storage_root / "slides" / "deck.pdf"
+    slide_file.parent.mkdir(parents=True, exist_ok=True)
+    slide_file.write_bytes(b"pdf")
+
+    image_dir = temp_config.storage_root / "slides" / "deck-images"
+    image_dir.mkdir(parents=True, exist_ok=True)
+    (image_dir / "page-1.png").write_bytes(b"image")
+
+    repository.update_lecture_assets(
+        lecture_id,
+        slide_path=slide_file.relative_to(temp_config.storage_root).as_posix(),
+        slide_image_dir=image_dir.relative_to(temp_config.storage_root).as_posix(),
+    )
+
+    response = client.delete(f"/api/lectures/{lecture_id}/assets/slides")
+
+    assert response.status_code == 200
+    updated = repository.get_lecture(lecture_id)
+    assert updated is not None
+    assert updated.slide_path is None
+    assert updated.slide_image_dir is None
+    assert not slide_file.exists()
+    assert not image_dir.exists()
+
+
 def test_upload_audio_respects_mastering_setting(temp_config):
     repository, lecture_id, _module_id = _create_sample_data(temp_config)
     app = create_app(repository, config=temp_config)
