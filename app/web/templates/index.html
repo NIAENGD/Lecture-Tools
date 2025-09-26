@@ -1599,16 +1599,42 @@
         align-items: center;
       }
 
-      .asset-actions a {
-        color: var(--accent);
-        text-decoration: none;
-        font-size: 0.9rem;
+      .asset-actions button {
+        border-radius: 999px;
+        border: 1px solid var(--panel-border);
+        background: transparent;
+        color: var(--muted);
+        padding: 6px 14px;
         font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease,
+          filter 0.2s ease;
       }
 
-      .asset-actions a[aria-disabled='true'] {
-        pointer-events: none;
-        color: var(--muted);
+      .asset-actions button.secondary {
+        background: transparent;
+      }
+
+      .asset-actions button.secondary:hover {
+        border-color: var(--accent);
+        color: var(--text);
+        background: var(--accent-muted);
+      }
+
+      .asset-actions button.danger {
+        background: var(--danger);
+        border-color: var(--danger);
+        color: var(--danger-contrast);
+      }
+
+      .asset-actions button.danger:hover {
+        filter: brightness(0.95);
+      }
+
+      .asset-actions button:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+        filter: none;
       }
 
       .actions-row {
@@ -2389,10 +2415,8 @@
               },
               actions: {
                 upload: 'Upload',
-                open: 'Open',
-                revealFolder: 'Reveal folder',
-                revealLocation: 'Reveal location',
-                downloadArchive: 'Download archive',
+                download: 'Download',
+                remove: 'Remove',
               },
             },
             create: {
@@ -2588,6 +2612,11 @@
                 message: 'Delete lecture "{{context}}" and all linked assets?',
                 cancel: 'Keep lecture',
               },
+              removeAsset: {
+                title: 'Remove {{asset}}',
+                message: 'Remove the current {{asset}} from this lecture? This cannot be undone.',
+                confirm: 'Remove asset',
+              },
               confirmDeletion: {
                 title: 'Confirm deletion',
                 message: 'This action cannot be undone. Do you want to permanently remove it?',
@@ -2690,8 +2719,7 @@
               createLectureRequirements: 'Select a module and enter a title.',
               slidesProcessed: 'Slides uploaded and processed into an image archive.',
               assetUploaded: 'Asset uploaded successfully.',
-              openingFolder: 'Opening folder in your file manager.',
-              openingLocation: 'Opening asset location in your file manager.',
+              assetRemoved: 'Asset removed.',
               transcriptionPreparing: '====> Preparing transcription…',
               transcriptionCompleted: 'Transcription completed.',
               processing: 'Processing…',
@@ -2785,10 +2813,8 @@
               },
               actions: {
                 upload: '上传',
-                open: '打开',
-                revealFolder: '在文件夹中显示',
-                revealLocation: '显示文件位置',
-                downloadArchive: '下载压缩包',
+                download: '下载',
+                remove: '移除',
               },
             },
             create: {
@@ -2981,6 +3007,11 @@
                 message: '删除讲座“{{context}}”及其所有关联资源？',
                 cancel: '保留讲座',
               },
+              removeAsset: {
+                title: '移除 {{asset}}',
+                message: '要从此讲座中移除当前{{asset}}吗？此操作无法撤销。',
+                confirm: '移除资源',
+              },
               confirmDeletion: {
                 title: '确认删除',
                 message: '该操作无法撤销，确定要永久删除吗？',
@@ -3079,8 +3110,7 @@
               createLectureRequirements: '请选择模块并输入标题。',
               slidesProcessed: '课件已上传并转换为图像压缩包。',
               assetUploaded: '资源上传成功。',
-              openingFolder: '正在文件管理器中打开文件夹。',
-              openingLocation: '正在文件管理器中显示资源位置。',
+              assetRemoved: '资源已移除。',
               transcriptionPreparing: '====> 正在准备转录…',
               transcriptionCompleted: '转录完成。',
               processing: '处理中…',
@@ -3174,10 +3204,8 @@
               },
               actions: {
                 upload: 'Subir',
-                open: 'Abrir',
-                revealFolder: 'Mostrar carpeta',
-                revealLocation: 'Mostrar ubicación',
-                downloadArchive: 'Descargar archivo',
+                download: 'Descargar',
+                remove: 'Eliminar',
               },
             },
             create: {
@@ -3374,6 +3402,11 @@
                 message: '¿Eliminar la clase "{{context}}" y todos los recursos vinculados?',
                 cancel: 'Conservar clase',
               },
+              removeAsset: {
+                title: 'Eliminar {{asset}}',
+                message: '¿Quieres eliminar el {{asset}} actual de esta clase? Esta acción no se puede deshacer.',
+                confirm: 'Eliminar recurso',
+              },
               confirmDeletion: {
                 title: 'Confirmar eliminación',
                 message: 'Esta acción no se puede deshacer. ¿Deseas eliminarla permanentemente?',
@@ -3476,8 +3509,7 @@
               createLectureRequirements: 'Selecciona un módulo e ingresa un título.',
               slidesProcessed: 'Diapositivas cargadas y convertidas en un archivo de imágenes.',
               assetUploaded: 'Recurso subido correctamente.',
-              openingFolder: 'Abriendo carpeta en tu explorador de archivos.',
-              openingLocation: 'Mostrando ubicación del recurso en tu explorador.',
+              assetRemoved: 'Recurso eliminado.',
               transcriptionPreparing: '====> Preparando transcripción…',
               transcriptionCompleted: 'Transcripción completada.',
               processing: 'Procesando…',
@@ -3572,10 +3604,8 @@
               },
               actions: {
                 upload: 'Importer',
-                open: 'Ouvrir',
-                revealFolder: 'Afficher le dossier',
-                revealLocation: 'Afficher l’emplacement',
-                downloadArchive: 'Télécharger l’archive',
+                download: 'Télécharger',
+                remove: 'Supprimer',
               },
             },
             create: {
@@ -3772,6 +3802,11 @@
                 message: 'Supprimer la leçon « {{context}} » et toutes les ressources associées ?',
                 cancel: 'Conserver la leçon',
               },
+              removeAsset: {
+                title: 'Supprimer {{asset}}',
+                message: 'Supprimer la ressource {{asset}} de cette leçon ? Cette action est irréversible.',
+                confirm: 'Supprimer la ressource',
+              },
               confirmDeletion: {
                 title: 'Confirmer la suppression',
                 message: 'Cette action est irréversible. Souhaitez-vous la supprimer définitivement ?',
@@ -3874,8 +3909,7 @@
               createLectureRequirements: 'Sélectionnez un module et saisissez un titre.',
               slidesProcessed: 'Diapositives importées et converties en archive d’images.',
               assetUploaded: 'Ressource importée avec succès.',
-              openingFolder: 'Ouverture du dossier dans votre explorateur de fichiers.',
-              openingLocation: 'Affichage de l’emplacement de la ressource dans votre explorateur.',
+              assetRemoved: 'Ressource supprimée.',
               transcriptionPreparing: '====> Préparation de la transcription…',
               transcriptionCompleted: 'Transcription terminée.',
               processing: 'Traitement…',
@@ -4702,7 +4736,6 @@
             labelKey: 'assets.labels.masteredAudio',
             accept: null,
             type: 'processed_audio',
-            reveal: 'file',
           },
           {
             key: 'slide_path',
@@ -4728,7 +4761,6 @@
             labelKey: 'assets.labels.slideImages',
             accept: null,
             type: 'slide_images',
-            downloadKey: 'assets.actions.downloadArchive',
           },
         ];
 
@@ -6378,6 +6410,27 @@
               updateRangeSummary();
             }
 
+            async function loadPdfDocument(data) {
+              const baseOptions = { data };
+              try {
+                return await window.pdfjsLib.getDocument(baseOptions).promise;
+              } catch (error) {
+                const message =
+                  (error && typeof error.message === 'string'
+                    ? error.message
+                    : String(error)) || '';
+                const shouldFallback =
+                  /WorkerMessageHandler|Setting up fake worker|No "?GlobalWorkerOptions"?/i.test(message);
+                if (!shouldFallback) {
+                  throw error;
+                }
+                console.warn('Falling back to workerless PDF rendering', error);
+                return await window.pdfjsLib
+                  .getDocument({ data, disableWorker: true })
+                  .promise;
+              }
+            }
+
             async function renderPages(pdf) {
               if (!dialog.pages) {
                 return;
@@ -6400,7 +6453,13 @@
                 const scale = Math.min(1.5, containerWidth / baseViewport.width);
                 const viewport = page.getViewport({ scale });
                 const canvas = document.createElement('canvas');
-                const context = canvas.getContext('2d', { alpha: false });
+                let context = canvas.getContext('2d', { alpha: false });
+                if (!context) {
+                  context = canvas.getContext('2d');
+                }
+                if (!context) {
+                  throw new Error('Unable to initialise canvas context');
+                }
                 canvas.width = viewport.width;
                 canvas.height = viewport.height;
                 canvas.style.width = '100%';
@@ -6545,9 +6604,7 @@
                 if (cancelled) {
                   return;
                 }
-                pdfDocument = await window.pdfjsLib
-                  .getDocument({ data: buffer })
-                  .promise;
+                pdfDocument = await loadPdfDocument(buffer);
                 if (cancelled) {
                   return;
                 }
@@ -7991,58 +8048,41 @@
               actions.appendChild(uploadButton);
             }
 
-            const link = document.createElement('a');
-            link.textContent = t('assets.actions.open');
-            if (value) {
-              link.href = buildStorageURL(value);
-              link.target = '_blank';
-              link.rel = 'noopener';
-            } else {
-              link.href = '#';
-              link.setAttribute('aria-disabled', 'true');
-            }
-            actions.appendChild(link);
+            const downloadButton = document.createElement('button');
+            downloadButton.type = 'button';
+            downloadButton.className = 'secondary';
+            downloadButton.textContent = t('assets.actions.download');
+            downloadButton.disabled = !value;
+            downloadButton.addEventListener('click', () => {
+              if (!value) {
+                return;
+              }
+              const downloadUrl = buildStorageURL(value);
+              const fallbackName = definition.type ? `${definition.type}.bin` : 'asset.bin';
+              const fileName = value.split('/').pop() || fallbackName;
+              const anchor = document.createElement('a');
+              anchor.href = downloadUrl;
+              anchor.download = fileName;
+              anchor.rel = 'noopener';
+              anchor.style.display = 'none';
+              document.body.appendChild(anchor);
+              anchor.click();
+              anchor.remove();
+            });
+            actions.appendChild(downloadButton);
 
-            if (definition.downloadKey) {
-              const downloadButton = document.createElement('button');
-              downloadButton.type = 'button';
-              downloadButton.className = 'secondary';
-              downloadButton.textContent = t(definition.downloadKey);
-              downloadButton.disabled = !value;
-              downloadButton.addEventListener('click', () => {
-                if (!value) {
-                  return;
-                }
-                const downloadUrl = buildStorageURL(value);
-                const fileName = value.split('/').pop() || 'slides.zip';
-                const anchor = document.createElement('a');
-                anchor.href = downloadUrl;
-                anchor.download = fileName;
-                anchor.rel = 'noopener';
-                anchor.style.display = 'none';
-                document.body.appendChild(anchor);
-                anchor.click();
-                anchor.remove();
-              });
-              actions.appendChild(downloadButton);
-            }
-
-            if (definition.reveal) {
-              const revealButton = document.createElement('button');
-              revealButton.type = 'button';
-              revealButton.className = 'secondary';
-              revealButton.textContent =
-                definition.reveal === 'folder'
-                  ? t('assets.actions.revealFolder')
-                  : t('assets.actions.revealLocation');
-              revealButton.disabled = !value;
-              revealButton.addEventListener('click', () => {
-                if (value) {
-                  revealAsset(value, definition.reveal);
-                }
-              });
-              actions.appendChild(revealButton);
-            }
+            const removeButton = document.createElement('button');
+            removeButton.type = 'button';
+            removeButton.className = 'danger';
+            removeButton.textContent = t('assets.actions.remove');
+            removeButton.disabled = !value;
+            removeButton.addEventListener('click', () => {
+              if (!value) {
+                return;
+              }
+              handleAssetRemoval(definition);
+            });
+            actions.appendChild(removeButton);
 
             item.appendChild(actions);
             dom.assetList.appendChild(item);
@@ -8124,6 +8164,40 @@
             dom.transcribeButton.disabled = !detail.lecture.audio_path;
 
             renderAssets(detail.lecture);
+          } catch (error) {
+            showStatus(error.message, 'error');
+          }
+        }
+
+        async function handleAssetRemoval(definition) {
+          if (!definition || !state.selectedLectureId) {
+            return;
+          }
+
+          const kind = definition.type;
+          if (!kind) {
+            return;
+          }
+
+          const lectureId = state.selectedLectureId;
+          const assetLabel = t(definition.labelKey);
+          const confirmed = await confirmDialog({
+            title: t('dialogs.removeAsset.title', { asset: assetLabel }),
+            message: t('dialogs.removeAsset.message', { asset: assetLabel }),
+            confirmText: t('dialogs.removeAsset.confirm'),
+            cancelText: t('dialog.cancel'),
+            variant: 'danger',
+          });
+
+          if (!confirmed) {
+            return;
+          }
+
+          try {
+            await request(`/api/lectures/${lectureId}/assets/${kind}`, { method: 'DELETE' });
+            showStatus(t('status.assetRemoved'), 'success');
+            await refreshData();
+            await selectLecture(lectureId);
           } catch (error) {
             showStatus(error.message, 'error');
           }
@@ -8331,42 +8405,6 @@
           if (kind === 'slides' && slideProcessingStarted && !backgroundProcessingActive) {
             stopProcessingProgress({ preserveMessage: true });
             slideProcessingStarted = false;
-          }
-        }
-
-        function buildRevealPayload(relativePath, mode = 'file') {
-          if (!relativePath) {
-            return null;
-          }
-          if (mode === 'folder') {
-            const segments = relativePath.split('/').filter(Boolean);
-            if (segments.length > 1) {
-              segments.pop();
-              return { path: segments.join('/'), select: false };
-            }
-            return { path: relativePath, select: false };
-          }
-          return { path: relativePath, select: true };
-        }
-
-        async function revealAsset(relativePath, mode = 'file') {
-          const payload = buildRevealPayload(relativePath, mode);
-          if (!payload) {
-            return;
-          }
-          try {
-            await request('/api/assets/reveal', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(payload),
-            });
-            const message =
-              mode === 'folder'
-                ? t('status.openingFolder')
-                : t('status.openingLocation');
-            showStatus(message, 'info');
-          } catch (error) {
-            showStatus(error.message, 'error');
           }
         }
 
