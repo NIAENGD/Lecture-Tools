@@ -492,8 +492,8 @@
       }
 
       .slide-range-error {
-        color: var(--status-error-text);
-        background: var(--status-error-bg);
+        color: var(--status-info-text);
+        background: var(--status-info-bg);
         border-radius: 8px;
         margin-bottom: 16px;
       }
@@ -3106,17 +3106,17 @@
               slideRange: {
                 title: 'Select pages to process',
                 description:
-                  'Preview the uploaded PDF and choose which pages to convert into slide images.',
+                  'Review the slide thumbnails and choose which pages to convert into images.',
                 loading: 'Loading preview…',
                 error:
-                  'Interactive preview unavailable. Server-rendered pages are shown below—adjust the range manually if needed.',
+                  'Slide previews are shown below. Adjust the range manually if needed.',
                 startLabel: 'Start page',
                 endLabel: 'End page',
                 rangeHint: 'Use the sliders, inputs, or page previews to adjust the selection.',
                 zoomLabel: 'Preview zoom',
                 zoomValue: '{{value}}% view',
                 fallbackMessage:
-                  'If the preview does not load, open the PDF below in a new tab and use your local copy to decide which pages to process.',
+                  'Open the PDF below in a new tab if you need to inspect it directly.',
                 fallbackLink: 'Open PDF in new tab',
                 fallbackFrameTitle: 'Fallback PDF preview',
                 summary: 'Processing pages {{start}}–{{end}} of {{total}}.',
@@ -3200,6 +3200,7 @@
               lectureTitleRequired: 'Lecture title is required.',
               createLectureRequirements: 'Select a module and enter a title.',
               slidesProcessed: 'Slides uploaded and processed into an image archive.',
+              audioProcessingQueued: 'Audio uploaded. Mastering will continue in the background.',
               assetUploaded: 'Asset uploaded successfully.',
               assetRemoved: 'Asset removed.',
               transcriptionPreparing: '====> Preparing transcription…',
@@ -3531,16 +3532,15 @@
               },
               slideRange: {
                 title: '选择要处理的页面',
-                description: '预览上传的 PDF，选择要转换为课件图像的页面范围。',
+                description: '浏览下方的课件缩略图，选择要转换为图像的页面范围。',
                 loading: '正在加载预览…',
-                error: '无法加载交互式预览。现已显示服务器生成的页面，请按需要调整处理范围。',
+                error: '下方显示的是服务器生成的课件预览，可按需手动调整页码范围。',
                 startLabel: '起始页',
                 endLabel: '结束页',
                 rangeHint: '可通过滑块、输入框或页面预览调整选择范围。',
                 zoomLabel: '预览缩放',
                 zoomValue: '{{value}}% 视图',
-                fallbackMessage:
-                  '如果预览仍未加载，请在下方打开 PDF 到新标签页，并使用你的本地文件确定需要处理的页码。',
+                fallbackMessage: '如需直接查看 PDF，可在下方打开新标签页。',
                 fallbackLink: '在新标签页打开 PDF',
                 fallbackFrameTitle: '备用 PDF 预览',
                 summary: '将处理第 {{start}}–{{end}} 页，共 {{total}} 页。',
@@ -3622,6 +3622,7 @@
               lectureTitleRequired: '需要填写讲座标题。',
               createLectureRequirements: '请选择模块并输入标题。',
               slidesProcessed: '课件已上传并转换为图像压缩包。',
+              audioProcessingQueued: '音频已上传，母带处理将在后台继续进行。',
               assetUploaded: '资源上传成功。',
               assetRemoved: '资源已移除。',
               transcriptionPreparing: '====> 正在准备转录…',
@@ -3958,10 +3959,10 @@
               slideRange: {
                 title: 'Seleccionar páginas a procesar',
                 description:
-                  'Previsualiza el PDF cargado y elige qué páginas convertir en imágenes de diapositivas.',
+                  'Revisa las miniaturas de las diapositivas y elige qué páginas convertir.',
                 loading: 'Cargando vista previa…',
                 error:
-                  'No se pudo cargar la vista previa interactiva. Se muestran páginas generadas en el servidor; ajusta el rango si es necesario.',
+                  'Se muestran abajo las previsualizaciones generadas en el servidor; ajusta el rango manualmente si es necesario.',
                 startLabel: 'Página inicial',
                 endLabel: 'Página final',
                 rangeHint:
@@ -3969,7 +3970,7 @@
                 zoomLabel: 'Zoom de la vista previa',
                 zoomValue: 'Vista al {{value}}%',
                 fallbackMessage:
-                  'Si la vista previa no se carga, abre el PDF de abajo en una pestaña nueva y usa tu copia local para decidir qué páginas procesar.',
+                  'Abre el PDF de abajo en una pestaña nueva si necesitas revisarlo directamente.',
                 fallbackLink: 'Abrir PDF en una pestaña nueva',
                 fallbackFrameTitle: 'Vista previa de PDF alternativa',
                 summary: 'Se procesarán las páginas {{start}}–{{end}} de {{total}}.',
@@ -4053,6 +4054,7 @@
               lectureTitleRequired: 'El título de la clase es obligatorio.',
               createLectureRequirements: 'Selecciona un módulo e ingresa un título.',
               slidesProcessed: 'Diapositivas cargadas y convertidas en un archivo de imágenes.',
+              audioProcessingQueued: 'Audio subido. La masterización continuará en segundo plano.',
               assetUploaded: 'Recurso subido correctamente.',
               assetRemoved: 'Recurso eliminado.',
               transcriptionPreparing: '====> Preparando transcripción…',
@@ -4390,17 +4392,17 @@
               slideRange: {
                 title: 'Sélectionner les pages à traiter',
                 description:
-                  'Prévisualisez le PDF téléversé et choisissez les pages à convertir en images de diapositives.',
+                  'Parcourez les miniatures des diapositives ci-dessous et choisissez les pages à convertir en images.',
                 loading: 'Chargement de l’aperçu…',
                 error:
-                  'Impossible de charger l’aperçu interactif. Des pages générées par le serveur sont affichées ci-dessous ; ajustez la plage si nécessaire.',
+                  'Les aperçus générés par le serveur sont affichés ci-dessous ; ajustez la plage manuellement si nécessaire.',
                 startLabel: 'Page de début',
                 endLabel: 'Page de fin',
                 rangeHint: 'Utilisez les curseurs, les champs ou l’aperçu pour ajuster la sélection.',
                 zoomLabel: 'Zoom de l’aperçu',
                 zoomValue: 'Vue à {{value}} %',
                 fallbackMessage:
-                  'Si l’aperçu ne se charge pas, ouvrez le PDF ci-dessous dans un nouvel onglet et servez-vous de votre copie locale pour choisir les pages à traiter.',
+                  'Ouvrez le PDF ci-dessous dans un nouvel onglet si vous devez l’examiner directement.',
                 fallbackLink: 'Ouvrir le PDF dans un nouvel onglet',
                 fallbackFrameTitle: 'Aperçu PDF de secours',
                 summary: 'Traitement des pages {{start}} à {{end}} sur {{total}}.',
@@ -4485,6 +4487,7 @@
               lectureTitleRequired: 'Le titre de la leçon est requis.',
               createLectureRequirements: 'Sélectionnez un module et saisissez un titre.',
               slidesProcessed: 'Diapositives importées et converties en archive d’images.',
+              audioProcessingQueued: 'Audio téléversé. Le mastering se poursuit en arrière-plan.',
               assetUploaded: 'Ressource importée avec succès.',
               assetRemoved: 'Ressource supprimée.',
               transcriptionPreparing: '====> Préparation de la transcription…',
@@ -7944,172 +7947,14 @@
             });
 
             (async () => {
-              const pdfjsLib = await loadPdfjsLibrary();
-              if (!pdfjsLib) {
-                await enableServerRenderedPreview();
-                return;
-              }
-
               try {
-                const sources = [];
-                let lastError = null;
-                let urlCandidate = null;
-                let hasFileCandidate = false;
-
-                if (
-                  previewSource &&
-                  typeof previewSource.url === 'string' &&
-                  previewSource.url
-                ) {
-                  const resolvedUrl = resolveAppUrl(previewSource.url);
-                  let absoluteUrl = resolvedUrl;
-                  try {
-                    absoluteUrl = new URL(resolvedUrl, window.location.origin).toString();
-                  } catch (urlError) {
-                    try {
-                      absoluteUrl = new URL(resolvedUrl, window.location.href).toString();
-                    } catch (fallbackError) {
-                      absoluteUrl = resolvedUrl;
-                    }
-                  }
-                  const withCredentials =
-                    previewSource.withCredentials === false ? false : true;
-                  urlCandidate = { url: absoluteUrl, withCredentials };
-                  if (typeof fetch === 'function') {
-                    try {
-                      const response = await fetch(absoluteUrl, {
-                        method: 'GET',
-                        credentials: withCredentials ? 'include' : 'omit',
-                        cache: 'no-store',
-                      });
-                      if (!response.ok) {
-                        lastError = new Error(`Unexpected response ${response.status}`);
-                      } else {
-                        const buffer = await response.arrayBuffer();
-                        if (cancelled) {
-                          return;
-                        }
-                        sources.push({ type: 'buffer', value: buffer });
-                      }
-                    } catch (error) {
-                      lastError = error instanceof Error ? error : new Error(String(error));
-                    }
-                  }
-                }
-
-                if (previewSource?.file instanceof Blob) {
-                  sources.push({ type: 'file', value: previewSource.file });
-                  hasFileCandidate = true;
-                }
-
-                if (!hasFileCandidate && source instanceof Blob) {
-                  sources.push({ type: 'file', value: source });
-                  hasFileCandidate = true;
-                }
-
-                if (urlCandidate) {
-                  sources.push({
-                    type: 'url',
-                    value: urlCandidate.url,
-                    withCredentials: urlCandidate.withCredentials,
-                  });
-                }
-
-                if (!sources.length) {
-                  throw new Error('No slide source available');
-                }
-
-                for (const candidate of sources) {
-                  if (cancelled) {
-                    return;
-                  }
-                  try {
-                    if (candidate.type === 'url') {
-                      pdfDocument = await loadPdfDocument(pdfjsLib, {
-                        url: candidate.value,
-                        withCredentials: candidate.withCredentials,
-                      });
-                    } else if (candidate.type === 'buffer') {
-                      pdfDocument = await loadPdfDocument(pdfjsLib, candidate.value);
-                    } else {
-                      const buffer = await candidate.value.arrayBuffer();
-                      if (cancelled) {
-                        return;
-                      }
-                      pdfDocument = await loadPdfDocument(pdfjsLib, buffer);
-                    }
-                    if (pdfDocument) {
-                      break;
-                    }
-                  } catch (error) {
-                    lastError = error instanceof Error ? error : new Error(String(error));
-                  }
-                }
-                if (!pdfDocument) {
-                  if (lastError) {
-                    throw lastError;
-                  }
-                  throw new Error('Unable to load slide preview');
-                }
-                if (cancelled) {
-                  return;
-                }
-                pageCount = pdfDocument.numPages || 0;
-                if (pageCount < 1) {
-                  await enableServerRenderedPreview({ knownPageCount: pageCount });
-                  return;
-                }
-
-                configureInputBounds(pageCount);
-                if (dialog.startSlider) {
-                  dialog.startSlider.value = '1';
-                }
-                if (dialog.endSlider) {
-                  dialog.endSlider.value = String(pageCount);
-                }
-
-                startPage = 1;
-                endPage = pageCount;
-                anchorPage = 1;
-                manualSelectionMade = false;
-
-                await renderPages(pdfDocument);
-                if (cancelled) {
-                  return;
-                }
-
-                if (dialog.loading) {
-                  dialog.loading.classList.add('hidden');
-                }
-                previewFailed = false;
-                clearFallbackPreview();
-                updateTexts();
-                enableControls();
-                updateRangeSummary();
-                window.requestAnimationFrame(() => {
-                  if (dialog.startInput && !dialog.startInput.disabled) {
-                    dialog.startInput.focus({ preventScroll: true });
-                    dialog.startInput.select();
-                  } else if (dialog.confirm && !dialog.confirm.disabled) {
-                    dialog.confirm.focus({ preventScroll: true });
-                  } else if (dialog.cancel) {
-                    dialog.cancel.focus({ preventScroll: true });
-                  }
-                });
+                await enableServerRenderedPreview();
               } catch (error) {
                 if (cancelled) {
                   return;
                 }
                 console.warn('Slide preview failed, enabling manual page selection', error);
-                await enableServerRenderedPreview();
-              } finally {
-                if (pdfDocument && typeof pdfDocument.cleanup === 'function') {
-                  try {
-                    pdfDocument.cleanup();
-                  } catch (cleanupError) {
-                    // Ignore cleanup errors.
-                  }
-                }
+                enableControls();
               }
             })();
           });
@@ -9909,7 +9754,13 @@
 
           const successMessage =
             kind === 'slides' ? t('status.slidesProcessed') : t('status.assetUploaded');
-          if (kind !== 'audio') {
+          if (kind === 'audio') {
+            if (allowAudioBackground) {
+              showStatus(t('status.audioProcessingQueued'), 'info', { persist: true });
+            } else {
+              showStatus(successMessage, 'success');
+            }
+          } else {
             showStatus(successMessage, 'success');
           }
           await refreshData();
