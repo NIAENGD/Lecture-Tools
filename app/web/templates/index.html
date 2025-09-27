@@ -341,7 +341,8 @@
       }
 
       .slide-range-window {
-        width: min(960px, 100%);
+        width: min(960px, calc(100vw - 48px));
+        max-width: min(960px, calc(100vw - 48px));
         max-height: min(90vh, 760px);
       }
 
@@ -451,6 +452,43 @@
         display: none !important;
       }
 
+      .dialog-pending-window {
+        width: min(360px, calc(100vw - 48px));
+        align-items: center;
+      }
+
+      .dialog-pending-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        text-align: center;
+      }
+
+      .dialog-pending-spinner {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: 4px solid var(--panel-border);
+        border-top-color: var(--accent);
+        animation: dialog-spinner 1s linear infinite;
+      }
+
+      .dialog-pending-message {
+        margin: 0;
+        font-size: 0.95rem;
+        color: var(--muted);
+      }
+
+      @keyframes dialog-spinner {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
       .slide-range-body {
         display: flex;
         flex-direction: column;
@@ -464,7 +502,9 @@
         padding: 16px;
         max-height: 60vh;
         overflow-y: auto;
+        overflow-x: auto;
         box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.08);
+        max-width: 100%;
       }
 
       .slide-range-preview::-webkit-scrollbar {
@@ -2506,6 +2546,20 @@
         </div>
         <div class="dialog-actions slide-range-footer">
           <button type="button" id="slide-range-cancel" class="dialog-button secondary"></button>
+        </div>
+      </div>
+    </div>
+    <div id="dialog-pending" class="dialog hidden" aria-hidden="true" tabindex="-1">
+      <div id="dialog-pending-backdrop" class="dialog-backdrop"></div>
+      <div
+        id="dialog-pending-window"
+        class="dialog-window dialog-pending-window"
+        role="status"
+        aria-live="polite"
+      >
+        <div class="dialog-pending-content">
+          <div class="dialog-pending-spinner" aria-hidden="true"></div>
+          <p id="dialog-pending-message" class="dialog-pending-message"></p>
         </div>
       </div>
     </div>
@@ -4662,6 +4716,10 @@
             confirm: document.getElementById('dialog-confirm'),
             cancel: document.getElementById('dialog-cancel'),
           },
+          pendingDialog: {
+            root: document.getElementById('dialog-pending'),
+            message: document.getElementById('dialog-pending-message'),
+          },
           slideRangeDialog: {
             root: document.getElementById('slide-range-dialog'),
             backdrop: document.getElementById('slide-range-backdrop'),
@@ -5815,6 +5873,180 @@
 
         const dialogState = { active: false, uploadActive: false };
 
+        let pdfjsLibPromise = null;
+
+        function loadPdfjsLib() {
+          if (window.pdfjsLib) {
+            return Promise.resolve(window.pdfjsLib);
+          }
+          if (pdfjsLibPromise) {
+            return pdfjsLibPromise;
+          }
+
+          const scriptUrl = window.__LECTURE_TOOLS_PDFJS_SCRIPT_URL__;
+          if (typeof scriptUrl !== 'string' || !scriptUrl) {
+            return Promise.reject(new Error('PDF.js script URL not configured.'));
+          }
+
+          const existingScript = document.querySelector('script[data-pdfjs-loader="true"]');
+          if (existingScript && !window.pdfjsLib) {
+            pdfjsLibPromise = new Promise((resolve, reject) => {
+              const handleLoad = () => {
+                if (window.pdfjsLib) {
+                  try {
+                    const workerUrl = window.__LECTURE_TOOLS_PDFJS_WORKER_URL__;
+                    if (workerUrl) {
+                      window.pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+                    }
+                  } catch (workerError) {
+                    console.warn('Unable to configure PDF.js worker', workerError);
+                  }
+                  resolve(window.pdfjsLib);
+                } else {
+                  reject(new Error('PDF.js did not expose pdfjsLib.'));
+                }
+              };
+              existingScript.addEventListener('load', handleLoad, { once: true });
+              existingScript.addEventListener(
+                'error',
+                () => reject(new Error('Failed to load PDF.js script.')),
+                { once: true },
+              );
+            }).catch((error) => {
+              pdfjsLibPromise = null;
+              throw error;
+            });
+            return pdfjsLibPromise;
+          }
+
+          pdfjsLibPromise = new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = scriptUrl;
+            script.async = true;
+            script.dataset.pdfjsLoader = 'true';
+            script.onload = () => {
+              if (window.pdfjsLib) {
+                try {
+                  const workerUrl = window.__LECTURE_TOOLS_PDFJS_WORKER_URL__;
+                  if (workerUrl) {
+                    window.pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+                  }
+                } catch (workerError) {
+                  console.warn('Unable to configure PDF.js worker', workerError);
+                }
+                resolve(window.pdfjsLib);
+              } else {
+                reject(new Error('PDF.js did not expose pdfjsLib.'));
+              }
+            };
+            script.onerror = () => {
+              reject(new Error('Failed to load PDF.js script.'));
+            };
+            document.head.appendChild(script);
+          }).catch((error) => {
+            pdfjsLibPromise = null;
+            throw error;
+          });
+
+          return pdfjsLibPromise;
+        }
+
+        async function extractPdfPageCountFromBlob(blob) {
+          if (!(blob instanceof Blob)) {
+            return null;
+          }
+          try {
+            const pdfjs = await loadPdfjsLib();
+            const data = await blob.arrayBuffer();
+            const loadingTask = pdfjs.getDocument({ data });
+            try {
+              const pdfDocument = await loadingTask.promise;
+              const totalPages = pdfDocument?.numPages;
+              if (typeof pdfDocument?.destroy === 'function') {
+                try {
+                  await pdfDocument.destroy();
+                } catch (destroyError) {
+                  console.warn('Failed to destroy PDF document', destroyError);
+                }
+              }
+              if (Number.isFinite(totalPages) && totalPages > 0) {
+                return Math.round(totalPages);
+              }
+            } finally {
+              if (typeof loadingTask.destroy === 'function') {
+                try {
+                  await loadingTask.destroy();
+                } catch (taskError) {
+                  // Ignore cleanup failures.
+                }
+              }
+            }
+          } catch (error) {
+            console.warn('Failed to read PDF page count from blob', error);
+          }
+          return null;
+        }
+
+        async function extractPdfPageCountFromUrl(url, { withCredentials = false } = {}) {
+          if (typeof url !== 'string' || !url) {
+            return null;
+          }
+          try {
+            const pdfjs = await loadPdfjsLib();
+            const loadingTask = pdfjs.getDocument({ url, withCredentials });
+            try {
+              const pdfDocument = await loadingTask.promise;
+              const totalPages = pdfDocument?.numPages;
+              if (typeof pdfDocument?.destroy === 'function') {
+                try {
+                  await pdfDocument.destroy();
+                } catch (destroyError) {
+                  console.warn('Failed to destroy PDF document', destroyError);
+                }
+              }
+              if (Number.isFinite(totalPages) && totalPages > 0) {
+                return Math.round(totalPages);
+              }
+            } finally {
+              if (typeof loadingTask.destroy === 'function') {
+                try {
+                  await loadingTask.destroy();
+                } catch (taskError) {
+                  // Ignore cleanup failures.
+                }
+              }
+            }
+          } catch (error) {
+            console.warn('Failed to read PDF page count from URL', error);
+          }
+          return null;
+        }
+
+        function showPendingOverlay(message = '') {
+          const pending = dom.pendingDialog;
+          if (!pending || !pending.root) {
+            return;
+          }
+          if (pending.message) {
+            pending.message.textContent = message || '';
+          }
+          pending.root.classList.remove('hidden');
+          pending.root.setAttribute('aria-hidden', 'false');
+        }
+
+        function hidePendingOverlay() {
+          const pending = dom.pendingDialog;
+          if (!pending || !pending.root) {
+            return;
+          }
+          pending.root.classList.add('hidden');
+          pending.root.setAttribute('aria-hidden', 'true');
+          if (pending.message) {
+            pending.message.textContent = '';
+          }
+        }
+
+
         function syncSettingsForm(settings) {
           const themeValue = settings?.theme ?? 'system';
           const languageValue = normalizeLanguage(settings?.language);
@@ -6291,6 +6523,12 @@
               if (typeof task !== 'function') {
                 return null;
               }
+              const pendingMessage =
+                t('dialogs.slideRange.loading') ||
+                labels.processing ||
+                labels.uploading ||
+                'Preparing document…';
+              showPendingOverlay(pendingMessage);
               if (dialog.root) {
                 dialog.root.classList.add('upload-dialog-hidden');
                 dialog.root.setAttribute('aria-hidden', 'true');
@@ -6300,6 +6538,7 @@
               try {
                 return await task();
               } finally {
+                hidePendingOverlay();
                 if (!closed) {
                   dialogState.uploadActive = true;
                   if (dialog.root) {
@@ -6313,6 +6552,8 @@
                       dialog.dropzone.focus({ preventScroll: true });
                     }
                   });
+                } else {
+                  document.body.classList.remove('dialog-open');
                 }
               }
             }
@@ -6751,6 +6992,7 @@
               return;
             }
 
+            hidePendingOverlay();
             dialogState.active = true;
             let cancelled = false;
             let pageCount = 0;
@@ -6924,6 +7166,51 @@
               return { url: null, isObjectUrl: false };
             }
 
+            async function derivePdfPageCount(fallbackPreview) {
+              const blobCandidates = [];
+              if (previewSource?.file instanceof Blob) {
+                blobCandidates.push(previewSource.file);
+              }
+              if (source instanceof Blob && source !== previewSource?.file) {
+                blobCandidates.push(source);
+              }
+
+              for (const blobCandidate of blobCandidates) {
+                try {
+                  const blobCount = await extractPdfPageCountFromBlob(blobCandidate);
+                  if (Number.isFinite(blobCount) && blobCount > 0) {
+                    return Math.round(blobCount);
+                  }
+                } catch (blobError) {
+                  console.warn('Failed to derive PDF page count from blob', blobError);
+                }
+              }
+
+              const urlCandidates = new Set();
+              if (previewSource && typeof previewSource.url === 'string' && previewSource.url) {
+                urlCandidates.add(resolveAppUrl(previewSource.url));
+              }
+              if (fallbackPreview?.url) {
+                urlCandidates.add(fallbackPreview.url);
+              }
+
+              const withCredentials = previewSource?.withCredentials === false ? false : true;
+              for (const candidateUrl of urlCandidates) {
+                try {
+                  const urlCount = await extractPdfPageCountFromUrl(candidateUrl, {
+                    withCredentials,
+                  });
+                  if (Number.isFinite(urlCount) && urlCount > 0) {
+                    return Math.round(urlCount);
+                  }
+                } catch (urlError) {
+                  console.warn('Failed to derive PDF page count from URL', urlError);
+                }
+              }
+
+              return null;
+            }
+
             async function fetchPreviewPageCount() {
               const { lectureId, previewId } = resolvePreviewIdentifiers();
               if (!lectureId || !previewId) {
@@ -7031,11 +7318,24 @@
                 }
               }
 
+              const fallbackPreview = resolveFallbackPreview();
+
               if (!resolvedCount || resolvedCount <= 0) {
                 try {
                   resolvedCount = await fetchPreviewPageCount();
                 } catch (metadataError) {
                   resolvedCount = null;
+                }
+              }
+
+              if (!resolvedCount || resolvedCount <= 0) {
+                try {
+                  const derivedCount = await derivePdfPageCount(fallbackPreview);
+                  if (Number.isFinite(derivedCount) && derivedCount > 0) {
+                    resolvedCount = Math.round(derivedCount);
+                  }
+                } catch (pageCountError) {
+                  console.warn('Unable to determine PDF page count from PDF data', pageCountError);
                 }
               }
 
@@ -7046,7 +7346,6 @@
               anchorPage = 1;
               manualSelectionMade = false;
 
-              const fallbackPreview = resolveFallbackPreview();
               assignFallbackPreview(fallbackPreview.url, {
                 isObjectUrl: fallbackPreview.isObjectUrl,
               });
