@@ -2683,15 +2683,16 @@
               },
               status: {
                 notLinked: 'Not linked',
-                slidesHint: 'Upload a PDF to generate slide images automatically.',
-                noSlideImages: 'No slide images generated yet.',
+                slidesHint: 'Upload a PDF, then process it to generate slide images.',
+                noSlideImages: 'No slide images yet. Use “Process slides” after uploading a PDF.',
                 linked: 'Linked: {{name}}',
-                linkedSlides: 'Linked: {{name}} (auto processed)',
+                slidesUploaded: 'Slides uploaded: {{name}}',
                 archiveCreated: 'Archive created: {{name}}',
                 mastered: 'Mastered: {{name}}',
               },
               actions: {
                 upload: 'Upload',
+                processSlides: 'Process slides',
                 download: 'Download',
                 remove: 'Remove',
               },
@@ -3026,6 +3027,10 @@
               lectureTitleRequired: 'Lecture title is required.',
               createLectureRequirements: 'Select a module and enter a title.',
               slidesProcessed: 'Slides uploaded and processed into an image archive.',
+              slidesUploaded: 'Slides uploaded. Process them to generate an image archive.',
+              slidesUploadRequired: 'Upload a PDF before processing slides.',
+              slidePreviewFailed: 'Unable to prepare the slide preview. Try re-uploading the PDF.',
+              processingSlides: 'Processing slides…',
               audioProcessingQueued: 'Audio uploaded. Mastering will continue in the background.',
               assetUploaded: 'Asset uploaded successfully.',
               assetRemoved: 'Asset removed.',
@@ -3114,15 +3119,16 @@
               },
               status: {
                 notLinked: '未关联',
-                slidesHint: '上传 PDF 可自动生成课件图像。',
-                noSlideImages: '尚未生成课件图像。',
+                slidesHint: '先上传 PDF，然后使用“处理课件”生成图像。',
+                noSlideImages: '尚未生成课件图像。上传 PDF 后点击“处理课件”。',
                 linked: '已关联：{{name}}',
-                linkedSlides: '已关联：{{name}}（自动处理）',
+                slidesUploaded: '已上传课件：{{name}}',
                 archiveCreated: '已生成压缩包：{{name}}',
                 mastered: '已优化：{{name}}',
               },
               actions: {
                 upload: '上传',
+                processSlides: '处理课件',
                 download: '下载',
                 remove: '移除',
               },
@@ -3449,6 +3455,10 @@
               lectureTitleRequired: '需要填写讲座标题。',
               createLectureRequirements: '请选择模块并输入标题。',
               slidesProcessed: '课件已上传并转换为图像压缩包。',
+              slidesUploaded: '课件已上传。处理后可生成图像压缩包。',
+              slidesUploadRequired: '请先上传 PDF 再处理课件。',
+              slidePreviewFailed: '无法准备课件预览，请尝试重新上传 PDF。',
+              processingSlides: '正在处理课件…',
               audioProcessingQueued: '音频已上传，母带处理将在后台继续进行。',
               assetUploaded: '资源上传成功。',
               assetRemoved: '资源已移除。',
@@ -3537,15 +3547,16 @@
               },
               status: {
                 notLinked: 'Sin vincular',
-                slidesHint: 'Carga un PDF para generar imágenes automáticamente.',
-                noSlideImages: 'Aún no se generan imágenes de diapositivas.',
+                slidesHint: 'Carga un PDF y luego procésalo para generar imágenes.',
+                noSlideImages: 'Aún no hay imágenes de diapositivas. Usa “Procesar diapositivas” después de subir un PDF.',
                 linked: 'Vinculado: {{name}}',
-                linkedSlides: 'Vinculado: {{name}} (procesado automáticamente)',
+                slidesUploaded: 'Diapositivas subidas: {{name}}',
                 archiveCreated: 'Archivo creado: {{name}}',
                 mastered: 'Masterizado: {{name}}',
               },
               actions: {
                 upload: 'Subir',
+                processSlides: 'Procesar diapositivas',
                 download: 'Descargar',
                 remove: 'Eliminar',
               },
@@ -3882,6 +3893,10 @@
               lectureTitleRequired: 'El título de la clase es obligatorio.',
               createLectureRequirements: 'Selecciona un módulo e ingresa un título.',
               slidesProcessed: 'Diapositivas cargadas y convertidas en un archivo de imágenes.',
+              slidesUploaded: 'Diapositivas subidas. Procésalas para generar un archivo de imágenes.',
+              slidesUploadRequired: 'Sube un PDF antes de procesar las diapositivas.',
+              slidePreviewFailed: 'No se pudo preparar la vista previa de las diapositivas. Intenta subir el PDF nuevamente.',
+              processingSlides: 'Procesando diapositivas…',
               audioProcessingQueued: 'Audio subido. La masterización continuará en segundo plano.',
               assetUploaded: 'Recurso subido correctamente.',
               assetRemoved: 'Recurso eliminado.',
@@ -3971,15 +3986,16 @@
               },
               status: {
                 notLinked: 'Non lié',
-                slidesHint: 'Importez un PDF pour générer automatiquement des images.',
-                noSlideImages: 'Aucune image de diapositive générée pour le moment.',
+                slidesHint: 'Importez un PDF puis traitez-le pour générer des images.',
+                noSlideImages: 'Aucune image de diapositive. Utilisez « Traiter les diapositives » après avoir importé un PDF.',
                 linked: 'Lié : {{name}}',
-                linkedSlides: 'Lié : {{name}} (traitement automatique)',
+                slidesUploaded: 'Diapositives importées : {{name}}',
                 archiveCreated: 'Archive créée : {{name}}',
                 mastered: 'Masterisé : {{name}}',
               },
               actions: {
                 upload: 'Importer',
+                processSlides: 'Traiter les diapositives',
                 download: 'Télécharger',
                 remove: 'Supprimer',
               },
@@ -4316,6 +4332,10 @@
               lectureTitleRequired: 'Le titre de la leçon est requis.',
               createLectureRequirements: 'Sélectionnez un module et saisissez un titre.',
               slidesProcessed: 'Diapositives importées et converties en archive d’images.',
+              slidesUploaded: 'Diapositives importées. Traitez-les pour générer une archive d’images.',
+              slidesUploadRequired: 'Importez un PDF avant de traiter les diapositives.',
+              slidePreviewFailed: 'Impossible de préparer l’aperçu des diapositives. Réessayez en important le PDF à nouveau.',
+              processingSlides: 'Traitement des diapositives…',
               audioProcessingQueued: 'Audio téléversé. Le mastering se poursuit en arrière-plan.',
               assetUploaded: 'Ressource importée avec succès.',
               assetRemoved: 'Ressource supprimée.',
@@ -4583,6 +4603,7 @@
           stats: {},
           query: '',
           selectedLectureId: null,
+          selectedLectureDetail: null,
           buttonMap: new Map(),
           editMode: false,
           activeView: 'details',
@@ -8047,12 +8068,23 @@
           return null;
         }
 
-        async function createSlidePreview(lectureId, file) {
-          if (!lectureId || !(file instanceof Blob)) {
+        async function createSlidePreview(lectureId, file, options = {}) {
+          if (!lectureId) {
             return null;
           }
           const formData = new FormData();
-          formData.append('file', file);
+          const source =
+            typeof options.source === 'string' && options.source
+              ? options.source.trim().toLowerCase()
+              : 'upload';
+          if (source === 'existing') {
+            formData.append('source', 'existing');
+          } else {
+            if (!(file instanceof Blob)) {
+              return null;
+            }
+            formData.append('file', file);
+          }
           const payload = await request(
             `/api/lectures/${lectureId}/slides/previews`,
             { method: 'POST', body: formData },
@@ -8060,10 +8092,14 @@
           if (!payload || !payload.preview_id || !payload.preview_url) {
             return null;
           }
+          const providedName =
+            (typeof payload.filename === 'string' && payload.filename) ||
+            (file && typeof file.name === 'string' && file.name) ||
+            'slides.pdf';
           return {
             id: payload.preview_id,
             url: resolveAppUrl(payload.preview_url),
-            filename: payload.filename || file.name || 'slides.pdf',
+            filename: providedName,
             pageCount:
               typeof payload.page_count === 'number' && Number.isFinite(payload.page_count)
                 ? Math.max(0, Math.round(payload.page_count))
@@ -8265,6 +8301,7 @@
           dom.assetSection.hidden = true;
           dom.assetList.innerHTML = '';
           dom.transcribeButton.disabled = true;
+          state.selectedLectureDetail = null;
           updateEditControlsAvailability();
         }
 
@@ -9269,7 +9306,7 @@
             if (value) {
               const fileName = value.split('/').pop();
               if (definition.type === 'slides') {
-                statusText = t('assets.status.linkedSlides', { name: fileName });
+                statusText = t('assets.status.slidesUploaded', { name: fileName });
               } else if (definition.type === 'slide_images') {
                 statusText = t('assets.status.archiveCreated', { name: fileName });
               } else if (definition.type === 'processed_audio') {
@@ -9320,6 +9357,20 @@
               anchor.click();
               anchor.remove();
             });
+
+            if (definition.type === 'slides') {
+              const processButton = document.createElement('button');
+              processButton.type = 'button';
+              processButton.className = 'secondary';
+              processButton.textContent = t('assets.actions.processSlides');
+              const isProcessing = state.processingProgressLectureId === lecture.id;
+              processButton.disabled = !value || isProcessing;
+              processButton.addEventListener('click', () => {
+                handleSlideProcessing(definition);
+              });
+              actions.appendChild(processButton);
+            }
+
             actions.appendChild(downloadButton);
 
             const removeButton = document.createElement('button');
@@ -9392,6 +9443,7 @@
 
         async function selectLecture(lectureId) {
           state.selectedLectureId = lectureId;
+          state.selectedLectureDetail = null;
           highlightSelected();
           setActiveView('details');
           try {
@@ -9399,6 +9451,7 @@
             if (!detail) {
               return;
             }
+            state.selectedLectureDetail = detail;
             renderSummary(detail);
             dom.assetSection.hidden = false;
 
@@ -9416,6 +9469,7 @@
 
             renderAssets(detail.lecture);
           } catch (error) {
+            state.selectedLectureDetail = null;
             showStatus(error.message, 'error');
           }
         }
@@ -9463,7 +9517,6 @@
           const kind = definition.type;
           const assetLabel = t(definition.labelKey);
           let audioProcessingStarted = false;
-          let slideProcessingStarted = false;
 
           function formatSlideSummary(selection) {
             if (!selection) {
@@ -9504,19 +9557,11 @@
 
           const allowAudioBackground =
             kind === 'audio' && state.settings?.audio_mastering_enabled !== false;
-          const allowBackgroundProcessing = allowAudioBackground || kind === 'slides';
+          const allowBackgroundProcessing = allowAudioBackground;
           const processingLabel =
-            kind === 'audio'
-              ? t('dialogs.upload.processingAudio')
-              : kind === 'slides'
-              ? t('dialogs.upload.processingSlides')
-              : undefined;
+            kind === 'audio' ? t('dialogs.upload.processingAudio') : undefined;
           const backgroundProcessingLabel =
-            kind === 'audio'
-              ? t('dialogs.upload.backgroundProcessing')
-              : kind === 'slides'
-              ? t('dialogs.upload.backgroundProcessingSlides')
-              : undefined;
+            kind === 'audio' ? t('dialogs.upload.backgroundProcessing') : undefined;
 
           const dialogResult = await showUploadDialog({
             accept: definition.accept || '',
@@ -9531,66 +9576,7 @@
             processingAction: t('dialogs.upload.processingAction'),
             allowBackgroundProcessing,
             backgroundProcessing: backgroundProcessingLabel,
-            onFileSelected:
-              kind === 'slides'
-                ? async (file) => {
-                    let preview = null;
-                    try {
-                      preview = await createSlidePreview(lectureId, file);
-                    } catch (error) {
-                      console.warn('Slide preview upload failed', error);
-                      preview = null;
-                    }
-                    const resolvedPageCount =
-                      preview && typeof preview.pageCount === 'number' && Number.isFinite(preview.pageCount)
-                        ? Math.max(0, Math.round(preview.pageCount))
-                        : null;
-                    const previewSource = preview
-                      ? {
-                          url: preview.url,
-                          file,
-                          withCredentials: true,
-                          previewId: preview.id,
-                          lectureId,
-                          pageCount: resolvedPageCount,
-                        }
-                      : { file, lectureId, pageCount: resolvedPageCount };
-                    const selection = await showSlideRangeDialog(previewSource);
-                    if (!selection || !selection.confirmed) {
-                      if (preview) {
-                        await deleteSlidePreview(lectureId, preview.id);
-                      }
-                      return { cancelled: true };
-                    }
-                    const meta = {};
-                    if (typeof selection.pageStart === 'number' && Number.isFinite(selection.pageStart)) {
-                      meta.pageStart = selection.pageStart;
-                    }
-                    if (typeof selection.pageEnd === 'number' && Number.isFinite(selection.pageEnd)) {
-                      meta.pageEnd = selection.pageEnd;
-                    }
-                    if (typeof selection.pageTotal === 'number' && Number.isFinite(selection.pageTotal)) {
-                      meta.pageTotal = selection.pageTotal;
-                    }
-                    if (preview) {
-                      meta.previewId = preview.id;
-                      meta.previewUrl = preview.url;
-                      meta.previewLectureId = lectureId;
-                    }
-                    const response = {
-                      meta,
-                      summary: formatSlideSummary(selection),
-                    };
-                    if (preview) {
-                      response.cleanup = async () => {
-                        await deleteSlidePreview(lectureId, preview.id);
-                        meta.previewId = null;
-                        meta.previewUrl = null;
-                      };
-                    }
-                    return response;
-                  }
-                : null,
+            onFileSelected: null,
             onUpload: async (file, helpers) => {
               const formData = new FormData();
               let includeFile = true;
@@ -9626,12 +9612,6 @@
                 } else {
                   audioProcessingStarted = false;
                 }
-              } else if (kind === 'slides') {
-                stopProcessingProgress();
-                state.lastProgressMessage = '';
-                state.lastProgressRatio = null;
-                startProcessingProgress(lectureId);
-                slideProcessingStarted = true;
               }
 
               try {
@@ -9647,10 +9627,6 @@
                 if (kind === 'audio' && audioProcessingStarted) {
                   stopProcessingProgress();
                   audioProcessingStarted = false;
-                }
-                if (kind === 'slides' && slideProcessingStarted) {
-                  stopProcessingProgress();
-                  slideProcessingStarted = false;
                 }
                 if (kind === 'slides') {
                   const meta = helpers?.meta || {};
@@ -9681,10 +9657,6 @@
               stopProcessingProgress();
               audioProcessingStarted = false;
             }
-            if (kind === 'slides' && slideProcessingStarted) {
-              stopProcessingProgress();
-              slideProcessingStarted = false;
-            }
             if (!backgroundProcessingActive) {
               await cleanupPreviewAfterDialog();
             }
@@ -9699,17 +9671,13 @@
                 stopProcessingProgress({ preserveMessage: true });
                 audioProcessingStarted = false;
               }
-              if (kind === 'slides' && slideProcessingStarted) {
-                stopProcessingProgress({ preserveMessage: true });
-                slideProcessingStarted = false;
-              }
               await cleanupPreviewAfterDialog();
             }
             return;
           }
 
           const successMessage =
-            kind === 'slides' ? t('status.slidesProcessed') : t('status.assetUploaded');
+            kind === 'slides' ? t('status.slidesUploaded') : t('status.assetUploaded');
           if (kind === 'audio') {
             if (allowAudioBackground) {
               showStatus(t('status.audioProcessingQueued'), 'info', { persist: true });
@@ -9725,9 +9693,92 @@
             stopProcessingProgress({ preserveMessage: true });
             audioProcessingStarted = false;
           }
-          if (kind === 'slides' && slideProcessingStarted && !backgroundProcessingActive) {
-            stopProcessingProgress({ preserveMessage: true });
-            slideProcessingStarted = false;
+        }
+
+        async function handleSlideProcessing(definition) {
+          if (!definition || definition.type !== 'slides' || !state.selectedLectureId) {
+            return;
+          }
+
+          const lectureId = state.selectedLectureId;
+          const detail = state.selectedLectureDetail;
+          const slidePath = detail?.lecture?.slide_path;
+          if (!slidePath) {
+            showStatus(t('status.slidesUploadRequired'), 'info');
+            return;
+          }
+
+          let preview = null;
+          try {
+            preview = await createSlidePreview(lectureId, null, { source: 'existing' });
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            showStatus(message, 'error');
+            return;
+          }
+
+          if (!preview) {
+            showStatus(t('status.slidePreviewFailed'), 'error');
+            return;
+          }
+
+          const previewSource = {
+            url: preview.url,
+            withCredentials: true,
+            previewId: preview.id,
+            lectureId,
+            pageCount:
+              typeof preview.pageCount === 'number' && Number.isFinite(preview.pageCount)
+                ? Math.max(0, Math.round(preview.pageCount))
+                : null,
+          };
+
+          let selection;
+          try {
+            selection = await showSlideRangeDialog(previewSource);
+          } catch (error) {
+            await deleteSlidePreview(lectureId, preview.id);
+            const message = error instanceof Error ? error.message : String(error);
+            showStatus(message, 'error');
+            return;
+          }
+          if (!selection || !selection.confirmed) {
+            await deleteSlidePreview(lectureId, preview.id);
+            return;
+          }
+
+          const formData = new FormData();
+          formData.append('use_existing', 'true');
+          if (typeof selection.pageStart === 'number' && Number.isFinite(selection.pageStart)) {
+            formData.append('page_start', String(selection.pageStart));
+          }
+          if (typeof selection.pageEnd === 'number' && Number.isFinite(selection.pageEnd)) {
+            formData.append('page_end', String(selection.pageEnd));
+          }
+          try {
+            await deleteSlidePreview(lectureId, preview.id);
+          } catch (error) {
+            console.warn('Failed to remove slide preview before processing', error);
+          }
+
+          stopProcessingProgress();
+          state.lastProgressMessage = '';
+          state.lastProgressRatio = null;
+          startProcessingProgress(lectureId);
+          showStatus(t('status.processingSlides'), 'info', { persist: true });
+
+          try {
+            await request(`/api/lectures/${lectureId}/process-slides`, {
+              method: 'POST',
+              body: formData,
+            });
+            showStatus(t('status.slidesProcessed'), 'success');
+            await refreshData();
+            await selectLecture(lectureId);
+          } catch (error) {
+            stopProcessingProgress();
+            const message = error instanceof Error ? error.message : String(error);
+            showStatus(message, 'error');
           }
         }
 
