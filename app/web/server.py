@@ -1849,10 +1849,9 @@ def create_app(
                 update_kwargs["processed_audio_path"] = None
 
         if asset_key == "slides":
-            slide_archive = _generate_slide_archive(
-                target, lecture_paths, _make_slide_converter()
-            )
-            update_kwargs["slide_image_dir"] = slide_archive
+            if lecture.slide_image_dir:
+                _delete_asset_path(lecture.slide_image_dir)
+            update_kwargs["slide_image_dir"] = None
 
         repository.update_lecture_assets(lecture_id, **update_kwargs)
         updated = repository.get_lecture(lecture_id)
@@ -2438,7 +2437,8 @@ def create_app(
     )
     async def create_slide_preview(
         lecture_id: int,
-        file: UploadFile = File(...),
+        file: Optional[UploadFile] = File(None),
+        source: Optional[str] = Form("upload"),
     ) -> Dict[str, Any]:
         _log_event("Creating slide preview", lecture_id=lecture_id)
         lecture = repository.get_lecture(lecture_id)
@@ -2456,7 +2456,21 @@ def create_app(
         preview_dir = _get_preview_dir(lecture_paths)
 
         preview_token = uuid.uuid4().hex
-        original_name = Path(file.filename or "slides.pdf").name
+        source_mode = (source or "upload").strip().lower()
+        if source_mode not in {"upload", "existing"}:
+            raise HTTPException(status_code=400, detail="Invalid preview source")
+
+        existing_slide: Optional[Path] = None
+        if source_mode == "existing":
+            existing_slide = _resolve_existing_asset(lecture.slide_path)
+            if existing_slide is None:
+                raise HTTPException(status_code=404, detail="No slides available for preview")
+            original_name = existing_slide.name or "slides.pdf"
+        else:
+            if file is None:
+                raise HTTPException(status_code=400, detail="Slide file is required")
+            original_name = Path(file.filename or "slides.pdf").name
+
         suffix = Path(original_name).suffix.lower() or ".pdf"
         if suffix != ".pdf":
             suffix = ".pdf"
@@ -2464,11 +2478,16 @@ def create_app(
         preview_name = f"{preview_token}-{stem}{suffix}"
         preview_path = preview_dir / preview_name
 
-        try:
-            with preview_path.open("wb") as buffer:
-                shutil.copyfileobj(file.file, buffer)
-        finally:
-            await file.close()
+        if source_mode == "existing":
+            with existing_slide.open("rb") as origin, preview_path.open("wb") as buffer:
+                shutil.copyfileobj(origin, buffer)
+        else:
+            assert file is not None  # for type checkers
+            try:
+                with preview_path.open("wb") as buffer:
+                    shutil.copyfileobj(file.file, buffer)
+            finally:
+                await file.close()
 
         page_count: Optional[int] = None
         try:
@@ -2627,6 +2646,7 @@ def create_app(
         page_start: Optional[int] = Form(None),
         page_end: Optional[int] = Form(None),
         preview_token: Optional[str] = Form(None),
+        use_existing: Optional[str] = Form(None),
     ) -> Dict[str, Any]:
         _log_event(
             "Processing slides",
@@ -2648,18 +2668,15 @@ def create_app(
         )
         lecture_paths.ensure()
 
-        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        slide_stem = build_asset_stem(
-            class_record.name,
-            module.name,
-            lecture.name,
-            "slides",
-        )
-        slide_filename = build_timestamped_name(slide_stem, timestamp=timestamp, extension=".pdf")
-        slide_destination = lecture_paths.raw_dir / slide_filename
-        slide_destination.parent.mkdir(parents=True, exist_ok=True)
-
         preview_dir = lecture_paths.raw_dir / _SLIDE_PREVIEW_DIR_NAME
+        existing_slide = _resolve_existing_asset(lecture.slide_path)
+        use_existing_flag = False
+        if use_existing is not None:
+            use_existing_flag = str(use_existing).strip().lower() in {"1", "true", "yes", "on"}
+
+        slide_destination: Optional[Path] = None
+        slide_relative: Optional[str] = None
+
         if preview_token:
             preview_path = _resolve_preview_file(preview_dir, preview_token)
             if preview_path is None or not preview_path.exists():
@@ -2667,6 +2684,18 @@ def create_app(
             if file is not None:
                 await file.close()
                 file = None
+            timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+            slide_stem = build_asset_stem(
+                class_record.name,
+                module.name,
+                lecture.name,
+                "slides",
+            )
+            slide_filename = build_timestamped_name(
+                slide_stem, timestamp=timestamp, extension=".pdf"
+            )
+            slide_destination = lecture_paths.raw_dir / slide_filename
+            slide_destination.parent.mkdir(parents=True, exist_ok=True)
             try:
                 preview_path.replace(slide_destination)
             except OSError as error:
@@ -2675,14 +2704,31 @@ def create_app(
                     detail=f"Failed to store slide preview: {error}",
                 ) from error
             _prune_preview_dir(preview_dir)
-        else:
-            if file is None:
-                raise HTTPException(status_code=400, detail="Slide file is required")
+            slide_relative = slide_destination.relative_to(config.storage_root).as_posix()
+        elif file is not None:
+            timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+            slide_stem = build_asset_stem(
+                class_record.name,
+                module.name,
+                lecture.name,
+                "slides",
+            )
+            slide_filename = build_timestamped_name(
+                slide_stem, timestamp=timestamp, extension=".pdf"
+            )
+            slide_destination = lecture_paths.raw_dir / slide_filename
+            slide_destination.parent.mkdir(parents=True, exist_ok=True)
             try:
                 with slide_destination.open("wb") as buffer:
                     shutil.copyfileobj(file.file, buffer)
             finally:
                 await file.close()
+            slide_relative = slide_destination.relative_to(config.storage_root).as_posix()
+        elif (use_existing_flag or not preview_token) and existing_slide is not None:
+            slide_destination = existing_slide
+            slide_relative = lecture.slide_path
+        else:
+            raise HTTPException(status_code=400, detail="Slide file is required")
 
         selected_range: Optional[Tuple[int, int]] = None
         if page_start is not None or page_end is not None:
@@ -2692,7 +2738,7 @@ def create_app(
                 start, end = end, start
             selected_range = (start, end)
 
-        slide_relative = slide_destination.relative_to(config.storage_root).as_posix()
+        assert slide_destination is not None and slide_relative is not None
         processing_tracker.start(
             lecture_id,
             "====> Preparing slide conversion…",
