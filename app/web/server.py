@@ -1853,6 +1853,65 @@ def create_app(
                 _delete_asset_path(lecture.slide_image_dir)
             update_kwargs["slide_image_dir"] = None
 
+            slide_image_relative: Optional[str] = None
+
+            tracker_started = False
+            existing_progress = processing_tracker.get(lecture_id)
+            if not existing_progress.get("active"):
+                processing_tracker.start(
+                    lecture_id,
+                    "====> Preparing slide conversion…",
+                    context={"operation": "slide_conversion", "source": "upload"},
+                )
+                tracker_started = True
+
+            def _handle_slide_progress(processed: int, total: Optional[int]) -> None:
+                if not tracker_started:
+                    return
+                if total and total > 0:
+                    message = format_progress_message(
+                        "====> Rendering slide images…",
+                        float(processed),
+                        float(total),
+                    )
+                    processing_tracker.update(
+                        lecture_id,
+                        float(processed),
+                        float(total),
+                        message,
+                    )
+
+            try:
+                slide_image_relative = await asyncio.to_thread(
+                    _generate_slide_archive,
+                    target,
+                    lecture_paths,
+                    _make_slide_converter(),
+                    progress_callback=_handle_slide_progress,
+                )
+            except HTTPException as error:
+                detail = getattr(error, "detail", str(error))
+                LOGGER.warning("Automatic slide conversion failed: %s", detail)
+                if tracker_started:
+                    processing_tracker.fail(lecture_id, f"====> {detail}")
+            except Exception as error:  # noqa: BLE001 - conversion may raise arbitrary errors
+                LOGGER.exception("Unexpected failure during automatic slide conversion")
+                if tracker_started:
+                    processing_tracker.fail(lecture_id, f"====> {error}")
+            else:
+                if slide_image_relative:
+                    update_kwargs["slide_image_dir"] = slide_image_relative
+                    if tracker_started:
+                        processing_tracker.finish(
+                            lecture_id,
+                            "====> Slide conversion completed.",
+                        )
+                elif tracker_started:
+                    processing_tracker.finish(
+                        lecture_id,
+                        "====> Slide conversion skipped.",
+                    )
+
         repository.update_lecture_assets(lecture_id, **update_kwargs)
         updated = repository.get_lecture(lecture_id)
         if updated is None:
