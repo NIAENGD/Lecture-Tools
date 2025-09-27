@@ -95,6 +95,9 @@ _SLIDE_PREVIEW_TOKEN_PATTERN = re.compile(r"^[a-f0-9]{16,64}$")
 LOGGER = logging.getLogger(__name__)
 
 
+_PDF_PAGE_COUNT_TIMEOUT_SECONDS = 8.0
+
+
 # Ensure PDF.js module assets are served with the correct MIME type for dynamic import.
 mimetypes.add_type("text/javascript", ".mjs")
 mimetypes.add_type("application/javascript", ".mjs")
@@ -2491,7 +2494,15 @@ def create_app(
 
         page_count: Optional[int] = None
         try:
-            page_count = get_pdf_page_count(preview_path)
+            page_count = await asyncio.wait_for(
+                asyncio.to_thread(get_pdf_page_count, preview_path),
+                timeout=_PDF_PAGE_COUNT_TIMEOUT_SECONDS,
+            )
+        except asyncio.TimeoutError:
+            LOGGER.warning(
+                "Timed out while inspecting slide preview for lecture %s",
+                lecture_id,
+            )
         except SlideConversionDependencyError as error:
             LOGGER.warning(
                 "Unable to inspect slide preview due to dependency issue: %s",
@@ -2562,7 +2573,18 @@ def create_app(
             raise HTTPException(status_code=404, detail="Preview not found")
 
         try:
-            page_count = get_pdf_page_count(preview_path)
+            page_count = await asyncio.wait_for(
+                asyncio.to_thread(get_pdf_page_count, preview_path),
+                timeout=_PDF_PAGE_COUNT_TIMEOUT_SECONDS,
+            )
+        except asyncio.TimeoutError as error:
+            LOGGER.warning(
+                "Timed out while inspecting slide preview metadata for lecture %s", lecture_id
+            )
+            raise HTTPException(
+                status_code=503,
+                detail="Slide preview inspection timed out",
+            ) from error
         except SlideConversionDependencyError as error:
             raise HTTPException(status_code=503, detail=str(error)) from error
         except SlideConversionError as error:

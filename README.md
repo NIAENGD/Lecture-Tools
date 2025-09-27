@@ -107,6 +107,7 @@ Open `http://SERVER_IP:PORT/` once the installer finishes. If you configure a re
 - **Port mapping** – Adjust the `8000:8000` mapping in `docker-compose.yml` when exposing a different port.
 - **Reverse proxies** – When terminating TLS with Nginx/Traefik, forward to the container and ensure the `LECTURE_TOOLS_ROOT_PATH` environment variable matches any prefix you inject (e.g. `/lecture`).
 - **Custom images** – Build and push your own tag with `docker build -t registry.example.com/lecture-tools:latest .` and update the compose file to reference it.
+- **Slide previews without MuPDF** – Uploads only wait a few seconds for PyMuPDF to report the page count; if inspection times out or the dependency is missing the upload succeeds (page totals omitted) and the metadata endpoint returns HTTP 503 instead of hanging.
 
 ### ♻️ Updating
 

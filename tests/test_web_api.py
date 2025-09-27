@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 import io
+import time
 import wave
 
 import pytest
@@ -825,6 +826,62 @@ def test_slide_preview_metadata_dependency_error(temp_config, monkeypatch):
     )
     assert metadata_response.status_code == 503
     assert "PyMuPDF" in metadata_response.json()["detail"]
+
+
+def test_slide_preview_upload_timeout_fallback(temp_config, monkeypatch):
+    repository, lecture_id, _module_id = _create_sample_data(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    monkeypatch.setattr(web_server, "_PDF_PAGE_COUNT_TIMEOUT_SECONDS", 0.05)
+
+    def hanging_get_pdf_page_count(_path):
+        time.sleep(0.2)
+        return 99
+
+    monkeypatch.setattr(web_server, "get_pdf_page_count", hanging_get_pdf_page_count)
+
+    start = time.perf_counter()
+    response = client.post(
+        f"/api/lectures/{lecture_id}/slides/previews",
+        files={"file": ("deck.pdf", _build_sample_pdf(2), "application/pdf")},
+    )
+    duration = time.perf_counter() - start
+
+    assert response.status_code == 201
+    assert response.json()["page_count"] is None
+    assert duration < 0.5
+
+
+def test_slide_preview_metadata_timeout(temp_config, monkeypatch):
+    repository, lecture_id, _module_id = _create_sample_data(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    creation_response = client.post(
+        f"/api/lectures/{lecture_id}/slides/previews",
+        files={"file": ("deck.pdf", _build_sample_pdf(1), "application/pdf")},
+    )
+    assert creation_response.status_code == 201
+    preview_id = creation_response.json()["preview_id"]
+
+    monkeypatch.setattr(web_server, "_PDF_PAGE_COUNT_TIMEOUT_SECONDS", 0.05)
+
+    def hanging_get_pdf_page_count(_path):
+        time.sleep(0.2)
+        return 42
+
+    monkeypatch.setattr(web_server, "get_pdf_page_count", hanging_get_pdf_page_count)
+
+    start = time.perf_counter()
+    metadata_response = client.get(
+        f"/api/lectures/{lecture_id}/slides/previews/{preview_id}/metadata"
+    )
+    duration = time.perf_counter() - start
+
+    assert metadata_response.status_code == 503
+    assert metadata_response.json()["detail"] == "Slide preview inspection timed out"
+    assert duration < 0.5
 
 
 def test_slide_preview_page_image(temp_config):
