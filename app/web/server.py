@@ -53,7 +53,7 @@ from ..processing import (
     render_pdf_page,
     save_preprocessed_wav,
 )
-from ..services.audio_conversion import ensure_wav
+from ..services.audio_conversion import ensure_wav, ffmpeg_available
 from ..services.ingestion import LecturePaths
 from ..services.naming import build_asset_stem, build_timestamped_name, slugify
 from ..services.progress import (
@@ -1676,6 +1676,19 @@ def create_app(
             candidate_name = build_timestamped_name(stem, timestamp=timestamp, extension=suffix)
             target = destination / candidate_name
 
+        if asset_key == "audio":
+            normalized_suffix = suffix.lower()
+            requires_conversion = normalized_suffix not in {".wav"}
+            if requires_conversion and not ffmpeg_available():
+                await file.close()
+                raise HTTPException(
+                    status_code=503,
+                    detail=(
+                        "FFmpeg is required to convert audio files on this server. "
+                        "Install FFmpeg or upload a WAV file instead."
+                    ),
+                )
+
         try:
             with target.open("wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
@@ -1854,7 +1867,19 @@ def create_app(
         if asset_key == "slides":
             if lecture.slide_image_dir:
                 _delete_asset_path(lecture.slide_image_dir)
-            update_kwargs["slide_image_dir"] = None
+            try:
+                slide_image_relative = await asyncio.to_thread(
+                    _generate_slide_archive,
+                    target,
+                    lecture_paths,
+                    _make_slide_converter(),
+                )
+            except HTTPException:
+                raise
+            except Exception as error:  # noqa: BLE001 - conversion may raise
+                LOGGER.exception("Slide conversion failed during upload")
+                slide_image_relative = None
+            update_kwargs["slide_image_dir"] = slide_image_relative
 
         repository.update_lecture_assets(lecture_id, **update_kwargs)
         updated = repository.get_lecture(lecture_id)

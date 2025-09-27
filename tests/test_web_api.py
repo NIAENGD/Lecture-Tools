@@ -469,10 +469,12 @@ def test_upload_asset_updates_repository(temp_config):
     assert repository.get_lecture(lecture_id).notes_path.endswith("summary.docx")
 
 
-def test_upload_audio_processes_file(temp_config):
+def test_upload_audio_processes_file(monkeypatch, temp_config):
     repository, lecture_id, _module_id = _create_sample_data(temp_config)
     app = create_app(repository, config=temp_config)
     client = TestClient(app)
+
+    monkeypatch.setattr(web_server, "ffmpeg_available", lambda: True)
 
     response = client.post(
         f"/api/lectures/{lecture_id}/assets/audio",
@@ -506,6 +508,8 @@ def test_upload_audio_converts_non_wav(monkeypatch, temp_config):
     app = create_app(repository, config=temp_config)
     client = TestClient(app)
 
+    monkeypatch.setattr(web_server, "ffmpeg_available", lambda: True)
+
     def fake_ensure_wav(path, *, output_dir, stem, timestamp):
         destination = output_dir / f"{stem}-converted.wav"
         destination.parent.mkdir(parents=True, exist_ok=True)
@@ -533,6 +537,36 @@ def test_upload_audio_converts_non_wav(monkeypatch, temp_config):
     processed_relative = payload.get("processed_audio_path")
     assert processed_relative == payload["audio_path"]
 
+
+def test_upload_audio_requires_ffmpeg(monkeypatch, temp_config):
+    repository, _existing_lecture_id, module_id = _create_sample_data(temp_config)
+    lecture_id = repository.add_lecture(module_id, "FFmpeg Check")
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    monkeypatch.setattr(web_server, "ffmpeg_available", lambda: False)
+
+    response = client.post(
+        f"/api/lectures/{lecture_id}/assets/audio",
+        files={"file": ("lecture.mp3", b"id3", "audio/mpeg")},
+    )
+    assert response.status_code == 503
+    assert "FFmpeg" in response.json().get("detail", "")
+
+    lecture = repository.get_lecture(lecture_id)
+    assert lecture is not None
+    assert lecture.audio_path is None
+
+    module = repository.get_module(module_id)
+    class_record = repository.get_class(module.class_id) if module else None
+    assert module is not None and class_record is not None
+    lecture_paths = LecturePaths.build(
+        temp_config.storage_root,
+        class_record.name,
+        module.name,
+        "FFmpeg Check",
+    )
+    assert not any(lecture_paths.raw_dir.iterdir())
 
 def test_delete_asset_clears_path_and_file(temp_config):
     repository, lecture_id, _module_id = _create_sample_data(temp_config)
