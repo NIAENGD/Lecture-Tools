@@ -1,79 +1,225 @@
 # Lecture Tools Logical Structure
+This document visualises the observable behaviour of Lecture Tools. Each diagram focuses on the choices available to administrators, instructors, and learners, together with the resulting system reactions. No implementation details are described—only the logical steps that occur when a person interacts with the platform.
 
-This document summarises the major layers, data flows, and integration points that make up the Lecture Tools platform. It is organised from the outermost entry points down to the lower-level processing utilities so that developers can trace how user actions propagate through the system.
+## 1. End-to-End Overview
 
-## 1. Runtime Entry Points
+```mermaid
+flowchart TD
+    A[Platform Startup] --> B{Who is interacting?}
+    B -->|Administrator| C[Configure & Monitor]
+    B -->|Instructor| D[Ingest & Curate Lectures]
+    B -->|Learner| E[Consume Published Content]
 
-### 1.1 Command-line bootstrap
-- `run.py` exposes a Typer-powered CLI. Invoking the script with no arguments launches the FastAPI web server through the `serve` command, while explicit subcommands provide administrative workflows such as overview rendering, audio mastering tests, asset ingestion, and standalone transcription.
-- Every CLI invocation begins by loading configuration and running `initialize_app()`, ensuring directories, logging, and the SQLite database are ready before the requested workflow executes.
+    C --> C1[Launch services]
+    C --> C2[Maintain catalogue]
+    C --> C3[Supervise background jobs]
 
-### 1.2 Web server startup
-- The `serve` command initialises the FastAPI application via `create_app`, mounts static assets, opens a browser tab for convenience, and runs Uvicorn with the configured root path, host, and port settings.
-- When started without arguments, `run.py` rewrites legacy `--testmastering` flags for compatibility and dispatches the CLI entry point, keeping command variants consistent.
+    D --> D1[Upload media]
+    D --> D2[Track processing]
+    D --> D3[Publish or revise]
 
-## 2. Configuration & Bootstrapping
+    E --> E1[Browse catalogue]
+    E --> E2[Stream audio & transcript]
+    E --> E3[Download slides & notes]
 
-- `AppConfig` provides strongly typed paths for the storage root, SQLite database, and assets directory derived from `config/default.json`. The configuration loader resolves relative locations against the project root for predictable filesystem layout.
-- `initialize_app()` creates a `Bootstrapper` that ensures runtime directories exist, clears temporary archives, and migrates the SQLite schema for classes, modules, and lectures (including optional columns and position ordering).
+    subgraph Shared Systems
+        S1[Progress Tracker]
+        S2[Persistent Storage]
+        S3[Dependency Validator]
+    end
 
-## 3. Persistence Model
+    C1 --> S3
+    C2 --> S2
+    C3 --> S1
+    D1 --> S2
+    D2 --> S1
+    D3 --> S2
+    E1 --> S2
+    E2 --> S1
+    E3 --> S2
+```
 
-### 3.1 Database schema
-- The bootstrap routine creates three core tables (`classes`, `modules`, `lectures`) with cascading deletes, textual metadata, ordering columns, and optional asset paths so that the UI can track uploaded artefacts and their derived outputs.
+The remainder of this document expands each branch so that every possible route a user can take is charted.
 
-### 3.2 Repository abstraction
-- `LectureRepository` centralises CRUD operations for domain records, opening SQLite connections with foreign key enforcement and computing ordering positions when new entities are inserted.
-- Iterators expose classes, modules, and lectures to other layers, while update helpers mutate stored asset paths as processing pipelines produce transcripts, slides, and mastered audio.
-- 
-## 4. Filesystem Layout
+## 2. Administrator Journey
 
-- `LecturePaths` calculates the on-disk directories (raw uploads, processed audio, transcripts, slides, notes) derived from slugified class/module/lecture names, and guarantees that each path exists before ingestion proceeds.
-- Asset naming utilities (`slugify`, `build_asset_stem`, `build_timestamped_name`) keep filenames stable and collision-free across ingestion runs, incorporating timestamps and sequences when necessary.
+### 2.1 Bringing the platform online
 
-## 5. Domain Services & Utilities
+```mermaid
+flowchart LR
+    A[Invoke startup command] --> B[Load configuration]
+    B --> C{Dependencies available?}
+    C -->|No| D[Report missing tools & stop]
+    C -->|Yes| E[Prepare storage & working dirs]
+    E --> F{Storage ready?}
+    F -->|No| G[Report storage error & wait for fix]
+    F -->|Yes| H[Start background services]
+    H --> I[Start web server]
+    I --> J[Administrator dashboard available]
+```
 
-- `ensure_wav()` upgrades arbitrary audio files to PCM WAV using FFmpeg, selecting destination names based on timestamped stems and reporting conversion failures with meaningful diagnostics.
-- `format_progress_message()` and `build_mastering_stage_progress_message()` turn deterministic stage counts into human-readable status updates consumed by CLI tasks and web polling endpoints.
-- `SettingsStore` serialises UI preferences (theme, language, Whisper defaults, slide DPI, toggles) to `storage/settings.json`, providing resilient load/save behaviour when files are missing or corrupted.
+### 2.2 Managing the catalogue and jobs
 
-## 6. Processing Pipelines
+```mermaid
+flowchart TD
+    A[Open admin dashboard / CLI] --> B{Action}
+    B -->|Create structure| C[Add class/module/lecture]
+    B -->|Edit details| D[Update metadata]
+    B -->|Remove content| E[Confirm cascade delete]
+    B -->|Monitor jobs| F[Inspect tracker]
 
-### 6.1 Audio mastering
-- `test-mastering` within `run.py` orchestrates the mastering flow: convert inputs to WAV, analyse statistics, run `preprocess_audio`, and persist the mastered result while reporting structured progress messages.
-- The preprocessing backend in `app/processing/recording.py` performs noise reduction, equalisation, compression, loudness normalisation, and diagnostic logging to optimise speech clarity.
+    C --> C1[Validate hierarchy]
+    C1 --> C2[Persist catalogue]
+    C2 --> C3[Notify active sessions]
 
-### 6.2 Transcription
-- `FasterWhisperTranscription` adapts to CPU (`faster-whisper` library) or GPU CLI execution, probing binaries/models, streaming progress updates, and saving both transcript text and segment JSON for downstream use.
-- The transcription CLI command and ingestion workflow construct this engine with assets stored in the configured download directory, ensuring consistent model caching across runs.
+    D --> D1[Validate changes]
+    D1 --> D2[Persist metadata]
+    D2 --> D3[Refresh UI panels]
 
-### 6.3 Slide conversion
-- `PyMuPDFSlideConverter` renders PDF slides to PNG images inside a ZIP archive, notifying progress callbacks as each page is processed. Dependency checks guard against missing PyMuPDF installations.
+    E --> E1[Warn about dependent artefacts]
+    E1 --> E2{Confirmed?}
+    E2 -->|No| B
+    E2 -->|Yes| E3[Delete records & artefacts]
+    E3 --> E4[Update tracker & UI]
 
-## 7. Ingestion Workflow
+    F --> F1[Review running/queued jobs]
+    F1 --> F2{Issue spotted?}
+    F2 -->|No| B
+    F2 -->|Yes| F3[Trigger retry or escalate]
+```
 
-- `LectureIngestor` coordinates the high-level ingestion flow: ensure class/module/lecture records exist, copy uploaded audio/slides into the raw directory, invoke transcription and slide conversion backends, and persist relative asset paths back to the repository.
-- Successful CLI ingestion prints the locations of generated transcripts and slide images, providing immediate feedback to operators.
+Administrators can loop through these options without restarting the platform. Every decision either updates storage immediately or guides the next corrective action.
 
-## 8. Web Application Layer
+## 3. Instructor Journey
 
-### 8.1 Application scaffolding
-- `create_app()` instantiates FastAPI with CORS support, mounts static assets, injects PDF.js URLs into the HTML shell, and attaches progress trackers that capture long-running operations for polling clients.
+### 3.1 Selecting ingestion paths
 
-### 8.2 REST API surface
-- Endpoints under `/api` manage the curriculum hierarchy (list/create/delete classes, modules, lectures), update lecture metadata, and stream files from the storage tree with defensive path validation.
-- Additional routes trigger transcription, slide previews, slide processing, GPU diagnostics, storage purges, exports/imports, and graceful shutdown. Each task logs contextual events and updates the shared progress tracker for the web UI to display status in real time.
+```mermaid
+flowchart TD
+    A[Open instructor dashboard] --> B[Fetch latest catalogue & job statuses]
+    B --> C{Choose lecture}
+    C --> D[Review outstanding tasks]
+    D --> E{What to do?}
+    E -->|Upload media| F[Choose audio/slides]
+    E -->|Retry failed job| G[Request retry]
+    E -->|Adjust lecture info| H[Edit metadata]
+    E -->|Publish/unpublish| I[Toggle visibility]
 
-### 8.3 Settings & diagnostics
-- The web layer persists UI preferences through `SettingsStore`, tests GPU Whisper availability, and streams debug log entries collected by an in-memory handler so administrators can review recent activity without leaving the browser.
+    F --> F1[Store uploads in lecture directory]
+    F1 --> F2[Register processing steps]
+    F2 --> J[Processing pipeline]
 
-## 9. User Interfaces
+    G --> G1[Reset job status]
+    G1 --> J
 
-- `ModernUI` renders a Rich-based dashboard in the terminal, combining tree views and statistics by querying the repository, while `ConsoleUI` offers a lightweight textual alternative; both reuse the shared `collect_overview()` snapshot builder.
-- The FastAPI SPA served from `app/web/static` consumes the same REST endpoints, presenting a graphical management experience with live progress feedback fed by `TranscriptionProgressTracker`.
+    H --> H1[Validate edits]
+    H1 --> H2[Persist changes]
+    H2 --> B
 
-## 10. External Integrations
+    I --> I1[Update publication state]
+    I1 --> B
+```
 
-- Audio conversion relies on FFmpeg being available on the execution path; failure to find the binary or a supported codec surfaces actionable errors to users.
-- Transcription can leverage the GPU-enabled CLI when bundled binaries and models are present, falling back to CPU inference when unavailable. The platform records GPU capability tests so the UI can report compatibility status.
-- Slide rendering uses PyMuPDF and Pillow; missing dependencies trigger explicit `SlideConversionDependencyError` exceptions that bubble up to the API and CLI surfaces.
+### 3.2 Processing pipeline reactions
+
+```mermaid
+stateDiagram-v2
+    [*] --> Staged
+    Staged --> AudioMastering: Audio queued
+    AudioMastering --> Transcript: Mastered audio ready
+    AudioMastering --> FailedMastering: Error encountered
+    FailedMastering --> Staged: Instructor retries
+    Transcript --> Slides: Slides available
+    Transcript --> ReadyForReview: No slides provided
+    Transcript --> FailedTranscription: Error encountered
+    FailedTranscription --> Transcript: Instructor retries
+    Slides --> ReadyForReview: Conversion complete
+    Slides --> FailedSlides: Error encountered
+    FailedSlides --> Slides: Instructor retries
+    ReadyForReview --> Published: Instructor publishes
+    Published --> Archived: Instructor retracts or supersedes
+```
+
+Every transition updates the unified progress tracker so that instructors immediately see where a lecture stands and what recovery options exist.
+
+## 4. Learner Journey
+
+### 4.1 Navigating the portal
+
+```mermaid
+flowchart TD
+    A[Enter learner portal] --> B[Load published catalogue]
+    B --> C{Select lecture}
+    C -->|Back to catalogue| B
+    C -->|Open lecture| D[Display lecture view]
+    D --> E{Desired action}
+    E -->|Stream audio| F[Play mastered audio]
+    E -->|Follow transcript| G[Sync transcript segments]
+    E -->|Inspect slides| H[Open slide gallery]
+    E -->|Download materials| I[Bundle download]
+    E -->|Mark complete| J[Update progress]
+
+    F --> F1[Continuous playback]
+    F1 --> G
+    G --> G1[Jump by timestamp]
+    H --> H1[Zoom individual slides]
+    I --> I1[Deliver archive]
+    J --> B
+```
+
+### 4.2 Handling unavailable items
+
+```mermaid
+flowchart LR
+    A[Lecture opened] --> B{Are all artefacts ready?}
+    B -->|Yes| C[Show full experience]
+    B -->|No| D[Display placeholders & status]
+    D --> E{Which artefact missing?}
+    E -->|Audio| F[Disable playback, show retry ETA]
+    E -->|Transcript| G[Hide sync controls, show notice]
+    E -->|Slides| H[Show conversion pending message]
+    F --> I[Await tracker update]
+    G --> I
+    H --> I
+    I --> B
+```
+
+Learners continuously poll the tracker so that newly available media appears without reloading the page.
+
+## 5. Cross-Cutting Safeguards
+
+### 5.1 Validation and dependency checks
+
+```mermaid
+flowchart TD
+    A[User initiates action] --> B[Validate input]
+    B --> C{Valid?}
+    C -->|No| D[Reject with guidance]
+    C -->|Yes| E[Check external dependencies]
+    E --> F{Tools & services ready?}
+    F -->|No| G[Queue job & notify admins]
+    F -->|Yes| H[Execute action]
+    G --> I[Wait for resolution]
+    I --> F
+    H --> J[Log success in tracker]
+```
+
+### 5.2 Error recovery loop
+
+```mermaid
+flowchart LR
+    A[Failure reported] --> B[Show actionable message]
+    B --> C{User role}
+    C -->|Instructor| D[Retry from dashboard]
+    C -->|Administrator| E[Resolve dependency/storage issue]
+    C -->|Learner| F[Wait or switch lecture]
+    D --> G[Job re-queued]
+    E --> H[Fix environment]
+    F --> I[Monitor tracker notifications]
+    G --> J[Tracker updates all clients]
+    H --> J
+    I --> J
+    J --> K{Problem solved?}
+    K -->|Yes| L[Resume normal flow]
+    K -->|No| B
+
