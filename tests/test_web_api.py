@@ -749,6 +749,7 @@ def test_slide_preview_lifecycle(temp_config):
     payload = response.json()
     preview_id = payload["preview_id"]
     preview_url = payload["preview_url"]
+    assert payload["page_count"] == 2
 
     lecture_paths = LecturePaths.build(
         temp_config.storage_root,
@@ -782,6 +783,7 @@ def test_slide_preview_metadata(temp_config, monkeypatch):
     assert response.status_code == 201
     payload = response.json()
     preview_id = payload["preview_id"]
+    assert payload["page_count"] == 4
 
     called_with = {}
 
@@ -809,7 +811,9 @@ def test_slide_preview_metadata_dependency_error(temp_config, monkeypatch):
         files={"file": ("deck.pdf", _build_sample_pdf(1), "application/pdf")},
     )
     assert response.status_code == 201
-    preview_id = response.json()["preview_id"]
+    preview_payload = response.json()
+    preview_id = preview_payload["preview_id"]
+    assert preview_payload["page_count"] == 1
 
     def fake_get_pdf_page_count(_path):
         raise SlideConversionDependencyError("PyMuPDF (fitz) is not installed")
@@ -833,7 +837,9 @@ def test_slide_preview_page_image(temp_config):
         files={"file": ("deck.pdf", _build_sample_pdf(3), "application/pdf")},
     )
     assert response.status_code == 201
-    preview_id = response.json()["preview_id"]
+    preview_payload = response.json()
+    preview_id = preview_payload["preview_id"]
+    assert preview_payload["page_count"] == 3
 
     image_response = client.get(
         f"/api/lectures/{lecture_id}/slides/previews/{preview_id}/pages/2"
@@ -892,7 +898,9 @@ def test_process_slides_with_preview_token(monkeypatch, temp_config):
         files={"file": ("deck.pdf", b"%PDF-1.4\n", "application/pdf")},
     )
     assert preview.status_code == 201
-    preview_id = preview.json()["preview_id"]
+    preview_payload = preview.json()
+    preview_id = preview_payload["preview_id"]
+    assert "page_count" in preview_payload
 
     response = client.post(
         f"/api/lectures/{lecture_id}/process-slides",

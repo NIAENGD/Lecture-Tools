@@ -2470,6 +2470,19 @@ def create_app(
         finally:
             await file.close()
 
+        page_count: Optional[int] = None
+        try:
+            page_count = get_pdf_page_count(preview_path)
+        except SlideConversionDependencyError as error:
+            LOGGER.warning(
+                "Unable to inspect slide preview due to dependency issue: %s",
+                error,
+            )
+        except SlideConversionError as error:
+            LOGGER.warning("Stored slide preview could not be inspected: %s", error)
+        except Exception:  # pragma: no cover - defensive fallback
+            LOGGER.exception("Unexpected failure while inspecting slide preview")
+
         relative_preview = preview_path.relative_to(config.storage_root).as_posix()
         _log_event(
             "Slide preview stored",
@@ -2483,6 +2496,7 @@ def create_app(
             "preview_id": preview_token,
             "preview_url": preview_url,
             "filename": original_name,
+            "page_count": page_count,
         }
 
     @app.get("/api/lectures/{lecture_id}/slides/previews/{preview_id}")
