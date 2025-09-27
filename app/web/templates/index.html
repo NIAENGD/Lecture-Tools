@@ -2570,200 +2570,6 @@
     </div>
     <script>
       (async function () {
-        function resolvePdfjsWorkerUrl() {
-          const candidate = window.__LECTURE_TOOLS_PDFJS_WORKER_URL__;
-          if (
-            typeof candidate === 'string' &&
-            candidate &&
-            candidate !== '__LECTURE_TOOLS_PDFJS_WORKER__'
-          ) {
-            return candidate;
-          }
-          return '/static/pdfjs/pdf.worker.min.js';
-        }
-
-        function resolvePdfjsScriptUrl() {
-          const candidate = window.__LECTURE_TOOLS_PDFJS_SCRIPT_URL__;
-          if (
-            typeof candidate === 'string' &&
-            candidate &&
-            candidate !== '__LECTURE_TOOLS_PDFJS_SCRIPT__'
-          ) {
-            return candidate;
-          }
-          return '/static/pdfjs/pdf.min.js';
-        }
-
-        function resolvePdfjsModuleUrl() {
-          const candidate = window.__LECTURE_TOOLS_PDFJS_MODULE_URL__;
-          if (
-            typeof candidate === 'string' &&
-            candidate &&
-            candidate !== '__LECTURE_TOOLS_PDFJS_MODULE__'
-          ) {
-            return candidate;
-          }
-          const fallback = window.__LECTURE_TOOLS_PDFJS_SCRIPT_URL__;
-          if (typeof fallback === 'string' && fallback && fallback !== '__LECTURE_TOOLS_PDFJS_SCRIPT__') {
-            return fallback.replace(/\.js($|\?)/, '.mjs$1');
-          }
-          return '/static/pdfjs/pdf.min.mjs';
-        }
-
-        function resolvePdfjsWorkerModuleUrl() {
-          const candidate = window.__LECTURE_TOOLS_PDFJS_WORKER_MODULE_URL__;
-          if (
-            typeof candidate === 'string' &&
-            candidate &&
-            candidate !== '__LECTURE_TOOLS_PDFJS_WORKER_MODULE__'
-          ) {
-            return candidate;
-          }
-          return '/static/pdfjs/pdf.worker.min.mjs';
-        }
-
-        function configurePdfjsWorker(pdfjsLib, options = {}) {
-          if (!pdfjsLib || !pdfjsLib.GlobalWorkerOptions) {
-            return;
-          }
-          const preferModule = options.preferModule !== false;
-          const workerModuleUrl = preferModule ? resolvePdfjsWorkerModuleUrl() : null;
-          let configured = false;
-          if (workerModuleUrl) {
-            try {
-              pdfjsLib.GlobalWorkerOptions.workerSrc = workerModuleUrl;
-              if ('workerType' in pdfjsLib.GlobalWorkerOptions) {
-                pdfjsLib.GlobalWorkerOptions.workerType = workerModuleUrl.endsWith('.mjs')
-                  ? 'module'
-                  : undefined;
-              }
-              configured = true;
-            } catch (error) {
-              console.warn('Unable to configure module worker for PDF.js', error);
-            }
-          }
-          if (!configured) {
-            const workerUrl = resolvePdfjsWorkerUrl();
-            if (workerUrl) {
-              try {
-                pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
-                if ('workerType' in pdfjsLib.GlobalWorkerOptions) {
-                  pdfjsLib.GlobalWorkerOptions.workerType = undefined;
-                }
-              } catch (error) {
-                console.warn('Unable to configure classic worker for PDF.js', error);
-              }
-            }
-          }
-        }
-
-        const pdfjsLoaderState = { promise: null };
-
-        const pdfjsScriptLoaderState = { promise: null, url: null };
-
-        async function loadPdfjsScript(scriptUrl) {
-          if (window.pdfjsLib && typeof window.pdfjsLib.getDocument === 'function') {
-            return window.pdfjsLib;
-          }
-          const source = typeof scriptUrl === 'string' && scriptUrl ? scriptUrl : null;
-          if (!source) {
-            return null;
-          }
-          if (pdfjsScriptLoaderState.promise && pdfjsScriptLoaderState.url === source) {
-            return pdfjsScriptLoaderState.promise;
-          }
-
-          pdfjsScriptLoaderState.url = source;
-          pdfjsScriptLoaderState.promise = new Promise((resolve) => {
-            const existing = Array.from(
-              document.querySelectorAll('script[data-pdfjs-script]'),
-            ).find((element) => element.getAttribute('data-pdfjs-script') === source);
-            if (existing) {
-              existing.addEventListener(
-                'load',
-                () => resolve(window.pdfjsLib || null),
-                { once: true },
-              );
-              existing.addEventListener('error', () => resolve(null), { once: true });
-              return;
-            }
-            const script = document.createElement('script');
-            script.src = source;
-            script.async = true;
-            script.setAttribute('data-pdfjs-script', source);
-            script.addEventListener('load', () => {
-              resolve(window.pdfjsLib || null);
-            });
-            script.addEventListener('error', () => {
-              console.error('Failed to load PDF.js classic script', source);
-              resolve(null);
-            });
-            document.head.appendChild(script);
-          });
-
-          const loaded = await pdfjsScriptLoaderState.promise;
-          if (!loaded) {
-            pdfjsScriptLoaderState.promise = null;
-          }
-          return loaded;
-        }
-
-        async function loadPdfjsLibrary() {
-          if (window.pdfjsLib && typeof window.pdfjsLib.getDocument === 'function') {
-            configurePdfjsWorker(window.pdfjsLib, { preferModule: false });
-            return window.pdfjsLib;
-          }
-
-          if (pdfjsLoaderState.promise) {
-            return pdfjsLoaderState.promise;
-          }
-
-          pdfjsLoaderState.promise = (async () => {
-            if (typeof Promise.withResolvers !== 'function') {
-              Promise.withResolvers = function withResolvers() {
-                let resolve;
-                let reject;
-                const promise = new Promise((res, rej) => {
-                  resolve = res;
-                  reject = rej;
-                });
-                return { promise, resolve, reject };
-              };
-            }
-
-            const moduleUrl = resolvePdfjsModuleUrl();
-            try {
-              const pdfjsModule = await import(/* @vite-ignore */ moduleUrl);
-              const pdfjsLib = pdfjsModule?.pdfjsLib || pdfjsModule?.default || pdfjsModule;
-              if (!pdfjsLib || typeof pdfjsLib.getDocument !== 'function') {
-                return null;
-              }
-              configurePdfjsWorker(pdfjsLib, { preferModule: true });
-              return pdfjsLib;
-            } catch (error) {
-              console.error('Failed to load PDF.js module', error);
-              const scriptUrl = resolvePdfjsScriptUrl();
-              if (scriptUrl) {
-                console.info('Falling back to classic PDF.js bundle');
-              }
-              const pdfjsLib = await loadPdfjsScript(scriptUrl);
-              if (!pdfjsLib || typeof pdfjsLib.getDocument !== 'function') {
-                return null;
-              }
-              configurePdfjsWorker(pdfjsLib, { preferModule: false });
-              return pdfjsLib;
-            }
-          })();
-
-          const loaded = await pdfjsLoaderState.promise;
-          if (!loaded) {
-            pdfjsLoaderState.promise = null;
-          }
-          return loaded;
-        }
-
-        configurePdfjsWorker(window.pdfjsLib, { preferModule: false });
-
         const translations = {
           en: {
             document: {
@@ -4528,8 +4334,6 @@
         })();
 
         window.__LECTURE_TOOLS_BASE_PATH__ = BASE_PATH;
-
-        configurePdfjsWorker(window.pdfjsLib);
 
         function resolveAppUrl(target) {
           if (!target || typeof target !== 'string') {
@@ -6949,7 +6753,6 @@
 
             dialogState.active = true;
             let cancelled = false;
-            let pdfDocument = null;
             let pageCount = 0;
             let startPage = 1;
             let endPage = 1;
@@ -7208,14 +7011,26 @@
             }
 
             async function enableServerRenderedPreview({ knownPageCount = null } = {}) {
-              previewFailed = true;
-              updateTexts();
               if (cancelled) {
                 return;
               }
-              let resolvedCount = Number.isFinite(knownPageCount)
-                ? Number(knownPageCount)
-                : null;
+
+              const countCandidates = [
+                knownPageCount,
+                previewSource && typeof previewSource.pageCount !== 'undefined'
+                  ? previewSource.pageCount
+                  : null,
+              ];
+
+              let resolvedCount = null;
+              for (const candidate of countCandidates) {
+                const numeric = Number(candidate);
+                if (Number.isFinite(numeric) && numeric > 0) {
+                  resolvedCount = Math.round(numeric);
+                  break;
+                }
+              }
+
               if (!resolvedCount || resolvedCount <= 0) {
                 try {
                   resolvedCount = await fetchPreviewPageCount();
@@ -7223,26 +7038,52 @@
                   resolvedCount = null;
                 }
               }
-              pageCount = Number.isFinite(resolvedCount) && resolvedCount > 0 ? resolvedCount : 0;
+
+              pageCount = Number.isFinite(resolvedCount) && resolvedCount > 0 ? Math.round(resolvedCount) : 0;
               configureInputBounds(pageCount);
               startPage = 1;
               endPage = pageCount > 0 ? pageCount : 1;
               anchorPage = 1;
               manualSelectionMade = false;
+
               const fallbackPreview = resolveFallbackPreview();
               assignFallbackPreview(fallbackPreview.url, {
                 isObjectUrl: fallbackPreview.isObjectUrl,
               });
+
               if (dialog.loading) {
                 dialog.loading.classList.add('hidden');
               }
-              if (dialog.error) {
-                dialog.error.textContent = t('dialogs.slideRange.error');
-                dialog.error.classList.remove('hidden');
+
+              let renderSucceeded = false;
+              if (!cancelled && pageCount > 0) {
+                try {
+                  await renderServerPreviewPages(pageCount);
+                  renderSucceeded = true;
+                } catch (error) {
+                  if (!cancelled) {
+                    console.warn('Unable to render slide previews', error);
+                  }
+                }
               }
-              await renderServerPreviewPages(pageCount);
+
+              previewFailed = !renderSucceeded;
+
+              if (dialog.error) {
+                if (previewFailed) {
+                  dialog.error.textContent = t('dialogs.slideRange.error');
+                  dialog.error.classList.remove('hidden');
+                } else {
+                  dialog.error.textContent = '';
+                  dialog.error.classList.add('hidden');
+                }
+              }
+
+              updateFallbackVisibility();
               enableControls();
               updateRangeSummary();
+              updateTexts();
+
               window.requestAnimationFrame(() => {
                 if (dialog.startInput && !dialog.startInput.disabled) {
                   dialog.startInput.focus({ preventScroll: true });
@@ -7516,10 +7357,6 @@
               }
               document.body.classList.remove('dialog-open');
               dialogState.active = false;
-              if (pdfDocument && typeof pdfDocument.destroy === 'function') {
-                pdfDocument.destroy();
-              }
-              pdfDocument = null;
               if (previousActive) {
                 previousActive.focus({ preventScroll: true });
               }
@@ -7676,114 +7513,6 @@
               }
               manualSelectionMade = true;
               updateRangeSummary();
-            }
-
-            async function loadPdfDocument(pdfjsLib, source) {
-              let options = null;
-              if (source instanceof ArrayBuffer || ArrayBuffer.isView(source)) {
-                options = { data: source };
-              } else if (typeof source === 'string') {
-                options = { url: source, withCredentials: true };
-              } else if (source && typeof source === 'object') {
-                if (source.data) {
-                  options = { data: source.data };
-                } else if (source.url) {
-                  const withCredentials =
-                    source.withCredentials === false ? false : true;
-                  options = { url: source.url, withCredentials };
-                }
-              }
-              if (!options) {
-                throw new Error('Unsupported PDF source');
-              }
-              try {
-                return await pdfjsLib.getDocument(options).promise;
-              } catch (error) {
-                const message =
-                  (error && typeof error.message === 'string'
-                    ? error.message
-                    : String(error)) || '';
-                const shouldFallback =
-                  Boolean(options.data) &&
-                  /WorkerMessageHandler|Setting up fake worker|No "?GlobalWorkerOptions"?/i.test(
-                    message,
-                  );
-                if (!shouldFallback) {
-                  throw error;
-                }
-                console.warn('Falling back to workerless PDF rendering', error);
-                return await pdfjsLib
-                  .getDocument({ data: options.data, disableWorker: true })
-                  .promise;
-              }
-            }
-
-            async function renderPages(pdf) {
-              if (!dialog.pages) {
-                return;
-              }
-              dialog.pages.innerHTML = '';
-              pageEntries.length = 0;
-              for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
-                if (cancelled) {
-                  return;
-                }
-                const page = await pdf.getPage(pageNumber);
-                if (cancelled) {
-                  return;
-                }
-                const baseViewport = page.getViewport({ scale: 1 });
-                const containerWidth = Math.max(
-                  320,
-                  (dialog.preview?.clientWidth ?? baseViewport.width) - 32,
-                );
-                const scale = Math.min(1.5, containerWidth / baseViewport.width);
-                const viewport = page.getViewport({ scale });
-                const canvas = document.createElement('canvas');
-                let context = canvas.getContext('2d', { alpha: false });
-                if (!context) {
-                  context = canvas.getContext('2d');
-                }
-                if (!context) {
-                  throw new Error('Unable to initialise canvas context');
-                }
-                canvas.width = viewport.width;
-                canvas.height = viewport.height;
-                canvas.style.width = '100%';
-                canvas.style.height = 'auto';
-                const wrapper = document.createElement('div');
-                wrapper.className = 'slide-preview-page';
-                wrapper.dataset.pageNumber = String(pageNumber);
-                wrapper.tabIndex = 0;
-                const label = document.createElement('div');
-                label.className = 'slide-preview-page-label';
-                label.textContent = t('dialogs.slideRange.pageLabel', { page: pageNumber });
-                wrapper.appendChild(label);
-                wrapper.appendChild(canvas);
-                dialog.pages.appendChild(wrapper);
-                pageEntries.push({ element: wrapper, label, pageNumber });
-                const renderTask = page.render({ canvasContext: context, viewport });
-                try {
-                  await renderTask.promise;
-                } catch (error) {
-                  if (!cancelled) {
-                    throw error;
-                  }
-                  return;
-                }
-                if (cancelled) {
-                  return;
-                }
-                wrapper.addEventListener('click', (event) => {
-                  handlePageSelection(pageNumber, event.shiftKey);
-                });
-                wrapper.addEventListener('keydown', (event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    handlePageSelection(pageNumber, event.shiftKey);
-                  }
-                });
-              }
             }
 
             activeSlideRangeDialog = {
@@ -8036,6 +7765,10 @@
             id: payload.preview_id,
             url: resolveAppUrl(payload.preview_url),
             filename: payload.filename || file.name || 'slides.pdf',
+            pageCount:
+              typeof payload.page_count === 'number' && Number.isFinite(payload.page_count)
+                ? Math.max(0, Math.round(payload.page_count))
+                : null,
           };
         }
 
@@ -9509,6 +9242,10 @@
                       console.warn('Slide preview upload failed', error);
                       preview = null;
                     }
+                    const resolvedPageCount =
+                      preview && typeof preview.pageCount === 'number' && Number.isFinite(preview.pageCount)
+                        ? Math.max(0, Math.round(preview.pageCount))
+                        : null;
                     const previewSource = preview
                       ? {
                           url: preview.url,
@@ -9516,8 +9253,9 @@
                           withCredentials: true,
                           previewId: preview.id,
                           lectureId,
+                          pageCount: resolvedPageCount,
                         }
-                      : { file, lectureId };
+                      : { file, lectureId, pageCount: resolvedPageCount };
                     const selection = await showSlideRangeDialog(previewSource);
                     if (!selection || !selection.confirmed) {
                       if (preview) {
