@@ -5,7 +5,7 @@ This document summarises the major layers, data flows, and integration points th
 ## 1. Runtime Entry Points
 
 ### 1.1 Command-line bootstrap
-- `run.py` exposes a Typer-powered CLI. Invoking the script with no arguments launches the FastAPI web server through the `serve` command, while explicit subcommands provide administrative workflows such as overview rendering, audio mastering tests, asset ingestion, and standalone transcription.【F:run.py†L45-L450】
+- `run.py` exposes a Typer-powered CLI. Invoking the script with no arguments launches the FastAPI web server through the `serve` command, while explicit subcommands provide administrative workflows such as overview rendering, audio mastering tests, asset ingestion, and standalone transcription.
 - Every CLI invocation begins by loading configuration and running `initialize_app()`, ensuring directories, logging, and the SQLite database are ready before the requested workflow executes.【F:run.py†L110-L158】【F:run.py†L215-L366】
 
 ### 1.2 Web server startup
