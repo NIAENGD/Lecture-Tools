@@ -9518,43 +9518,6 @@
           const assetLabel = t(definition.labelKey);
           let audioProcessingStarted = false;
 
-          function formatSlideSummary(selection) {
-            if (!selection) {
-              return '';
-            }
-            const total =
-              typeof selection.pageTotal === 'number' && Number.isFinite(selection.pageTotal)
-                ? selection.pageTotal
-                : null;
-            const start =
-              typeof selection.pageStart === 'number' && Number.isFinite(selection.pageStart)
-                ? selection.pageStart
-                : null;
-            const end =
-              typeof selection.pageEnd === 'number' && Number.isFinite(selection.pageEnd)
-                ? selection.pageEnd
-                : null;
-            if (!total || !start || !end) {
-              return t('dialogs.slideRange.allPages');
-            }
-            const normalizedStart = Math.min(start, end);
-            const normalizedEnd = Math.max(start, end);
-            if (normalizedStart === 1 && normalizedEnd === total) {
-              return t('dialogs.slideRange.allPages');
-            }
-            if (normalizedStart === normalizedEnd) {
-              return t('dialogs.slideRange.summarySingle', {
-                start: normalizedStart,
-                total,
-              });
-            }
-            return t('dialogs.slideRange.summary', {
-              start: normalizedStart,
-              end: normalizedEnd,
-              total,
-            });
-          }
-
           const allowAudioBackground =
             kind === 'audio' && state.settings?.audio_mastering_enabled !== false;
           const allowBackgroundProcessing = allowAudioBackground;
@@ -9579,27 +9542,8 @@
             onFileSelected: null,
             onUpload: async (file, helpers) => {
               const formData = new FormData();
-              let includeFile = true;
               let endpoint = `/api/lectures/${lectureId}/assets/${kind}`;
-
-              if (kind === 'slides') {
-                endpoint = `/api/lectures/${lectureId}/process-slides`;
-                const meta = helpers?.meta || {};
-                if (typeof meta.pageStart === 'number' && Number.isFinite(meta.pageStart)) {
-                  formData.append('page_start', String(meta.pageStart));
-                }
-                if (typeof meta.pageEnd === 'number' && Number.isFinite(meta.pageEnd)) {
-                  formData.append('page_end', String(meta.pageEnd));
-                }
-                if (typeof meta.previewId === 'string' && meta.previewId) {
-                  formData.append('preview_token', meta.previewId);
-                  includeFile = false;
-                }
-              }
-
-              if (includeFile) {
-                formData.append('file', file);
-              }
+              formData.append('file', file);
 
               if (kind === 'audio') {
                 stopTranscriptionProgress();
@@ -9628,37 +9572,17 @@
                   stopProcessingProgress();
                   audioProcessingStarted = false;
                 }
-                if (kind === 'slides') {
-                  const meta = helpers?.meta || {};
-                  if (typeof meta.previewId === 'string' && meta.previewId) {
-                    await deleteSlidePreview(lectureId, meta.previewId);
-                  }
-                }
                 throw error;
               }
             },
           });
 
           const backgroundProcessingActive = Boolean(dialogResult && dialogResult.processing);
-          const previewId =
-            kind === 'slides' && dialogResult && dialogResult.meta && dialogResult.meta.previewId
-              ? dialogResult.meta.previewId
-              : null;
-
-          async function cleanupPreviewAfterDialog() {
-            if (!previewId || kind !== 'slides') {
-              return;
-            }
-            await deleteSlidePreview(lectureId, previewId);
-          }
 
           if (!dialogResult || (!dialogResult.uploaded && !backgroundProcessingActive)) {
             if (kind === 'audio' && audioProcessingStarted) {
               stopProcessingProgress();
               audioProcessingStarted = false;
-            }
-            if (!backgroundProcessingActive) {
-              await cleanupPreviewAfterDialog();
             }
             return;
           }
@@ -9671,7 +9595,6 @@
                 stopProcessingProgress({ preserveMessage: true });
                 audioProcessingStarted = false;
               }
-              await cleanupPreviewAfterDialog();
             }
             return;
           }
