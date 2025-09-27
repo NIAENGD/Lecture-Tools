@@ -1,5 +1,4 @@
 # Lecture Tools Logical Structure
-
 This document visualises the observable behaviour of Lecture Tools. Each diagram focuses on the choices available to administrators, instructors, and learners, together with the resulting system reactions. No implementation details are described—only the logical steps that occur when a person interacts with the platform.
 
 ## 1. End-to-End Overview
@@ -223,10 +222,4 @@ flowchart LR
     J --> K{Problem solved?}
     K -->|Yes| L[Resume normal flow]
     K -->|No| B
-```
 
-These safeguards ensure that every participant knows how to react when something goes wrong and how the system communicates progress throughout the resolution process.
-
----
-
-The diagrams above map the complete set of routes available to administrators, instructors, and learners. Together they describe how Lecture Tools behaves in response to every choice a user can make, and how the shared subsystems coordinate to keep the experience consistent.
