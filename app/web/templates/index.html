@@ -1837,15 +1837,7 @@
         filter: none;
       }
 
-      .actions-row {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        align-items: flex-end;
-        margin-top: 12px;
-      }
-
-      .actions-row label.inline {
+      .asset-actions label.inline {
         display: inline-flex;
         flex-direction: column;
         font-weight: 600;
@@ -1853,8 +1845,8 @@
         color: var(--muted);
       }
 
-      .actions-row label.inline select,
-      .actions-row label.inline input {
+      .asset-actions label.inline select,
+      .asset-actions label.inline input {
         margin-top: 4px;
         min-width: 120px;
       }
@@ -2107,24 +2099,6 @@
             <section id="asset-section" hidden>
               <h3 data-i18n="assets.title">Assets</h3>
               <ul id="asset-list" class="asset-list"></ul>
-              <div class="actions-row">
-                <button id="transcribe-button" type="button" data-i18n="assets.transcribe">
-                  Transcribe audio
-                </button>
-                <label class="inline" for="transcribe-model" style="margin-left: auto;" data-i18n="assets.modelLabel">
-                  Model
-                  <select id="transcribe-model">
-                    <option value="tiny" data-i18n="assets.model.tiny">tiny</option>
-                    <option value="base" selected data-i18n="assets.model.base">base</option>
-                    <option value="small" data-i18n="assets.model.small">small</option>
-                    <option value="medium" data-i18n="assets.model.medium">medium</option>
-                    <option value="large" data-i18n="assets.model.large">large</option>
-                    <option value="gpu" class="gpu-only" disabled data-i18n="assets.model.gpu">
-                      GPU (hardware accelerated)
-                    </option>
-                  </select>
-                </label>
-              </div>
             </section>
           </div>
           <div id="view-progress" class="view" data-view="progress" hidden>
@@ -4550,6 +4524,9 @@
           }
 
           renderProgressQueue();
+          if (state.selectedLectureDetail) {
+            renderAssets(state.selectedLectureDetail.lecture);
+          }
         }
 
         const WHISPER_MODEL_CHOICES = new Set([
@@ -4638,6 +4615,11 @@
             loading: false,
             timer: null,
           },
+          transcribeControls: {
+            button: null,
+            model: null,
+            gpuOption: null,
+          },
           debug: {
             enabled: false,
             timer: null,
@@ -4647,6 +4629,77 @@
             serverEntries: [],
           },
         };
+
+        function getTranscribeButton() {
+          return state.transcribeControls.button;
+        }
+
+        function getTranscribeModelSelect() {
+          return state.transcribeControls.model;
+        }
+
+        function setTranscribeControls(button, model, gpuOption) {
+          const current = state.transcribeControls;
+          if (current.button && current.button !== button) {
+            current.button.removeEventListener('click', handleTranscribeClick);
+          }
+
+          if (dom.gpuModelOptions) {
+            const existingOption = current.gpuOption;
+            if (existingOption && existingOption !== gpuOption) {
+              if (dom.gpuModelOptions instanceof Set) {
+                dom.gpuModelOptions.delete(existingOption);
+              } else if (Array.isArray(dom.gpuModelOptions)) {
+                dom.gpuModelOptions = dom.gpuModelOptions.filter(
+                  (option) => option !== existingOption,
+                );
+              }
+            }
+          }
+
+          state.transcribeControls = {
+            button: button || null,
+            model: model || null,
+            gpuOption: gpuOption || null,
+          };
+
+          if (button && current.button !== button) {
+            button.addEventListener('click', handleTranscribeClick);
+          }
+
+          if (dom.gpuModelOptions && gpuOption) {
+            if (dom.gpuModelOptions instanceof Set) {
+              dom.gpuModelOptions.add(gpuOption);
+            } else if (Array.isArray(dom.gpuModelOptions)) {
+              dom.gpuModelOptions.push(gpuOption);
+            }
+          }
+
+          updateGpuWhisperUI({ ...state.gpuWhisper });
+        }
+
+        function setTranscribeButtonDisabled(disabled) {
+          const button = getTranscribeButton();
+          if (button) {
+            button.disabled = Boolean(disabled);
+          }
+        }
+
+        function setTranscribeModelValue(value) {
+          const select = getTranscribeModelSelect();
+          if (!select) {
+            return;
+          }
+          select.value = normalizeWhisperModel(value);
+        }
+
+        function getTranscribeModelValue() {
+          const select = getTranscribeModelSelect();
+          if (select && select.value) {
+            return normalizeWhisperModel(select.value);
+          }
+          return state.settings?.whisper_model || DEFAULT_WHISPER_MODEL;
+        }
 
         const dom = {
           status: document.getElementById('status-bar'),
@@ -4667,8 +4720,6 @@
           editBanner: document.getElementById('edit-mode-banner'),
           assetSection: document.getElementById('asset-section'),
           assetList: document.getElementById('asset-list'),
-          transcribeButton: document.getElementById('transcribe-button'),
-          transcribeModel: document.getElementById('transcribe-model'),
           createForm: document.getElementById('lecture-create-form'),
           createModule: document.getElementById('create-module'),
           createName: document.getElementById('create-name'),
@@ -4697,7 +4748,7 @@
           settingsExport: document.getElementById('settings-export'),
           settingsImport: document.getElementById('settings-import'),
           settingsImportMode: document.getElementById('settings-import-mode'),
-          gpuModelOptions: Array.from(document.querySelectorAll('option.gpu-only')),
+          gpuModelOptions: new Set(Array.from(document.querySelectorAll('option.gpu-only'))),
           debugPane: document.getElementById('debug-pane'),
           debugLog: document.getElementById('debug-log-window'),
           debugEmpty: document.getElementById('debug-log-empty'),
@@ -5641,21 +5692,20 @@
             if (dom.settingsWhisperModel && dom.settingsWhisperModel.value === GPU_MODEL) {
               dom.settingsWhisperModel.value = DEFAULT_WHISPER_MODEL;
             }
-            if (dom.transcribeModel && dom.transcribeModel.value === GPU_MODEL) {
-              dom.transcribeModel.value = DEFAULT_WHISPER_MODEL;
+            const transcribeSelect = getTranscribeModelSelect();
+            if (transcribeSelect && transcribeSelect.value === GPU_MODEL) {
+              setTranscribeModelValue(DEFAULT_WHISPER_MODEL);
             }
             if (state.settings) {
               state.settings.whisper_model = dom.settingsWhisperModel
                 ? dom.settingsWhisperModel.value
                 : DEFAULT_WHISPER_MODEL;
-            }
+          }
           } else if (requestedModel === GPU_MODEL) {
             if (dom.settingsWhisperModel) {
               dom.settingsWhisperModel.value = GPU_MODEL;
             }
-            if (dom.transcribeModel) {
-              dom.transcribeModel.value = GPU_MODEL;
-            }
+            setTranscribeModelValue(GPU_MODEL);
             if (state.settings) {
               state.settings.whisper_model = GPU_MODEL;
             }
@@ -6100,7 +6150,7 @@
           if (dom.settingsDebugEnabled) {
             dom.settingsDebugEnabled.checked = debugEnabled;
           }
-          dom.transcribeModel.value = effectiveModel;
+          setTranscribeModelValue(effectiveModel);
 
           state.settings = {
             theme: themeValue,
@@ -6317,6 +6367,7 @@
             let processingInBackground = false;
 
             const allowBackgroundProcessing = options.allowBackgroundProcessing === true;
+            const enableProcessingStage = options.enableProcessingStage !== false;
             const backgroundProcessingMessage =
               typeof options.backgroundProcessing === 'string' ? options.backgroundProcessing : '';
 
@@ -6468,6 +6519,7 @@
                 dialog.progress.setAttribute('aria-valuenow', String(percent));
               }
               if (
+                enableProcessingStage &&
                 labels.processing &&
                 uploading &&
                 uploadStage !== 'processing' &&
@@ -8300,7 +8352,8 @@
           }
           dom.assetSection.hidden = true;
           dom.assetList.innerHTML = '';
-          dom.transcribeButton.disabled = true;
+          setTranscribeControls(null, null, null);
+          setTranscribeButtonDisabled(true);
           state.selectedLectureDetail = null;
           updateEditControlsAvailability();
         }
@@ -9285,6 +9338,7 @@
 
         function renderAssets(lecture) {
           dom.assetList.innerHTML = '';
+          setTranscribeControls(null, null, null);
           assetDefinitions.forEach((definition) => {
             const value = lecture[definition.key];
             if (
@@ -9325,6 +9379,11 @@
             const actions = document.createElement('div');
             actions.className = 'asset-actions';
 
+            let transcribeButton = null;
+            let modelLabel = null;
+            let modelSelect = null;
+            let gpuOption = null;
+
             if (definition.accept) {
               const uploadButton = document.createElement('button');
               uploadButton.type = 'button';
@@ -9334,6 +9393,43 @@
                 handleAssetUpload(definition);
               });
               actions.appendChild(uploadButton);
+            }
+
+            if (definition.type === 'audio') {
+              transcribeButton = document.createElement('button');
+              transcribeButton.type = 'button';
+              transcribeButton.className = 'secondary';
+              transcribeButton.setAttribute('data-i18n', 'assets.transcribe');
+              transcribeButton.textContent = t('assets.transcribe');
+              transcribeButton.disabled = !value;
+              actions.appendChild(transcribeButton);
+
+              modelLabel = document.createElement('label');
+              modelLabel.className = 'inline';
+              modelLabel.textContent = t('assets.modelLabel');
+              modelLabel.setAttribute('for', 'transcribe-model');
+              modelLabel.style.marginLeft = 'auto';
+
+              modelSelect = document.createElement('select');
+              modelSelect.id = 'transcribe-model';
+              const modelChoices = ['tiny', 'base', 'small', 'medium', 'large', 'gpu'];
+              modelChoices.forEach((choice) => {
+                const option = document.createElement('option');
+                option.value = choice;
+                option.setAttribute('data-i18n', `assets.model.${choice}`);
+                option.textContent = t(`assets.model.${choice}`);
+                if (choice === GPU_MODEL) {
+                  option.classList.add('gpu-only');
+                  option.disabled = true;
+                  gpuOption = option;
+                }
+                modelSelect.appendChild(option);
+              });
+              const requestedModel = normalizeWhisperModel(
+                state.settings?.whisper_model_requested || state.settings?.whisper_model,
+              );
+              modelSelect.value = requestedModel;
+              modelLabel.appendChild(modelSelect);
             }
 
             const downloadButton = document.createElement('button');
@@ -9385,6 +9481,12 @@
               handleAssetRemoval(definition);
             });
             actions.appendChild(removeButton);
+
+            if (definition.type === 'audio' && modelLabel && modelSelect) {
+              actions.appendChild(modelLabel);
+              setTranscribeControls(transcribeButton, modelSelect, gpuOption);
+              setTranscribeButtonDisabled(!value);
+            }
 
             item.appendChild(actions);
             dom.assetList.appendChild(item);
@@ -9465,7 +9567,7 @@
               dom.editName.focus();
             }
 
-            dom.transcribeButton.disabled = !detail.lecture.audio_path;
+            setTranscribeButtonDisabled(!detail.lecture.audio_path);
 
             renderAssets(detail.lecture);
           } catch (error) {
@@ -9521,6 +9623,7 @@
           const allowAudioBackground =
             kind === 'audio' && state.settings?.audio_mastering_enabled !== false;
           const allowBackgroundProcessing = allowAudioBackground;
+          const enableProcessingStage = allowBackgroundProcessing;
           const processingLabel =
             kind === 'audio' ? t('dialogs.upload.processingAudio') : undefined;
           const backgroundProcessingLabel =
@@ -9538,6 +9641,7 @@
             processing: processingLabel,
             processingAction: t('dialogs.upload.processingAction'),
             allowBackgroundProcessing,
+            enableProcessingStage,
             backgroundProcessing: backgroundProcessingLabel,
             onFileSelected: null,
             onUpload: async (file, helpers) => {
@@ -9858,13 +9962,20 @@
           }
         });
 
-        dom.transcribeButton.addEventListener('click', async () => {
+        async function handleTranscribeClick(event) {
+          event?.preventDefault?.();
           if (!state.selectedLectureId) {
             return;
           }
+
           const lectureId = state.selectedLectureId;
-          const selectedModel = dom.transcribeModel.value;
-          dom.transcribeButton.disabled = true;
+          const selectedModel = getTranscribeModelValue();
+          const button = getTranscribeButton();
+
+          if (button) {
+            button.disabled = true;
+          }
+
           showStatus(t('status.transcriptionPreparing'), 'info', { persist: true });
           startTranscriptionProgress(lectureId);
           try {
@@ -9887,9 +9998,7 @@
                 cancelText: t('common.actions.close'),
                 variant: 'danger',
               });
-              if (dom.transcribeModel) {
-                dom.transcribeModel.value = fallbackModel;
-              }
+              setTranscribeModelValue(fallbackModel);
               if (dom.settingsWhisperModel) {
                 dom.settingsWhisperModel.value = fallbackModel;
               }
@@ -9917,9 +10026,11 @@
               showStatus(message, 'error');
             }
           } finally {
-            dom.transcribeButton.disabled = false;
+            if (button) {
+              button.disabled = false;
+            }
           }
-        });
+        }
 
         if (dom.settingsWhisperGpuTest) {
           dom.settingsWhisperGpuTest.addEventListener('click', async () => {
@@ -9940,9 +10051,7 @@
                   if (dom.settingsWhisperModel) {
                     dom.settingsWhisperModel.value = GPU_MODEL;
                   }
-                  if (dom.transcribeModel) {
-                    dom.transcribeModel.value = GPU_MODEL;
-                  }
+                  setTranscribeModelValue(GPU_MODEL);
                   state.settings.whisper_model = GPU_MODEL;
                 }
               } else {
