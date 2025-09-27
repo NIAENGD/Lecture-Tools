@@ -639,10 +639,18 @@
         gap: 12px;
       }
 
+      .page-selection {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: flex-end;
+      }
+
       .page-inputs {
         display: flex;
         gap: 12px;
         flex-wrap: wrap;
+        flex: 1 1 240px;
       }
 
       .page-inputs label {
@@ -664,70 +672,15 @@
         font-weight: 500;
       }
 
-      .page-range-slider {
-        position: relative;
-        height: 36px;
-        margin-top: 4px;
+      .page-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: flex-start;
       }
 
-      .page-range-track {
-        position: absolute;
-        inset: 0;
-        height: 6px;
-        top: 50%;
-        transform: translateY(-50%);
-        background: rgba(148, 163, 184, 0.35);
-        border-radius: 999px;
-      }
-
-      .page-range-fill {
-        position: absolute;
-        top: 50%;
-        height: 6px;
-        background: var(--accent);
-        border-radius: 999px;
-        transform: translateY(-50%);
-      }
-
-      .page-range-slider input[type='range'] {
-        -webkit-appearance: none;
-        appearance: none;
-        background: transparent;
-        position: absolute;
-        inset: 0;
-        margin: 0;
-        pointer-events: none;
-      }
-
-      .page-range-slider input[type='range']::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        height: 18px;
-        width: 18px;
-        border-radius: 50%;
-        background: var(--accent);
-        border: 2px solid var(--panel-bg);
-        box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
-        pointer-events: auto;
-        cursor: pointer;
-      }
-
-      .page-range-slider input[type='range']::-moz-range-thumb {
-        height: 18px;
-        width: 18px;
-        border-radius: 50%;
-        background: var(--accent);
-        border: 2px solid var(--panel-bg);
-        box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
-        pointer-events: auto;
-        cursor: pointer;
-      }
-
-      .page-range-slider input[type='range']::-webkit-slider-runnable-track {
-        background: transparent;
-      }
-
-      .page-range-slider input[type='range']::-moz-range-track {
-        background: transparent;
+      .page-actions .dialog-button {
+        white-space: nowrap;
       }
 
       .page-range-summary {
@@ -998,6 +951,11 @@
         display: flex;
         justify-content: flex-end;
         gap: 8px;
+      }
+
+      .slide-range-footer {
+        justify-content: flex-end;
+        padding-top: 8px;
       }
 
       .dialog-button {
@@ -2500,21 +2458,29 @@
             <div id="slide-range-pages" class="slide-range-pages"></div>
           </div>
           <div class="slide-range-controls">
-            <div class="page-inputs">
-              <label for="slide-range-start">
-                <span id="slide-range-start-label"></span>
-                <input id="slide-range-start" type="number" min="1" value="1" />
-              </label>
-              <label for="slide-range-end">
-                <span id="slide-range-end-label"></span>
-                <input id="slide-range-end" type="number" min="1" value="1" />
-              </label>
-            </div>
-            <div class="page-range-slider" aria-hidden="true">
-              <div class="page-range-track"></div>
-              <div id="slide-range-slider-fill" class="page-range-fill"></div>
-              <input id="slide-range-slider-start" type="range" min="1" value="1" step="1" />
-              <input id="slide-range-slider-end" type="range" min="1" value="1" step="1" />
+            <div class="page-selection">
+              <div class="page-inputs">
+                <label for="slide-range-start">
+                  <span id="slide-range-start-label"></span>
+                  <input id="slide-range-start" type="number" min="1" value="1" />
+                </label>
+                <label for="slide-range-end">
+                  <span id="slide-range-end-label"></span>
+                  <input id="slide-range-end" type="number" min="1" value="1" />
+                </label>
+              </div>
+              <div class="page-actions">
+                <button
+                  type="button"
+                  id="slide-range-select-all"
+                  class="dialog-button secondary"
+                ></button>
+                <button
+                  type="button"
+                  id="slide-range-confirm"
+                  class="dialog-button primary"
+                ></button>
+              </div>
             </div>
             <div class="slide-range-zoom">
               <div class="slide-range-zoom-header">
@@ -2538,9 +2504,8 @@
             <p id="slide-range-summary" class="page-range-summary"></p>
           </div>
         </div>
-        <div class="dialog-actions">
+        <div class="dialog-actions slide-range-footer">
           <button type="button" id="slide-range-cancel" class="dialog-button secondary"></button>
-          <button type="button" id="slide-range-confirm" class="dialog-button primary"></button>
         </div>
       </div>
     </div>
@@ -3112,7 +3077,7 @@
                   'Slide previews are shown below. Adjust the range manually if needed.',
                 startLabel: 'Start page',
                 endLabel: 'End page',
-                rangeHint: 'Use the sliders, inputs, or page previews to adjust the selection.',
+                rangeHint: 'Use the inputs or page previews to adjust the selection.',
                 zoomLabel: 'Preview zoom',
                 zoomValue: '{{value}}% view',
                 fallbackMessage:
@@ -3125,7 +3090,8 @@
                 summarySingleUnknown: 'Processing page {{start}}.',
                 allPages: 'Processing all pages in the document.',
                 pageLabel: 'Page {{page}}',
-                confirm: 'Process selection',
+                selectAll: 'Select all',
+                confirm: 'Confirm & Continue',
               },
               upload: {
                 title: 'Upload file',
@@ -3537,7 +3503,7 @@
                 error: '下方显示的是服务器生成的课件预览，可按需手动调整页码范围。',
                 startLabel: '起始页',
                 endLabel: '结束页',
-                rangeHint: '可通过滑块、输入框或页面预览调整选择范围。',
+                rangeHint: '可通过输入框或页面预览调整选择范围。',
                 zoomLabel: '预览缩放',
                 zoomValue: '{{value}}% 视图',
                 fallbackMessage: '如需直接查看 PDF，可在下方打开新标签页。',
@@ -3549,7 +3515,8 @@
                 summarySingleUnknown: '正在处理第 {{start}} 页。',
                 allPages: '将处理文档中的全部页面。',
                 pageLabel: '第 {{page}} 页',
-                confirm: '处理所选页面',
+                selectAll: '选择全部',
+                confirm: '确认并继续',
               },
               upload: {
                 title: '上传文件',
@@ -3966,7 +3933,7 @@
                 startLabel: 'Página inicial',
                 endLabel: 'Página final',
                 rangeHint:
-                  'Usa los controles deslizantes, los campos o la vista previa para ajustar la selección.',
+                  'Usa los campos o la vista previa para ajustar la selección.',
                 zoomLabel: 'Zoom de la vista previa',
                 zoomValue: 'Vista al {{value}}%',
                 fallbackMessage:
@@ -3979,7 +3946,8 @@
                 summarySingleUnknown: 'Procesando la página {{start}}.',
                 allPages: 'Se procesarán todas las páginas del documento.',
                 pageLabel: 'Página {{page}}',
-                confirm: 'Procesar selección',
+                selectAll: 'Seleccionar todo',
+                confirm: 'Confirmar y continuar',
               },
               upload: {
                 title: 'Subir archivo',
@@ -4398,7 +4366,7 @@
                   'Les aperçus générés par le serveur sont affichés ci-dessous ; ajustez la plage manuellement si nécessaire.',
                 startLabel: 'Page de début',
                 endLabel: 'Page de fin',
-                rangeHint: 'Utilisez les curseurs, les champs ou l’aperçu pour ajuster la sélection.',
+                rangeHint: 'Utilisez les champs ou l’aperçu pour ajuster la sélection.',
                 zoomLabel: 'Zoom de l’aperçu',
                 zoomValue: 'Vue à {{value}} %',
                 fallbackMessage:
@@ -4411,7 +4379,8 @@
                 summarySingleUnknown: 'Traitement de la page {{start}}.',
                 allPages: 'Traitement de toutes les pages du document.',
                 pageLabel: 'Page {{page}}',
-                confirm: 'Traiter la sélection',
+                selectAll: 'Tout sélectionner',
+                confirm: 'Confirmer et continuer',
               },
               upload: {
                 title: 'Téléverser un fichier',
@@ -4907,9 +4876,7 @@
             endLabel: document.getElementById('slide-range-end-label'),
             startInput: document.getElementById('slide-range-start'),
             endInput: document.getElementById('slide-range-end'),
-            startSlider: document.getElementById('slide-range-slider-start'),
-            endSlider: document.getElementById('slide-range-slider-end'),
-            sliderFill: document.getElementById('slide-range-slider-fill'),
+            selectAll: document.getElementById('slide-range-select-all'),
             zoomLabel: document.getElementById('slide-range-zoom-label'),
             zoomValue: document.getElementById('slide-range-zoom-value'),
             zoomSlider: document.getElementById('slide-range-zoom'),
@@ -7034,14 +7001,6 @@
                 dialog.endInput.min = '1';
                 dialog.endInput.max = numeric > 0 ? String(numeric) : '';
               }
-              if (dialog.startSlider) {
-                dialog.startSlider.min = '1';
-                dialog.startSlider.max = numeric > 0 ? String(numeric) : '1';
-              }
-              if (dialog.endSlider) {
-                dialog.endSlider.min = '1';
-                dialog.endSlider.max = numeric > 0 ? String(numeric) : '1';
-              }
             }
 
             function resolvePreviewIdentifiers() {
@@ -7361,6 +7320,9 @@
                   t('dialogs.slideRange.fallbackFrameTitle'),
                 );
               }
+              if (dialog.selectAll) {
+                dialog.selectAll.textContent = t('dialogs.slideRange.selectAll');
+              }
               if (dialog.hint) {
                 dialog.hint.textContent = t('dialogs.slideRange.rangeHint');
               }
@@ -7399,18 +7361,8 @@
               if (dialog.endInput) {
                 dialog.endInput.value = String(endPage);
               }
-              if (dialog.startSlider) {
-                dialog.startSlider.value = String(startPage);
-              }
-              if (dialog.endSlider) {
-                dialog.endSlider.value = String(endPage);
-              }
 
               if (!pageCount || pageCount < 1) {
-                if (dialog.sliderFill) {
-                  dialog.sliderFill.style.left = '0%';
-                  dialog.sliderFill.style.width = '100%';
-                }
                 if (dialog.summary) {
                   if (!manualSelectionMade) {
                     dialog.summary.textContent = t('dialogs.slideRange.allPages');
@@ -7429,17 +7381,6 @@
                   element.classList.add('selected');
                 });
                 return;
-              }
-
-              if (dialog.sliderFill && pageCount > 1) {
-                const denominator = pageCount - 1;
-                const percentStart = ((startPage - 1) / denominator) * 100;
-                const percentEnd = ((endPage - 1) / denominator) * 100;
-                dialog.sliderFill.style.left = `${percentStart}%`;
-                dialog.sliderFill.style.width = `${Math.max(
-                  0,
-                  percentEnd - percentStart,
-                )}%`;
               }
 
               if (dialog.summary) {
@@ -7467,11 +7408,8 @@
               if (dialog.endInput) {
                 dialog.endInput.disabled = true;
               }
-              if (dialog.startSlider) {
-                dialog.startSlider.disabled = true;
-              }
-              if (dialog.endSlider) {
-                dialog.endSlider.disabled = true;
+              if (dialog.selectAll) {
+                dialog.selectAll.disabled = true;
               }
               if (dialog.confirm) {
                 dialog.confirm.disabled = true;
@@ -7490,11 +7428,9 @@
               if (dialog.endInput) {
                 dialog.endInput.disabled = !manualOnly && !hasPageCount;
               }
-              if (dialog.startSlider) {
-                dialog.startSlider.disabled = !hasPageCount || pageCount <= 1;
-              }
-              if (dialog.endSlider) {
-                dialog.endSlider.disabled = !hasPageCount || pageCount <= 1;
+              if (dialog.selectAll) {
+                const canSelectAll = hasPageCount || manualOnly;
+                dialog.selectAll.disabled = !canSelectAll;
               }
               if (dialog.confirm) {
                 dialog.confirm.disabled = false;
@@ -7507,6 +7443,9 @@
             function enableConfirmOnly() {
               if (dialog.confirm) {
                 dialog.confirm.disabled = false;
+              }
+              if (dialog.selectAll) {
+                dialog.selectAll.disabled = true;
               }
               if (dialog.zoomSlider) {
                 dialog.zoomSlider.disabled = true;
@@ -7538,11 +7477,8 @@
                 dialog.endInput.removeEventListener('input', handleEndInput);
                 dialog.endInput.removeEventListener('blur', handleEndBlur);
               }
-              if (dialog.startSlider) {
-                dialog.startSlider.removeEventListener('input', handleStartSlider);
-              }
-              if (dialog.endSlider) {
-                dialog.endSlider.removeEventListener('input', handleEndSlider);
+              if (dialog.selectAll) {
+                dialog.selectAll.removeEventListener('click', handleSelectAll);
               }
               if (dialog.zoomSlider) {
                 dialog.zoomSlider.removeEventListener('input', handleZoomInput);
@@ -7635,10 +7571,9 @@
               return [
                 dialog.startInput,
                 dialog.endInput,
-                dialog.startSlider,
-                dialog.endSlider,
-                dialog.cancel,
+                dialog.selectAll,
                 dialog.confirm,
+                dialog.cancel,
               ].filter((element) => element instanceof HTMLElement && !element.disabled);
             }
 
@@ -7712,22 +7647,15 @@
               updateRangeSummary();
             }
 
-            function handleStartSlider(event) {
-              if (!pageCount) {
+            function handleSelectAll(event) {
+              event?.preventDefault?.();
+              if (!pageCount && !previewFailed) {
                 return;
               }
-              startPage = clampPage(event.target.value);
+              startPage = 1;
+              endPage = pageCount && pageCount > 0 ? pageCount : Math.max(1, endPage);
               anchorPage = startPage;
-              manualSelectionMade = true;
-              updateRangeSummary();
-            }
-
-            function handleEndSlider(event) {
-              if (!pageCount) {
-                return;
-              }
-              endPage = clampPage(event.target.value);
-              manualSelectionMade = true;
+              manualSelectionMade = false;
               updateRangeSummary();
             }
 
@@ -7883,12 +7811,6 @@
               dialog.endInput.value = '1';
             }
             configureInputBounds(0);
-            if (dialog.startSlider) {
-              dialog.startSlider.value = '1';
-            }
-            if (dialog.endSlider) {
-              dialog.endSlider.value = '1';
-            }
             manualSelectionMade = false;
 
             disableControls();
@@ -7924,11 +7846,8 @@
               dialog.endInput.addEventListener('input', handleEndInput);
               dialog.endInput.addEventListener('blur', handleEndBlur);
             }
-            if (dialog.startSlider) {
-              dialog.startSlider.addEventListener('input', handleStartSlider);
-            }
-            if (dialog.endSlider) {
-              dialog.endSlider.addEventListener('input', handleEndSlider);
+            if (dialog.selectAll) {
+              dialog.selectAll.addEventListener('click', handleSelectAll);
             }
             if (dialog.zoomSlider) {
               previewZoom = clampZoom(dialog.zoomSlider.value);
