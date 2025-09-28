@@ -105,8 +105,9 @@ What the helper now does for you:
   UFW is active, offers to open the chosen port.
 - Installs an expanded management CLI named `lecturetool` under
   `/usr/local/bin` with subcommands such as `start`, `stop`, `restart`,
-  `reload`, `logs`/`tail`, `update`, `upgrade`, `info`, `config`, `doctor`, and
-  `shell` for quick troubleshooting.
+  `reload`, `logs`/`tail`, `update`, `upgrade`, `info`, `config`, `doctor`,
+  `shell`, and `purge` (full uninstall) for quick troubleshooting and lifecycle
+  management.
 
 Example service management:
 
@@ -115,6 +116,7 @@ sudo lecturetool status      # Inspect service health
 sudo lecturetool doctor      # Run a health check (service, ports, TLS files)
 sudo lecturetool update      # Pull the latest git commit & reinstall deps
 sudo lecturetool shell       # Drop into a shell as the service account
+sudo lecturetool purge       # Remove service, config, files, and service user
 ```
 
 Ready to uninstall? Two cleanup helpers are available:
@@ -123,6 +125,9 @@ Ready to uninstall? Two cleanup helpers are available:
   leaves the code/data on disk.
 - `scripts/remove_server_full.sh` chains the above and interactively removes the
   repository directory plus the dedicated system user.
+- `sudo lecturetool purge` provides a non-interactive option to stop the
+  service, remove the repository, configuration, systemd unit, helper CLI, and
+  dedicated service user in one step.
 
 ---
 
