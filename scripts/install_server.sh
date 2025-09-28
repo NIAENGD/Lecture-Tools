@@ -105,6 +105,36 @@ create_service_user() {
   fi
 }
 
+sanitize_service_user() {
+  local candidate="$1" fallback="$2"
+  local sanitized fallback_sanitized
+
+  fallback_sanitized="${fallback,,}"
+  fallback_sanitized="${fallback_sanitized//[^a-z0-9_-]/-}"
+  while [[ -n $fallback_sanitized && $fallback_sanitized =~ ^[^a-z_] ]]; do
+    fallback_sanitized="${fallback_sanitized#?}"
+  done
+  if [[ -z $fallback_sanitized || ! $fallback_sanitized =~ ^[a-z_][a-z0-9_-]*$ ]]; then
+    fallback_sanitized="lecturetools"
+  fi
+
+  sanitized="${candidate,,}"
+  sanitized="${sanitized//[^a-z0-9_-]/-}"
+  while [[ -n $sanitized && $sanitized =~ ^[^a-z_] ]]; do
+    sanitized="${sanitized#?}"
+  done
+  while [[ $sanitized == *--* ]]; do
+    sanitized="${sanitized//--/-}"
+  done
+  sanitized="${sanitized:-$fallback_sanitized}"
+
+  if [[ ! $sanitized =~ ^[a-z_][a-z0-9_-]*$ ]]; then
+    sanitized="$fallback_sanitized"
+  fi
+
+  printf '%s' "$sanitized"
+}
+
 systemd_unit_exists() {
   local unit="$1"
   if systemctl list-unit-files "$unit" >/dev/null 2>&1; then
@@ -535,6 +565,13 @@ if [[ $install_dir == *" "* ]]; then
 fi
 if [[ -z $service_user ]]; then
   fatal "System user cannot be empty."
+fi
+if [[ ! $service_user =~ ^[a-z_][a-z0-9_-]*$ ]]; then
+  sanitized_service_user=$(sanitize_service_user "$service_user" "$DEFAULT_USER")
+  if [[ $sanitized_service_user != "$service_user" ]]; then
+    warn "System user '$service_user' is invalid; using '$sanitized_service_user' instead."
+  fi
+  service_user="$sanitized_service_user"
 fi
 if [[ ! $service_user =~ ^[a-z_][a-z0-9_-]*$ ]]; then
   fatal "System user must start with a letter or underscore and contain only lowercase letters, numbers, underscores or hyphens."
