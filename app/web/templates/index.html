@@ -6365,6 +6365,7 @@
             let uploadResult = null;
             let uploadStage = 'idle';
             let processingInBackground = false;
+            let autoCloseOnComplete = false;
 
             const allowBackgroundProcessing = options.allowBackgroundProcessing === true;
             const enableProcessingStage = options.enableProcessingStage !== false;
@@ -6501,6 +6502,7 @@
               }
               uploadStage = 'idle';
               processingInBackground = false;
+              autoCloseOnComplete = false;
             }
 
             function updateProgress(ratio) {
@@ -6518,12 +6520,19 @@
               if (dialog.progress) {
                 dialog.progress.setAttribute('aria-valuenow', String(percent));
               }
+              if (percent >= 100) {
+                autoCloseOnComplete = true;
+                if (uploading && uploadStage === 'uploading') {
+                  setStatus(labels.success, 'success');
+                }
+              }
               if (
                 enableProcessingStage &&
                 labels.processing &&
                 uploading &&
                 uploadStage !== 'processing' &&
-                percent >= 100
+                percent >= 100 &&
+                !autoCloseOnComplete
               ) {
                 uploadStage = 'processing';
                 if (allowBackgroundProcessing) {
@@ -6870,12 +6879,24 @@
                 updateProgress(1);
                 setStatus(labels.success, 'success');
                 updateActionState();
+                if (autoCloseOnComplete) {
+                  autoCloseOnComplete = false;
+                  void resolveAndClose({
+                    confirmed: true,
+                    uploaded: true,
+                    file: selectedFile,
+                    result: uploadResult,
+                    meta: selectedMeta,
+                  });
+                  return;
+                }
               } catch (error) {
                 uploading = false;
                 uploadComplete = false;
                 uploadResult = null;
                 uploadStage = 'idle';
                 processingInBackground = false;
+                autoCloseOnComplete = false;
                 const message =
                   error instanceof Error && error.message ? error.message : labels.failure;
                 setStatus(message, 'error');
