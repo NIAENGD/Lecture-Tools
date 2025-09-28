@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 import logging
 import shutil
 import sys
@@ -118,7 +119,14 @@ def serve(
     config_kwargs = {}
     max_upload_bytes = get_max_upload_bytes()
     if max_upload_bytes > 0:
-        config_kwargs["limit_max_request_size"] = max_upload_bytes
+        config_signature = inspect.signature(uvicorn.Config.__init__)
+        if "limit_max_request_size" in config_signature.parameters:
+            config_kwargs["limit_max_request_size"] = max_upload_bytes
+        else:
+            LOGGER.warning(
+                "Ignoring max upload size limit; uvicorn.Config does not support "
+                "'limit_max_request_size'.",
+            )
 
     server_config = uvicorn.Config(
         app,
