@@ -414,6 +414,7 @@ Commands:
   info         Show installation summary
   config       Output the persisted configuration file
   doctor       Run basic health checks
+  nginx        Configure an Nginx reverse proxy (HTTPS or HTTP)
   shell        Open an interactive shell as the service user
   purge        Completely remove the service, files, and user
   uninstall    Alias for purge
@@ -431,6 +432,178 @@ run_as_service_user() {
   local command="$1"
   shift
   runuser -u "$SERVICE_USER" -- "$command" "$@"
+}
+
+NGINX_SITE_AVAILABLE="/etc/nginx/sites-available/lecture-tools.conf"
+NGINX_SITE_ENABLED="/etc/nginx/sites-enabled/lecture-tools.conf"
+
+ensure_nginx_installed() {
+  if command -v nginx >/dev/null 2>&1; then
+    return
+  fi
+
+  echo "[lecture-tools] Installing nginx..."
+  apt-get update -qq
+  DEBIAN_FRONTEND=noninteractive apt-get install -y nginx >/dev/null
+}
+
+render_nginx_location_block() {
+  local upstream="http://127.0.0.1:${HTTP_PORT:-8000}"
+  local root_prefix="${ROOT_PATH:-}"
+  local location_path="/"
+  local proxy_target="$upstream"
+  local redirect_block=""
+
+  if [[ -n $root_prefix ]]; then
+    if [[ ${root_prefix:0:1} != '/' ]]; then
+      root_prefix="/$root_prefix"
+    fi
+    root_prefix="${root_prefix%/}"
+    location_path="${root_prefix}/"
+    proxy_target="${upstream}${root_prefix}/"
+    printf -v redirect_block '    location = / {\n        return 302 %s/;\n    }\n' "$root_prefix"
+  fi
+
+  printf '    location %s {\n' "$location_path"
+  printf '        proxy_pass %s;\n' "$proxy_target"
+  printf '        proxy_set_header Host %s;\n' '$host'
+  printf '        proxy_set_header X-Real-IP %s;\n' '$remote_addr'
+  printf '        proxy_set_header X-Forwarded-For %s;\n' '$proxy_add_x_forwarded_for'
+  printf '        proxy_set_header X-Forwarded-Proto %s;\n' '$scheme'
+  printf '        proxy_set_header X-Forwarded-Host %s;\n' '$host'
+  printf '        proxy_set_header X-Forwarded-Port %s;\n' '$server_port'
+  printf '        proxy_http_version 1.1;\n'
+  printf '        proxy_set_header Upgrade %s;\n' '$http_upgrade'
+  printf '        proxy_set_header Connection "upgrade";\n'
+  printf '        proxy_redirect off;\n'
+  if [[ -n $root_prefix ]]; then
+    printf '        proxy_set_header X-Script-Name %s;\n' "$root_prefix"
+    printf '        proxy_set_header X-Forwarded-Prefix %s;\n' "$root_prefix"
+  fi
+  printf '    }\n'
+  printf '%s' "$redirect_block"
+}
+
+activate_nginx_site() {
+  mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
+  ln -sf "$NGINX_SITE_AVAILABLE" "$NGINX_SITE_ENABLED"
+  if [[ -L /etc/nginx/sites-enabled/default ]]; then
+    rm -f /etc/nginx/sites-enabled/default
+  fi
+}
+
+reload_nginx_service() {
+  nginx -t
+  if ! systemctl is-enabled --quiet nginx; then
+    systemctl enable nginx >/dev/null 2>&1 || true
+  fi
+  if systemctl is-active --quiet nginx; then
+    systemctl reload nginx
+  else
+    systemctl start nginx
+  fi
+}
+
+remove_nginx_site() {
+  local removed=0
+  if [[ -f $NGINX_SITE_AVAILABLE ]]; then
+    rm -f "$NGINX_SITE_AVAILABLE"
+    removed=1
+  fi
+  if [[ -L $NGINX_SITE_ENABLED ]]; then
+    rm -f "$NGINX_SITE_ENABLED"
+    removed=1
+  fi
+
+  if [[ $removed -eq 1 ]]; then
+    if command -v nginx >/dev/null 2>&1; then
+      if nginx -t >/dev/null 2>&1; then
+        systemctl reload nginx >/dev/null 2>&1 || systemctl restart nginx >/dev/null 2>&1 || true
+      fi
+    fi
+  fi
+}
+
+configure_nginx_https() {
+  require_root
+  ensure_nginx_installed
+
+  local domain="$1" cert_path="$2" key_path="$3" dollar='$'
+
+  if [[ -z $domain ]]; then
+    echo "[lecture-tools] error: A domain is required for HTTPS configuration." >&2
+    exit 1
+  fi
+  if [[ -z $cert_path || ! -f $cert_path ]]; then
+    echo "[lecture-tools] error: TLS certificate $cert_path is missing." >&2
+    exit 1
+  fi
+  if [[ -z $key_path || ! -f $key_path ]]; then
+    echo "[lecture-tools] error: TLS private key $key_path is missing." >&2
+    exit 1
+  fi
+
+  local proxy_block
+  proxy_block="$(render_nginx_location_block)"
+
+  cat >"$NGINX_SITE_AVAILABLE" <<EOFNGINX
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${domain};
+    return 301 https://${dollar}host${dollar}request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name ${domain};
+
+    ssl_certificate ${cert_path};
+    ssl_certificate_key ${key_path};
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers on;
+    ssl_session_timeout 10m;
+    ssl_session_cache shared:SSL:10m;
+
+${proxy_block}}
+EOFNGINX
+
+  chmod 0644 "$NGINX_SITE_AVAILABLE"
+  activate_nginx_site
+  reload_nginx_service
+  echo "[lecture-tools] Nginx HTTPS reverse proxy configured for ${domain}."
+}
+
+configure_nginx_ip() {
+  require_root
+  ensure_nginx_installed
+
+  local listen_port="$1"
+  if [[ -z $listen_port ]]; then
+    listen_port="80"
+  fi
+  if ! [[ $listen_port =~ ^[0-9]+$ ]]; then
+    echo "[lecture-tools] error: Listen port must be numeric." >&2
+    exit 1
+  fi
+
+  local proxy_block
+  proxy_block="$(render_nginx_location_block)"
+
+  cat >"$NGINX_SITE_AVAILABLE" <<EOFNGINX
+server {
+    listen ${listen_port};
+    listen [::]:${listen_port};
+    server_name _;
+
+${proxy_block}}
+EOFNGINX
+
+  chmod 0644 "$NGINX_SITE_AVAILABLE"
+  activate_nginx_site
+  reload_nginx_service
+  echo "[lecture-tools] Nginx HTTP reverse proxy configured on port ${listen_port}."
 }
 
 print_info() {
@@ -515,6 +688,8 @@ purge_installation() {
     rm -f "$HELPER_PATH"
   fi
 
+  remove_nginx_site
+
   if [[ -n ${SERVICE_USER:-} ]]; then
     if id "$SERVICE_USER" >/dev/null 2>&1; then
       userdel --remove "$SERVICE_USER" || true
@@ -569,6 +744,30 @@ case $1 in
   logs|tail)
     require_root
     journalctl -u "$SERVICE_NAME" -f
+    ;;
+  nginx)
+    shift || true
+    subcommand="${1:-}"
+    case $subcommand in
+      https)
+        shift || true
+        domain="${1:-${PUBLIC_HOSTNAME:-}}"
+        cert_path="${2:-${TLS_CERTIFICATE_PATH:-}}"
+        key_path="${3:-${TLS_PRIVATE_KEY_PATH:-}}"
+        configure_nginx_https "$domain" "$cert_path" "$key_path"
+        ;;
+      ip|http)
+        shift || true
+        listen_port="${1:-80}"
+        configure_nginx_ip "$listen_port"
+        ;;
+      *)
+        echo "Usage: lecturetool nginx <https|ip> [options]" >&2
+        echo "  https [domain] [cert] [key]  Configure HTTPS reverse proxy using the stored or provided values." >&2
+        echo "  ip [port]                    Configure HTTP reverse proxy listening on the given port (default 80)." >&2
+        exit 1
+        ;;
+    esac
     ;;
   update)
     require_root
