@@ -128,6 +128,14 @@ def serve(
     if limit_parameter is not None:
         effective_limit = max_upload_bytes if max_upload_bytes > 0 else sys.maxsize
         config_kwargs[limit_parameter] = effective_limit
+        if limit_parameter == "h11_max_incomplete_event_size":
+            # When uvicorn lacks native request size limiting support it defaults to
+            # the pure-Python ``h11`` implementation. The high-performance
+            # ``httptools`` HTTP parser enforces its own ~1MB body size limit which
+            # would prevent uploads from completing. Force the ``h11`` protocol so
+            # that the configured upload limit takes effect and large files are
+            # accepted consistently across platforms.
+            config_kwargs.setdefault("http", "h11")
     elif max_upload_bytes > 0:
         LOGGER.warning(
             "Ignoring max upload size limit; uvicorn.Config does not support the "
