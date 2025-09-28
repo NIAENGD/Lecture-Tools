@@ -1208,6 +1208,10 @@ root_path=$(normalize_root_path "$root_path")
 domain=$(prompt_default "Public domain (leave blank if behind a load balancer or IP only)" "$DEFAULT_DOMAIN")
 domain=$(trim "$domain")
 
+HTTP_PORT="$port"
+ROOT_PATH="$root_path"
+PUBLIC_HOSTNAME="$domain"
+
 detect_existing_certificate "$domain"
 
 tls_cert_path="$DEFAULT_TLS_CERT"
@@ -1230,6 +1234,9 @@ if [[ -n $domain && -z $tls_key_path ]]; then
   tls_key_path=$(prompt_default "TLS private key path for $domain (leave blank to skip)" "")
   tls_key_path=$(trim "$tls_key_path")
 fi
+
+TLS_CERTIFICATE_PATH="$tls_cert_path"
+TLS_PRIVATE_KEY_PATH="$tls_key_path"
 
 if [[ -z $install_dir ]]; then
   fatal "Installation directory cannot be empty."
@@ -1341,6 +1348,24 @@ TLS_CERTIFICATE_PATH="$tls_cert_path"
 TLS_PRIVATE_KEY_PATH="$tls_key_path"
 EOFCONF
 chmod 0600 "$CONFIG_FILE"
+
+proxy_default="no"
+if [[ -n $domain ]]; then
+  proxy_default="yes"
+fi
+
+if prompt_yes_no "Configure an Nginx reverse proxy now?" "$proxy_default"; then
+  guided_nginx_setup
+  if [[ -f $CONFIG_FILE ]]; then
+    # shellcheck disable=SC1091
+    source "$CONFIG_FILE"
+    domain="${PUBLIC_HOSTNAME:-$domain}"
+    tls_cert_path="${TLS_CERTIFICATE_PATH:-$tls_cert_path}"
+    tls_key_path="${TLS_PRIVATE_KEY_PATH:-$tls_key_path}"
+  fi
+else
+  log "Skip configuring Nginx. You can run 'sudo lecturetool nginx guided' later."
+fi
 
 helper_path="/usr/local/bin/lecturetool"
 log "Installing helper CLI at $helper_path..."
