@@ -22,9 +22,21 @@ def _setup_serve(monkeypatch, tmp_path, upload_limit):
     monkeypatch.setattr(run, "create_app", lambda repository, config, root_path: dummy_app)
 
     class DummyConfig:
-        def __init__(self, app, **kwargs):
+        def __init__(
+            self,
+            app,
+            *,
+            limit_max_request_size=None,
+            h11_max_incomplete_event_size=None,
+            **kwargs,
+        ):
             captured["app"] = app
-            captured["config_kwargs"] = kwargs
+            captured_kwargs = dict(kwargs)
+            if limit_max_request_size is not None:
+                captured_kwargs["limit_max_request_size"] = limit_max_request_size
+            if h11_max_incomplete_event_size is not None:
+                captured_kwargs["h11_max_incomplete_event_size"] = h11_max_incomplete_event_size
+            captured["config_kwargs"] = captured_kwargs
 
     class DummyServer:
         def __init__(self, config):
@@ -54,14 +66,22 @@ def _setup_serve(monkeypatch, tmp_path, upload_limit):
     return captured
 
 
+def _get_limit_key(config_kwargs):
+    for key in ("limit_max_request_size", "h11_max_incomplete_event_size"):
+        if key in config_kwargs:
+            return key
+    raise AssertionError("Expected an upload size limit parameter to be set")
+
+
 def test_serve_applies_request_size_limit(monkeypatch, tmp_path):
     captured = _setup_serve(monkeypatch, tmp_path, upload_limit=50 * 1024 * 1024)
 
-    assert captured["config_kwargs"]["limit_max_request_size"] == 50 * 1024 * 1024
+    limit_key = _get_limit_key(captured["config_kwargs"])
+    assert captured["config_kwargs"][limit_key] == 50 * 1024 * 1024
     assert captured["app_state_server"] is captured["server_instance"]
 
 
-def test_serve_omits_limit_when_disabled(monkeypatch, tmp_path):
+def test_serve_uses_large_limit_when_disabled(monkeypatch, tmp_path):
     captured = _setup_serve(monkeypatch, tmp_path, upload_limit=0)
-
-    assert "limit_max_request_size" not in captured["config_kwargs"]
+    limit_key = _get_limit_key(captured["config_kwargs"])
+    assert captured["config_kwargs"][limit_key] >= 2**31 - 1
