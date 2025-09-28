@@ -1511,6 +1511,34 @@ prompt_menu() {
   done
 }
 
+select_primary_action() {
+  local default_choice=1
+  if [[ $existing_installation_detected -eq 1 ]]; then
+    default_choice=2
+  fi
+
+  local selection
+  selection=$(prompt_menu "Select an action" "$default_choice" \
+    "Clean install (remove previous configuration and reinstall)" \
+    "Update or repair the existing installation" \
+    "Remove the installation and purge managed dependencies")
+
+  case $selection in
+    1)
+      PRIMARY_ACTION="clean-install"
+      ;;
+    2)
+      PRIMARY_ACTION="update"
+      ;;
+    3)
+      PRIMARY_ACTION="purge"
+      ;;
+    *)
+      fatal "Unexpected selection '$selection'"
+      ;;
+  esac
+}
+
 require_root() {
   if [[ ${EUID:-$(id -u)} -ne 0 ]]; then
     echo "[lecture-tools] error: Please run this command with sudo or as root." >&2
@@ -1690,6 +1718,17 @@ detect_existing_installation() {
   if (( ${#EXISTING_TRACES[@]} > 0 )); then
     existing_installation_detected=1
   fi
+}
+
+summarize_existing_installation() {
+  if [[ $existing_installation_detected -eq 0 ]]; then
+    return
+  fi
+
+  log "Detected existing Lecture Tools installation components:"
+  for trace in "${EXISTING_TRACES[@]}"; do
+    log "  - $trace"
+  done
 }
 
 remove_existing_installation() {
@@ -2223,257 +2262,262 @@ purge_installation() {
 }
 
 
-if [[ ${1:-} == "--render-helper" ]]; then
-  shift || true
-  output_path="${1:-/dev/stdout}"
-  write_helper_script "$output_path"
-  exit 0
-fi
-
-ensure_debian
-load_existing_configuration
-detect_existing_installation
-summarize_existing_installation
-select_primary_action
-
-case $PRIMARY_ACTION in
-  clean-install)
-    if [[ $existing_installation_detected -eq 1 ]]; then
-      log "Removing existing installation before performing a clean install..."
-      remove_existing_installation 1
-      reset_defaults_to_base
-    else
-      log "No previous installation found. Proceeding with a fresh setup."
-    fi
-    ;;
-  update)
-    if [[ $existing_installation_detected -eq 0 ]]; then
-      log "No previous installation detected. Proceeding with a new installation."
-    fi
-    ;;
-  purge)
-    detect_legacy_docker
-    if [[ $existing_installation_detected -eq 1 ]]; then
-      log "Removing existing installation components..."
-      remove_existing_installation 1
-    fi
-    purge_packages
-    log "Managed dependencies purged."
-    log "Server environment fully removed."
+main() {
+  if [[ ${1:-} == "--render-helper" ]]; then
+    shift || true
+    output_path="${1:-/dev/stdout}"
+    write_helper_script "$output_path"
     exit 0
-    ;;
-  *)
-    fatal "Unrecognized primary action '$PRIMARY_ACTION'"
-    ;;
-esac
-
-detect_legacy_docker
-ensure_packages
-
-DEFAULT_INSTALL_DIR="${INSTALL_DEFAULT:-$FALLBACK_INSTALL_DIR}"
-DEFAULT_REPO="${REPO_DEFAULT:-$FALLBACK_REPO}"
-DEFAULT_BRANCH="${BRANCH_DEFAULT:-$FALLBACK_BRANCH}"
-DEFAULT_USER="${USER_DEFAULT:-$FALLBACK_USER}"
-DEFAULT_PORT="${PORT_DEFAULT:-$FALLBACK_PORT}"
-DEFAULT_ROOT_PATH="${ROOT_PATH_DEFAULT:-$FALLBACK_ROOT_PATH}"
-DEFAULT_DOMAIN="${DOMAIN_DEFAULT:-$FALLBACK_DOMAIN}"
-DEFAULT_TLS_CERT="${TLS_CERT_DEFAULT:-$FALLBACK_TLS_CERT}"
-DEFAULT_TLS_KEY="${TLS_KEY_DEFAULT:-$FALLBACK_TLS_KEY}"
-
-install_dir=$(prompt_default "Application directory (git clone target)" "$DEFAULT_INSTALL_DIR")
-install_dir=$(trim "$install_dir")
-repo_url=$(prompt_default "Git repository" "$DEFAULT_REPO")
-repo_url=$(trim "$repo_url")
-branch=$(prompt_default "Branch or tag" "$DEFAULT_BRANCH")
-branch=$(trim "$branch")
-service_user=$(prompt_default "System user" "$DEFAULT_USER")
-service_user=$(trim "$service_user")
-port=$(prompt_default "HTTP port" "$DEFAULT_PORT")
-port=$(trim "$port")
-root_path=$(prompt_default "Root path (leave blank for /)" "$DEFAULT_ROOT_PATH")
-root_path=$(normalize_root_path "$root_path")
-domain=$(prompt_default "Public domain (leave blank if behind a load balancer or IP only)" "$DEFAULT_DOMAIN")
-domain=$(trim "$domain")
-
-HTTP_PORT="$port"
-ROOT_PATH="$root_path"
-PUBLIC_HOSTNAME="$domain"
-
-detect_existing_certificate "$domain"
-
-tls_cert_path="$DEFAULT_TLS_CERT"
-tls_key_path="$DEFAULT_TLS_KEY"
-if [[ -n $detected_cert_path ]]; then
-  log "Detected existing TLS certificate for $domain at $detected_cert_path"
-  tls_cert_path="$detected_cert_path"
-fi
-if [[ -n $detected_key_path ]]; then
-  log "Detected existing TLS private key for $domain at $detected_key_path"
-  tls_key_path="$detected_key_path"
-fi
-
-if [[ -n $domain && -z $tls_cert_path ]]; then
-  tls_cert_path=$(prompt_default "TLS certificate path for $domain (leave blank to skip)" "")
-  tls_cert_path=$(trim "$tls_cert_path")
-fi
-
-if [[ -n $domain && -z $tls_key_path ]]; then
-  tls_key_path=$(prompt_default "TLS private key path for $domain (leave blank to skip)" "")
-  tls_key_path=$(trim "$tls_key_path")
-fi
-
-TLS_CERTIFICATE_PATH="$tls_cert_path"
-TLS_PRIVATE_KEY_PATH="$tls_key_path"
-
-if [[ -z $install_dir ]]; then
-  fatal "Installation directory cannot be empty."
-fi
-if [[ $install_dir == "/" ]]; then
-  fatal "Installation directory cannot be the filesystem root."
-fi
-if [[ $install_dir == *" "* ]]; then
-  warn "Installation directory contains spaces; generated systemd unit will escape them."
-fi
-if [[ -z $service_user ]]; then
-  fatal "System user cannot be empty."
-fi
-if [[ ! $service_user =~ ^[a-z_][a-z0-9_-]*$ ]]; then
-  sanitized_service_user=$(sanitize_service_user "$service_user" "$DEFAULT_USER")
-  if [[ $sanitized_service_user != "$service_user" ]]; then
-    warn "System user '$service_user' is invalid; using '$sanitized_service_user' instead."
   fi
-  service_user="$sanitized_service_user"
-fi
-if [[ ! $service_user =~ ^[a-z_][a-z0-9_-]*$ ]]; then
-  fatal "System user must start with a letter or underscore and contain only lowercase letters, numbers, underscores or hyphens."
-fi
-if [[ -z $repo_url ]]; then
-  fatal "Repository URL cannot be empty."
-fi
-if [[ -z $branch ]]; then
-  fatal "Branch cannot be empty."
-fi
 
-install_parent=$(dirname "$install_dir")
-mkdir -p "$install_parent"
+  ensure_debian
+  load_existing_configuration
+  detect_existing_installation
+  summarize_existing_installation
+  select_primary_action
 
-create_service_user "$service_user" "$install_parent"
-service_group=$(id -gn "$service_user")
+  case $PRIMARY_ACTION in
+    clean-install)
+      if [[ $existing_installation_detected -eq 1 ]]; then
+        log "Removing existing installation before performing a clean install..."
+        remove_existing_installation 1
+        reset_defaults_to_base
+      else
+        log "No previous installation found. Proceeding with a fresh setup."
+      fi
+      ;;
+    update)
+      if [[ $existing_installation_detected -eq 0 ]]; then
+        log "No previous installation detected. Proceeding with a new installation."
+      fi
+      ;;
+    purge)
+      detect_legacy_docker
+      if [[ $existing_installation_detected -eq 1 ]]; then
+        log "Removing existing installation components..."
+        remove_existing_installation 1
+      fi
+      purge_packages
+      log "Managed dependencies purged."
+      log "Server environment fully removed."
+      exit 0
+      ;;
+    *)
+      fatal "Unrecognized primary action '$PRIMARY_ACTION'"
+      ;;
+  esac
 
-mkdir -p "$install_dir"
-chown -R "$service_user:$service_group" "$install_dir"
+  detect_legacy_docker
+  ensure_packages
 
-if [[ -d "$install_dir/.git" ]]; then
-  log "Existing repository detected in $install_dir – updating..."
-  runuser -u "$service_user" -- git -C "$install_dir" remote set-url origin "$repo_url"
-  runuser -u "$service_user" -- git -C "$install_dir" fetch --all --prune
-  runuser -u "$service_user" -- git -C "$install_dir" checkout "$branch"
-  runuser -u "$service_user" -- git -C "$install_dir" reset --hard "origin/$branch"
-else
-  if [[ -n $(ls -A "$install_dir" 2>/dev/null) ]]; then
-    if prompt_yes_no "Directory $install_dir is not empty. Replace its contents?" "no"; then
-      rm -rf "$install_dir"
-      mkdir -p "$install_dir"
-      chown -R "$service_user:$service_group" "$install_dir"
+  DEFAULT_INSTALL_DIR="${INSTALL_DEFAULT:-$FALLBACK_INSTALL_DIR}"
+  DEFAULT_REPO="${REPO_DEFAULT:-$FALLBACK_REPO}"
+  DEFAULT_BRANCH="${BRANCH_DEFAULT:-$FALLBACK_BRANCH}"
+  DEFAULT_USER="${USER_DEFAULT:-$FALLBACK_USER}"
+  DEFAULT_PORT="${PORT_DEFAULT:-$FALLBACK_PORT}"
+  DEFAULT_ROOT_PATH="${ROOT_PATH_DEFAULT:-$FALLBACK_ROOT_PATH}"
+  DEFAULT_DOMAIN="${DOMAIN_DEFAULT:-$FALLBACK_DOMAIN}"
+  DEFAULT_TLS_CERT="${TLS_CERT_DEFAULT:-$FALLBACK_TLS_CERT}"
+  DEFAULT_TLS_KEY="${TLS_KEY_DEFAULT:-$FALLBACK_TLS_KEY}"
+
+  install_dir=$(prompt_default "Application directory (git clone target)" "$DEFAULT_INSTALL_DIR")
+  install_dir=$(trim "$install_dir")
+  repo_url=$(prompt_default "Git repository" "$DEFAULT_REPO")
+  repo_url=$(trim "$repo_url")
+  branch=$(prompt_default "Branch or tag" "$DEFAULT_BRANCH")
+  branch=$(trim "$branch")
+  service_user=$(prompt_default "System user" "$DEFAULT_USER")
+  service_user=$(trim "$service_user")
+  port=$(prompt_default "HTTP port" "$DEFAULT_PORT")
+  port=$(trim "$port")
+  root_path=$(prompt_default "Root path (leave blank for /)" "$DEFAULT_ROOT_PATH")
+  root_path=$(normalize_root_path "$root_path")
+  domain=$(prompt_default "Public domain (leave blank if behind a load balancer or IP only)" "$DEFAULT_DOMAIN")
+  domain=$(trim "$domain")
+
+  HTTP_PORT="$port"
+  ROOT_PATH="$root_path"
+  PUBLIC_HOSTNAME="$domain"
+
+  detect_existing_certificate "$domain"
+
+  tls_cert_path="$DEFAULT_TLS_CERT"
+  tls_key_path="$DEFAULT_TLS_KEY"
+  if [[ -n $detected_cert_path ]]; then
+    log "Detected existing TLS certificate for $domain at $detected_cert_path"
+    tls_cert_path="$detected_cert_path"
+  fi
+  if [[ -n $detected_key_path ]]; then
+    log "Detected existing TLS private key for $domain at $detected_key_path"
+    tls_key_path="$detected_key_path"
+  fi
+
+  if [[ -n $domain && -z $tls_cert_path ]]; then
+    tls_cert_path=$(prompt_default "TLS certificate path for $domain (leave blank to skip)" "")
+    tls_cert_path=$(trim "$tls_cert_path")
+  fi
+
+  if [[ -n $domain && -z $tls_key_path ]]; then
+    tls_key_path=$(prompt_default "TLS private key path for $domain (leave blank to skip)" "")
+    tls_key_path=$(trim "$tls_key_path")
+  fi
+
+  TLS_CERTIFICATE_PATH="$tls_cert_path"
+  TLS_PRIVATE_KEY_PATH="$tls_key_path"
+
+  if [[ -z $install_dir ]]; then
+    fatal "Installation directory cannot be empty."
+  fi
+  if [[ $install_dir == "/" ]]; then
+    fatal "Installation directory cannot be the filesystem root."
+  fi
+  if [[ $install_dir == *" "* ]]; then
+    warn "Installation directory contains spaces; generated systemd unit will escape them."
+  fi
+  if [[ -z $service_user ]]; then
+    fatal "System user cannot be empty."
+  fi
+  if [[ ! $service_user =~ ^[a-z_][a-z0-9_-]*$ ]]; then
+    sanitized_service_user=$(sanitize_service_user "$service_user" "$DEFAULT_USER")
+    if [[ $sanitized_service_user != "$service_user" ]]; then
+      warn "System user '$service_user' is invalid; using '$sanitized_service_user' instead."
+    fi
+    service_user="$sanitized_service_user"
+  fi
+  if [[ ! $service_user =~ ^[a-z_][a-z0-9_-]*$ ]]; then
+    fatal "System user must start with a letter or underscore and contain only lowercase letters, numbers, underscores or hyphens."
+  fi
+  if [[ -z $repo_url ]]; then
+    fatal "Repository URL cannot be empty."
+  fi
+  if [[ -z $branch ]]; then
+    fatal "Branch cannot be empty."
+  fi
+
+  install_parent=$(dirname "$install_dir")
+  mkdir -p "$install_parent"
+
+  create_service_user "$service_user" "$install_parent"
+  service_group=$(id -gn "$service_user")
+
+  mkdir -p "$install_dir"
+  chown -R "$service_user:$service_group" "$install_dir"
+
+  if [[ -d "$install_dir/.git" ]]; then
+    log "Existing repository detected in $install_dir – updating..."
+    runuser -u "$service_user" -- git -C "$install_dir" remote set-url origin "$repo_url"
+    runuser -u "$service_user" -- git -C "$install_dir" fetch --all --prune
+    runuser -u "$service_user" -- git -C "$install_dir" checkout "$branch"
+    runuser -u "$service_user" -- git -C "$install_dir" reset --hard "origin/$branch"
+  else
+    if [[ -n $(ls -A "$install_dir" 2>/dev/null) ]]; then
+      if prompt_yes_no "Directory $install_dir is not empty. Replace its contents?" "no"; then
+        rm -rf "$install_dir"
+        mkdir -p "$install_dir"
+        chown -R "$service_user:$service_group" "$install_dir"
+      else
+        fatal "Installation aborted due to non-empty directory."
+      fi
+    fi
+    log "Cloning repository into $install_dir..."
+    runuser -u "$service_user" -- git clone "$repo_url" "$install_dir"
+    runuser -u "$service_user" -- git -C "$install_dir" checkout "$branch"
+  fi
+
+  python_bin=$(select_python)
+  log "Creating virtual environment with $python_bin..."
+  runuser -u "$service_user" -- "$python_bin" -m venv "$install_dir/.venv"
+  venv_py="$install_dir/.venv/bin/python"
+
+  log "Installing Python dependencies..."
+  runuser -u "$service_user" -- "$venv_py" -m pip install --upgrade pip
+  if [[ -f "$install_dir/requirements-dev.txt" ]]; then
+    runuser -u "$service_user" -- "$venv_py" -m pip install -r "$install_dir/requirements-dev.txt"
+  elif [[ -f "$install_dir/requirements.txt" ]]; then
+    runuser -u "$service_user" -- "$venv_py" -m pip install -r "$install_dir/requirements.txt"
+  else
+    log "No requirements file found – skipping dependency installation."
+  fi
+
+  unit_path="$UNIT_PATH_DEFAULT"
+  if [[ -z $unit_path ]]; then
+    unit_path="/etc/systemd/system/${SERVICE_NAME_DEFAULT}"
+  fi
+  service_name="$SERVICE_NAME_DEFAULT"
+  if [[ -z $service_name ]]; then
+    service_name="lecture-tools.service"
+  fi
+
+  log "Writing systemd unit to $unit_path..."
+  if systemd_unit_exists "$service_name"; then
+    log "Stopping existing $service_name service prior to updating the unit..."
+    systemctl stop "$service_name" || true
+  fi
+  write_systemd_unit "$unit_path" "$install_dir" "$service_user" "$service_group" "$port" "$root_path"
+
+  log "Persisting deployment metadata to $CONFIG_FILE..."
+  cat >"$CONFIG_FILE" <<EOFCONF
+  CONFIG_VERSION="2"
+  INSTALL_DIR="$install_dir"
+  SERVICE_USER="$service_user"
+  SERVICE_GROUP="$service_group"
+  UNIT_PATH="$unit_path"
+  SERVICE_NAME="$service_name"
+  VENV_PY="$venv_py"
+  GIT_REMOTE="origin"
+  GIT_REMOTE_URL="$repo_url"
+  GIT_BRANCH="$branch"
+  GIT_REFERENCE="origin/$branch"
+  HTTP_PORT="$port"
+  ROOT_PATH="$root_path"
+  PUBLIC_HOSTNAME="$domain"
+  TLS_CERTIFICATE_PATH="$tls_cert_path"
+  TLS_PRIVATE_KEY_PATH="$tls_key_path"
+EOFCONF
+  chmod 0600 "$CONFIG_FILE"
+
+  proxy_default="no"
+  if [[ -n $domain ]]; then
+    proxy_default="yes"
+  fi
+
+  if prompt_yes_no "Configure an Nginx reverse proxy now?" "$proxy_default"; then
+    guided_nginx_setup
+    if [[ -f $CONFIG_FILE ]]; then
+      # shellcheck disable=SC1091
+      source "$CONFIG_FILE"
+      domain="${PUBLIC_HOSTNAME:-$domain}"
+      tls_cert_path="${TLS_CERTIFICATE_PATH:-$tls_cert_path}"
+      tls_key_path="${TLS_PRIVATE_KEY_PATH:-$tls_key_path}"
+    fi
+  else
+    log "Skip configuring Nginx. You can run 'sudo lecturetool nginx guided' later."
+  fi
+
+  helper_path="/usr/local/bin/lecturetool"
+  log "Installing helper CLI at $helper_path..."
+  write_helper_script "$helper_path"
+  chmod 0755 "$helper_path"
+
+  systemctl daemon-reload
+  if prompt_yes_no "Enable and start the Lecture Tools service now?" "yes"; then
+    systemctl enable --now "$service_name"
+  else
+    log "Service installed but not started. Enable later with: sudo systemctl enable --now $service_name"
+  fi
+
+  configure_firewall "$port"
+
+  if [[ -n $domain ]]; then
+    if [[ -n $tls_cert_path ]]; then
+      log "HTTPS support recorded using certificate $tls_cert_path"
     else
-      fatal "Installation aborted due to non-empty directory."
+      warn "Domain provided without certificate. Configure HTTPS termination manually and update $CONFIG_FILE when ready."
     fi
   fi
-  log "Cloning repository into $install_dir..."
-  runuser -u "$service_user" -- git clone "$repo_url" "$install_dir"
-  runuser -u "$service_user" -- git -C "$install_dir" checkout "$branch"
-fi
 
-python_bin=$(select_python)
-log "Creating virtual environment with $python_bin..."
-runuser -u "$service_user" -- "$python_bin" -m venv "$install_dir/.venv"
-venv_py="$install_dir/.venv/bin/python"
+  log "Installation complete. Use 'sudo lecturetool status' to inspect the service."
+}
 
-log "Installing Python dependencies..."
-runuser -u "$service_user" -- "$venv_py" -m pip install --upgrade pip
-if [[ -f "$install_dir/requirements-dev.txt" ]]; then
-  runuser -u "$service_user" -- "$venv_py" -m pip install -r "$install_dir/requirements-dev.txt"
-elif [[ -f "$install_dir/requirements.txt" ]]; then
-  runuser -u "$service_user" -- "$venv_py" -m pip install -r "$install_dir/requirements.txt"
-else
-  log "No requirements file found – skipping dependency installation."
-fi
 
-unit_path="$UNIT_PATH_DEFAULT"
-if [[ -z $unit_path ]]; then
-  unit_path="/etc/systemd/system/${SERVICE_NAME_DEFAULT}"
-fi
-service_name="$SERVICE_NAME_DEFAULT"
-if [[ -z $service_name ]]; then
-  service_name="lecture-tools.service"
-fi
-
-log "Writing systemd unit to $unit_path..."
-if systemd_unit_exists "$service_name"; then
-  log "Stopping existing $service_name service prior to updating the unit..."
-  systemctl stop "$service_name" || true
-fi
-write_systemd_unit "$unit_path" "$install_dir" "$service_user" "$service_group" "$port" "$root_path"
-
-log "Persisting deployment metadata to $CONFIG_FILE..."
-cat >"$CONFIG_FILE" <<EOFCONF
-CONFIG_VERSION="2"
-INSTALL_DIR="$install_dir"
-SERVICE_USER="$service_user"
-SERVICE_GROUP="$service_group"
-UNIT_PATH="$unit_path"
-SERVICE_NAME="$service_name"
-VENV_PY="$venv_py"
-GIT_REMOTE="origin"
-GIT_REMOTE_URL="$repo_url"
-GIT_BRANCH="$branch"
-GIT_REFERENCE="origin/$branch"
-HTTP_PORT="$port"
-ROOT_PATH="$root_path"
-PUBLIC_HOSTNAME="$domain"
-TLS_CERTIFICATE_PATH="$tls_cert_path"
-TLS_PRIVATE_KEY_PATH="$tls_key_path"
-EOFCONF
-chmod 0600 "$CONFIG_FILE"
-
-proxy_default="no"
-if [[ -n $domain ]]; then
-  proxy_default="yes"
-fi
-
-if prompt_yes_no "Configure an Nginx reverse proxy now?" "$proxy_default"; then
-  guided_nginx_setup
-  if [[ -f $CONFIG_FILE ]]; then
-    # shellcheck disable=SC1091
-    source "$CONFIG_FILE"
-    domain="${PUBLIC_HOSTNAME:-$domain}"
-    tls_cert_path="${TLS_CERTIFICATE_PATH:-$tls_cert_path}"
-    tls_key_path="${TLS_PRIVATE_KEY_PATH:-$tls_key_path}"
-  fi
-else
-  log "Skip configuring Nginx. You can run 'sudo lecturetool nginx guided' later."
-fi
-
-helper_path="/usr/local/bin/lecturetool"
-log "Installing helper CLI at $helper_path..."
-write_helper_script "$helper_path"
-chmod 0755 "$helper_path"
-
-systemctl daemon-reload
-if prompt_yes_no "Enable and start the Lecture Tools service now?" "yes"; then
-  systemctl enable --now "$service_name"
-else
-  log "Service installed but not started. Enable later with: sudo systemctl enable --now $service_name"
-fi
-
-configure_firewall "$port"
-
-if [[ -n $domain ]]; then
-  if [[ -n $tls_cert_path ]]; then
-    log "HTTPS support recorded using certificate $tls_cert_path"
-  else
-    warn "Domain provided without certificate. Configure HTTPS termination manually and update $CONFIG_FILE when ready."
-  fi
-fi
-
-log "Installation complete. Use 'sudo lecturetool status' to inspect the service."
+main "$@"
