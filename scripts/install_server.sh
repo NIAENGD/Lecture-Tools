@@ -409,6 +409,8 @@ Commands:
   config       Output the persisted configuration file
   doctor       Run basic health checks
   shell        Open an interactive shell as the service user
+  purge        Completely remove the service, files, and user
+  uninstall    Alias for purge
 EOU
 }
 
@@ -470,6 +472,59 @@ run_doctor() {
       echo "[lecture-tools] warning: TLS private key $TLS_PRIVATE_KEY_PATH is missing." >&2
     fi
   fi
+}
+
+purge_installation() {
+  require_root
+
+  echo "[lecture-tools] WARNING: This will stop the service and permanently delete files, configuration, and the service user."
+  read -r -p "Proceed with complete removal? [no]: " response || response="no"
+  response=${response:-no}
+  case ${response,,} in
+    y|yes) ;;
+    *)
+      echo "[lecture-tools] Aborted complete removal."
+      exit 0
+      ;;
+  esac
+
+  if systemctl list-unit-files | grep -q "^${SERVICE_NAME}"; then
+    systemctl stop "$SERVICE_NAME" || true
+    systemctl disable "$SERVICE_NAME" || true
+  fi
+
+  if [[ -f $UNIT_PATH ]]; then
+    rm -f "$UNIT_PATH"
+  fi
+
+  if [[ -f $CONFIG_FILE ]]; then
+    rm -f "$CONFIG_FILE"
+  fi
+
+  if [[ -n ${INSTALL_DIR:-} && -d $INSTALL_DIR ]]; then
+    rm -rf "$INSTALL_DIR"
+  fi
+
+  if [[ -n ${SERVICE_USER:-} ]]; then
+    if id "$SERVICE_USER" >/dev/null 2>&1; then
+      userdel --remove "$SERVICE_USER" || true
+    fi
+  fi
+
+  if [[ -n ${SERVICE_GROUP:-} ]]; then
+    if getent group "$SERVICE_GROUP" >/dev/null 2>&1; then
+      groupdel "$SERVICE_GROUP" || true
+    fi
+  fi
+
+  systemctl daemon-reload || true
+
+  helper_path="$(command -v lecturetool 2>/dev/null || true)"
+  if [[ -n $helper_path && -f $helper_path ]]; then
+    rm -f "$helper_path"
+  fi
+
+  echo "[lecture-tools] Complete removal finished."
 }
 
 if [[ $# -eq 0 ]]; then
@@ -541,6 +596,10 @@ case $1 in
     ;;
   doctor)
     run_doctor
+    ;;
+  purge|uninstall)
+    purge_installation
+    exit 0
     ;;
   shell)
     require_root
