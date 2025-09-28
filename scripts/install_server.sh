@@ -26,6 +26,30 @@ trim() {
   printf '%s' "$value"
 }
 
+normalize_root_path() {
+  local value
+  value="$(trim "${1:-}")"
+  if [[ -z $value ]]; then
+    printf ''
+    return
+  fi
+
+  if [[ ${value:0:1} != '/' ]]; then
+    value="/$value"
+  fi
+
+  # Strip trailing slashes while preserving the root-only case.
+  while [[ ${#value} -gt 1 && ${value: -1} == '/' ]]; do
+    value="${value%/}"
+  done
+
+  if [[ $value == '/' ]]; then
+    printf ''
+  else
+    printf '%s' "$value"
+  fi
+}
+
 prompt_default() {
   local prompt="$1" default="$2" reply trimmed
   if [[ -t 0 ]]; then
@@ -190,7 +214,7 @@ load_existing_configuration() {
     BRANCH_DEFAULT="${GIT_BRANCH:-$BRANCH_DEFAULT}"
     USER_DEFAULT="${SERVICE_USER:-$USER_DEFAULT}"
     PORT_DEFAULT="${HTTP_PORT:-$PORT_DEFAULT}"
-    ROOT_PATH_DEFAULT="${ROOT_PATH:-$ROOT_PATH_DEFAULT}"
+    ROOT_PATH_DEFAULT="$(normalize_root_path "${ROOT_PATH:-$ROOT_PATH_DEFAULT}")"
     DOMAIN_DEFAULT="${PUBLIC_HOSTNAME:-$DOMAIN_DEFAULT}"
     TLS_CERT_DEFAULT="${TLS_CERTIFICATE_PATH:-$TLS_CERT_DEFAULT}"
     SERVICE_NAME_DEFAULT="${SERVICE_NAME:-$SERVICE_NAME_DEFAULT}"
@@ -557,7 +581,7 @@ service_user=$(trim "$service_user")
 port=$(prompt_default "HTTP port" "$DEFAULT_PORT")
 port=$(trim "$port")
 root_path=$(prompt_default "Root path (leave blank for /)" "$DEFAULT_ROOT_PATH")
-root_path=$(trim "$root_path")
+root_path=$(normalize_root_path "$root_path")
 domain=$(prompt_default "Public domain (leave blank if behind a load balancer or IP only)" "$DEFAULT_DOMAIN")
 domain=$(trim "$domain")
 
