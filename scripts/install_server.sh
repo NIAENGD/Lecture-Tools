@@ -707,7 +707,7 @@ detect_existing_installation() {
   if [[ -z $service_name ]]; then
     service_name="$FALLBACK_SERVICE_NAME"
   fi
-  if [[ -n $service_name && systemd_unit_exists "$service_name" ]]; then
+  if [[ -n $service_name ]] && systemd_unit_exists "$service_name"; then
     EXISTING_TRACES+=("systemd service $service_name")
   fi
 
@@ -749,7 +749,7 @@ remove_existing_installation() {
     service_name="$FALLBACK_SERVICE_NAME"
   fi
 
-  if [[ -n $service_name && systemd_unit_exists "$service_name" ]]; then
+  if [[ -n $service_name ]] && systemd_unit_exists "$service_name"; then
     log "Stopping $service_name..."
     systemctl stop "$service_name" || true
     log "Disabling $service_name..."
@@ -790,25 +790,31 @@ remove_existing_installation() {
 
     local user="$EXISTING_SERVICE_USER"
     local group="$EXISTING_SERVICE_GROUP"
-    if [[ -z $group && -n $user && id "$user" >/dev/null 2>&1 ]]; then
-      group="$(id -gn "$user")"
-    fi
-
-    if [[ -n $user && id "$user" >/dev/null 2>&1 ]]; then
-      if [[ $user != "root" ]]; then
-        log "Removing system user $user..."
-        userdel "$user" || true
-      else
-        warn "Refusing to delete system user root."
+    if [[ -z $group && -n $user ]]; then
+      if id "$user" >/dev/null 2>&1; then
+        group="$(id -gn "$user")"
       fi
     fi
 
-    if [[ -n $group && getent group "$group" >/dev/null 2>&1 ]]; then
-      if [[ $group != "root" ]]; then
-        log "Removing system group $group..."
-        groupdel "$group" || true
-      else
-        warn "Refusing to delete system group root."
+    if [[ -n $user ]]; then
+      if id "$user" >/dev/null 2>&1; then
+        if [[ $user != "root" ]]; then
+          log "Removing system user $user..."
+          userdel "$user" || true
+        else
+          warn "Refusing to delete system user root."
+        fi
+      fi
+    fi
+
+    if [[ -n $group ]]; then
+      if getent group "$group" >/dev/null 2>&1; then
+        if [[ $group != "root" ]]; then
+          log "Removing system group $group..."
+          groupdel "$group" || true
+        else
+          warn "Refusing to delete system group root."
+        fi
       fi
     fi
   else
@@ -1391,6 +1397,765 @@ case $1 in
 esac
 EOFHELP
 }
+
+prompt_menu() {
+  local prompt="$1" default_choice="$2"
+  shift 2
+  local options=("$@")
+  local choice
+  local have_tty=0
+
+  if [[ -t 0 ]]; then
+    have_tty=1
+  elif [[ -e /dev/tty ]]; then
+    have_tty=2
+  fi
+
+  while true; do
+    echo "$prompt"
+    for idx in "${!options[@]}"; do
+      local number=$((idx + 1))
+      if [[ $number -eq $default_choice ]]; then
+        printf '  [%d] %s (default)\n' "$number" "${options[$idx]}"
+      else
+        printf '  [%d] %s\n' "$number" "${options[$idx]}"
+      fi
+    done
+
+    if [[ $have_tty -eq 1 ]]; then
+      read -r -p "Selection [$default_choice]: " choice || true
+    elif [[ $have_tty -eq 2 ]]; then
+      printf 'Selection [%s]: ' "$default_choice" > /dev/tty
+      read -r choice < /dev/tty || true
+    else
+      choice="$default_choice"
+    fi
+
+    choice=$(trim "${choice:-}")
+    if [[ -z $choice ]]; then
+      choice="$default_choice"
+    fi
+
+    if [[ $choice =~ ^[0-9]+$ ]] && (( choice >= 1 && choice <= ${#options[@]} )); then
+      printf '%s' "$choice"
+      return 0
+    fi
+
+    echo "Please enter a number between 1 and ${#options[@]}."
+  done
+}
+
+require_root() {
+  if [[ ${EUID:-$(id -u)} -ne 0 ]]; then
+    echo "[lecture-tools] error: Please run this command with sudo or as root." >&2
+    exit 1
+  fi
+}
+
+run_as_service_user() {
+  local command="$1"
+  shift
+  runuser -u "$SERVICE_USER" -- "$command" "$@"
+}
+
+NGINX_SITE_AVAILABLE="/etc/nginx/sites-available/lecture-tools.conf"
+NGINX_SITE_ENABLED="/etc/nginx/sites-enabled/lecture-tools.conf"
+
+ensure_nginx_installed() {
+  if command -v nginx >/dev/null 2>&1; then
+    return
+  fi
+
+  echo "[lecture-tools] Installing nginx..."
+  apt-get update -qq
+  DEBIAN_FRONTEND=noninteractive apt-get install -y nginx >/dev/null
+}
+
+ensure_certbot_installed() {
+  if command -v certbot >/dev/null 2>&1; then
+    return
+  fi
+
+  echo "[lecture-tools] Installing certbot..."
+  apt-get update -qq
+  DEBIAN_FRONTEND=noninteractive apt-get install -y certbot >/dev/null
+}
+
+render_nginx_location_block() {
+  local upstream="http://127.0.0.1:${HTTP_PORT:-8000}"
+  local root_prefix="${ROOT_PATH:-}"
+  local location_path="/"
+  local proxy_target="$upstream"
+  local redirect_block=""
+
+  if [[ -n $root_prefix ]]; then
+    if [[ ${root_prefix:0:1} != '/' ]]; then
+      root_prefix="/$root_prefix"
+    fi
+    root_prefix="${root_prefix%/}"
+    location_path="${root_prefix}/"
+    proxy_target="${upstream}${root_prefix}/"
+    printf -v redirect_block '    location = / {\n        return 302 %s/;\n    }\n' "$root_prefix"
+  fi
+
+  printf '    location %s {\n' "$location_path"
+  printf '        proxy_pass %s;\n' "$proxy_target"
+  printf '        proxy_set_header Host %s;\n' '$host'
+  printf '        proxy_set_header X-Real-IP %s;\n' '$remote_addr'
+  printf '        proxy_set_header X-Forwarded-For %s;\n' '$proxy_add_x_forwarded_for'
+  printf '        proxy_set_header X-Forwarded-Proto %s;\n' '$scheme'
+  printf '        proxy_set_header X-Forwarded-Host %s;\n' '$host'
+  printf '        proxy_set_header X-Forwarded-Port %s;\n' '$server_port'
+  printf '        proxy_http_version 1.1;\n'
+  printf '        proxy_set_header Upgrade %s;\n' '$http_upgrade'
+  printf '        proxy_set_header Connection "upgrade";\n'
+  printf '        proxy_redirect off;\n'
+  if [[ -n $root_prefix ]]; then
+    printf '        proxy_set_header X-Script-Name %s;\n' "$root_prefix"
+    printf '        proxy_set_header X-Forwarded-Prefix %s;\n' "$root_prefix"
+  fi
+  printf '    }\n'
+  printf '%s' "$redirect_block"
+}
+
+activate_nginx_site() {
+  mkdir -p /etc/nginx/sites-available /etc/nginx/sites-enabled
+  ln -sf "$NGINX_SITE_AVAILABLE" "$NGINX_SITE_ENABLED"
+  if [[ -L /etc/nginx/sites-enabled/default ]]; then
+    rm -f /etc/nginx/sites-enabled/default
+  fi
+}
+
+reload_nginx_service() {
+  nginx -t
+  if ! systemctl is-enabled --quiet nginx; then
+    systemctl enable nginx >/dev/null 2>&1 || true
+  fi
+  if systemctl is-active --quiet nginx; then
+    systemctl reload nginx
+  else
+    systemctl start nginx
+  fi
+}
+
+remove_nginx_site() {
+  local removed=0
+  if [[ -f $NGINX_SITE_AVAILABLE ]]; then
+    rm -f "$NGINX_SITE_AVAILABLE"
+    removed=1
+  fi
+  if [[ -L $NGINX_SITE_ENABLED ]]; then
+    rm -f "$NGINX_SITE_ENABLED"
+    removed=1
+  fi
+
+  if [[ $removed -eq 1 ]]; then
+    if command -v nginx >/dev/null 2>&1; then
+      if nginx -t >/dev/null 2>&1; then
+        systemctl reload nginx >/dev/null 2>&1 || systemctl restart nginx >/dev/null 2>&1 || true
+      fi
+    fi
+  fi
+}
+
+reset_defaults_to_base() {
+  INSTALL_DEFAULT=""
+  REPO_DEFAULT=""
+  BRANCH_DEFAULT=""
+  USER_DEFAULT=""
+  PORT_DEFAULT=""
+  ROOT_PATH_DEFAULT=""
+  DOMAIN_DEFAULT=""
+  TLS_CERT_DEFAULT=""
+  TLS_KEY_DEFAULT=""
+  SERVICE_NAME_DEFAULT="$FALLBACK_SERVICE_NAME"
+  UNIT_PATH_DEFAULT="$FALLBACK_UNIT_PATH"
+  EXISTING_INSTALL_DIR=""
+  EXISTING_SERVICE_USER=""
+  EXISTING_SERVICE_GROUP=""
+  EXISTING_SERVICE_NAME="$FALLBACK_SERVICE_NAME"
+  EXISTING_UNIT_PATH="$FALLBACK_UNIT_PATH"
+  EXISTING_TRACES=()
+  existing_installation_detected=0
+}
+
+detect_existing_installation() {
+  EXISTING_TRACES=()
+  existing_installation_detected=0
+
+  if [[ -f $CONFIG_FILE ]]; then
+    EXISTING_TRACES+=("configuration file at $CONFIG_FILE")
+  fi
+
+  local service_name="$EXISTING_SERVICE_NAME"
+  if [[ -z $service_name ]]; then
+    service_name="$SERVICE_NAME_DEFAULT"
+  fi
+  if [[ -z $service_name ]]; then
+    service_name="$FALLBACK_SERVICE_NAME"
+  fi
+  if [[ -n $service_name ]] && systemd_unit_exists "$service_name"; then
+    EXISTING_TRACES+=("systemd service $service_name")
+  fi
+
+  local unit_path="$EXISTING_UNIT_PATH"
+  if [[ -z $unit_path ]]; then
+    unit_path="$UNIT_PATH_DEFAULT"
+  fi
+  if [[ -z $unit_path ]]; then
+    unit_path="$FALLBACK_UNIT_PATH"
+  fi
+  if [[ -n $unit_path && -f $unit_path ]]; then
+    EXISTING_TRACES+=("systemd unit file $unit_path")
+  fi
+
+  if [[ -n $EXISTING_INSTALL_DIR && -d $EXISTING_INSTALL_DIR ]]; then
+    EXISTING_TRACES+=("application directory $EXISTING_INSTALL_DIR")
+  fi
+
+  if [[ -f $HELPER_PATH_DEFAULT ]]; then
+    EXISTING_TRACES+=("helper CLI $HELPER_PATH_DEFAULT")
+  fi
+
+  if [[ -f $NGINX_SITE_AVAILABLE || -L $NGINX_SITE_ENABLED ]]; then
+    EXISTING_TRACES+=("nginx site configuration")
+  fi
+
+  if (( ${#EXISTING_TRACES[@]} > 0 )); then
+    existing_installation_detected=1
+  fi
+}
+
+remove_existing_installation() {
+  local purge_all="${1:-0}"
+  local service_name="$EXISTING_SERVICE_NAME"
+  if [[ -z $service_name ]]; then
+    service_name="$SERVICE_NAME_DEFAULT"
+  fi
+  if [[ -z $service_name ]]; then
+    service_name="$FALLBACK_SERVICE_NAME"
+  fi
+
+  if [[ -n $service_name ]] && systemd_unit_exists "$service_name"; then
+    log "Stopping $service_name..."
+    systemctl stop "$service_name" || true
+    log "Disabling $service_name..."
+    systemctl disable "$service_name" || true
+  fi
+
+  local unit_path="$EXISTING_UNIT_PATH"
+  if [[ -z $unit_path ]]; then
+    unit_path="$UNIT_PATH_DEFAULT"
+  fi
+  if [[ -z $unit_path ]]; then
+    unit_path="$FALLBACK_UNIT_PATH"
+  fi
+  if [[ -n $unit_path && -f $unit_path ]]; then
+    log "Removing unit file $unit_path..."
+    rm -f "$unit_path"
+  fi
+
+  remove_nginx_site
+
+  if [[ -f $HELPER_PATH_DEFAULT ]]; then
+    log "Removing helper CLI $HELPER_PATH_DEFAULT..."
+    rm -f "$HELPER_PATH_DEFAULT"
+  fi
+
+  if [[ -f $CONFIG_FILE ]]; then
+    log "Deleting configuration file $CONFIG_FILE..."
+    rm -f "$CONFIG_FILE"
+  fi
+
+  systemctl daemon-reload || true
+
+  if [[ $purge_all -eq 1 ]]; then
+    if [[ -n $EXISTING_INSTALL_DIR && -d $EXISTING_INSTALL_DIR ]]; then
+      log "Removing installation directory $EXISTING_INSTALL_DIR..."
+      rm -rf "$EXISTING_INSTALL_DIR"
+    fi
+
+    local user="$EXISTING_SERVICE_USER"
+    local group="$EXISTING_SERVICE_GROUP"
+    if [[ -z $group && -n $user ]]; then
+      if id "$user" >/dev/null 2>&1; then
+        group="$(id -gn "$user")"
+      fi
+    fi
+
+    if [[ -n $user ]]; then
+      if id "$user" >/dev/null 2>&1; then
+        if [[ $user != "root" ]]; then
+          log "Removing system user $user..."
+          userdel "$user" || true
+        else
+          warn "Refusing to delete system user root."
+        fi
+      fi
+    fi
+
+    if [[ -n $group ]]; then
+      if getent group "$group" >/dev/null 2>&1; then
+        if [[ $group != "root" ]]; then
+          log "Removing system group $group..."
+          groupdel "$group" || true
+        else
+          warn "Refusing to delete system group root."
+        fi
+      fi
+    fi
+  else
+    if [[ -n $EXISTING_INSTALL_DIR ]]; then
+      log "Application files preserved in $EXISTING_INSTALL_DIR"
+    fi
+    if [[ -n $EXISTING_SERVICE_USER ]]; then
+      log "System user $EXISTING_SERVICE_USER was preserved."
+    fi
+  fi
+
+  EXISTING_TRACES=()
+  existing_installation_detected=0
+}
+
+handle_existing_installation() {
+  detect_existing_installation
+  if [[ $existing_installation_detected -eq 0 ]]; then
+    return
+  fi
+
+  log "Detected existing Lecture Tools installation artifacts:"
+  for trace in "${EXISTING_TRACES[@]}"; do
+    log "  - $trace"
+  done
+
+  local selection
+  selection=$(prompt_menu "Select how to handle the existing installation" 1 \
+    "Update and repair the existing installation" \
+    "Remove the installation and exit" \
+    "Remove everything and perform a clean install")
+
+  case $selection in
+    1)
+      log "Proceeding with update and repair of the existing installation."
+      ;;
+    2)
+      log "Removing existing installation components..."
+      remove_existing_installation 0
+      log "Existing installation removed. Exiting installer."
+      exit 0
+      ;;
+    3)
+      log "Preparing for a clean installation by removing existing components..."
+      remove_existing_installation 1
+      reset_defaults_to_base
+      log "Clean installation will continue."
+      ;;
+    *)
+      fatal "Unexpected selection '$selection'"
+      ;;
+  esac
+}
+
+configure_nginx_https() {
+  require_root
+  ensure_nginx_installed
+
+  local domain="$1" cert_path="$2" key_path="$3" dollar='$'
+
+  if [[ -z $domain ]]; then
+    echo "[lecture-tools] error: A domain is required for HTTPS configuration." >&2
+    exit 1
+  fi
+  if [[ -z $cert_path || ! -f $cert_path ]]; then
+    echo "[lecture-tools] error: TLS certificate $cert_path is missing." >&2
+    exit 1
+  fi
+  if [[ -z $key_path || ! -f $key_path ]]; then
+    echo "[lecture-tools] error: TLS private key $key_path is missing." >&2
+    exit 1
+  fi
+
+  local proxy_block
+  proxy_block="$(render_nginx_location_block)"
+
+  cat >"$NGINX_SITE_AVAILABLE" <<EOFNGINX
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${domain};
+    return 301 https://${dollar}host${dollar}request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name ${domain};
+
+    ssl_certificate ${cert_path};
+    ssl_certificate_key ${key_path};
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers on;
+    ssl_session_timeout 10m;
+    ssl_session_cache shared:SSL:10m;
+
+${proxy_block}}
+EOFNGINX
+
+  chmod 0644 "$NGINX_SITE_AVAILABLE"
+  activate_nginx_site
+  reload_nginx_service
+  echo "[lecture-tools] Nginx HTTPS reverse proxy configured for ${domain}."
+}
+
+configure_nginx_ip() {
+  require_root
+  ensure_nginx_installed
+
+  local listen_port="$1"
+  if [[ -z $listen_port ]]; then
+    listen_port="80"
+  fi
+  if ! [[ $listen_port =~ ^[0-9]+$ ]]; then
+    echo "[lecture-tools] error: Listen port must be numeric." >&2
+    exit 1
+  fi
+
+  local proxy_block
+  proxy_block="$(render_nginx_location_block)"
+
+  cat >"$NGINX_SITE_AVAILABLE" <<EOFNGINX
+server {
+    listen ${listen_port};
+    listen [::]:${listen_port};
+    server_name _;
+
+${proxy_block}}
+EOFNGINX
+
+  chmod 0644 "$NGINX_SITE_AVAILABLE"
+  activate_nginx_site
+  reload_nginx_service
+  echo "[lecture-tools] Nginx HTTP reverse proxy configured on port ${listen_port}."
+}
+
+configure_nginx_http_domain() {
+  require_root
+  ensure_nginx_installed
+
+  local domain="$1" listen_port="$2"
+  if [[ -z $domain ]]; then
+    echo "[lecture-tools] error: A domain is required for HTTP configuration." >&2
+    exit 1
+  fi
+  if [[ -z $listen_port ]]; then
+    listen_port="80"
+  fi
+  if ! [[ $listen_port =~ ^[0-9]+$ ]]; then
+    echo "[lecture-tools] error: Listen port must be numeric." >&2
+    exit 1
+  fi
+
+  local proxy_block
+  proxy_block="$(render_nginx_location_block)"
+
+  cat >"$NGINX_SITE_AVAILABLE" <<EOFNGINX
+server {
+    listen ${listen_port};
+    listen [::]:${listen_port};
+    server_name ${domain};
+
+${proxy_block}}
+EOFNGINX
+
+  chmod 0644 "$NGINX_SITE_AVAILABLE"
+  activate_nginx_site
+  reload_nginx_service
+  echo "[lecture-tools] Nginx HTTP reverse proxy configured for ${domain} on port ${listen_port}."
+}
+
+update_config_entry() {
+  local key="$1" value="$2"
+  python3 - "$CONFIG_FILE" "$key" "$value" <<'PY'
+import os
+import sys
+
+path, key, value = sys.argv[1:]
+value = value or ""
+escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+lines = []
+found = False
+
+if os.path.exists(path):
+    with open(path, 'r', encoding='utf-8') as handle:
+        for line in handle:
+            if line.startswith(f"{key}="):
+                lines.append(f'{key}="{escaped}"\n')
+                found = True
+            else:
+                lines.append(line)
+else:
+    lines = []
+
+if not found:
+    lines.append(f'{key}="{escaped}"\n')
+
+with open(path, 'w', encoding='utf-8') as handle:
+    handle.writelines(lines)
+PY
+  chmod 0600 "$CONFIG_FILE" || true
+}
+
+obtain_lets_encrypt_certificate() {
+  local domain="$1" email="$2" share_email="$3" use_staging="$4"
+
+  ensure_certbot_installed
+
+  local nginx_was_active=0
+  if systemctl is-active --quiet nginx; then
+    nginx_was_active=1
+    systemctl stop nginx || true
+  fi
+
+  local cmd=(certbot certonly --standalone --preferred-challenges http --agree-tos --non-interactive -d "$domain")
+  if [[ -n $email ]]; then
+    cmd+=(--email "$email")
+    if [[ $share_email -eq 1 ]]; then
+      cmd+=(--eff-email)
+    else
+      cmd+=(--no-eff-email)
+    fi
+  else
+    cmd+=(--register-unsafely-without-email)
+  fi
+  if [[ $use_staging -eq 1 ]]; then
+    cmd+=(--staging)
+  fi
+
+  echo "[lecture-tools] Requesting Let's Encrypt certificate for ${domain}..."
+  if ! "${cmd[@]}"; then
+    echo "[lecture-tools] error: Certbot was unable to obtain a certificate for ${domain}." >&2
+    if [[ $nginx_was_active -eq 1 ]]; then
+      systemctl start nginx || true
+    fi
+    return 1
+  fi
+
+  if [[ $nginx_was_active -eq 1 ]]; then
+    systemctl start nginx || true
+  fi
+
+  return 0
+}
+
+guided_nginx_https() {
+  local domain cert_path key_path email share_email use_staging
+
+  while true; do
+    domain=$(prompt_default "Domain for HTTPS (e.g. example.com)" "${PUBLIC_HOSTNAME:-}")
+    domain=$(trim "$domain")
+    if [[ -n $domain ]]; then
+      break
+    fi
+    echo "A domain is required to configure HTTPS."
+  done
+
+  local default_use_existing="no"
+  if [[ -n ${TLS_CERTIFICATE_PATH:-} && -n ${TLS_PRIVATE_KEY_PATH:-} ]]; then
+    default_use_existing="yes"
+  fi
+
+  if prompt_yes_no "Use existing TLS certificate files for ${domain}?" "$default_use_existing"; then
+    cert_path=$(prompt_default "Path to the TLS certificate" "${TLS_CERTIFICATE_PATH:-/etc/letsencrypt/live/${domain}/fullchain.pem}")
+    cert_path=$(trim "$cert_path")
+    key_path=$(prompt_default "Path to the TLS private key" "${TLS_PRIVATE_KEY_PATH:-/etc/letsencrypt/live/${domain}/privkey.pem}")
+    key_path=$(trim "$key_path")
+  else
+    echo "Let's obtain a new Let's Encrypt certificate. Ensure DNS for ${domain} points to this server and that ports 80/443 are open."
+    email=$(prompt_default "Email for Let's Encrypt expiry notices (leave blank to skip)" "")
+    email=$(trim "$email")
+    if [[ -n $email ]]; then
+      if prompt_yes_no "Share your email with the Electronic Frontier Foundation?" "no"; then
+        share_email=1
+      else
+        share_email=0
+      fi
+    else
+      share_email=0
+    fi
+    if prompt_yes_no "Use Let's Encrypt staging environment (recommended for testing)?" "no"; then
+      use_staging=1
+    else
+      use_staging=0
+    fi
+
+    if ! obtain_lets_encrypt_certificate "$domain" "$email" "${share_email:-0}" "${use_staging:-0}"; then
+      echo "[lecture-tools] Aborting HTTPS configuration due to certificate issuance failure." >&2
+      return 1
+    fi
+
+    cert_path="/etc/letsencrypt/live/${domain}/fullchain.pem"
+    key_path="/etc/letsencrypt/live/${domain}/privkey.pem"
+  fi
+
+  if [[ ! -f $cert_path ]]; then
+    echo "[lecture-tools] error: TLS certificate $cert_path is missing." >&2
+    return 1
+  fi
+  if [[ ! -f $key_path ]]; then
+    echo "[lecture-tools] error: TLS private key $key_path is missing." >&2
+    return 1
+  fi
+
+  configure_nginx_https "$domain" "$cert_path" "$key_path"
+
+  PUBLIC_HOSTNAME="$domain"
+  TLS_CERTIFICATE_PATH="$cert_path"
+  TLS_PRIVATE_KEY_PATH="$key_path"
+  update_config_entry "PUBLIC_HOSTNAME" "$PUBLIC_HOSTNAME"
+  update_config_entry "TLS_CERTIFICATE_PATH" "$TLS_CERTIFICATE_PATH"
+  update_config_entry "TLS_PRIVATE_KEY_PATH" "$TLS_PRIVATE_KEY_PATH"
+  echo "[lecture-tools] Stored HTTPS settings in $CONFIG_FILE."
+}
+
+guided_nginx_setup() {
+  local selection listen_port domain
+
+  selection=$(prompt_menu "How should Nginx proxy Lecture Tools?" 3 \
+    "Serve HTTP on the server IP (no TLS)" \
+    "Serve HTTP for a domain name (no TLS)" \
+    "Set up HTTPS with Let's Encrypt or existing certificates")
+
+  case $selection in
+    1)
+      listen_port=$(prompt_default "HTTP listen port" "80")
+      listen_port=$(trim "$listen_port")
+      configure_nginx_ip "$listen_port"
+      ;;
+    2)
+      domain=$(prompt_default "Domain for HTTP (e.g. example.com)" "${PUBLIC_HOSTNAME:-}")
+      domain=$(trim "$domain")
+      if [[ -z $domain ]]; then
+        echo "[lecture-tools] error: A domain is required for this option." >&2
+        return 1
+      fi
+      listen_port=$(prompt_default "HTTP listen port" "80")
+      listen_port=$(trim "$listen_port")
+      configure_nginx_http_domain "$domain" "$listen_port"
+      PUBLIC_HOSTNAME="$domain"
+      TLS_CERTIFICATE_PATH=""
+      TLS_PRIVATE_KEY_PATH=""
+      update_config_entry "PUBLIC_HOSTNAME" "$PUBLIC_HOSTNAME"
+      update_config_entry "TLS_CERTIFICATE_PATH" ""
+      update_config_entry "TLS_PRIVATE_KEY_PATH" ""
+      echo "[lecture-tools] Stored HTTP domain settings in $CONFIG_FILE."
+      ;;
+    3)
+      guided_nginx_https
+      ;;
+  esac
+}
+
+print_info() {
+  cat <<EOFINFO
+Service name : ${SERVICE_NAME}
+Unit file    : ${UNIT_PATH}
+User / group : ${SERVICE_USER}:${SERVICE_GROUP}
+Install dir  : ${INSTALL_DIR}
+Virtualenv   : ${VENV_PY}
+Git branch   : ${GIT_BRANCH} (remote ${GIT_REMOTE:-origin})
+HTTP port    : ${HTTP_PORT:-8000}
+Root path    : ${ROOT_PATH:-/}
+Public host  : ${PUBLIC_HOSTNAME:-<not set>}
+TLS cert     : ${TLS_CERTIFICATE_PATH:-<not set>}
+TLS key      : ${TLS_PRIVATE_KEY_PATH:-<not set>}
+EOFINFO
+}
+
+run_doctor() {
+  print_info
+  echo ""
+  echo "[lecture-tools] Checking service status..."
+  if systemctl is-active --quiet "$SERVICE_NAME"; then
+    echo "[lecture-tools] Service is active."
+  else
+    systemctl status --no-pager "$SERVICE_NAME" || true
+  fi
+
+  if command -v ss >/dev/null 2>&1; then
+    echo "[lecture-tools] Listening sockets for port ${HTTP_PORT:-8000}:"
+    ss -tulpn | grep -E ":${HTTP_PORT:-8000}\b" || echo "[lecture-tools] warning: No listener detected on port ${HTTP_PORT:-8000}."
+  fi
+
+  if [[ -n ${TLS_CERTIFICATE_PATH:-} ]]; then
+    if [[ -f $TLS_CERTIFICATE_PATH ]]; then
+      echo "[lecture-tools] TLS certificate present at $TLS_CERTIFICATE_PATH"
+    else
+      echo "[lecture-tools] warning: TLS certificate $TLS_CERTIFICATE_PATH is missing." >&2
+    fi
+  fi
+  if [[ -n ${TLS_PRIVATE_KEY_PATH:-} ]]; then
+    if [[ -f $TLS_PRIVATE_KEY_PATH ]]; then
+      echo "[lecture-tools] TLS private key present at $TLS_PRIVATE_KEY_PATH"
+    else
+      echo "[lecture-tools] warning: TLS private key $TLS_PRIVATE_KEY_PATH is missing." >&2
+    fi
+  fi
+}
+
+purge_installation() {
+  require_root
+
+  echo "[lecture-tools] WARNING: This will stop the service and permanently delete files, configuration, and the service user."
+  read -r -p "Proceed with complete removal? [no]: " response || response="no"
+  response=${response:-no}
+  case ${response,,} in
+    y|yes) ;;
+    *)
+      echo "[lecture-tools] Aborted complete removal."
+      exit 0
+      ;;
+  esac
+
+  if systemctl list-unit-files | grep -q "^${SERVICE_NAME}"; then
+    systemctl stop "$SERVICE_NAME" || true
+    systemctl disable "$SERVICE_NAME" || true
+  fi
+
+  if [[ -f $UNIT_PATH ]]; then
+    rm -f "$UNIT_PATH"
+  fi
+
+  if [[ -f $CONFIG_FILE ]]; then
+    rm -f "$CONFIG_FILE"
+  fi
+
+  if [[ -n ${INSTALL_DIR:-} && -d $INSTALL_DIR ]]; then
+    rm -rf "$INSTALL_DIR"
+  fi
+
+  if [[ -n ${HELPER_PATH:-} && -f $HELPER_PATH ]]; then
+    rm -f "$HELPER_PATH"
+  fi
+
+  remove_nginx_site
+
+  if [[ -n ${SERVICE_USER:-} ]]; then
+    if id "$SERVICE_USER" >/dev/null 2>&1; then
+      userdel --remove "$SERVICE_USER" || true
+    fi
+  fi
+
+  if [[ -n ${SERVICE_GROUP:-} ]]; then
+    if getent group "$SERVICE_GROUP" >/dev/null 2>&1; then
+      groupdel "$SERVICE_GROUP" || true
+    fi
+  fi
+
+  systemctl daemon-reload || true
+
+  echo "[lecture-tools] Complete removal finished."
+}
+
 
 if [[ ${1:-} == "--render-helper" ]]; then
   shift || true
