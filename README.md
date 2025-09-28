@@ -93,7 +93,8 @@ What the helper now does for you:
   unit, Compose stack, legacy config), and reuses details from existing native
   installs so re-running the script is idempotent.
 - Prompts for the Git repository, branch, installation directory (default
-  `/opt/lecture-tools`), HTTP port, optional root path, public domain, and TLS
+  `/opt/lecture-tools`), HTTP port, optional root path (normalising entries such
+  as `lecturetools` to `/lecturetools`), public domain, and TLS
   certificate/key locations—auto-detecting Let’s Encrypt assets when they
   already exist so you can skip duplicate configuration.
 - Clones or updates the repository in-place, creates an isolated virtual
