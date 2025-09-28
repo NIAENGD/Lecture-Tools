@@ -9618,16 +9618,25 @@
           const lectureId = state.selectedLectureId;
           const kind = definition.type;
           const assetLabel = t(definition.labelKey);
-          let audioProcessingStarted = false;
+          let processingProgressStarted = false;
 
           const allowAudioBackground =
             kind === 'audio' && state.settings?.audio_mastering_enabled !== false;
-          const allowBackgroundProcessing = allowAudioBackground;
+          const allowSlideBackground = kind === 'slides';
+          const allowBackgroundProcessing = allowAudioBackground || allowSlideBackground;
           const enableProcessingStage = allowBackgroundProcessing;
           const processingLabel =
-            kind === 'audio' ? t('dialogs.upload.processingAudio') : undefined;
+            kind === 'audio'
+              ? t('dialogs.upload.processingAudio')
+              : kind === 'slides'
+              ? t('dialogs.upload.processingSlides')
+              : undefined;
           const backgroundProcessingLabel =
-            kind === 'audio' ? t('dialogs.upload.backgroundProcessing') : undefined;
+            kind === 'audio'
+              ? t('dialogs.upload.backgroundProcessing')
+              : kind === 'slides'
+              ? t('dialogs.upload.processingSlides')
+              : undefined;
 
           const dialogResult = await showUploadDialog({
             accept: definition.accept || '',
@@ -9651,14 +9660,16 @@
 
               if (kind === 'audio') {
                 stopTranscriptionProgress();
+              }
+              if (kind === 'audio' || kind === 'slides') {
                 stopProcessingProgress();
                 state.lastProgressMessage = '';
                 state.lastProgressRatio = null;
-                if (allowAudioBackground) {
+                if (allowBackgroundProcessing) {
                   startProcessingProgress(lectureId);
-                  audioProcessingStarted = true;
+                  processingProgressStarted = true;
                 } else {
-                  audioProcessingStarted = false;
+                  processingProgressStarted = false;
                 }
               }
 
@@ -9672,21 +9683,24 @@
                 });
                 return response;
               } catch (error) {
-                if (kind === 'audio' && audioProcessingStarted) {
+                if (processingProgressStarted) {
                   stopProcessingProgress();
-                  audioProcessingStarted = false;
+                  processingProgressStarted = false;
                 }
                 throw error;
               }
             },
           });
 
-          const backgroundProcessingActive = Boolean(dialogResult && dialogResult.processing);
+          const backgroundProcessingActive = Boolean(
+            (dialogResult && dialogResult.processing) ||
+              (dialogResult && dialogResult.result && dialogResult.result.processing)
+          );
 
           if (!dialogResult || (!dialogResult.uploaded && !backgroundProcessingActive)) {
-            if (kind === 'audio' && audioProcessingStarted) {
+            if (processingProgressStarted && !backgroundProcessingActive) {
               stopProcessingProgress();
-              audioProcessingStarted = false;
+              processingProgressStarted = false;
             }
             return;
           }
@@ -9695,9 +9709,9 @@
             if (!backgroundProcessingActive) {
               await refreshData();
               await selectLecture(lectureId);
-              if (kind === 'audio' && audioProcessingStarted) {
+              if (processingProgressStarted) {
                 stopProcessingProgress({ preserveMessage: true });
-                audioProcessingStarted = false;
+                processingProgressStarted = false;
               }
             }
             return;
@@ -9706,8 +9720,14 @@
           const successMessage =
             kind === 'slides' ? t('status.slidesUploaded') : t('status.assetUploaded');
           if (kind === 'audio') {
-            if (allowAudioBackground) {
+            if (allowAudioBackground && backgroundProcessingActive) {
               showStatus(t('status.audioProcessingQueued'), 'info', { persist: true });
+            } else {
+              showStatus(successMessage, 'success');
+            }
+          } else if (kind === 'slides') {
+            if (allowBackgroundProcessing && backgroundProcessingActive) {
+              showStatus(t('status.processingSlides'), 'info', { persist: true });
             } else {
               showStatus(successMessage, 'success');
             }
@@ -9716,9 +9736,9 @@
           }
           await refreshData();
           await selectLecture(lectureId);
-          if (kind === 'audio' && audioProcessingStarted && !backgroundProcessingActive) {
+          if (processingProgressStarted && !backgroundProcessingActive) {
             stopProcessingProgress({ preserveMessage: true });
-            audioProcessingStarted = false;
+            processingProgressStarted = false;
           }
         }
 
