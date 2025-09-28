@@ -105,9 +105,9 @@ What the helper now does for you:
   UFW is active, offers to open the chosen port.
 - Installs an expanded management CLI named `lecturetool` under
   `/usr/local/bin` with subcommands such as `start`, `stop`, `restart`,
-  `reload`, `logs`/`tail`, `update`, `upgrade`, `info`, `config`, `doctor`,
-  `shell`, and `purge` (full uninstall) for quick troubleshooting and lifecycle
-  management.
+  `reload`, `logs`/`tail`, `nginx`, `update`, `upgrade`, `info`, `config`,
+  `doctor`, `shell`, and `purge` (full uninstall) for quick troubleshooting and
+  lifecycle management.
 
 Example service management:
 
@@ -117,6 +117,12 @@ sudo lecturetool doctor      # Run a health check (service, ports, TLS files)
 sudo lecturetool update      # Pull the latest git commit & reinstall deps
 sudo lecturetool shell       # Drop into a shell as the service account
 sudo lecturetool purge       # Remove service, config, files, and service user
+
+# Configure an Nginx reverse proxy (HTTPS or HTTP-only)
+sudo lecturetool nginx https example.com \
+  /etc/letsencrypt/live/example.com/fullchain.pem \
+  /etc/letsencrypt/live/example.com/privkey.pem
+sudo lecturetool nginx ip 80  # Serve the app directly on the server's IP
 ```
 
 Ready to uninstall? Two cleanup helpers are available:
