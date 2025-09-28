@@ -37,6 +37,7 @@ from app.services.storage import LectureRepository
 from app.ui.console import ConsoleUI
 from app.ui.modern import ModernUI
 from app.web import create_app
+from app.web.server import get_max_upload_bytes
 
 
 LOGGER = logging.getLogger("lecture_tools.mastering")
@@ -114,12 +115,18 @@ def serve(
     normalized_root = _normalize_root_path(root_path)
     app = create_app(repository, config=app_config, root_path=normalized_root)
 
+    config_kwargs = {}
+    max_upload_bytes = get_max_upload_bytes()
+    if max_upload_bytes > 0:
+        config_kwargs["limit_max_request_size"] = max_upload_bytes
+
     server_config = uvicorn.Config(
         app,
         host=host,
         port=port,
         log_config=None,
         root_path=normalized_root,
+        **config_kwargs,
     )
     server = uvicorn.Server(server_config)
     app.state.server = server
