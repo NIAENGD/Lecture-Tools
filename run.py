@@ -118,15 +118,21 @@ def serve(
 
     config_kwargs = {}
     max_upload_bytes = get_max_upload_bytes()
-    if max_upload_bytes > 0:
-        config_signature = inspect.signature(uvicorn.Config.__init__)
-        if "limit_max_request_size" in config_signature.parameters:
-            config_kwargs["limit_max_request_size"] = max_upload_bytes
-        else:
-            LOGGER.warning(
-                "Ignoring max upload size limit; uvicorn.Config does not support "
-                "'limit_max_request_size'.",
-            )
+    config_signature = inspect.signature(uvicorn.Config.__init__)
+    limit_parameter: str | None = None
+    if "limit_max_request_size" in config_signature.parameters:
+        limit_parameter = "limit_max_request_size"
+    elif "h11_max_incomplete_event_size" in config_signature.parameters:
+        limit_parameter = "h11_max_incomplete_event_size"
+
+    if limit_parameter is not None:
+        effective_limit = max_upload_bytes if max_upload_bytes > 0 else sys.maxsize
+        config_kwargs[limit_parameter] = effective_limit
+    elif max_upload_bytes > 0:
+        LOGGER.warning(
+            "Ignoring max upload size limit; uvicorn.Config does not support the "
+            "configured upload limit parameters.",
+        )
 
     server_config = uvicorn.Config(
         app,
