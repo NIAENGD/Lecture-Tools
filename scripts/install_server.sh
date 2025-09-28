@@ -28,7 +28,14 @@ trim() {
 
 prompt_default() {
   local prompt="$1" default="$2" reply trimmed
-  read -r -p "$prompt [$default]: " reply || true
+  if [[ -t 0 ]]; then
+    read -r -p "$prompt [$default]: " reply || true
+  elif [[ -e /dev/tty ]]; then
+    printf '%s [%s]: ' "$prompt" "$default" > /dev/tty
+    read -r reply < /dev/tty || true
+  else
+    reply=""
+  fi
   trimmed=$(trim "${reply:-}")
   if [[ -z $trimmed ]]; then
     printf '%s' "$default"
@@ -39,13 +46,36 @@ prompt_default() {
 
 prompt_yes_no() {
   local prompt="$1" default="$2" reply
+  local have_tty=0
+  if [[ -t 0 ]]; then
+    have_tty=1
+  elif [[ -e /dev/tty ]]; then
+    have_tty=2
+  fi
+
   while true; do
-    read -r -p "$prompt [$default]: " reply || true
+    if [[ $have_tty -eq 1 ]]; then
+      read -r -p "$prompt [$default]: " reply || true
+    elif [[ $have_tty -eq 2 ]]; then
+      printf '%s [%s]: ' "$prompt" "$default" > /dev/tty
+      read -r reply < /dev/tty || true
+    else
+      reply="$default"
+    fi
+
     reply=${reply:-$default}
     case ${reply,,} in
       y|yes) return 0 ;;
       n|no) return 1 ;;
-   esac
+    esac
+
+    if [[ $have_tty -eq 0 ]]; then
+      case ${default,,} in
+        y|yes) return 0 ;;
+        *) return 1 ;;
+      esac
+    fi
+
     echo "Please answer yes or no (y/n)."
   done
 }
