@@ -414,11 +414,119 @@ Commands:
   info         Show installation summary
   config       Output the persisted configuration file
   doctor       Run basic health checks
-  nginx        Configure an Nginx reverse proxy (HTTPS or HTTP)
+  nginx        Configure an Nginx reverse proxy (interactive wizard available)
   shell        Open an interactive shell as the service user
   purge        Completely remove the service, files, and user
   uninstall    Alias for purge
 EOU
+}
+
+trim() {
+  local value="$1"
+  value="${value#${value%%[![:space:]]*}}"
+  value="${value%${value##*[![:space:]]}}"
+  printf '%s' "$value"
+}
+
+prompt_default() {
+  local prompt="$1" default="$2" reply trimmed
+  if [[ -t 0 ]]; then
+    read -r -p "$prompt [$default]: " reply || true
+  elif [[ -e /dev/tty ]]; then
+    printf '%s [%s]: ' "$prompt" "$default" > /dev/tty
+    read -r reply < /dev/tty || true
+  else
+    reply=""
+  fi
+  trimmed=$(trim "${reply:-}")
+  if [[ -z $trimmed ]]; then
+    printf '%s' "$default"
+  else
+    printf '%s' "$trimmed"
+  fi
+}
+
+prompt_yes_no() {
+  local prompt="$1" default="$2" reply
+  local have_tty=0
+  if [[ -t 0 ]]; then
+    have_tty=1
+  elif [[ -e /dev/tty ]]; then
+    have_tty=2
+  fi
+
+  while true; do
+    if [[ $have_tty -eq 1 ]]; then
+      read -r -p "$prompt [$default]: " reply || true
+    elif [[ $have_tty -eq 2 ]]; then
+      printf '%s [%s]: ' "$prompt" "$default" > /dev/tty
+      read -r reply < /dev/tty || true
+    else
+      reply="$default"
+    fi
+
+    reply=${reply:-$default}
+    case ${reply,,} in
+      y|yes) return 0 ;;
+      n|no) return 1 ;;
+    esac
+
+    if [[ $have_tty -eq 0 ]]; then
+      case ${default,,} in
+        y|yes) return 0 ;;
+        *) return 1 ;;
+      esac
+    fi
+
+    echo "Please answer yes or no (y/n)."
+  done
+}
+
+prompt_menu() {
+  local prompt="$1" default_choice="$2"
+  shift 2
+  local options=("$@")
+  local choice
+  local have_tty=0
+
+  if [[ -t 0 ]]; then
+    have_tty=1
+  elif [[ -e /dev/tty ]]; then
+    have_tty=2
+  fi
+
+  while true; do
+    echo "$prompt"
+    for idx in "${!options[@]}"; do
+      local number=$((idx + 1))
+      if [[ $number -eq $default_choice ]]; then
+        printf '  [%d] %s (default)\n' "$number" "${options[$idx]}"
+      else
+        printf '  [%d] %s\n' "$number" "${options[$idx]}"
+      fi
+    done
+
+    if [[ $have_tty -eq 1 ]]; then
+      read -r -p "Selection [$default_choice]: " choice || true
+    elif [[ $have_tty -eq 2 ]]; then
+      printf 'Selection [%s]: ' "$default_choice" > /dev/tty
+      read -r choice < /dev/tty || true
+    else
+      choice="$default_choice"
+    fi
+
+    choice=$(trim "${choice:-}")
+    if [[ -z $choice ]]; then
+      choice="$default_choice"
+    fi
+
+    if [[ $choice =~ ^[0-9]+$ ]] && (( choice >= 1 && choice <= ${#options[@]} )); then
+      printf '%s' "$choice"
+      return 0
+    fi
+
+    echo "Please enter a number between 1 and ${#options[@]}."
+  done
 }
 
 require_root() {
@@ -445,6 +553,16 @@ ensure_nginx_installed() {
   echo "[lecture-tools] Installing nginx..."
   apt-get update -qq
   DEBIAN_FRONTEND=noninteractive apt-get install -y nginx >/dev/null
+}
+
+ensure_certbot_installed() {
+  if command -v certbot >/dev/null 2>&1; then
+    return
+  fi
+
+  echo "[lecture-tools] Installing certbot..."
+  apt-get update -qq
+  DEBIAN_FRONTEND=noninteractive apt-get install -y certbot >/dev/null
 }
 
 render_nginx_location_block() {
@@ -606,6 +724,223 @@ EOFNGINX
   echo "[lecture-tools] Nginx HTTP reverse proxy configured on port ${listen_port}."
 }
 
+configure_nginx_http_domain() {
+  require_root
+  ensure_nginx_installed
+
+  local domain="$1" listen_port="$2"
+  if [[ -z $domain ]]; then
+    echo "[lecture-tools] error: A domain is required for HTTP configuration." >&2
+    exit 1
+  fi
+  if [[ -z $listen_port ]]; then
+    listen_port="80"
+  fi
+  if ! [[ $listen_port =~ ^[0-9]+$ ]]; then
+    echo "[lecture-tools] error: Listen port must be numeric." >&2
+    exit 1
+  fi
+
+  local proxy_block
+  proxy_block="$(render_nginx_location_block)"
+
+  cat >"$NGINX_SITE_AVAILABLE" <<EOFNGINX
+server {
+    listen ${listen_port};
+    listen [::]:${listen_port};
+    server_name ${domain};
+
+${proxy_block}}
+EOFNGINX
+
+  chmod 0644 "$NGINX_SITE_AVAILABLE"
+  activate_nginx_site
+  reload_nginx_service
+  echo "[lecture-tools] Nginx HTTP reverse proxy configured for ${domain} on port ${listen_port}."
+}
+
+update_config_entry() {
+  local key="$1" value="$2"
+  python3 - "$CONFIG_FILE" "$key" "$value" <<'PY'
+import os
+import sys
+
+path, key, value = sys.argv[1:]
+value = value or ""
+escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+lines = []
+found = False
+
+if os.path.exists(path):
+    with open(path, 'r', encoding='utf-8') as handle:
+        for line in handle:
+            if line.startswith(f"{key}="):
+                lines.append(f'{key}="{escaped}"\n')
+                found = True
+            else:
+                lines.append(line)
+else:
+    lines = []
+
+if not found:
+    lines.append(f'{key}="{escaped}"\n')
+
+with open(path, 'w', encoding='utf-8') as handle:
+    handle.writelines(lines)
+PY
+  chmod 0600 "$CONFIG_FILE" || true
+}
+
+obtain_lets_encrypt_certificate() {
+  local domain="$1" email="$2" share_email="$3" use_staging="$4"
+
+  ensure_certbot_installed
+
+  local nginx_was_active=0
+  if systemctl is-active --quiet nginx; then
+    nginx_was_active=1
+    systemctl stop nginx || true
+  fi
+
+  local cmd=(certbot certonly --standalone --preferred-challenges http --agree-tos --non-interactive -d "$domain")
+  if [[ -n $email ]]; then
+    cmd+=(--email "$email")
+    if [[ $share_email -eq 1 ]]; then
+      cmd+=(--eff-email)
+    else
+      cmd+=(--no-eff-email)
+    fi
+  else
+    cmd+=(--register-unsafely-without-email)
+  fi
+  if [[ $use_staging -eq 1 ]]; then
+    cmd+=(--staging)
+  fi
+
+  echo "[lecture-tools] Requesting Let's Encrypt certificate for ${domain}..."
+  if ! "${cmd[@]}"; then
+    echo "[lecture-tools] error: Certbot was unable to obtain a certificate for ${domain}." >&2
+    if [[ $nginx_was_active -eq 1 ]]; then
+      systemctl start nginx || true
+    fi
+    return 1
+  fi
+
+  if [[ $nginx_was_active -eq 1 ]]; then
+    systemctl start nginx || true
+  fi
+
+  return 0
+}
+
+guided_nginx_https() {
+  local domain cert_path key_path email share_email use_staging
+
+  while true; do
+    domain=$(prompt_default "Domain for HTTPS (e.g. example.com)" "${PUBLIC_HOSTNAME:-}")
+    domain=$(trim "$domain")
+    if [[ -n $domain ]]; then
+      break
+    fi
+    echo "A domain is required to configure HTTPS."
+  done
+
+  local default_use_existing="no"
+  if [[ -n ${TLS_CERTIFICATE_PATH:-} && -n ${TLS_PRIVATE_KEY_PATH:-} ]]; then
+    default_use_existing="yes"
+  fi
+
+  if prompt_yes_no "Use existing TLS certificate files for ${domain}?" "$default_use_existing"; then
+    cert_path=$(prompt_default "Path to the TLS certificate" "${TLS_CERTIFICATE_PATH:-/etc/letsencrypt/live/${domain}/fullchain.pem}")
+    cert_path=$(trim "$cert_path")
+    key_path=$(prompt_default "Path to the TLS private key" "${TLS_PRIVATE_KEY_PATH:-/etc/letsencrypt/live/${domain}/privkey.pem}")
+    key_path=$(trim "$key_path")
+  else
+    echo "Let's obtain a new Let's Encrypt certificate. Ensure DNS for ${domain} points to this server and that ports 80/443 are open."
+    email=$(prompt_default "Email for Let's Encrypt expiry notices (leave blank to skip)" "")
+    email=$(trim "$email")
+    if [[ -n $email ]]; then
+      if prompt_yes_no "Share your email with the Electronic Frontier Foundation?" "no"; then
+        share_email=1
+      else
+        share_email=0
+      fi
+    else
+      share_email=0
+    fi
+    if prompt_yes_no "Use Let's Encrypt staging environment (recommended for testing)?" "no"; then
+      use_staging=1
+    else
+      use_staging=0
+    fi
+
+    if ! obtain_lets_encrypt_certificate "$domain" "$email" "${share_email:-0}" "${use_staging:-0}"; then
+      echo "[lecture-tools] Aborting HTTPS configuration due to certificate issuance failure." >&2
+      return 1
+    fi
+
+    cert_path="/etc/letsencrypt/live/${domain}/fullchain.pem"
+    key_path="/etc/letsencrypt/live/${domain}/privkey.pem"
+  fi
+
+  if [[ ! -f $cert_path ]]; then
+    echo "[lecture-tools] error: TLS certificate $cert_path is missing." >&2
+    return 1
+  fi
+  if [[ ! -f $key_path ]]; then
+    echo "[lecture-tools] error: TLS private key $key_path is missing." >&2
+    return 1
+  fi
+
+  configure_nginx_https "$domain" "$cert_path" "$key_path"
+
+  PUBLIC_HOSTNAME="$domain"
+  TLS_CERTIFICATE_PATH="$cert_path"
+  TLS_PRIVATE_KEY_PATH="$key_path"
+  update_config_entry "PUBLIC_HOSTNAME" "$PUBLIC_HOSTNAME"
+  update_config_entry "TLS_CERTIFICATE_PATH" "$TLS_CERTIFICATE_PATH"
+  update_config_entry "TLS_PRIVATE_KEY_PATH" "$TLS_PRIVATE_KEY_PATH"
+  echo "[lecture-tools] Stored HTTPS settings in $CONFIG_FILE."
+}
+
+guided_nginx_setup() {
+  local selection listen_port domain
+
+  selection=$(prompt_menu "How should Nginx proxy Lecture Tools?" 3 \
+    "Serve HTTP on the server IP (no TLS)" \
+    "Serve HTTP for a domain name (no TLS)" \
+    "Set up HTTPS with Let's Encrypt or existing certificates")
+
+  case $selection in
+    1)
+      listen_port=$(prompt_default "HTTP listen port" "80")
+      listen_port=$(trim "$listen_port")
+      configure_nginx_ip "$listen_port"
+      ;;
+    2)
+      domain=$(prompt_default "Domain for HTTP (e.g. example.com)" "${PUBLIC_HOSTNAME:-}")
+      domain=$(trim "$domain")
+      if [[ -z $domain ]]; then
+        echo "[lecture-tools] error: A domain is required for this option." >&2
+        return 1
+      fi
+      listen_port=$(prompt_default "HTTP listen port" "80")
+      listen_port=$(trim "$listen_port")
+      configure_nginx_http_domain "$domain" "$listen_port"
+      PUBLIC_HOSTNAME="$domain"
+      TLS_CERTIFICATE_PATH=""
+      TLS_PRIVATE_KEY_PATH=""
+      update_config_entry "PUBLIC_HOSTNAME" "$PUBLIC_HOSTNAME"
+      update_config_entry "TLS_CERTIFICATE_PATH" ""
+      update_config_entry "TLS_PRIVATE_KEY_PATH" ""
+      echo "[lecture-tools] Stored HTTP domain settings in $CONFIG_FILE."
+      ;;
+    3)
+      guided_nginx_https
+      ;;
+  esac
+}
+
 print_info() {
   cat <<EOFINFO
 Service name : ${SERVICE_NAME}
@@ -749,6 +1084,9 @@ case $1 in
     shift || true
     subcommand="${1:-}"
     case $subcommand in
+      ""|guided|wizard|setup)
+        guided_nginx_setup
+        ;;
       https)
         shift || true
         domain="${1:-${PUBLIC_HOSTNAME:-}}"
@@ -762,9 +1100,11 @@ case $1 in
         configure_nginx_ip "$listen_port"
         ;;
       *)
-        echo "Usage: lecturetool nginx <https|ip> [options]" >&2
-        echo "  https [domain] [cert] [key]  Configure HTTPS reverse proxy using the stored or provided values." >&2
-        echo "  ip [port]                    Configure HTTP reverse proxy listening on the given port (default 80)." >&2
+        echo "Usage: lecturetool nginx [guided|https|http|ip] [options]" >&2
+        echo "  guided                      Launch the interactive proxy configuration wizard (default)." >&2
+        echo "  https [domain] [cert] [key] Configure HTTPS reverse proxy using the stored or provided values." >&2
+        echo "  http [domain] [port]        Configure HTTP reverse proxy for a domain (default port 80)." >&2
+        echo "  ip [port]                   Configure HTTP reverse proxy listening on the given port (default 80)." >&2
         exit 1
         ;;
     esac

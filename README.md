@@ -118,11 +118,13 @@ sudo lecturetool update      # Pull the latest git commit & reinstall deps
 sudo lecturetool shell       # Drop into a shell as the service account
 sudo lecturetool purge       # Remove service, config, files, and service user
 
-# Configure an Nginx reverse proxy (HTTPS or HTTP-only)
+# Configure an Nginx reverse proxy (interactive wizard + manual modes)
+sudo lecturetool nginx            # Launch the guided setup (choose IP/HTTP/HTTPS with Let's Encrypt assistance)
 sudo lecturetool nginx https example.com \
   /etc/letsencrypt/live/example.com/fullchain.pem \
   /etc/letsencrypt/live/example.com/privkey.pem
-sudo lecturetool nginx ip 80  # Serve the app directly on the server's IP
+sudo lecturetool nginx http example.com 80  # Plain HTTP for a domain
+sudo lecturetool nginx ip 80                # Plain HTTP bound to the server IP
 ```
 
 Ready to uninstall? Two cleanup helpers are available:
