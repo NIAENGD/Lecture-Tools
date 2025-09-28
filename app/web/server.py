@@ -43,6 +43,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from starlette.formparsers import MultiPartParser
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from ..config import AppConfig
@@ -103,7 +104,6 @@ try:
     )
 except ValueError:
     _MAX_UPLOAD_BYTES = _DEFAULT_MAX_UPLOAD_BYTES
-
 
 def get_max_upload_bytes() -> int:
     """Return the configured maximum upload size in bytes."""
