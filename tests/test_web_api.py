@@ -78,7 +78,6 @@ def _build_wav_bytes(duration_seconds: float = 0.25, sample_rate: int = 16_000) 
         handle.writeframes(silence)
     return buffer.getvalue()
 
-
 def _wait_for_background_jobs(app, timeout: float = 5.0) -> None:
     jobs = getattr(app.state, "background_jobs", None)
     lock = getattr(app.state, "background_jobs_lock", None)
@@ -514,7 +513,6 @@ def test_upload_audio_processes_file(monkeypatch, temp_config):
     assert updated.processed_audio_path is None
 
     _wait_for_background_jobs(app)
-
     refreshed = repository.get_lecture(lecture_id)
     assert refreshed is not None
     assert refreshed.audio_path and refreshed.audio_path.endswith("-master.wav")
@@ -571,8 +569,7 @@ def test_upload_audio_converts_non_wav(monkeypatch, temp_config):
     assert refreshed is not None
     assert refreshed.audio_path and refreshed.audio_path.endswith("-converted-master.wav")
     assert refreshed.processed_audio_path == refreshed.audio_path
-
-
+    
 def test_upload_audio_requires_ffmpeg(monkeypatch, temp_config):
     repository, _existing_lecture_id, module_id = _create_sample_data(temp_config)
     lecture_id = repository.add_lecture(module_id, "FFmpeg Check")
@@ -591,7 +588,6 @@ def test_upload_audio_requires_ffmpeg(monkeypatch, temp_config):
     lecture = repository.get_lecture(lecture_id)
     assert lecture is not None
     assert lecture.audio_path is None
-
     module = repository.get_module(module_id)
     class_record = repository.get_class(module.class_id) if module else None
     assert module is not None and class_record is not None

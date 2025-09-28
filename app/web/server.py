@@ -2089,6 +2089,7 @@ def create_app(
         response: Dict[str, Any] = {"lecture": _serialize_lecture(updated), attribute: relative}
         if asset_key == "audio":
             response["processed_audio_path"] = processed_relative
+            response["processing"] = processing_queued
         if asset_key == "slides":
             response["slide_image_dir"] = update_kwargs.get("slide_image_dir")
         response["processing"] = bool(processing_queued)
