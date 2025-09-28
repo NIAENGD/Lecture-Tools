@@ -734,15 +734,12 @@ def test_upload_audio_respects_mastering_setting(temp_config):
     assert updated.audio_path and updated.audio_path.endswith("lecture.wav")
 
 
-def test_upload_slides_auto_generates_archive(monkeypatch, temp_config):
+def test_upload_slides_does_not_process_automatically(monkeypatch, temp_config):
     repository, lecture_id, _module_id = _create_sample_data(temp_config)
 
     class DummyConverter:
         def convert(self, slide_path, output_dir, *, page_range=None):
-            output_dir.mkdir(parents=True, exist_ok=True)
-            archive = output_dir / "slides.zip"
-            archive.write_bytes(b"zip")
-            return [archive]
+            raise AssertionError("Slide conversion should not run during upload")
 
     monkeypatch.setattr(web_server, "PyMuPDFSlideConverter", lambda: DummyConverter())
 
@@ -756,18 +753,15 @@ def test_upload_slides_auto_generates_archive(monkeypatch, temp_config):
     assert response.status_code == 200
     payload = response.json()
     assert payload["slide_path"].endswith(".pdf")
-    assert payload.get("processing") is True
-    operations = payload.get("processing_operations") or []
-    assert "slide_conversion" in operations or not operations
+    assert payload.get("processing") is False
+    assert not payload.get("processing_operations")
     assert payload.get("slide_image_dir") is None
 
     _wait_for_background_jobs(app)
 
     updated = repository.get_lecture(lecture_id)
     assert updated.slide_path and updated.slide_path.endswith("deck.pdf")
-    assert updated.slide_image_dir and updated.slide_image_dir.endswith("slides.zip")
-    slide_asset = temp_config.storage_root / updated.slide_image_dir
-    assert slide_asset.exists()
+    assert updated.slide_image_dir is None
 
 
 def test_upload_slides_gracefully_handles_missing_converter(monkeypatch, temp_config):
@@ -796,10 +790,8 @@ def test_upload_slides_gracefully_handles_missing_converter(monkeypatch, temp_co
     assert response.status_code == 200
     payload = response.json()
     assert payload["slide_path"].endswith(".pdf")
-    assert payload.get("processing") is True
+    assert payload.get("processing") is False
     assert payload.get("slide_image_dir") is None
-
-    _wait_for_background_jobs(app)
 
     updated = repository.get_lecture(lecture_id)
     assert updated.slide_path and updated.slide_path.endswith("deck.pdf")
