@@ -19,6 +19,19 @@ fatal() {
   exit 1
 }
 
+readonly FALLBACK_INSTALL_DIR="/opt/lecture-tools"
+readonly FALLBACK_REPO="https://github.com/NIAENGD/Lecture-Tools.git"
+readonly FALLBACK_BRANCH="main"
+readonly FALLBACK_USER="lecturetools"
+readonly FALLBACK_PORT="8000"
+readonly FALLBACK_ROOT_PATH=""
+readonly FALLBACK_DOMAIN=""
+readonly FALLBACK_TLS_CERT=""
+readonly FALLBACK_TLS_KEY=""
+readonly FALLBACK_SERVICE_NAME="lecture-tools.service"
+readonly FALLBACK_UNIT_PATH="/etc/systemd/system/lecture-tools.service"
+readonly HELPER_PATH_DEFAULT="/usr/local/bin/lecturetool"
+
 trim() {
   local value="$1"
   value="${value#${value%%[![:space:]]*}}"
@@ -203,12 +216,21 @@ LEGACY_UNIT_PATH="/etc/systemd/system/lecturetools.service"
 LEGACY_HELPER="/usr/local/bin/lecturetool"
 
 declare INSTALL_DEFAULT="" REPO_DEFAULT="" BRANCH_DEFAULT="" USER_DEFAULT="" PORT_DEFAULT="" ROOT_PATH_DEFAULT=""
-declare DOMAIN_DEFAULT="" TLS_CERT_DEFAULT="" TLS_KEY_DEFAULT="" SERVICE_NAME_DEFAULT="lecture-tools.service" UNIT_PATH_DEFAULT="/etc/systemd/system/lecture-tools.service"
+declare DOMAIN_DEFAULT="" TLS_CERT_DEFAULT="" TLS_KEY_DEFAULT="" SERVICE_NAME_DEFAULT="$FALLBACK_SERVICE_NAME" UNIT_PATH_DEFAULT="$FALLBACK_UNIT_PATH"
+declare EXISTING_INSTALL_DIR="" EXISTING_SERVICE_USER="" EXISTING_SERVICE_GROUP=""
+declare EXISTING_SERVICE_NAME="$FALLBACK_SERVICE_NAME" EXISTING_UNIT_PATH="$FALLBACK_UNIT_PATH"
+declare -a EXISTING_TRACES=()
+declare existing_installation_detected=0
 
 load_existing_configuration() {
   if [[ -f $CONFIG_FILE ]]; then
     # shellcheck disable=SC1091
     source "$CONFIG_FILE"
+    EXISTING_INSTALL_DIR="${INSTALL_DIR:-$EXISTING_INSTALL_DIR}"
+    EXISTING_SERVICE_USER="${SERVICE_USER:-$EXISTING_SERVICE_USER}"
+    EXISTING_SERVICE_GROUP="${SERVICE_GROUP:-$EXISTING_SERVICE_GROUP}"
+    EXISTING_SERVICE_NAME="${SERVICE_NAME:-$EXISTING_SERVICE_NAME}"
+    EXISTING_UNIT_PATH="${UNIT_PATH:-$EXISTING_UNIT_PATH}"
     INSTALL_DEFAULT="${INSTALL_DIR:-$INSTALL_DEFAULT}"
     REPO_DEFAULT="${GIT_REMOTE_URL:-$REPO_DEFAULT}"
     BRANCH_DEFAULT="${GIT_BRANCH:-$BRANCH_DEFAULT}"
@@ -220,6 +242,13 @@ load_existing_configuration() {
     SERVICE_NAME_DEFAULT="${SERVICE_NAME:-$SERVICE_NAME_DEFAULT}"
     UNIT_PATH_DEFAULT="${UNIT_PATH:-$UNIT_PATH_DEFAULT}"
     TLS_KEY_DEFAULT="${TLS_PRIVATE_KEY_PATH:-$TLS_KEY_DEFAULT}"
+  fi
+
+  if [[ -z $EXISTING_SERVICE_NAME ]]; then
+    EXISTING_SERVICE_NAME="$SERVICE_NAME_DEFAULT"
+  fi
+  if [[ -z $EXISTING_UNIT_PATH ]]; then
+    EXISTING_UNIT_PATH="$UNIT_PATH_DEFAULT"
   fi
 }
 
@@ -640,6 +669,198 @@ remove_nginx_site() {
       fi
     fi
   fi
+}
+
+reset_defaults_to_base() {
+  INSTALL_DEFAULT=""
+  REPO_DEFAULT=""
+  BRANCH_DEFAULT=""
+  USER_DEFAULT=""
+  PORT_DEFAULT=""
+  ROOT_PATH_DEFAULT=""
+  DOMAIN_DEFAULT=""
+  TLS_CERT_DEFAULT=""
+  TLS_KEY_DEFAULT=""
+  SERVICE_NAME_DEFAULT="$FALLBACK_SERVICE_NAME"
+  UNIT_PATH_DEFAULT="$FALLBACK_UNIT_PATH"
+  EXISTING_INSTALL_DIR=""
+  EXISTING_SERVICE_USER=""
+  EXISTING_SERVICE_GROUP=""
+  EXISTING_SERVICE_NAME="$FALLBACK_SERVICE_NAME"
+  EXISTING_UNIT_PATH="$FALLBACK_UNIT_PATH"
+  EXISTING_TRACES=()
+  existing_installation_detected=0
+}
+
+detect_existing_installation() {
+  EXISTING_TRACES=()
+  existing_installation_detected=0
+
+  if [[ -f $CONFIG_FILE ]]; then
+    EXISTING_TRACES+=("configuration file at $CONFIG_FILE")
+  fi
+
+  local service_name="$EXISTING_SERVICE_NAME"
+  if [[ -z $service_name ]]; then
+    service_name="$SERVICE_NAME_DEFAULT"
+  fi
+  if [[ -z $service_name ]]; then
+    service_name="$FALLBACK_SERVICE_NAME"
+  fi
+  if [[ -n $service_name && systemd_unit_exists "$service_name" ]]; then
+    EXISTING_TRACES+=("systemd service $service_name")
+  fi
+
+  local unit_path="$EXISTING_UNIT_PATH"
+  if [[ -z $unit_path ]]; then
+    unit_path="$UNIT_PATH_DEFAULT"
+  fi
+  if [[ -z $unit_path ]]; then
+    unit_path="$FALLBACK_UNIT_PATH"
+  fi
+  if [[ -n $unit_path && -f $unit_path ]]; then
+    EXISTING_TRACES+=("systemd unit file $unit_path")
+  fi
+
+  if [[ -n $EXISTING_INSTALL_DIR && -d $EXISTING_INSTALL_DIR ]]; then
+    EXISTING_TRACES+=("application directory $EXISTING_INSTALL_DIR")
+  fi
+
+  if [[ -f $HELPER_PATH_DEFAULT ]]; then
+    EXISTING_TRACES+=("helper CLI $HELPER_PATH_DEFAULT")
+  fi
+
+  if [[ -f $NGINX_SITE_AVAILABLE || -L $NGINX_SITE_ENABLED ]]; then
+    EXISTING_TRACES+=("nginx site configuration")
+  fi
+
+  if (( ${#EXISTING_TRACES[@]} > 0 )); then
+    existing_installation_detected=1
+  fi
+}
+
+remove_existing_installation() {
+  local purge_all="${1:-0}"
+  local service_name="$EXISTING_SERVICE_NAME"
+  if [[ -z $service_name ]]; then
+    service_name="$SERVICE_NAME_DEFAULT"
+  fi
+  if [[ -z $service_name ]]; then
+    service_name="$FALLBACK_SERVICE_NAME"
+  fi
+
+  if [[ -n $service_name && systemd_unit_exists "$service_name" ]]; then
+    log "Stopping $service_name..."
+    systemctl stop "$service_name" || true
+    log "Disabling $service_name..."
+    systemctl disable "$service_name" || true
+  fi
+
+  local unit_path="$EXISTING_UNIT_PATH"
+  if [[ -z $unit_path ]]; then
+    unit_path="$UNIT_PATH_DEFAULT"
+  fi
+  if [[ -z $unit_path ]]; then
+    unit_path="$FALLBACK_UNIT_PATH"
+  fi
+  if [[ -n $unit_path && -f $unit_path ]]; then
+    log "Removing unit file $unit_path..."
+    rm -f "$unit_path"
+  fi
+
+  remove_nginx_site
+
+  if [[ -f $HELPER_PATH_DEFAULT ]]; then
+    log "Removing helper CLI $HELPER_PATH_DEFAULT..."
+    rm -f "$HELPER_PATH_DEFAULT"
+  fi
+
+  if [[ -f $CONFIG_FILE ]]; then
+    log "Deleting configuration file $CONFIG_FILE..."
+    rm -f "$CONFIG_FILE"
+  fi
+
+  systemctl daemon-reload || true
+
+  if [[ $purge_all -eq 1 ]]; then
+    if [[ -n $EXISTING_INSTALL_DIR && -d $EXISTING_INSTALL_DIR ]]; then
+      log "Removing installation directory $EXISTING_INSTALL_DIR..."
+      rm -rf "$EXISTING_INSTALL_DIR"
+    fi
+
+    local user="$EXISTING_SERVICE_USER"
+    local group="$EXISTING_SERVICE_GROUP"
+    if [[ -z $group && -n $user && id "$user" >/dev/null 2>&1 ]]; then
+      group="$(id -gn "$user")"
+    fi
+
+    if [[ -n $user && id "$user" >/dev/null 2>&1 ]]; then
+      if [[ $user != "root" ]]; then
+        log "Removing system user $user..."
+        userdel "$user" || true
+      else
+        warn "Refusing to delete system user root."
+      fi
+    fi
+
+    if [[ -n $group && getent group "$group" >/dev/null 2>&1 ]]; then
+      if [[ $group != "root" ]]; then
+        log "Removing system group $group..."
+        groupdel "$group" || true
+      else
+        warn "Refusing to delete system group root."
+      fi
+    fi
+  else
+    if [[ -n $EXISTING_INSTALL_DIR ]]; then
+      log "Application files preserved in $EXISTING_INSTALL_DIR"
+    fi
+    if [[ -n $EXISTING_SERVICE_USER ]]; then
+      log "System user $EXISTING_SERVICE_USER was preserved."
+    fi
+  fi
+
+  EXISTING_TRACES=()
+  existing_installation_detected=0
+}
+
+handle_existing_installation() {
+  detect_existing_installation
+  if [[ $existing_installation_detected -eq 0 ]]; then
+    return
+  fi
+
+  log "Detected existing Lecture Tools installation artifacts:"
+  for trace in "${EXISTING_TRACES[@]}"; do
+    log "  - $trace"
+  done
+
+  local selection
+  selection=$(prompt_menu "Select how to handle the existing installation" 1 \
+    "Update and repair the existing installation" \
+    "Remove the installation and exit" \
+    "Remove everything and perform a clean install")
+
+  case $selection in
+    1)
+      log "Proceeding with update and repair of the existing installation."
+      ;;
+    2)
+      log "Removing existing installation components..."
+      remove_existing_installation 0
+      log "Existing installation removed. Exiting installer."
+      exit 0
+      ;;
+    3)
+      log "Preparing for a clean installation by removing existing components..."
+      remove_existing_installation 1
+      reset_defaults_to_base
+      log "Clean installation will continue."
+      ;;
+    *)
+      fatal "Unexpected selection '$selection'"
+      ;;
+  esac
 }
 
 configure_nginx_https() {
@@ -1181,17 +1402,18 @@ fi
 ensure_debian
 load_existing_configuration
 detect_legacy_docker
+handle_existing_installation
 ensure_packages
 
-DEFAULT_INSTALL_DIR="${INSTALL_DEFAULT:-/opt/lecture-tools}"
-DEFAULT_REPO="${REPO_DEFAULT:-https://github.com/NIAENGD/Lecture-Tools.git}"
-DEFAULT_BRANCH="${BRANCH_DEFAULT:-main}"
-DEFAULT_USER="${USER_DEFAULT:-lecturetools}"
-DEFAULT_PORT="${PORT_DEFAULT:-8000}"
-DEFAULT_ROOT_PATH="${ROOT_PATH_DEFAULT:-}"
-DEFAULT_DOMAIN="${DOMAIN_DEFAULT:-}"
-DEFAULT_TLS_CERT="${TLS_CERT_DEFAULT:-}"
-DEFAULT_TLS_KEY="${TLS_KEY_DEFAULT:-}"
+DEFAULT_INSTALL_DIR="${INSTALL_DEFAULT:-$FALLBACK_INSTALL_DIR}"
+DEFAULT_REPO="${REPO_DEFAULT:-$FALLBACK_REPO}"
+DEFAULT_BRANCH="${BRANCH_DEFAULT:-$FALLBACK_BRANCH}"
+DEFAULT_USER="${USER_DEFAULT:-$FALLBACK_USER}"
+DEFAULT_PORT="${PORT_DEFAULT:-$FALLBACK_PORT}"
+DEFAULT_ROOT_PATH="${ROOT_PATH_DEFAULT:-$FALLBACK_ROOT_PATH}"
+DEFAULT_DOMAIN="${DOMAIN_DEFAULT:-$FALLBACK_DOMAIN}"
+DEFAULT_TLS_CERT="${TLS_CERT_DEFAULT:-$FALLBACK_TLS_CERT}"
+DEFAULT_TLS_KEY="${TLS_KEY_DEFAULT:-$FALLBACK_TLS_KEY}"
 
 install_dir=$(prompt_default "Application directory (git clone target)" "$DEFAULT_INSTALL_DIR")
 install_dir=$(trim "$install_dir")
