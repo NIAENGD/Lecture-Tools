@@ -136,6 +136,14 @@ def serve(
             # that the configured upload limit takes effect and large files are
             # accepted consistently across platforms.
             config_kwargs.setdefault("http", "h11")
+        elif limit_parameter == "limit_max_request_size":
+            # ``httptools`` applies a hard-coded ~1MB safety limit which rejects
+            # larger uploads before uvicorn can enforce ``limit_max_request_size``.
+            # This limit only affects Linux builds where the binary parser is
+            # available (such as our Docker image). Always prefer the pure Python
+            # implementation so the configured upload limit is honored
+            # consistently with the Windows/batch launcher.
+            config_kwargs.setdefault("http", "h11")
     elif max_upload_bytes > 0:
         LOGGER.warning(
             "Ignoring max upload size limit; uvicorn.Config does not support the "
