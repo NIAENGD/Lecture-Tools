@@ -11,7 +11,7 @@ import time
 import webbrowser
 from enum import Enum
 from pathlib import Path
-from typing import Optional
+from typing import Any, Dict, Optional
 
 import uvicorn
 import typer
@@ -116,7 +116,7 @@ def serve(
     normalized_root = _normalize_root_path(root_path)
     app = create_app(repository, config=app_config, root_path=normalized_root)
 
-    config_kwargs = {}
+    config_kwargs: Dict[str, Any] = {}
     max_upload_bytes = get_max_upload_bytes()
     config_signature = inspect.signature(uvicorn.Config.__init__)
     limit_parameter: str | None = None
@@ -128,27 +128,25 @@ def serve(
     if limit_parameter is not None:
         effective_limit = max_upload_bytes if max_upload_bytes > 0 else sys.maxsize
         config_kwargs[limit_parameter] = effective_limit
-        if limit_parameter == "h11_max_incomplete_event_size":
-            # When uvicorn lacks native request size limiting support it defaults to
-            # the pure-Python ``h11`` implementation. The high-performance
-            # ``httptools`` HTTP parser enforces its own ~1MB body size limit which
-            # would prevent uploads from completing. Force the ``h11`` protocol so
-            # that the configured upload limit takes effect and large files are
-            # accepted consistently across platforms.
-            config_kwargs.setdefault("http", "h11")
-        elif limit_parameter == "limit_max_request_size":
-            # ``httptools`` applies a hard-coded ~1MB safety limit which rejects
-            # larger uploads before uvicorn can enforce ``limit_max_request_size``.
-            # This limit only affects Linux builds where the binary parser is
-            # available (such as our Docker image). Always prefer the pure Python
-            # implementation so the configured upload limit is honored
-            # consistently with the Windows/batch launcher.
-            config_kwargs.setdefault("http", "h11")
+        if limit_parameter == "limit_max_request_size":
+            LOGGER.debug(
+                "Applying uvicorn request size limit using limit_max_request_size=%s", effective_limit
+            )
+        else:
+            LOGGER.debug(
+                "Applying uvicorn request size limit using h11_max_incomplete_event_size=%s",
+                effective_limit,
+            )
     elif max_upload_bytes > 0:
         LOGGER.warning(
-            "Ignoring max upload size limit; uvicorn.Config does not support the "
-            "configured upload limit parameters.",
+            "Ignoring max upload size limit; uvicorn.Config does not expose request size controls."
         )
+
+    # ``httptools`` – the native HTTP parser uvicorn enables on Linux – enforces a ~1MB
+    # body limit internally. Force the pure-Python ``h11`` implementation instead so the
+    # configured limit (or lack thereof) is honoured consistently across Docker, macOS,
+    # and Windows deployments.
+    config_kwargs["http"] = "h11"
 
     server_config = uvicorn.Config(
         app,
