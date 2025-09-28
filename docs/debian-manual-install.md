@@ -1,6 +1,6 @@
 # Manual Debian Server Installation
 
-This guide walks through a full manual installation of Lecture Tools on a Debian 12 (Bookworm) server without relying on Docker. Every step assumes you have `sudo` privileges on the target machine. Adjust paths and usernames to match your environment.
+This guide walks through a full manual installation of Lecture Tools on a Debian 12 (Bookworm) server without relying on Docker. Every step assumes you have `sudo` privileges on the target machine. Adjust paths and usernames to match your environment. Prefer an automated setup? Run `scripts/install_server.sh` (or download it directly from GitHub) to provision a systemd service with sensible defaults.
 
 ## 1. Update the operating system
 
@@ -117,8 +117,8 @@ A sample unit file is provided in `config/systemd/lecture-tools.service`. Copy a
 
 ```ini
 [Service]
-WorkingDirectory=/opt/lecture-tools/Lecture-Tools
-ExecStart=/opt/lecture-tools/Lecture-Tools/.venv/bin/python run.py serve --host 0.0.0.0 --port 8000
+WorkingDirectory=/opt/lecture-tools
+ExecStart=/opt/lecture-tools/.venv/bin/python run.py serve --host 0.0.0.0 --port 8000
 User=lecturetools
 Group=lecturetools
 ```

@@ -15,8 +15,8 @@
 
 1. [✨ Key Features](#-key-features)
 2. [🏁 Quick Start](#-quick-start)
-3. [🧰 Manual Debian Server Install](#-manual-debian-server-install)
-4. [🐳 Docker Deployment (Server)](#-docker-deployment-server)
+3. [🤖 Automated Server Install (systemd)](#-automated-server-install-systemd)
+4. [🧰 Manual Debian Server Install](#-manual-debian-server-install)
 5. [🧭 Project Tour](#-project-tour)
 6. [🎛️ Interface Customization](#-interface-customization)
 7. [🛠️ Core Workflows](#-core-workflows)
@@ -67,10 +67,61 @@
        ```
      or set `LECTURE_TOOLS_ROOT_PATH=/lecture` in the environment.
 5. **Classic terminal vibes still included**
-   ```bash
-   python run.py overview --style modern
+ ```bash
+  python run.py overview --style modern
   python run.py overview --style console
-  ```
+ ```
+
+---
+
+## 🤖 Automated Server Install (systemd)
+
+Need a headless deployment that boots automatically? The repository now ships a
+full bare-metal installer that provisions Lecture Tools as a native systemd
+service—no containers required.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/NIAENGD/Lecture-Tools/main/scripts/install_server.sh | sudo bash
+```
+
+What the helper now does for you:
+
+- Validates that you are running on a Debian-based distribution and installs
+  any missing system dependency (Python 3.11, FFmpeg, PortAudio, build tools,
+  git) without re-downloading packages that are already present.
+- Detects previous Docker-based deployments, offers to tear them down (systemd
+  unit, Compose stack, legacy config), and reuses details from existing native
+  installs so re-running the script is idempotent.
+- Prompts for the Git repository, branch, installation directory (default
+  `/opt/lecture-tools`), HTTP port, optional root path, public domain, and TLS
+  certificate/key locations—auto-detecting Let’s Encrypt assets when they
+  already exist so you can skip duplicate configuration.
+- Clones or updates the repository in-place, creates an isolated virtual
+  environment, and installs dependencies from `requirements-dev.txt` when
+  available (falling back to `requirements.txt`).
+- Writes/updates a dedicated systemd unit that runs `run.py serve --host
+  0.0.0.0` at boot, stops any previous instance before redeploying, and when
+  UFW is active, offers to open the chosen port.
+- Installs an expanded management CLI named `lecturetool` under
+  `/usr/local/bin` with subcommands such as `start`, `stop`, `restart`,
+  `reload`, `logs`/`tail`, `update`, `upgrade`, `info`, `config`, `doctor`, and
+  `shell` for quick troubleshooting.
+
+Example service management:
+
+```bash
+sudo lecturetool status      # Inspect service health
+sudo lecturetool doctor      # Run a health check (service, ports, TLS files)
+sudo lecturetool update      # Pull the latest git commit & reinstall deps
+sudo lecturetool shell       # Drop into a shell as the service account
+```
+
+Ready to uninstall? Two cleanup helpers are available:
+
+- `scripts/remove_server.sh` disables the service, removes the helper CLI, and
+  leaves the code/data on disk.
+- `scripts/remove_server_full.sh` chains the above and interactively removes the
+  repository directory plus the dedicated system user.
 
 ---
 
@@ -79,59 +130,6 @@
 Need a reproducible bare-metal deployment? Follow the step-by-step [Debian manual installation guide](docs/debian-manual-install.md) to provision system packages, configure Python, and (optionally) wire Lecture Tools into systemd.
 
 ---
-
-## 🐳 Docker Deployment (Server)
-
-Deploy the Lecture Tools server in a reproducible Docker container. Personal computers can still use the direct setup described above; Docker is now the recommended path for remote servers.
-
-### 📦 Requirements
-
-- Docker Engine 24 or newer
-- The Docker Compose plugin (bundled with modern Docker releases)
-
-### 🚀 One-click install
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/NIAENGD/Lecture-Tools/main/scripts/docker-install.sh | bash
-```
-
-The installer now guides you through a full production-ready setup:
-
-- Verifies you are on a supported Debian-based distribution and installs every missing dependency (Docker Engine, Compose plugin, git, curl, etc.).
-- Prompts for the Git repository/branch, installation directory (default `/opt/lecture-tools`), persistent data directory, HTTP port, application root path (for reverse proxies), and the system user that will own the deployment.
-- Creates a dedicated systemd unit so the stack can automatically start on boot and be managed like a native service.
-- Generates a management CLI named `lecturetool` under `/usr/local/bin` with the following sub-commands:
-  - `lecturetool -enable` / `lecturetool -disable` – toggle auto-start at boot.
-  - `lecturetool -start` / `lecturetool -stop` – control the running containers.
-  - `lecturetool -status` – view systemd status plus container health.
-  - `lecturetool -update` – pull the latest code and container images, then restart the stack.
-  - `lecturetool -remove` – stop everything, delete persisted data, and uninstall Docker + Compose if the installer added them.
-
-Open `http://SERVER_IP:PORT/` once the installer finishes. If you configure a reverse proxy, provide the desired path prefix when prompted so `LECTURE_TOOLS_ROOT_PATH` is populated automatically.
-
-### 🔧 Configuration
-
-- **Port mapping** – Adjust the `8000:8000` mapping in `docker-compose.yml` when exposing a different port.
-- **Reverse proxies** – When terminating TLS with Nginx/Traefik, forward to the container and ensure the `LECTURE_TOOLS_ROOT_PATH` environment variable matches any prefix you inject (e.g. `/lecture`).
-- **Large uploads** – The container forces uvicorn to use the pure-Python `h11` HTTP stack so files well above 3 MB are accepted. Override the `LECTURE_TOOLS_MAX_UPLOAD_BYTES` environment variable (bytes, `0` = unlimited) to tune the limit.
-- **Custom images** – Build and push your own tag with `docker build -t registry.example.com/lecture-tools:latest .` and update the compose file to reference it.
-- **Slide previews without MuPDF** – Uploads only wait a few seconds for PyMuPDF to report the page count; if inspection times out or the dependency is missing the upload succeeds (page totals omitted) and the metadata endpoint returns HTTP 503 instead of hanging.
-
-### ♻️ Updating
-
-```bash
-sudo lecturetool -update
-```
-
-The update routine will stop the service, pull the latest git commit for the branch you selected during installation, rebuild/pull container images, and restart the stack.
-
-### 🧹 Removing the stack
-
-```bash
-sudo lecturetool -remove
-```
-
-This command stops the containers, disables and deletes the systemd service, removes the persisted data directories, and purges Docker/Compose if they were originally installed by the helper.
 
 ## 🧭 Project Tour
 

@@ -144,7 +144,7 @@ def serve(
 
     # ``httptools`` – the native HTTP parser uvicorn enables on Linux – enforces a ~1MB
     # body limit internally. Force the pure-Python ``h11`` implementation instead so the
-    # configured limit (or lack thereof) is honoured consistently across Docker, macOS,
+    # configured limit (or lack thereof) is honoured consistently across Linux, macOS,
     # and Windows deployments.
     config_kwargs["http"] = "h11"
 
