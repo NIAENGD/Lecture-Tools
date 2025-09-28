@@ -95,6 +95,7 @@ _SLIDE_PREVIEW_DIR_NAME = ".previews"
 _SLIDE_PREVIEW_TOKEN_PATTERN = re.compile(r"^[a-f0-9]{16,64}$")
 
 LOGGER = logging.getLogger(__name__)
+EVENT_LOGGER = logging.getLogger("lecture_tools.ui.events")
 
 
 _PDF_PAGE_COUNT_TIMEOUT_SECONDS = 8.0
@@ -109,14 +110,28 @@ class DebugLogHandler(logging.Handler):
     """In-memory log handler used to power the live debug console."""
 
     def __init__(self, capacity: int = 500) -> None:
-        super().__init__(level=logging.INFO)
+        super().__init__(level=logging.DEBUG)
         self._entries: Deque[Dict[str, Any]] = deque(maxlen=capacity)
         self._lock = threading.Lock()
         self._last_id = 0
         self.setFormatter(logging.Formatter(DEFAULT_LOG_FORMAT))
 
     def emit(self, record: logging.LogRecord) -> None:  # noqa: D401 - inherited documentation
-        message = self.format(record)
+        message = record.getMessage()
+        if not isinstance(message, str):
+            message = str(message)
+        if record.exc_info:
+            formatter = self.formatter or logging.Formatter()
+            try:
+                exception_text = formatter.formatException(record.exc_info)
+            except Exception:  # pragma: no cover - defensive
+                exception_text = logging.Formatter().formatException(record.exc_info)
+            message = f"{message}\n{exception_text}" if exception_text else message
+        context = getattr(record, "debug_context", None)
+        if isinstance(context, dict):
+            context = {key: value for key, value in context.items() if value is not None}
+        else:
+            context = None
         entry = {
             "id": None,
             "timestamp": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(),
@@ -127,6 +142,11 @@ class DebugLogHandler(logging.Handler):
             if any(record.name.startswith(prefix) for prefix in _SERVER_LOGGER_PREFIXES)
             else "application",
         }
+        if context:
+            entry["context"] = context
+        debug_event = getattr(record, "debug_event", None)
+        if debug_event:
+            entry["event"] = str(debug_event)
         with self._lock:
             self._last_id += 1
             entry["id"] = self._last_id
@@ -874,12 +894,46 @@ def create_app(
         safe_value = json.dumps(resolved)[1:-1]
         return rendered.replace("__LECTURE_TOOLS_ROOT_PATH__", safe_value)
 
+    def _sanitize_context_value(value: Any) -> Any:
+        if value is None:
+            return None
+        if isinstance(value, (bool, int, float)):
+            return value
+        if isinstance(value, datetime):
+            return value.isoformat()
+        if isinstance(value, Path):
+            return str(value)
+        if isinstance(value, (list, tuple, set)):
+            joined = ", ".join(str(item) for item in value)
+            return joined[:200] + ("…" if len(joined) > 200 else "")
+        text = str(value)
+        return text[:200] + ("…" if len(text) > 200 else "")
+
+    def _normalize_event_context(values: Dict[str, Any]) -> Dict[str, Any]:
+        normalized: Dict[str, Any] = {}
+        for key, raw_value in values.items():
+            if not key:
+                continue
+            value = _sanitize_context_value(raw_value)
+            if value is None or value == "":
+                continue
+            normalized[str(key)] = value
+        return normalized
+
     def _log_event(message: str, **context: Any) -> None:
-        if context:
-            context_details = ", ".join(f"{key}={value}" for key, value in context.items())
-            LOGGER.debug("%s (%s)", message, context_details)
+        normalized_context = _normalize_event_context(context) if context else {}
+        context_details = ", ".join(
+            f"{key}={value}" for key, value in normalized_context.items()
+        )
+        extra = {"debug_context": normalized_context, "debug_event": message}
+        if context_details:
+            if LOGGER.isEnabledFor(logging.DEBUG):
+                LOGGER.debug("%s (%s)", message, context_details)
+            EVENT_LOGGER.info("%s (%s)", message, context_details, extra=extra)
         else:
-            LOGGER.debug(message)
+            if LOGGER.isEnabledFor(logging.DEBUG):
+                LOGGER.debug(message)
+            EVENT_LOGGER.info(message, extra=extra)
 
     def _summarize_lecture(lecture_id: int) -> Optional[Dict[str, Any]]:
         lecture_record = repository.get_lecture(lecture_id)
@@ -2184,7 +2238,13 @@ def create_app(
     @app.get("/api/settings")
     async def get_settings() -> Dict[str, Any]:
         settings = _load_ui_settings()
-        LOGGER.debug("Loaded UI settings (debug_enabled=%s)", settings.debug_enabled)
+        _log_event(
+            "Loaded settings",
+            theme=settings.theme,
+            language=settings.language,
+            whisper_model=settings.whisper_model,
+            debug_enabled=settings.debug_enabled,
+        )
         return {"settings": asdict(settings)}
 
     @app.get("/api/debug/logs")
@@ -2208,7 +2268,7 @@ def create_app(
     @app.put("/api/settings")
     async def update_settings(payload: SettingsPayload) -> Dict[str, Any]:
         settings = _load_ui_settings()
-        LOGGER.debug("Received settings update request")
+        _log_event("Received settings update request")
         settings.theme = payload.theme
         settings.language = _normalize_language(payload.language)
         desired_model = _normalize_whisper_model(payload.whisper_model)
@@ -2233,12 +2293,12 @@ def create_app(
         settings.debug_enabled = bool(payload.debug_enabled)
         settings_store.save(settings)
         _update_debug_state(settings.debug_enabled)
-        LOGGER.debug(
-            "Persisted settings (theme=%s, language=%s, whisper_model=%s, debug=%s)",
-            settings.theme,
-            settings.language,
-            settings.whisper_model,
-            settings.debug_enabled,
+        _log_event(
+            "Persisted settings",
+            theme=settings.theme,
+            language=settings.language,
+            whisper_model=settings.whisper_model,
+            debug_enabled=settings.debug_enabled,
         )
         return {"settings": asdict(settings)}
 
@@ -2533,6 +2593,10 @@ def create_app(
         for lecture_id, state in processing_tracker.all().items():
             entries.append(_progress_entry("processing", lecture_id, state))
         entries.sort(key=lambda entry: entry.get("timestamp") or 0, reverse=True)
+        if entries:
+            _log_event("Enumerated active tasks", count=len(entries))
+        else:
+            _log_event("No active background tasks")
         return {"entries": entries}
 
     @app.delete("/api/progress/{lecture_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -2542,12 +2606,27 @@ def create_app(
     ) -> Response:
         cleared = False
         normalized = (entry_type or "").strip().lower()
+        _log_event(
+            "Clearing progress entry",
+            lecture_id=lecture_id,
+            entry_type=normalized or "all",
+        )
         if not normalized or normalized == "transcription":
             cleared = progress_tracker.clear(lecture_id) or cleared
         if not normalized or normalized == "processing":
             cleared = processing_tracker.clear(lecture_id) or cleared
         if not cleared:
+            _log_event(
+                "Progress entry not found",
+                lecture_id=lecture_id,
+                entry_type=normalized or "all",
+            )
             raise HTTPException(status_code=404, detail="Progress entry not found")
+        _log_event(
+            "Cleared progress entry",
+            lecture_id=lecture_id,
+            entry_type=normalized or "all",
+        )
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     @app.post("/api/lectures/{lecture_id}/transcribe")
