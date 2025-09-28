@@ -152,6 +152,26 @@ ensure_packages() {
   DEBIAN_FRONTEND=noninteractive apt-get install -y "${missing_packages[@]}" >/dev/null
 }
 
+purge_packages() {
+  local packages=(python3.11 python3.11-venv python3-pip git ffmpeg libportaudio2 build-essential)
+  local installed=()
+
+  for pkg in "${packages[@]}"; do
+    if dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "install ok installed"; then
+      installed+=("$pkg")
+    fi
+  done
+
+  if [[ ${#installed[@]} -eq 0 ]]; then
+    log "No managed system packages are currently installed."
+    return
+  fi
+
+  log "Purging managed system packages (${installed[*]})..."
+  DEBIAN_FRONTEND=noninteractive apt-get purge -y "${installed[@]}" >/dev/null
+  DEBIAN_FRONTEND=noninteractive apt-get autoremove -y >/dev/null
+}
+
 select_python() {
   if command -v python3.11 >/dev/null 2>&1; then
     command -v python3.11
@@ -221,6 +241,7 @@ declare EXISTING_INSTALL_DIR="" EXISTING_SERVICE_USER="" EXISTING_SERVICE_GROUP=
 declare EXISTING_SERVICE_NAME="$FALLBACK_SERVICE_NAME" EXISTING_UNIT_PATH="$FALLBACK_UNIT_PATH"
 declare -a EXISTING_TRACES=()
 declare existing_installation_detected=0
+PRIMARY_ACTION=""
 
 load_existing_configuration() {
   if [[ -f $CONFIG_FILE ]]; then
@@ -324,6 +345,12 @@ detect_legacy_docker() {
   fi
 
   log "Detected remnants of the previous Docker-based deployment."
+  if [[ $PRIMARY_ACTION == "clean-install" || $PRIMARY_ACTION == "purge" ]]; then
+    log "Automatically removing legacy Docker deployment for the selected action."
+    cleanup_legacy_docker
+    return
+  fi
+
   if prompt_yes_no "Remove the legacy Docker setup before continuing?" "yes"; then
     cleanup_legacy_docker
   else
@@ -558,6 +585,34 @@ prompt_menu() {
   done
 }
 
+select_primary_action() {
+  local default_choice=1
+  if [[ $existing_installation_detected -eq 1 ]]; then
+    default_choice=2
+  fi
+
+  local selection
+  selection=$(prompt_menu "Select an action" "$default_choice" \
+    "Clean install (remove previous configuration and reinstall)" \
+    "Update or repair the existing installation" \
+    "Remove the installation and purge managed dependencies")
+
+  case $selection in
+    1)
+      PRIMARY_ACTION="clean-install"
+      ;;
+    2)
+      PRIMARY_ACTION="update"
+      ;;
+    3)
+      PRIMARY_ACTION="purge"
+      ;;
+    *)
+      fatal "Unexpected selection '$selection'"
+      ;;
+  esac
+}
+
 require_root() {
   if [[ ${EUID:-$(id -u)} -ne 0 ]]; then
     echo "[lecture-tools] error: Please run this command with sudo or as root." >&2
@@ -737,6 +792,17 @@ detect_existing_installation() {
   if (( ${#EXISTING_TRACES[@]} > 0 )); then
     existing_installation_detected=1
   fi
+}
+
+summarize_existing_installation() {
+  if [[ $existing_installation_detected -eq 0 ]]; then
+    return
+  fi
+
+  log "Detected existing Lecture Tools installation components:"
+  for trace in "${EXISTING_TRACES[@]}"; do
+    log "  - $trace"
+  done
 }
 
 remove_existing_installation() {
@@ -2166,8 +2232,42 @@ fi
 
 ensure_debian
 load_existing_configuration
+detect_existing_installation
+summarize_existing_installation
+select_primary_action
+
+case $PRIMARY_ACTION in
+  clean-install)
+    if [[ $existing_installation_detected -eq 1 ]]; then
+      log "Removing existing installation before performing a clean install..."
+      remove_existing_installation 1
+      reset_defaults_to_base
+    else
+      log "No previous installation found. Proceeding with a fresh setup."
+    fi
+    ;;
+  update)
+    if [[ $existing_installation_detected -eq 0 ]]; then
+      log "No previous installation detected. Proceeding with a new installation."
+    fi
+    ;;
+  purge)
+    detect_legacy_docker
+    if [[ $existing_installation_detected -eq 1 ]]; then
+      log "Removing existing installation components..."
+      remove_existing_installation 1
+    fi
+    purge_packages
+    log "Managed dependencies purged."
+    log "Server environment fully removed."
+    exit 0
+    ;;
+  *)
+    fatal "Unrecognized primary action '$PRIMARY_ACTION'"
+    ;;
+esac
+
 detect_legacy_docker
-handle_existing_installation
 ensure_packages
 
 DEFAULT_INSTALL_DIR="${INSTALL_DEFAULT:-$FALLBACK_INSTALL_DIR}"
