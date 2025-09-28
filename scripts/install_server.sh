@@ -261,6 +261,13 @@ configure_firewall() {
 
 write_systemd_unit() {
   local unit_path="$1" working_dir="$2" service_user="$3" service_group="$4" port="$5" root_path="$6"
+  local python_exec="$working_dir/.venv/bin/python"
+  local app_script="$working_dir/run.py"
+  local exec_start working_dir_escaped
+
+  printf -v exec_start '%q %q serve --host 0.0.0.0 --port %s' "$python_exec" "$app_script" "$port"
+  printf -v working_dir_escaped '%q' "$working_dir"
+
   cat >"$unit_path" <<EOFUNIT
 [Unit]
 Description=Lecture Tools FastAPI server
@@ -269,15 +276,15 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-WorkingDirectory=$working_dir
-ExecStart=$working_dir/.venv/bin/python run.py serve --host 0.0.0.0 --port $port
+WorkingDirectory=$working_dir_escaped
+ExecStart=$exec_start
 Restart=on-failure
 RestartSec=5
 User=$service_user
 Group=$service_group
 EOFUNIT
   if [[ -n $root_path ]]; then
-    printf 'Environment=LECTURE_TOOLS_ROOT_PATH=%s\n' "$root_path" >>"$unit_path"
+    printf 'Environment=%s=%q\n' "LECTURE_TOOLS_ROOT_PATH" "$root_path" >>"$unit_path"
   fi
   cat >>"$unit_path" <<'EOFUNIT'
 [Install]
@@ -524,7 +531,7 @@ if [[ $install_dir == "/" ]]; then
   fatal "Installation directory cannot be the filesystem root."
 fi
 if [[ $install_dir == *" "* ]]; then
-  fatal "Installation directory must not include spaces."
+  warn "Installation directory contains spaces; generated systemd unit will escape them."
 fi
 if [[ -z $service_user ]]; then
   fatal "System user cannot be empty."
