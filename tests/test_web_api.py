@@ -7,6 +7,7 @@ from typing import Any
 import io
 import time
 import wave
+from concurrent.futures import wait
 
 import pytest
 
@@ -76,6 +77,24 @@ def _build_wav_bytes(duration_seconds: float = 0.25, sample_rate: int = 16_000) 
         silence = b"\x00\x00" * frame_count
         handle.writeframes(silence)
     return buffer.getvalue()
+
+
+def _wait_for_background_jobs(app, timeout: float = 5.0) -> None:
+    jobs = getattr(app.state, "background_jobs", None)
+    lock = getattr(app.state, "background_jobs_lock", None)
+    if jobs is None or lock is None:
+        return
+    deadline = time.time() + timeout
+    while True:
+        with lock:
+            pending = list(jobs)
+        if not pending:
+            return
+        remaining = deadline - time.time()
+        if remaining <= 0:
+            break
+        wait(pending, timeout=min(0.2, remaining))
+    raise AssertionError("Audio mastering jobs did not finish before timeout")
 
 
 def test_api_handles_configured_root_path(temp_config):
@@ -469,10 +488,12 @@ def test_upload_asset_updates_repository(temp_config):
     assert repository.get_lecture(lecture_id).notes_path.endswith("summary.docx")
 
 
-def test_upload_audio_processes_file(temp_config):
+def test_upload_audio_processes_file(monkeypatch, temp_config):
     repository, lecture_id, _module_id = _create_sample_data(temp_config)
     app = create_app(repository, config=temp_config)
     client = TestClient(app)
+
+    monkeypatch.setattr(web_server, "ffmpeg_available", lambda: True)
 
     response = client.post(
         f"/api/lectures/{lecture_id}/assets/audio",
@@ -480,17 +501,26 @@ def test_upload_audio_processes_file(temp_config):
     )
     assert response.status_code == 200
     payload = response.json()
+    assert payload.get("processing") is True
     audio_relative = payload["audio_path"]
-    assert audio_relative.endswith("-master.wav")
-    processed_relative = payload.get("processed_audio_path")
-    assert processed_relative == audio_relative
-    processed_file = temp_config.storage_root / processed_relative
-    assert processed_file.exists()
+    assert audio_relative.endswith("lecture.wav")
+    assert payload.get("processed_audio_path") is None
+    raw_file = temp_config.storage_root / audio_relative
+    assert raw_file.exists()
 
     updated = repository.get_lecture(lecture_id)
     assert updated is not None
     assert updated.audio_path == audio_relative
-    assert updated.processed_audio_path == processed_relative
+    assert updated.processed_audio_path is None
+
+    _wait_for_background_jobs(app)
+
+    refreshed = repository.get_lecture(lecture_id)
+    assert refreshed is not None
+    assert refreshed.audio_path and refreshed.audio_path.endswith("-master.wav")
+    assert refreshed.processed_audio_path == refreshed.audio_path
+    processed_file = temp_config.storage_root / refreshed.processed_audio_path
+    assert processed_file.exists()
 
     progress_response = client.get(
         f"/api/lectures/{lecture_id}/processing-progress"
@@ -505,6 +535,8 @@ def test_upload_audio_converts_non_wav(monkeypatch, temp_config):
     repository, lecture_id, _module_id = _create_sample_data(temp_config)
     app = create_app(repository, config=temp_config)
     client = TestClient(app)
+
+    monkeypatch.setattr(web_server, "ffmpeg_available", lambda: True)
 
     def fake_ensure_wav(path, *, output_dir, stem, timestamp):
         destination = output_dir / f"{stem}-converted.wav"
@@ -521,18 +553,55 @@ def test_upload_audio_converts_non_wav(monkeypatch, temp_config):
 
     assert response.status_code == 200
     payload = response.json()
-    assert payload["audio_path"].endswith("-converted-master.wav")
+    assert payload.get("processing") is True
+    assert payload["audio_path"].endswith("-converted.wav")
+    assert payload.get("processed_audio_path") is None
     wav_path = temp_config.storage_root / payload["audio_path"]
     assert wav_path.exists()
     assert not (wav_path.parent / "lecture.mp3").exists()
 
     updated = repository.get_lecture(lecture_id)
     assert updated is not None
-    assert updated.audio_path and updated.audio_path.endswith("-converted-master.wav")
+    assert updated.audio_path and updated.audio_path.endswith("-converted.wav")
+    assert updated.processed_audio_path is None
 
-    processed_relative = payload.get("processed_audio_path")
-    assert processed_relative == payload["audio_path"]
+    _wait_for_background_jobs(app)
 
+    refreshed = repository.get_lecture(lecture_id)
+    assert refreshed is not None
+    assert refreshed.audio_path and refreshed.audio_path.endswith("-converted-master.wav")
+    assert refreshed.processed_audio_path == refreshed.audio_path
+
+
+def test_upload_audio_requires_ffmpeg(monkeypatch, temp_config):
+    repository, _existing_lecture_id, module_id = _create_sample_data(temp_config)
+    lecture_id = repository.add_lecture(module_id, "FFmpeg Check")
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    monkeypatch.setattr(web_server, "ffmpeg_available", lambda: False)
+
+    response = client.post(
+        f"/api/lectures/{lecture_id}/assets/audio",
+        files={"file": ("lecture.mp3", b"id3", "audio/mpeg")},
+    )
+    assert response.status_code == 503
+    assert "FFmpeg" in response.json().get("detail", "")
+
+    lecture = repository.get_lecture(lecture_id)
+    assert lecture is not None
+    assert lecture.audio_path is None
+
+    module = repository.get_module(module_id)
+    class_record = repository.get_class(module.class_id) if module else None
+    assert module is not None and class_record is not None
+    lecture_paths = LecturePaths.build(
+        temp_config.storage_root,
+        class_record.name,
+        module.name,
+        "FFmpeg Check",
+    )
+    assert not any(lecture_paths.raw_dir.iterdir())
 
 def test_delete_asset_clears_path_and_file(temp_config):
     repository, lecture_id, _module_id = _create_sample_data(temp_config)
@@ -633,6 +702,7 @@ def test_upload_audio_respects_mastering_setting(temp_config):
     )
     assert response.status_code == 200
     payload = response.json()
+    assert payload.get("processing") is False
     assert payload.get("processed_audio_path") is None
     assert payload["audio_path"].endswith("lecture.wav")
     audio_file = temp_config.storage_root / payload["audio_path"]
@@ -666,12 +736,18 @@ def test_upload_slides_auto_generates_archive(monkeypatch, temp_config):
     assert response.status_code == 200
     payload = response.json()
     assert payload["slide_path"].endswith(".pdf")
-    assert payload["slide_image_dir"].endswith("slides.zip")
-    slide_asset = temp_config.storage_root / payload["slide_image_dir"]
-    assert slide_asset.exists()
+    assert payload.get("processing") is True
+    operations = payload.get("processing_operations") or []
+    assert "slide_conversion" in operations or not operations
+    assert payload.get("slide_image_dir") is None
+
+    _wait_for_background_jobs(app)
+
     updated = repository.get_lecture(lecture_id)
     assert updated.slide_path and updated.slide_path.endswith("deck.pdf")
     assert updated.slide_image_dir and updated.slide_image_dir.endswith("slides.zip")
+    slide_asset = temp_config.storage_root / updated.slide_image_dir
+    assert slide_asset.exists()
 
 
 def test_upload_slides_gracefully_handles_missing_converter(monkeypatch, temp_config):
@@ -700,7 +776,14 @@ def test_upload_slides_gracefully_handles_missing_converter(monkeypatch, temp_co
     assert response.status_code == 200
     payload = response.json()
     assert payload["slide_path"].endswith(".pdf")
+    assert payload.get("processing") is True
     assert payload.get("slide_image_dir") is None
+
+    _wait_for_background_jobs(app)
+
+    updated = repository.get_lecture(lecture_id)
+    assert updated.slide_path and updated.slide_path.endswith("deck.pdf")
+    assert updated.slide_image_dir is None
 
 
 def test_process_slides_generates_archive(monkeypatch, temp_config):

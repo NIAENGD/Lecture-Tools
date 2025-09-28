@@ -9681,7 +9681,10 @@
             },
           });
 
-          const backgroundProcessingActive = Boolean(dialogResult && dialogResult.processing);
+          const backgroundProcessingActive = Boolean(
+            (dialogResult && dialogResult.processing) ||
+              (dialogResult && dialogResult.result && dialogResult.result.processing)
+          );
 
           if (!dialogResult || (!dialogResult.uploaded && !backgroundProcessingActive)) {
             if (kind === 'audio' && audioProcessingStarted) {

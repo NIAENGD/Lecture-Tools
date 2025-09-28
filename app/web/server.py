@@ -24,6 +24,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any, Callable, Deque, Dict, List, Literal, Optional, Set, Tuple
 
+from concurrent.futures import Future, ThreadPoolExecutor
+
 from fastapi import (
     FastAPI,
     HTTPException,
@@ -53,7 +55,7 @@ from ..processing import (
     render_pdf_page,
     save_preprocessed_wav,
 )
-from ..services.audio_conversion import ensure_wav
+from ..services.audio_conversion import ensure_wav, ffmpeg_available
 from ..services.ingestion import LecturePaths
 from ..services.naming import build_asset_stem, build_timestamped_name, slugify
 from ..services.progress import (
@@ -800,6 +802,24 @@ def create_app(
     settings_store = SettingsStore(config)
     progress_tracker = TranscriptionProgressTracker()
     processing_tracker = TranscriptionProgressTracker()
+
+    background_executor = ThreadPoolExecutor(
+        max_workers=2,
+        thread_name_prefix="media-processing",
+    )
+    app.state.background_executor = background_executor
+    app.state.background_jobs: Set[Future] = set()
+    app.state.background_jobs_lock = threading.Lock()
+    # Backwards compatibility for existing helpers/tests that still reference the
+    # previous audio-specific executor state attributes.
+    app.state.audio_mastering_executor = background_executor
+    app.state.audio_mastering_jobs = app.state.background_jobs
+    app.state.audio_mastering_jobs_lock = app.state.background_jobs_lock
+
+    def _shutdown_background_executor() -> None:
+        background_executor.shutdown(wait=True, cancel_futures=True)
+
+    app.add_event_handler("shutdown", _shutdown_background_executor)
     app.state.progress_tracker = progress_tracker
     app.state.processing_tracker = processing_tracker
     gpu_support_state: Dict[str, Any] = {
@@ -1676,6 +1696,19 @@ def create_app(
             candidate_name = build_timestamped_name(stem, timestamp=timestamp, extension=suffix)
             target = destination / candidate_name
 
+        if asset_key == "audio":
+            normalized_suffix = suffix.lower()
+            requires_conversion = normalized_suffix not in {".wav"}
+            if requires_conversion and not ffmpeg_available():
+                await file.close()
+                raise HTTPException(
+                    status_code=503,
+                    detail=(
+                        "FFmpeg is required to convert audio files on this server. "
+                        "Install FFmpeg or upload a WAV file instead."
+                    ),
+                )
+
         try:
             with target.open("wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
@@ -1685,7 +1718,34 @@ def create_app(
         relative = target.relative_to(config.storage_root).as_posix()
         update_kwargs: Dict[str, Optional[str]] = {attribute: relative}
         processed_relative: Optional[str] = None
-        completion_message: Optional[str] = None
+        processing_queued = False
+        processing_operations: Set[str] = set()
+        pending_jobs: List[Callable[[], None]] = []
+
+        def _enqueue_background_job(task: Callable[[], None], *, context_label: str) -> None:
+            executor: ThreadPoolExecutor = getattr(app.state, "background_executor")
+            jobs: Set[Future] = getattr(app.state, "background_jobs")
+            jobs_lock: threading.Lock = getattr(app.state, "background_jobs_lock")
+
+            try:
+                future = executor.submit(task)
+            except Exception as error:  # noqa: BLE001 - executor may raise
+                LOGGER.exception(
+                    "Failed to queue %s for lecture %s", context_label, lecture_id
+                )
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Unable to queue {context_label} task.",
+                ) from error
+
+            with jobs_lock:
+                jobs.add(future)
+
+            def _cleanup_future(done: Future) -> None:
+                with jobs_lock:
+                    jobs.discard(done)
+
+            future.add_done_callback(_cleanup_future)
 
         if asset_key == "audio":
             original_target = target
@@ -1705,6 +1765,7 @@ def create_app(
                 candidate_name = target.name
                 relative = target.relative_to(config.storage_root).as_posix()
                 update_kwargs[attribute] = relative
+                update_kwargs["processed_audio_path"] = None
                 if converted:
                     with contextlib.suppress(OSError):
                         original_target.unlink(missing_ok=True)
@@ -1713,6 +1774,8 @@ def create_app(
             audio_mastering_enabled = getattr(settings, "audio_mastering_enabled", True)
 
             if audio_mastering_enabled:
+                processing_queued = True
+                processing_operations.add("audio_mastering")
                 total_steps = float(AUDIO_MASTERING_TOTAL_STEPS)
                 processing_tracker.start(
                     lecture_id,
@@ -1723,6 +1786,9 @@ def create_app(
                     ),
                     context={"operation": "audio_mastering"},
                 )
+
+                target_path = target
+                base_stem = Path(candidate_name).stem if candidate_name else stem
 
                 def _process_audio() -> Tuple[str, str]:
                     completed_steps = 1.0
@@ -1736,7 +1802,7 @@ def create_app(
                             total_steps,
                         ),
                     )
-                    samples, sample_rate = load_wav_file(target)
+                    samples, sample_rate = load_wav_file(target_path)
                     if LOGGER.isEnabledFor(logging.DEBUG):
                         LOGGER.debug(
                             "Audio mastering diagnostics before preprocessing for lecture %s: %s",
@@ -1775,7 +1841,47 @@ def create_app(
                                 for name, value in stage_description.parameters.items()
                             ),
                         )
-                    processed = preprocess_audio(samples, sample_rate)
+
+                    stage_base = completed_steps
+
+                    def _handle_mastering_substage(
+                        step_index: int,
+                        step_count: int,
+                        detail: str,
+                        completed: bool,
+                    ) -> None:
+                        if step_count <= 0:
+                            return
+                        if completed:
+                            fraction = float(step_index) / float(step_count)
+                        else:
+                            fraction = float(step_index - 1) / float(step_count)
+                        fraction = max(0.0, min(fraction, 1.0))
+                        progress_value = min(stage_base + fraction, total_steps)
+                        message_detail = detail.strip() or stage_description.summary
+                        if stage_index is not None and total_stage_count is not None:
+                            progress_label = (
+                                f"====> Stage {stage_index}/{total_stage_count} – {message_detail}"
+                            )
+                        else:
+                            progress_label = f"====> {message_detail}"
+                        progress_message = format_progress_message(
+                            progress_label,
+                            progress_value,
+                            total_steps,
+                        )
+                        processing_tracker.update(
+                            lecture_id,
+                            progress_value,
+                            total_steps,
+                            progress_message,
+                        )
+
+                    processed = preprocess_audio(
+                        samples,
+                        sample_rate,
+                        progress_callback=_handle_mastering_substage,
+                    )
                     if LOGGER.isEnabledFor(logging.DEBUG):
                         LOGGER.debug(
                             "Audio mastering diagnostics after preprocessing for lecture %s: %s",
@@ -1795,7 +1901,6 @@ def create_app(
                     )
 
                     lecture_paths.processed_audio_dir.mkdir(parents=True, exist_ok=True)
-                    base_stem = Path(candidate_name).stem if candidate_name else stem
                     processed_name = f"{base_stem}-master.wav"
                     processed_target = lecture_paths.processed_audio_dir / processed_name
                     if processed_target.exists():
@@ -1807,9 +1912,9 @@ def create_app(
                         processed_target = lecture_paths.processed_audio_dir / processed_name
 
                     save_preprocessed_wav(processed_target, processed, sample_rate)
-                    if processed_target != target:
+                    if processed_target != target_path:
                         with contextlib.suppress(OSError):
-                            target.unlink(missing_ok=True)
+                            target_path.unlink(missing_ok=True)
                     completed_steps = total_steps
                     completion_message = format_progress_message(
                         "====> Audio mastering completed.",
@@ -1827,44 +1932,168 @@ def create_app(
                         completion_message,
                     )
 
-                try:
-                    processed_relative, completion_message = await asyncio.to_thread(
-                        _process_audio
-                    )
-                except ValueError as error:
-                    processing_tracker.fail(lecture_id, f"====> {error}")
-                    raise HTTPException(status_code=400, detail=str(error)) from error
-                except Exception as error:  # noqa: BLE001 - processing may raise
-                    processing_tracker.fail(lecture_id, f"====> {error}")
-                    raise HTTPException(status_code=500, detail=str(error)) from error
-                else:
-                    if completion_message is None:
-                        completion_message = format_progress_message(
-                            "====> Audio mastering completed.",
-                            total_steps,
-                            total_steps,
+                def _run_mastering_job() -> None:
+                    try:
+                        processed_path, completion = _process_audio()
+                    except ValueError as error:
+                        LOGGER.warning(
+                            "Audio mastering failed for lecture %s: %s",
+                            lecture_id,
+                            error,
                         )
-                    processing_tracker.finish(lecture_id, completion_message)
-                    relative = processed_relative
-                    update_kwargs[attribute] = processed_relative
-                    update_kwargs["processed_audio_path"] = processed_relative
+                        processing_tracker.fail(lecture_id, f"====> {error}")
+                        return
+                    except Exception as error:  # noqa: BLE001 - processing may raise
+                        LOGGER.exception(
+                            "Audio mastering crashed for lecture %s", lecture_id
+                        )
+                        processing_tracker.fail(lecture_id, f"====> {error}")
+                        return
+                    processing_tracker.finish(lecture_id, completion)
+                    try:
+                        repository.update_lecture_assets(
+                            lecture_id,
+                            **{
+                                attribute: processed_path,
+                                "processed_audio_path": processed_path,
+                            },
+                        )
+                    except Exception:  # noqa: BLE001 - repository update may fail
+                        LOGGER.exception(
+                            "Failed to update lecture %s with mastered audio path",
+                            lecture_id,
+                        )
+                    else:
+                        _log_event(
+                            "Audio mastering completed",
+                            lecture_id=lecture_id,
+                            path=processed_path,
+                        )
+
+                def _queue_mastering_job() -> None:
+                    _enqueue_background_job(
+                        _run_mastering_job,
+                        context_label="audio mastering",
+                    )
+                    _log_event(
+                        "Audio mastering queued", lecture_id=lecture_id, path=relative
+                    )
+
+                pending_jobs.append(_queue_mastering_job)
             else:
                 update_kwargs["processed_audio_path"] = None
 
         if asset_key == "slides":
             if lecture.slide_image_dir:
                 _delete_asset_path(lecture.slide_image_dir)
+
+            converter = _make_slide_converter()
+            processing_queued = True
+            processing_operations.add("slide_conversion")
             update_kwargs["slide_image_dir"] = None
+
+            processing_tracker.start(
+                lecture_id,
+                "====> Preparing slide conversion…",
+                context={"operation": "slide_conversion", "source": "upload"},
+            )
+
+            progress_total: Optional[float] = None
+
+            def _handle_slide_progress(processed: int, total: Optional[int]) -> None:
+                nonlocal progress_total
+                if total and total > 0:
+                    progress_total = float(total)
+                    current = float(max(0, min(processed, total)))
+                    message = format_progress_message(
+                        "====> Rendering slide images…",
+                        current,
+                        progress_total,
+                    )
+                    processing_tracker.update(
+                        lecture_id,
+                        current,
+                        progress_total,
+                        message,
+                    )
+                else:
+                    processing_tracker.note(lecture_id, "====> Rendering slide images…")
+
+            def _run_slide_conversion() -> None:
+                nonlocal progress_total
+                try:
+                    slide_image_relative = _generate_slide_archive(
+                        target,
+                        lecture_paths,
+                        converter,
+                        progress_callback=_handle_slide_progress,
+                    )
+                except HTTPException as error:
+                    detail = getattr(error, "detail", str(error))
+                    LOGGER.warning(
+                        "Slide conversion failed during upload for lecture %s: %s",
+                        lecture_id,
+                        detail,
+                    )
+                    processing_tracker.fail(lecture_id, f"====> {detail}")
+                    return
+                except Exception as error:  # noqa: BLE001 - conversion may raise
+                    LOGGER.exception(
+                        "Slide conversion crashed during upload for lecture %s",
+                        lecture_id,
+                    )
+                    processing_tracker.fail(lecture_id, f"====> {error}")
+                    return
+
+                if progress_total and progress_total > 0:
+                    completion_message = format_progress_message(
+                        "====> Slide conversion completed.",
+                        progress_total,
+                        progress_total,
+                    )
+                else:
+                    completion_message = "====> Slide conversion completed."
+                processing_tracker.finish(lecture_id, completion_message)
+
+                if slide_image_relative:
+                    try:
+                        repository.update_lecture_assets(
+                            lecture_id,
+                            slide_image_dir=slide_image_relative,
+                        )
+                    except Exception:  # noqa: BLE001 - repository update may fail
+                        LOGGER.exception(
+                            "Failed to update lecture %s with slide archive path",
+                            lecture_id,
+                        )
+                    else:
+                        _log_event(
+                            "Slides processed",
+                            lecture_id=lecture_id,
+                            slide_path=relative,
+                            slide_image_dir=slide_image_relative,
+                        )
+
+            pending_jobs.append(
+                lambda: _enqueue_background_job(
+                    _run_slide_conversion, context_label="slide conversion"
+                )
+            )
 
         repository.update_lecture_assets(lecture_id, **update_kwargs)
         updated = repository.get_lecture(lecture_id)
         if updated is None:
             raise HTTPException(status_code=500, detail="Lecture update failed")
+        for job in pending_jobs:
+            job()
         response: Dict[str, Any] = {"lecture": _serialize_lecture(updated), attribute: relative}
         if asset_key == "audio":
             response["processed_audio_path"] = processed_relative
         if asset_key == "slides":
             response["slide_image_dir"] = update_kwargs.get("slide_image_dir")
+        response["processing"] = bool(processing_queued)
+        if processing_operations:
+            response["processing_operations"] = sorted(processing_operations)
         _log_event(
             "Uploaded asset",
             lecture_id=lecture_id,

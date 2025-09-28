@@ -5,13 +5,17 @@ from __future__ import annotations
 import math
 import subprocess
 import wave
+import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Mapping, Optional, Tuple
+from typing import Callable, Dict, Mapping, Optional, Tuple
 from types import MappingProxyType
 
 import numpy as np
 from numpy.lib import stride_tricks
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 def _db_to_amplitude(value: float) -> float:
@@ -170,8 +174,39 @@ def preprocess_audio(
     compressor_release_ms: float = 120.0,
     target_peak_db: float = -1.0,
     target_lufs_db: float = -16.0,
+    progress_callback: Optional[Callable[[int, int, str, bool], None]] = None,
 ) -> np.ndarray:
     """Apply mastering steps to prioritise intelligible speech."""
+
+    description = describe_preprocess_audio_stage(
+        highpass_hz=highpass_hz,
+        lowpass_hz=lowpass_hz,
+        presence_low_hz=presence_low_hz,
+        presence_high_hz=presence_high_hz,
+        presence_gain_db=presence_gain_db,
+        noise_reduction_db=noise_reduction_db,
+        noise_sensitivity=noise_sensitivity,
+        compressor_threshold_db=compressor_threshold_db,
+        compressor_ratio=compressor_ratio,
+        compressor_attack_ms=compressor_attack_ms,
+        compressor_release_ms=compressor_release_ms,
+        target_peak_db=target_peak_db,
+        target_lufs_db=target_lufs_db,
+    )
+    stage_messages = list(description.detail_lines)
+    stage_count = max(len(stage_messages), 1)
+
+    def _notify(stage_index: int, completed: bool) -> None:
+        if progress_callback is None:
+            return
+        label_index = max(0, min(stage_index - 1, len(stage_messages) - 1))
+        label = stage_messages[label_index] if stage_messages else "Applying mastering step"
+        try:
+            progress_callback(stage_index, stage_count, label, completed)
+        except Exception:  # pragma: no cover - defensive logging
+            LOGGER.exception("Audio preprocessing progress callback failed")
+
+    _notify(1, False)
 
     if audio.ndim == 2 and audio.shape[1] > 1:
         mono = np.mean(audio, axis=1)
@@ -179,12 +214,18 @@ def preprocess_audio(
         mono = np.squeeze(audio)
     mono = np.asarray(mono, dtype=np.float32)
 
+    _notify(1, True)
+    _notify(2, False)
+
     mono = _reduce_noise(
         mono,
         sample_rate,
         reduction_db=noise_reduction_db,
         sensitivity=noise_sensitivity,
     )
+
+    _notify(2, True)
+    _notify(3, False)
 
     mono = _shape_frequency_response(
         mono,
@@ -196,6 +237,9 @@ def preprocess_audio(
         presence_gain_db=presence_gain_db,
     )
 
+    _notify(3, True)
+    _notify(4, False)
+
     # Gentle compression to even out peaks.
     mono = _compress_signal(
         mono,
@@ -206,8 +250,13 @@ def preprocess_audio(
         release_ms=compressor_release_ms,
     )
 
+    _notify(4, True)
+    _notify(5, False)
+
     mono = _normalise_signal(mono, target_peak_db=target_peak_db, target_lufs_db=target_lufs_db)
     mono = np.clip(mono, -1.0, 1.0)
+
+    _notify(5, True)
     return mono.astype(np.float32)
 
 
