@@ -487,6 +487,30 @@ def test_upload_asset_updates_repository(temp_config):
     assert repository.get_lecture(lecture_id).notes_path.endswith("summary.docx")
 
 
+def test_upload_large_audio_respects_configured_limit(temp_config):
+    repository, lecture_id, _module_id = _create_sample_data(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    large_audio = b"\x01" * (2 * 1024 * 1024)
+    response = client.post(
+        f"/api/lectures/{lecture_id}/assets/audio",
+        files={"file": ("big.mp3", large_audio, "audio/mpeg")},
+    )
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    relative_path = payload.get("audio_path")
+    assert isinstance(relative_path, str) and relative_path.endswith("big.mp3")
+    stored_path = temp_config.storage_root / relative_path
+    assert stored_path.exists()
+    assert stored_path.stat().st_size == len(large_audio)
+
+    updated = repository.get_lecture(lecture_id)
+    assert updated is not None
+    assert updated.audio_path == relative_path
+
+
 def test_upload_audio_processes_file(monkeypatch, temp_config):
     repository, lecture_id, _module_id = _create_sample_data(temp_config)
     app = create_app(repository, config=temp_config)

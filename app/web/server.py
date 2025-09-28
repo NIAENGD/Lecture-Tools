@@ -13,6 +13,7 @@ import re
 import shutil
 import stat
 import sqlite3
+import sys
 import subprocess
 import threading
 import time
@@ -104,8 +105,33 @@ try:
 except ValueError:
     _MAX_UPLOAD_BYTES = _DEFAULT_MAX_UPLOAD_BYTES
 
-if _MAX_UPLOAD_BYTES > 0:
-    MultiPartParser.max_part_size = max(int(MultiPartParser.max_part_size), int(_MAX_UPLOAD_BYTES))
+def get_max_upload_bytes() -> int:
+    """Return the configured maximum upload size in bytes."""
+
+    return int(_MAX_UPLOAD_BYTES)
+
+
+class LargeUploadRequest(Request):
+    """Request subclass that applies the configured multipart upload limit."""
+
+    async def _get_form(
+        self,
+        *,
+        max_files: int | float = 1000,
+        max_fields: int | float = 1000,
+        max_part_size: int = 1024 * 1024,
+    ) -> "FormData":
+        configured_limit = get_max_upload_bytes()
+        effective_limit = int(max_part_size)
+        if configured_limit > 0:
+            effective_limit = max(int(configured_limit), effective_limit)
+        else:
+            effective_limit = sys.maxsize
+        return await super()._get_form(
+            max_files=max_files,
+            max_fields=max_fields,
+            max_part_size=effective_limit,
+        )
 
 LOGGER = logging.getLogger(__name__)
 EVENT_LOGGER = logging.getLogger("lecture_tools.ui.events")
@@ -813,6 +839,7 @@ def create_app(
         title="Lecture Tools",
         description="Browse lectures from any device",
         root_path=normalized_root,
+        request_class=LargeUploadRequest,
     )
     app.state.server = None
     root_logger = logging.getLogger()
