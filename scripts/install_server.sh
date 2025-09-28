@@ -544,21 +544,23 @@ prompt_menu() {
   local options=("$@")
   local choice
   local have_tty=0
+  local prompt_device="/dev/stderr"
 
   if [[ -t 0 ]]; then
     have_tty=1
   elif [[ -e /dev/tty ]]; then
     have_tty=2
+    prompt_device="/dev/tty"
   fi
 
   while true; do
-    echo "$prompt"
+    printf '%s\n' "$prompt" >"$prompt_device"
     for idx in "${!options[@]}"; do
       local number=$((idx + 1))
       if [[ $number -eq $default_choice ]]; then
-        printf '  [%d] %s (default)\n' "$number" "${options[$idx]}"
+        printf '  [%d] %s (default)\n' "$number" "${options[$idx]}" >"$prompt_device"
       else
-        printf '  [%d] %s\n' "$number" "${options[$idx]}"
+        printf '  [%d] %s\n' "$number" "${options[$idx]}" >"$prompt_device"
       fi
     done
 
@@ -568,6 +570,7 @@ prompt_menu() {
       printf 'Selection [%s]: ' "$default_choice" > /dev/tty
       read -r choice < /dev/tty || true
     else
+      printf 'No interactive terminal detected; selecting option %s by default.\n' "$default_choice" >"$prompt_device"
       choice="$default_choice"
     fi
 
@@ -581,7 +584,7 @@ prompt_menu() {
       return 0
     fi
 
-    echo "Please enter a number between 1 and ${#options[@]}."
+    printf 'Please enter a number between 1 and %d.\n' "${#options[@]}" >"$prompt_device"
   done
 }
 
@@ -1470,21 +1473,23 @@ prompt_menu() {
   local options=("$@")
   local choice
   local have_tty=0
+  local prompt_device="/dev/stderr"
 
   if [[ -t 0 ]]; then
     have_tty=1
   elif [[ -e /dev/tty ]]; then
     have_tty=2
+    prompt_device="/dev/tty"
   fi
 
   while true; do
-    echo "$prompt"
+    printf '%s\n' "$prompt" >"$prompt_device"
     for idx in "${!options[@]}"; do
       local number=$((idx + 1))
       if [[ $number -eq $default_choice ]]; then
-        printf '  [%d] %s (default)\n' "$number" "${options[$idx]}"
+        printf '  [%d] %s (default)\n' "$number" "${options[$idx]}" >"$prompt_device"
       else
-        printf '  [%d] %s\n' "$number" "${options[$idx]}"
+        printf '  [%d] %s\n' "$number" "${options[$idx]}" >"$prompt_device"
       fi
     done
 
@@ -1494,6 +1499,7 @@ prompt_menu() {
       printf 'Selection [%s]: ' "$default_choice" > /dev/tty
       read -r choice < /dev/tty || true
     else
+      printf 'No interactive terminal detected; selecting option %s by default.\n' "$default_choice" >"$prompt_device"
       choice="$default_choice"
     fi
 
@@ -1507,7 +1513,7 @@ prompt_menu() {
       return 0
     fi
 
-    echo "Please enter a number between 1 and ${#options[@]}."
+    printf 'Please enter a number between 1 and %d.\n' "${#options[@]}" >"$prompt_device"
   done
 }
 
