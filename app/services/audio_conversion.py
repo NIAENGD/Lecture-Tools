@@ -111,4 +111,10 @@ def ensure_wav(
     return candidate, True
 
 
-__all__ = ["ensure_wav"]
+def ffmpeg_available() -> bool:
+    """Return ``True`` when an FFmpeg binary is discoverable."""
+
+    return shutil.which("ffmpeg") is not None
+
+
+__all__ = ["ensure_wav", "ffmpeg_available"]
