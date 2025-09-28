@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import functools
 import contextlib
 import json
 import logging
@@ -105,6 +106,8 @@ try:
 except ValueError:
     _MAX_UPLOAD_BYTES = _DEFAULT_MAX_UPLOAD_BYTES
 
+_DEFAULT_UPLOAD_CHUNK_SIZE = 1024 * 1024
+
 def get_max_upload_bytes() -> int:
     """Return the configured maximum upload size in bytes."""
 
@@ -132,6 +135,35 @@ class LargeUploadRequest(Request):
             max_fields=max_fields,
             max_part_size=effective_limit,
         )
+
+
+def _copy_upload_stream(
+    upload: UploadFile,
+    target: Path,
+    *,
+    chunk_size: int = _DEFAULT_UPLOAD_CHUNK_SIZE,
+) -> None:
+    """Synchronously copy ``upload`` to ``target`` using a bounded chunk size."""
+
+    source = upload.file
+    if hasattr(source, "seek"):
+        with contextlib.suppress(OSError, ValueError):
+            source.seek(0)
+    with target.open("wb") as buffer:
+        shutil.copyfileobj(source, buffer, length=chunk_size)
+
+
+async def _persist_upload_file(
+    upload: UploadFile,
+    target: Path,
+    *,
+    chunk_size: int = _DEFAULT_UPLOAD_CHUNK_SIZE,
+) -> None:
+    """Persist an uploaded file to disk without blocking the event loop."""
+
+    loop = asyncio.get_running_loop()
+    copy_operation = functools.partial(_copy_upload_stream, upload, target, chunk_size=chunk_size)
+    await loop.run_in_executor(None, copy_operation)
 
 LOGGER = logging.getLogger(__name__)
 EVENT_LOGGER = logging.getLogger("lecture_tools.ui.events")
@@ -1804,8 +1836,7 @@ def create_app(
                 )
 
         try:
-            with target.open("wb") as buffer:
-                shutil.copyfileobj(file.file, buffer)
+            await _persist_upload_file(file, target)
         finally:
             await file.close()
 
