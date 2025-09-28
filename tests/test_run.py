@@ -28,6 +28,7 @@ def _setup_serve(monkeypatch, tmp_path, upload_limit):
             *,
             limit_max_request_size=None,
             h11_max_incomplete_event_size=None,
+            http=None,
             **kwargs,
         ):
             captured["app"] = app
@@ -36,6 +37,8 @@ def _setup_serve(monkeypatch, tmp_path, upload_limit):
                 captured_kwargs["limit_max_request_size"] = limit_max_request_size
             if h11_max_incomplete_event_size is not None:
                 captured_kwargs["h11_max_incomplete_event_size"] = h11_max_incomplete_event_size
+            if http is not None:
+                captured_kwargs["http"] = http
             captured["config_kwargs"] = captured_kwargs
 
     class DummyServer:
@@ -85,3 +88,11 @@ def test_serve_uses_large_limit_when_disabled(monkeypatch, tmp_path):
     captured = _setup_serve(monkeypatch, tmp_path, upload_limit=0)
     limit_key = _get_limit_key(captured["config_kwargs"])
     assert captured["config_kwargs"][limit_key] >= 2**31 - 1
+
+
+def test_serve_forces_h11_when_using_legacy_limit(monkeypatch, tmp_path):
+    captured = _setup_serve(monkeypatch, tmp_path, upload_limit=1024)
+
+    config_kwargs = captured["config_kwargs"]
+    if "h11_max_incomplete_event_size" in config_kwargs:
+        assert config_kwargs.get("http") == "h11"
