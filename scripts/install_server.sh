@@ -390,6 +390,12 @@ fi
 # shellcheck disable=SC1090
 source "$CONFIG_FILE"
 
+SCRIPT_PATH="${BASH_SOURCE[0]:-$0}"
+if command -v readlink >/dev/null 2>&1; then
+  HELPER_PATH="$(readlink -f "$SCRIPT_PATH" 2>/dev/null || true)"
+fi
+HELPER_PATH="${HELPER_PATH:-$SCRIPT_PATH}"
+
 usage() {
   cat <<'EOU'
 Usage: lecturetool <command>
@@ -505,6 +511,10 @@ purge_installation() {
     rm -rf "$INSTALL_DIR"
   fi
 
+  if [[ -n ${HELPER_PATH:-} && -f $HELPER_PATH ]]; then
+    rm -f "$HELPER_PATH"
+  fi
+
   if [[ -n ${SERVICE_USER:-} ]]; then
     if id "$SERVICE_USER" >/dev/null 2>&1; then
       userdel --remove "$SERVICE_USER" || true
@@ -518,11 +528,6 @@ purge_installation() {
   fi
 
   systemctl daemon-reload || true
-
-  helper_path="$(command -v lecturetool 2>/dev/null || true)"
-  if [[ -n $helper_path && -f $helper_path ]]; then
-    rm -f "$helper_path"
-  fi
 
   echo "[lecture-tools] Complete removal finished."
 }
@@ -580,6 +585,19 @@ case $1 in
     elif [[ -f "$INSTALL_DIR/requirements.txt" ]]; then
       run_as_service_user "$VENV_PY" -m pip install -r "$INSTALL_DIR/requirements.txt"
     fi
+
+    helper_source="$INSTALL_DIR/scripts/install_server.sh"
+    if [[ -f $helper_source ]]; then
+      echo "[lecture-tools] Refreshing helper CLI..."
+      if bash "$helper_source" --render-helper "$HELPER_PATH"; then
+        chmod 0755 "$HELPER_PATH"
+        echo "[lecture-tools] Helper CLI refreshed."
+      else
+        echo "[lecture-tools] warning: Failed to refresh helper CLI from $helper_source." >&2
+      fi
+    else
+      echo "[lecture-tools] warning: Cannot refresh helper CLI (missing $helper_source)." >&2
+    fi
     systemctl start "$SERVICE_NAME"
     ;;
   upgrade)
@@ -613,6 +631,13 @@ case $1 in
 esac
 EOFHELP
 }
+
+if [[ ${1:-} == "--render-helper" ]]; then
+  shift || true
+  output_path="${1:-/dev/stdout}"
+  write_helper_script "$output_path"
+  exit 0
+fi
 
 ensure_debian
 load_existing_configuration
