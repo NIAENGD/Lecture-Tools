@@ -15,12 +15,13 @@
 
 1. [✨ Key Features](#-key-features)
 2. [🏁 Quick Start](#-quick-start)
-3. [🐳 Docker Deployment (Server)](#-docker-deployment-server)
-4. [🧭 Project Tour](#-project-tour)
-5. [🎛️ Interface Customization](#-interface-customization)
-6. [🛠️ Core Workflows](#-core-workflows)
-7. [🧪 Testing](#-testing)
-8. [🤝 Contributing](#-contributing)
+3. [🧰 Manual Debian Server Install](#-manual-debian-server-install)
+4. [🐳 Docker Deployment (Server)](#-docker-deployment-server)
+5. [🧭 Project Tour](#-project-tour)
+6. [🎛️ Interface Customization](#-interface-customization)
+7. [🛠️ Core Workflows](#-core-workflows)
+8. [🧪 Testing](#-testing)
+9. [🤝 Contributing](#-contributing)
 
 ---
 
@@ -68,8 +69,14 @@
 5. **Classic terminal vibes still included**
    ```bash
    python run.py overview --style modern
-   python run.py overview --style console
-   ```
+  python run.py overview --style console
+  ```
+
+---
+
+## 🧰 Manual Debian Server Install
+
+Need a reproducible bare-metal deployment? Follow the step-by-step [Debian manual installation guide](docs/debian-manual-install.md) to provision system packages, configure Python, and (optionally) wire Lecture Tools into systemd.
 
 ---
 
