@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterable, Optional, Protocol
 
+from .. import config as config_module
 from ..config import AppConfig
 from .naming import build_asset_stem, build_timestamped_name, slugify
 from .storage import ClassRecord, LectureRecord, LectureRepository, ModuleRecord
@@ -102,17 +103,22 @@ class LecturePaths:
         )
 
     def ensure(self) -> None:
-        for path in (
-            self.lecture_root,
-            self.raw_dir,
-            self.processed_dir,
-            self.processed_audio_dir,
-            self.transcript_dir,
-            self.slide_dir,
-            self.notes_dir,
-        ):
-            path.mkdir(parents=True, exist_ok=True)
-            LOGGER.debug("Ensured lecture path exists: %s", path)
+        directories = (
+            ("lecture", self.lecture_root),
+            ("raw", self.raw_dir),
+            ("processed", self.processed_dir),
+            ("processed audio", self.processed_audio_dir),
+            ("transcript", self.transcript_dir),
+            ("slide", self.slide_dir),
+            ("notes", self.notes_dir),
+        )
+        for label, path in directories:
+            if not config_module._ensure_writable_directory(path):
+                raise IngestionError(
+                    f"Unable to prepare {label} directory '{path}'. It is not writable. "
+                    "Update config/default.json or adjust permissions."
+                )
+            LOGGER.debug("Ensured %s path exists and is writable: %s", label, path)
 class LectureIngestor:
     """Coordinates the ingestion of lecture assets."""
 
