@@ -29,6 +29,8 @@ from typing import Any, Callable, Deque, Dict, List, Literal, Optional, Set, Tup
 
 from concurrent.futures import Future, ThreadPoolExecutor
 
+T = TypeVar("T")
+
 from fastapi import (
     FastAPI,
     HTTPException,
@@ -909,6 +911,49 @@ def create_app(
     app.state.audio_mastering_executor = background_executor
     app.state.audio_mastering_jobs = app.state.background_jobs
     app.state.audio_mastering_jobs_lock = app.state.background_jobs_lock
+
+    async def _run_serialized_background_task(
+        operation: Callable[[], T],
+        *,
+        context_label: str,
+        queued_callback: Optional[Callable[[], None]] = None,
+    ) -> T:
+        """Run ``operation`` in the shared worker, queueing if necessary."""
+
+        executor: ThreadPoolExecutor = getattr(app.state, "background_executor")
+        jobs: Set[Future] = getattr(app.state, "background_jobs")
+        jobs_lock: threading.Lock = getattr(app.state, "background_jobs_lock")
+
+        loop = asyncio.get_running_loop()
+        future = loop.run_in_executor(executor, operation)
+
+        with jobs_lock:
+            active_jobs = {job for job in jobs if not job.done()}
+            jobs.clear()
+            jobs.update(active_jobs)
+            queued = bool(active_jobs)
+            active_count = len(active_jobs)
+            jobs.add(future)
+
+        if queued:
+            LOGGER.debug(
+                "Queued %s task behind %s active job(s)",
+                context_label,
+                active_count,
+            )
+            if queued_callback is not None:
+                try:
+                    queued_callback()
+                except Exception:  # pragma: no cover - defensive
+                    LOGGER.exception("Queued callback for %s raised an error", context_label)
+
+        try:
+            result = await future
+        finally:
+            with jobs_lock:
+                jobs.discard(future)
+
+        return result
 
     def _shutdown_background_executor() -> None:
         background_executor.shutdown(wait=True, cancel_futures=True)
@@ -1939,51 +1984,6 @@ def create_app(
                     jobs.discard(done)
 
             future.add_done_callback(_cleanup_future)
-
-        T = TypeVar("T")
-
-        async def _run_serialized_background_task(
-            operation: Callable[[], T],
-            *,
-            context_label: str,
-            queued_callback: Optional[Callable[[], None]] = None,
-        ) -> T:
-            """Run ``operation`` in the shared worker, queueing if necessary."""
-
-            executor: ThreadPoolExecutor = getattr(app.state, "background_executor")
-            jobs: Set[Future] = getattr(app.state, "background_jobs")
-            jobs_lock: threading.Lock = getattr(app.state, "background_jobs_lock")
-
-            loop = asyncio.get_running_loop()
-            future = loop.run_in_executor(executor, operation)
-
-            with jobs_lock:
-                active_jobs = {job for job in jobs if not job.done()}
-                jobs.clear()
-                jobs.update(active_jobs)
-                queued = bool(active_jobs)
-                active_count = len(active_jobs)
-                jobs.add(future)
-
-            if queued:
-                LOGGER.debug(
-                    "Queued %s task behind %s active job(s)",
-                    context_label,
-                    active_count,
-                )
-                if queued_callback is not None:
-                    try:
-                        queued_callback()
-                    except Exception:  # pragma: no cover - defensive
-                        LOGGER.exception("Queued callback for %s raised an error", context_label)
-
-            try:
-                result = await future
-            finally:
-                with jobs_lock:
-                    jobs.discard(future)
-
-            return result
 
         if asset_key == "audio":
             if lecture.processed_audio_path:
