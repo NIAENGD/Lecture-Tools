@@ -173,10 +173,10 @@ def preprocess_audio(
     compressor_attack_ms: float = 12.0,
     compressor_release_ms: float = 120.0,
     target_peak_db: float = -1.0,
-    target_lufs_db: float = -16.0,
+    target_lufs_db: float = -20.0,
     progress_callback: Optional[Callable[[int, int, str, bool], None]] = None,
 ) -> np.ndarray:
-    """Apply mastering steps to prioritise intelligible speech."""
+    """Apply a lightweight mastering chain for speech intelligibility."""
 
     description = describe_preprocess_audio_stage(
         highpass_hz=highpass_hz,
@@ -217,46 +217,16 @@ def preprocess_audio(
     _notify(1, True)
     _notify(2, False)
 
-    mono = _reduce_noise(
-        mono,
-        sample_rate,
-        reduction_db=noise_reduction_db,
-        sensitivity=noise_sensitivity,
-    )
+    if mono.size:
+        mono = mono - float(np.mean(mono))
 
     _notify(2, True)
     _notify(3, False)
 
-    mono = _shape_frequency_response(
-        mono,
-        sample_rate,
-        highpass_hz=highpass_hz,
-        lowpass_hz=lowpass_hz,
-        presence_low_hz=presence_low_hz,
-        presence_high_hz=presence_high_hz,
-        presence_gain_db=presence_gain_db,
-    )
-
-    _notify(3, True)
-    _notify(4, False)
-
-    # Gentle compression to even out peaks.
-    mono = _compress_signal(
-        mono,
-        sample_rate,
-        threshold_db=compressor_threshold_db,
-        ratio=compressor_ratio,
-        attack_ms=compressor_attack_ms,
-        release_ms=compressor_release_ms,
-    )
-
-    _notify(4, True)
-    _notify(5, False)
-
     mono = _normalise_signal(mono, target_peak_db=target_peak_db, target_lufs_db=target_lufs_db)
     mono = np.clip(mono, -1.0, 1.0)
 
-    _notify(5, True)
+    _notify(3, True)
     return mono.astype(np.float32)
 
 
@@ -284,35 +254,20 @@ def describe_preprocess_audio_stage(
     compressor_attack_ms: float = 12.0,
     compressor_release_ms: float = 120.0,
     target_peak_db: float = -1.0,
-    target_lufs_db: float = -16.0,
+    target_lufs_db: float = -20.0,
 ) -> PreprocessAudioStageDescription:
     """Return a structured description of the mastering stage."""
 
     headline_steps = (
         "downmix to mono",
-        "spectral noise gating",
-        "speech-focused EQ",
-        "dynamic compression",
+        "remove DC offset",
         "loudness normalisation",
     )
     headline = " \u2192 ".join(headline_steps)
 
     detail_lines = (
         "Downmixing multi-channel input to mono for a consistent reference track.",
-        (
-            "Applying spectral noise gating to remove stationary background noise "
-            f"(~{noise_reduction_db:.0f} dB target reduction, sensitivity {noise_sensitivity})."
-        ),
-        (
-            "Shaping the frequency response for speech intelligibility: "
-            f"high-pass {highpass_hz:.0f} Hz, low-pass {lowpass_hz:.0f} Hz, "
-            f"+{presence_gain_db:.1f} dB presence boost between {presence_low_hz:.0f}-{presence_high_hz:.0f} Hz."
-        ),
-        (
-            f"Compressing dynamics with a {compressor_ratio}:1 ratio at "
-            f"{compressor_threshold_db:.0f} dBFS, attack {compressor_attack_ms:.0f} ms, "
-            f"release {compressor_release_ms:.0f} ms to even out levels."
-        ),
+        "Removing steady DC offset before level normalisation.",
         (
             f"Normalising loudness to {target_lufs_db:.0f} LUFS with a {target_peak_db:.0f} dBFS peak "
             "ceiling for consistent playback volume."
@@ -321,24 +276,13 @@ def describe_preprocess_audio_stage(
 
     parameters: Mapping[str, float] = MappingProxyType(
         {
-            "highpass_hz": float(highpass_hz),
-            "lowpass_hz": float(lowpass_hz),
-            "presence_low_hz": float(presence_low_hz),
-            "presence_high_hz": float(presence_high_hz),
-            "presence_gain_db": float(presence_gain_db),
-            "noise_reduction_db": float(noise_reduction_db),
-            "noise_sensitivity": float(noise_sensitivity),
-            "compressor_threshold_db": float(compressor_threshold_db),
-            "compressor_ratio": float(compressor_ratio),
-            "compressor_attack_ms": float(compressor_attack_ms),
-            "compressor_release_ms": float(compressor_release_ms),
             "target_peak_db": float(target_peak_db),
             "target_lufs_db": float(target_lufs_db),
         }
     )
 
     return PreprocessAudioStageDescription(
-        summary="Applying mastering chain",
+        summary="Applying lightweight mastering chain",
         headline=headline,
         detail_lines=detail_lines,
         parameters=parameters,
