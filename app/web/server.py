@@ -551,7 +551,7 @@ def _safe_preview_for_path(storage_root: Path, relative_path: Optional[str]) -> 
 
 
 def _resolve_storage_path(_storage_root: Path, relative_path: str) -> Path:
-    root_path = _require_storage_root().resolve()
+    root_path = _storage_root.resolve()
     candidate = Path(relative_path)
     if not candidate.is_absolute():
         candidate = (root_path / candidate).resolve()
@@ -787,13 +787,14 @@ def _infer_prefix_from_path(value: Any) -> Optional[str]:
         "/docs",
         "/openapi.json",
     )
+    reserved_prefixes: Tuple[str, ...] = ("/api", "/storage", "/static")
     for marker in markers:
         index = path.find(marker)
         if index <= 0:
             continue
         prefix = path[:index]
         prefix = prefix.rstrip("/")
-        if prefix:
+        if prefix and prefix not in reserved_prefixes:
             return prefix
 
     return None
