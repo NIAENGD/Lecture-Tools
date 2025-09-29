@@ -7,6 +7,7 @@ import shutil
 import sqlite3
 from pathlib import Path
 
+from . import config as config_module
 from .config import AppConfig, load_config
 
 LOGGER = logging.getLogger(__name__)
@@ -35,12 +36,23 @@ class Bootstrapper:
         LOGGER.info("Bootstrap completed successfully")
 
     def _ensure_directories(self) -> None:
-        for path in (self._config.storage_root, self._config.assets_root):
-            path.mkdir(parents=True, exist_ok=True)
-            LOGGER.debug("Ensured directory exists: %s", path)
+        for label, path in (
+            ("storage", self._config.storage_root),
+            ("assets", self._config.assets_root),
+        ):
+            if not config_module._ensure_writable_directory(path):
+                raise BootstrapError(
+                    f"{label.capitalize()} directory '{path}' is not writable. "
+                    "Update config/default.json or adjust permissions."
+                )
+            LOGGER.debug("Ensured %s directory exists and is writable: %s", label, path)
 
         archive_root = self._config.archive_root
-        archive_root.mkdir(parents=True, exist_ok=True)
+        if not config_module._ensure_writable_directory(archive_root):
+            raise BootstrapError(
+                f"Archive directory '{archive_root}' is not writable. "
+                "Update config/default.json or adjust permissions."
+            )
         for child in archive_root.iterdir():
             try:
                 if child.is_dir():
