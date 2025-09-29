@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import json
 import logging
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterable, Tuple
@@ -56,10 +57,12 @@ def _select_writable_directory(
     if _ensure_writable_directory(preferred):
         return preferred, False
 
+    seen: set[Path] = {preferred}
     for fallback in fallbacks:
         candidate = fallback.resolve()
-        if candidate == preferred:
+        if candidate in seen:
             continue
+        seen.add(candidate)
         if _ensure_writable_directory(candidate):
             LOGGER.warning(
                 "Preferred %s directory '%s' is not writable; using fallback '%s'.",
@@ -94,11 +97,14 @@ class AppConfig:
     @classmethod
     def from_mapping(cls, mapping: Dict[str, Any], *, base_path: Path) -> "AppConfig":
         preferred_storage = (base_path / mapping["storage_root"]).resolve()
-        storage_fallback = Path.home() / ".lecture_tools" / "storage"
+        storage_fallbacks = (
+            Path.home() / ".lecture_tools" / "storage",
+            Path(tempfile.gettempdir()) / "lecture_tools" / "storage",
+        )
         storage_root, storage_fallback_used = _select_writable_directory(
             preferred_storage,
             label="storage",
-            fallbacks=(storage_fallback,),
+            fallbacks=storage_fallbacks,
         )
 
         database_file = (base_path / mapping["database_file"]).resolve()

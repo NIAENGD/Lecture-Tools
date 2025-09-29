@@ -56,3 +56,53 @@ def test_storage_root_falls_back_when_preferred_is_unusable(
     assert config.assets_root == expected_assets
     assert expected_storage.exists()
     assert expected_assets.exists()
+
+
+def test_storage_root_uses_temp_directory_when_home_is_unusable(
+    tmp_path: Path, monkeypatch
+) -> None:
+    home_dir = tmp_path / "home"
+    temp_dir = tmp_path / "temp"
+    temp_dir.mkdir()
+
+    monkeypatch.setattr(config_module.Path, "home", lambda: home_dir)
+    monkeypatch.setattr(config_module.tempfile, "gettempdir", lambda: str(temp_dir))
+
+    preferred_storage = tmp_path / "storage"
+    preferred_storage.write_text("not a directory", encoding="utf-8")
+
+    preferred_assets = tmp_path / "assets"
+    preferred_assets.write_text("not a directory", encoding="utf-8")
+
+    original_ensure = config_module._ensure_writable_directory
+    unwritable = {
+        preferred_storage.resolve(),
+        (home_dir / ".lecture_tools" / "storage").resolve(),
+    }
+
+    def fake_ensure(path: Path) -> bool:
+        resolved = path.resolve()
+        if resolved in unwritable:
+            return False
+        return original_ensure(path)
+
+    monkeypatch.setattr(config_module, "_ensure_writable_directory", fake_ensure)
+
+    config = AppConfig.from_mapping(
+        {
+            "storage_root": "storage",
+            "database_file": "storage/lectures.db",
+            "assets_root": "assets",
+        },
+        base_path=tmp_path,
+    )
+
+    expected_storage = (temp_dir / "lecture_tools" / "storage").resolve()
+    expected_database = (expected_storage / "lectures.db").resolve()
+    expected_assets = (expected_storage / "_assets").resolve()
+
+    assert config.storage_root == expected_storage
+    assert config.database_file == expected_database
+    assert config.assets_root == expected_assets
+    assert expected_storage.exists()
+    assert expected_assets.exists()
