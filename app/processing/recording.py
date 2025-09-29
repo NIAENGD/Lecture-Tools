@@ -414,26 +414,45 @@ def _reduce_noise(
         shape=(frame_count, frame_length),
         strides=(padded.strides[0] * hop_length, padded.strides[0]),
     )
-    windowed = frames * window
-    spectra = np.fft.rfft(windowed, axis=1)
 
-    magnitude = np.abs(spectra)
+    # Computing the noise profile across the full recording can require several
+    # gigabytes for long lectures.  Sample a limited number of frames so the
+    # spectral statistics remain stable while keeping memory bounded.
+    noise_sample_cap = 4_096
+    if frame_count <= noise_sample_cap:
+        sample_frames = frames
+    else:
+        sample_indices = np.linspace(0, frame_count - 1, num=noise_sample_cap, dtype=np.int32)
+        sample_frames = frames[sample_indices]
+
+    sample_windowed = sample_frames * window
+    sample_spectra = np.fft.rfft(sample_windowed, axis=1)
+
+    magnitude = np.abs(sample_spectra)
     noise_profile = np.median(magnitude, axis=0, keepdims=True)
     min_gain = _db_to_amplitude(-reduction_db)
 
     floor = noise_profile * sensitivity
-    gain = np.clip((magnitude - floor) / np.maximum(magnitude, 1e-9), min_gain, 1.0)
-    processed_frames = np.fft.irfft(spectra * gain, n=frame_length, axis=1).astype(np.float32)
-
     output = np.zeros_like(padded, dtype=np.float32)
     window_accumulator = np.zeros_like(padded, dtype=np.float32)
     window_squared = window * window
 
-    for index in range(frame_count):
-        start = index * hop_length
-        stop = start + frame_length
-        output[start:stop] += processed_frames[index] * window
-        window_accumulator[start:stop] += window_squared
+    batch_size = 1_024
+    for batch_start in range(0, frame_count, batch_size):
+        batch_end = min(batch_start + batch_size, frame_count)
+        batch_frames = frames[batch_start:batch_end]
+        windowed = batch_frames * window
+        spectra = np.fft.rfft(windowed, axis=1)
+
+        magnitude = np.abs(spectra)
+        gain = np.clip((magnitude - floor) / np.maximum(magnitude, 1e-9), min_gain, 1.0)
+        processed_frames = np.fft.irfft(spectra * gain, n=frame_length, axis=1).astype(np.float32)
+
+        for index, frame_index in enumerate(range(batch_start, batch_end)):
+            start = frame_index * hop_length
+            stop = start + frame_length
+            output[start:stop] += processed_frames[index] * window
+            window_accumulator[start:stop] += window_squared
 
     valid = window_accumulator > 1e-6
     output[valid] /= window_accumulator[valid]

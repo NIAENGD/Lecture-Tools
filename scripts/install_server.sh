@@ -184,12 +184,22 @@ select_python() {
 
 create_service_user() {
   local user="$1" home_dir="$2"
+
   if id "$user" >/dev/null 2>&1; then
     log "System user '$user' already exists."
+    local current_home
+    current_home=$(getent passwd "$user" | cut -d: -f6)
+    if [[ -n $current_home && $current_home != "$home_dir" ]]; then
+      mkdir -p "$home_dir"
+      warn "System user '$user' has home '$current_home'; updating to '$home_dir'."
+      usermod -d "$home_dir" "$user"
+    fi
   else
-    log "Creating system user '$user'..."
+    log "Creating system user '$user' with home '$home_dir'..."
     adduser --system --group --home "$home_dir" --shell /bin/bash "$user" >/dev/null
   fi
+
+  mkdir -p "$home_dir"
 }
 
 sanitize_service_user() {
@@ -2403,7 +2413,7 @@ main() {
   install_parent=$(dirname "$install_dir")
   mkdir -p "$install_parent"
 
-  create_service_user "$service_user" "$install_parent"
+  create_service_user "$service_user" "$install_dir"
   service_group=$(id -gn "$service_user")
 
   mkdir -p "$install_dir"

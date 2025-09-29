@@ -9,7 +9,13 @@ import pytest
 from PIL import Image
 
 from app.config import AppConfig
-from app.services.ingestion import LectureIngestor, SlideConverter, TranscriptResult, TranscriptionEngine
+from app.services.ingestion import (
+    IngestionError,
+    LectureIngestor,
+    SlideConverter,
+    TranscriptResult,
+    TranscriptionEngine,
+)
 from app.services.storage import LectureRepository
 
 
@@ -91,3 +97,40 @@ def test_ingestion_requires_assets(temp_config: AppConfig) -> None:
         )
 
     assert "audio_file" in str(exc_info.value)
+
+
+def test_ingestion_detects_unwritable_directories(
+    temp_config: AppConfig,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    repository = LectureRepository(temp_config)
+    ingestor = LectureIngestor(
+        temp_config,
+        repository,
+        transcription_engine=DummyTranscriptionEngine(),
+    )
+
+    audio_source = tmp_path / "lecture.wav"
+    audio_source.write_text("dummy audio", encoding="utf-8")
+
+    import app.services.ingestion as ingestion_module
+
+    def fake_ensure(path: Path) -> bool:
+        if "transcripts" in path.parts:
+            return False
+        return True
+
+    monkeypatch.setattr(ingestion_module.config_module, "_ensure_writable_directory", fake_ensure)
+
+    with pytest.raises(IngestionError) as exc_info:
+        ingestor.ingest(
+            class_name="Physics",
+            module_name="Optics",
+            lecture_name="Refraction",
+            audio_file=audio_source,
+        )
+
+    message = str(exc_info.value)
+    assert "transcript" in message.lower()
+    assert "not writable" in message.lower()
