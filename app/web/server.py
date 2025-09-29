@@ -25,7 +25,7 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any, Callable, Deque, Dict, List, Literal, Optional, Set, Tuple
+from typing import Any, Callable, Deque, Dict, List, Literal, Optional, Set, Tuple, TypeVar
 
 from concurrent.futures import Future, ThreadPoolExecutor
 
@@ -898,7 +898,7 @@ def create_app(
     processing_tracker = TranscriptionProgressTracker()
 
     background_executor = ThreadPoolExecutor(
-        max_workers=2,
+        max_workers=1,
         thread_name_prefix="media-processing",
     )
     app.state.background_executor = background_executor
@@ -1940,6 +1940,51 @@ def create_app(
 
             future.add_done_callback(_cleanup_future)
 
+        T = TypeVar("T")
+
+        async def _run_serialized_background_task(
+            operation: Callable[[], T],
+            *,
+            context_label: str,
+            queued_callback: Optional[Callable[[], None]] = None,
+        ) -> T:
+            """Run ``operation`` in the shared worker, queueing if necessary."""
+
+            executor: ThreadPoolExecutor = getattr(app.state, "background_executor")
+            jobs: Set[Future] = getattr(app.state, "background_jobs")
+            jobs_lock: threading.Lock = getattr(app.state, "background_jobs_lock")
+
+            loop = asyncio.get_running_loop()
+            future = loop.run_in_executor(executor, operation)
+
+            with jobs_lock:
+                active_jobs = {job for job in jobs if not job.done()}
+                jobs.clear()
+                jobs.update(active_jobs)
+                queued = bool(active_jobs)
+                active_count = len(active_jobs)
+                jobs.add(future)
+
+            if queued:
+                LOGGER.debug(
+                    "Queued %s task behind %s active job(s)",
+                    context_label,
+                    active_count,
+                )
+                if queued_callback is not None:
+                    try:
+                        queued_callback()
+                    except Exception:  # pragma: no cover - defensive
+                        LOGGER.exception("Queued callback for %s raised an error", context_label)
+
+            try:
+                result = await future
+            finally:
+                with jobs_lock:
+                    jobs.discard(future)
+
+            return result
+
         if asset_key == "audio":
             if lecture.processed_audio_path:
                 _delete_asset_path(lecture.processed_audio_path)
@@ -2685,9 +2730,12 @@ def create_app(
                 progress_tracker.fail(lecture_id, f"====> {message}")
                 raise HTTPException(status_code=503, detail=message)
             try:
-                mastered_path, _completion = await asyncio.to_thread(
-                    _perform_audio_mastering,
-                    audio_file,
+                mastered_path, _completion = await _run_serialized_background_task(
+                    lambda: _perform_audio_mastering(audio_file),
+                    context_label="audio mastering",
+                    queued_callback=lambda: progress_tracker.note(
+                        lecture_id, "====> Waiting for other tasks to finish…"
+                    ),
                 )
             except ValueError as error:
                 progress_tracker.fail(lecture_id, f"====> {error}")
@@ -2752,11 +2800,16 @@ def create_app(
                 error_reported = True
                 raise HTTPException(status_code=400, detail=str(error)) from error
 
-            result = await asyncio.to_thread(
-                engine.transcribe,
-                audio_file,
-                lecture_paths.transcript_dir,
-                progress_callback=handle_progress,
+            result = await _run_serialized_background_task(
+                lambda: engine.transcribe(
+                    audio_file,
+                    lecture_paths.transcript_dir,
+                    progress_callback=handle_progress,
+                ),
+                context_label="transcription",
+                queued_callback=lambda: progress_tracker.note(
+                    lecture_id, "====> Waiting for other tasks to finish…"
+                ),
             )
         except HTTPException as error:
             if not error_reported:
@@ -3163,13 +3216,18 @@ def create_app(
                 processing_tracker.note(lecture_id, "====> Rendering slide images…")
 
         try:
-            slide_image_relative = await asyncio.to_thread(
-                _generate_slide_archive,
-                slide_destination,
-                lecture_paths,
-                _make_slide_converter(),
-                page_range=selected_range,
-                progress_callback=_handle_slide_progress,
+            slide_image_relative = await _run_serialized_background_task(
+                lambda: _generate_slide_archive(
+                    slide_destination,
+                    lecture_paths,
+                    _make_slide_converter(),
+                    page_range=selected_range,
+                    progress_callback=_handle_slide_progress,
+                ),
+                context_label="slide conversion",
+                queued_callback=lambda: processing_tracker.note(
+                    lecture_id, "====> Waiting for other tasks to finish…"
+                ),
             )
         except HTTPException as error:
             detail = getattr(error, "detail", str(error))

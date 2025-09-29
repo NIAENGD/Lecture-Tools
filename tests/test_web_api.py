@@ -8,7 +8,7 @@ from typing import Any
 import io
 import time
 import wave
-from concurrent.futures import wait
+from concurrent.futures import ThreadPoolExecutor, wait
 
 import pytest
 
@@ -1141,6 +1141,55 @@ def test_process_slides_gracefully_handles_missing_converter(monkeypatch, temp_c
     payload = response.json()
     assert payload["slide_path"].endswith(".pdf")
     assert payload.get("slide_image_dir") is None
+
+
+def test_process_slides_tasks_are_queued(monkeypatch, temp_config):
+    repository, lecture_id, _module_id = _create_sample_data(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    call_events: list[tuple[str, float]] = []
+
+    def fake_generate(
+        pdf_path,
+        lecture_paths,
+        converter,
+        *,
+        page_range=None,
+        progress_callback=None,
+    ):
+        start_time = time.perf_counter()
+        call_events.append(("start", start_time))
+        time.sleep(0.1)
+        target = lecture_paths.slide_dir / "slides.zip"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(b"zip")
+        if progress_callback is not None:
+            progress_callback(1, 1)
+        end_time = time.perf_counter()
+        call_events.append(("end", end_time))
+        return target.relative_to(temp_config.storage_root).as_posix()
+
+    monkeypatch.setattr(web_server, "_generate_slide_archive", fake_generate)
+
+    pdf_payload = _build_sample_pdf(1)
+
+    def trigger_request() -> None:
+        response = client.post(
+            f"/api/lectures/{lecture_id}/process-slides",
+            files={"file": ("slides.pdf", pdf_payload, "application/pdf")},
+        )
+        assert response.status_code == 200
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        first = pool.submit(trigger_request)
+        time.sleep(0.05)
+        second = pool.submit(trigger_request)
+        first.result(timeout=5)
+        second.result(timeout=5)
+
+    assert [event for event, _ in call_events] == ["start", "end", "start", "end"]
+    assert call_events[2][1] >= call_events[1][1]
 
 
 def test_transcribe_audio_uses_backend(monkeypatch, temp_config):
