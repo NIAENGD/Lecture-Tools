@@ -47,6 +47,7 @@ from pydantic import BaseModel, Field
 from starlette.formparsers import MultiPartParser
 from starlette.types import ASGIApp, Receive, Scope, Send
 
+from .. import config as config_module
 from ..config import AppConfig
 from ..processing import (
     PyMuPDFSlideConverter,
@@ -549,14 +550,14 @@ def _safe_preview_for_path(storage_root: Path, relative_path: Optional[str]) -> 
     }
 
 
-def _resolve_storage_path(storage_root: Path, relative_path: str) -> Path:
+def _resolve_storage_path(_storage_root: Path, relative_path: str) -> Path:
+    root_path = _require_storage_root().resolve()
     candidate = Path(relative_path)
-    storage_root = storage_root.resolve()
     if not candidate.is_absolute():
-        candidate = (storage_root / candidate).resolve()
+        candidate = (root_path / candidate).resolve()
     else:
         candidate = candidate.resolve()
-    candidate.relative_to(storage_root)
+    candidate.relative_to(root_path)
     return candidate
 
 
@@ -930,6 +931,65 @@ def create_app(
 
     index_html = _TEMPLATE_PATH.read_text(encoding="utf-8")
 
+    _STORAGE_HEALTH_CACHE_SECONDS = 5.0
+    storage_health_state: Dict[str, Any] = {
+        "checked_at": 0.0,
+        "available": False,
+        "error": None,
+    }
+    storage_health_lock = threading.Lock()
+    storage_unavailable_detail = (
+        f"Storage directory '{config.storage_root}' is unavailable. "
+        "Ensure the configured location exists and is writable."
+    )
+    storage_unwritable_detail = (
+        f"Storage directory '{config.storage_root}' is not writable. "
+        "Check permissions and free space."
+    )
+
+    def _require_storage_root(*, force: bool = False) -> Path:
+        now = time.monotonic()
+        root_path = config.storage_root
+        if not force:
+            if storage_health_state["available"] and (
+                now - storage_health_state["checked_at"]
+            ) < _STORAGE_HEALTH_CACHE_SECONDS:
+                if root_path.exists() and root_path.is_dir():
+                    return root_path
+        with storage_health_lock:
+            now = time.monotonic()
+            if not force:
+                if (
+                    storage_health_state["available"]
+                    and (now - storage_health_state["checked_at"]) < _STORAGE_HEALTH_CACHE_SECONDS
+                    and root_path.exists()
+                    and root_path.is_dir()
+                ):
+                    return root_path
+            try:
+                available = config_module._ensure_writable_directory(root_path)
+            except OSError as error:  # pragma: no cover - defensive logging
+                storage_health_state.update(
+                    {"available": False, "checked_at": now, "error": str(error)}
+                )
+                LOGGER.error(
+                    "Storage directory '%s' is not accessible: %s",
+                    root_path,
+                    error,
+                )
+                raise HTTPException(status_code=503, detail=storage_unavailable_detail) from error
+            if not available:
+                storage_health_state.update(
+                    {"available": False, "checked_at": now, "error": "unwritable"}
+                )
+                LOGGER.error("Storage directory '%s' is not writable.", root_path)
+                raise HTTPException(status_code=503, detail=storage_unwritable_detail)
+            previously_unavailable = storage_health_state.get("error")
+            storage_health_state.update({"available": True, "checked_at": now, "error": None})
+            if previously_unavailable:
+                LOGGER.info("Storage directory '%s' is available again", root_path)
+            return root_path
+
     def _render_index_html(request: Request | None = None) -> str:
         candidates: List[str] = []
         if request is not None:
@@ -1126,7 +1186,7 @@ def create_app(
         func(path)
 
     def _delete_storage_path(target: Path) -> None:
-        storage_root = config.storage_root.resolve()
+        storage_root = _require_storage_root().resolve()
         candidate = target.resolve()
         try:
             candidate.relative_to(storage_root)
@@ -1146,8 +1206,9 @@ def create_app(
     def _delete_asset_path(relative: Optional[str]) -> None:
         if not relative:
             return
+        root_path = _require_storage_root()
         try:
-            asset_path = _resolve_storage_path(config.storage_root, relative)
+            asset_path = _resolve_storage_path(root_path, relative)
         except ValueError:
             return
         _delete_storage_path(asset_path)
@@ -1193,7 +1254,7 @@ def create_app(
             connection.commit()
 
     def _clear_storage() -> None:
-        storage_root = config.storage_root.resolve()
+        storage_root = _require_storage_root().resolve()
         archive_root = config.archive_root.resolve()
         for child in storage_root.iterdir():
             if child.resolve() == archive_root:
@@ -1216,6 +1277,7 @@ def create_app(
         return total
 
     def _build_storage_entry(path: Path) -> StorageEntry:
+        root_path = _require_storage_root()
         stat_result = path.lstat()
         is_dir = path.is_dir() and not path.is_symlink()
         size = 0
@@ -1231,7 +1293,7 @@ def create_app(
             modified_iso = modified.isoformat()
         except (OverflowError, OSError, ValueError):
             modified_iso = None
-        relative_path = path.relative_to(config.storage_root).as_posix()
+        relative_path = path.relative_to(root_path).as_posix()
         return StorageEntry(
             name=path.name or relative_path,
             path=relative_path,
@@ -1250,8 +1312,9 @@ def create_app(
     def _resolve_existing_asset(relative: Optional[str]) -> Optional[Path]:
         if not relative:
             return None
+        root_path = _require_storage_root()
         try:
-            candidate = _resolve_storage_path(config.storage_root, relative)
+            candidate = _resolve_storage_path(root_path, relative)
         except ValueError:
             return None
         return candidate if candidate.exists() else None
@@ -1376,6 +1439,7 @@ def create_app(
             _delete_storage_path(directory)
 
     def _reuse_existing_slide_archive(candidates: List[Path]) -> Optional[str]:
+        root_path = _require_storage_root()
         prioritized: List[Path] = []
         prioritized.extend([path for path in candidates if path.suffix.lower() == ".zip"])
         prioritized.extend([path for path in candidates if path.suffix.lower() != ".zip"])
@@ -1383,7 +1447,7 @@ def create_app(
             try:
                 if not candidate.exists():
                     continue
-                return candidate.relative_to(config.storage_root).as_posix()
+                return candidate.relative_to(root_path).as_posix()
             except ValueError:
                 continue
         return None
@@ -1435,6 +1499,7 @@ def create_app(
         page_range: Optional[Tuple[int, int]] = None,
         progress_callback: Optional[Callable[[int, Optional[int]], None]] = None,
     ) -> Optional[str]:
+        root_path = _require_storage_root()
         existing_items: List[Path] = []
         if lecture_paths.slide_dir.exists():
             existing_items = list(lecture_paths.slide_dir.iterdir())
@@ -1465,7 +1530,7 @@ def create_app(
         slide_image_relative = None
         if generated:
             archive_path = generated[0]
-            slide_image_relative = archive_path.relative_to(config.storage_root).as_posix()
+            slide_image_relative = archive_path.relative_to(root_path).as_posix()
             for leftover in existing_items:
                 if leftover.resolve() == archive_path.resolve():
                     continue
@@ -1485,8 +1550,9 @@ def create_app(
 
     @app.get("/storage/{path:path}")
     async def serve_storage_file(path: str) -> FileResponse:
+        root_path = _require_storage_root()
         try:
-            target = _resolve_storage_path(config.storage_root, path)
+            target = _resolve_storage_path(root_path, path)
         except ValueError as error:
             raise HTTPException(status_code=404, detail="File not found") from error
         if not target.exists() or target.is_dir():
@@ -1785,8 +1851,9 @@ def create_app(
             raise HTTPException(status_code=404, detail="Lecture not found")
 
         class_record, module = _require_hierarchy(lecture)
+        storage_root = _require_storage_root()
         lecture_paths = LecturePaths.build(
-            config.storage_root,
+            storage_root,
             class_record.name,
             module.name,
             lecture.name,
@@ -1840,7 +1907,7 @@ def create_app(
         finally:
             await file.close()
 
-        relative = target.relative_to(config.storage_root).as_posix()
+        relative = target.relative_to(storage_root).as_posix()
         update_kwargs: Dict[str, Optional[str]] = {attribute: relative}
         processed_relative: Optional[str] = None
         processing_queued = False
@@ -2061,7 +2128,7 @@ def create_app(
         filename = build_timestamped_name("lecture-tools-export", extension="zip")
         archive_path = archive_root / filename
 
-        storage_root = config.storage_root.resolve()
+        storage_root = _require_storage_root().resolve()
         exclude_root = archive_root.resolve()
 
         with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as bundle:
@@ -2081,7 +2148,8 @@ def create_app(
                     except OSError:
                         continue
 
-        relative = archive_path.relative_to(config.storage_root).as_posix()
+        root_path = _require_storage_root()
+        relative = archive_path.relative_to(root_path).as_posix()
         info = archive_path.stat()
 
         class_count = len(metadata.get("classes", []))
@@ -2149,11 +2217,13 @@ def create_app(
                 _clear_database()
                 _clear_storage()
 
+            root_path = _require_storage_root()
+
             if files_root.exists():
                 for path in files_root.rglob("*"):
                     if path.is_dir():
                         continue
-                    destination = config.storage_root / path.relative_to(files_root)
+                    destination = root_path / path.relative_to(files_root)
                     destination.parent.mkdir(parents=True, exist_ok=True)
                     try:
                         shutil.copy2(path, destination)
@@ -2397,13 +2467,14 @@ def create_app(
         settings = _load_ui_settings()
         default_settings = UISettings()
         audio_mastering_enabled = getattr(settings, "audio_mastering_enabled", True)
+        storage_root = _require_storage_root()
 
         processed_relative = lecture.processed_audio_path
         audio_file: Path
         audio_mastering_required = False
 
         if processed_relative:
-            processed_candidate = _resolve_storage_path(config.storage_root, processed_relative)
+            processed_candidate = _resolve_storage_path(storage_root, processed_relative)
             if processed_candidate.exists():
                 audio_file = processed_candidate
             else:
@@ -2424,12 +2495,12 @@ def create_app(
         if processed_relative is None:
             if not lecture.audio_path:
                 raise HTTPException(status_code=400, detail="Upload an audio file first")
-            audio_file = _resolve_storage_path(config.storage_root, lecture.audio_path)
+            audio_file = _resolve_storage_path(storage_root, lecture.audio_path)
             if not audio_file.exists():
                 raise HTTPException(status_code=404, detail="Audio file not found")
 
         lecture_paths = LecturePaths.build(
-            config.storage_root,
+            storage_root,
             class_record.name,
             module.name,
             lecture.name,
@@ -2627,7 +2698,7 @@ def create_app(
                 progress_tracker.fail(lecture_id, f"====> {error}")
                 raise HTTPException(status_code=500, detail=str(error)) from error
             else:
-                processed_relative = mastered_path.relative_to(config.storage_root).as_posix()
+                processed_relative = mastered_path.relative_to(storage_root).as_posix()
                 try:
                     repository.update_lecture_assets(
                         lecture_id,
@@ -2701,14 +2772,14 @@ def create_app(
                 )
             progress_tracker.finish(lecture_id, "====> Transcription completed.")
 
-        transcript_relative = result.text_path.relative_to(config.storage_root).as_posix()
+        transcript_relative = result.text_path.relative_to(storage_root).as_posix()
         repository.update_lecture_assets(lecture_id, transcript_path=transcript_relative)
         updated = repository.get_lecture(lecture_id)
         if updated is None:
             raise HTTPException(status_code=500, detail="Lecture update failed")
         response = {"lecture": _serialize_lecture(updated), "transcript_path": transcript_relative}
         if result.segments_path:
-            response["segments_path"] = result.segments_path.relative_to(config.storage_root).as_posix()
+            response["segments_path"] = result.segments_path.relative_to(storage_root).as_posix()
         if fallback_model:
             response["fallback_model"] = fallback_model
             if fallback_reason:
@@ -2736,8 +2807,9 @@ def create_app(
             raise HTTPException(status_code=404, detail="Lecture not found")
 
         class_record, module = _require_hierarchy(lecture)
+        storage_root = _require_storage_root()
         lecture_paths = LecturePaths.build(
-            config.storage_root,
+            storage_root,
             class_record.name,
             module.name,
             lecture.name,
@@ -2800,7 +2872,7 @@ def create_app(
         except Exception:  # pragma: no cover - defensive fallback
             LOGGER.exception("Unexpected failure while inspecting slide preview")
 
-        relative_preview = preview_path.relative_to(config.storage_root).as_posix()
+        relative_preview = preview_path.relative_to(storage_root).as_posix()
         _log_event(
             "Slide preview stored",
             lecture_id=lecture_id,
@@ -2823,8 +2895,9 @@ def create_app(
             raise HTTPException(status_code=404, detail="Lecture not found")
 
         class_record, module = _require_hierarchy(lecture)
+        storage_root = _require_storage_root()
         lecture_paths = LecturePaths.build(
-            config.storage_root,
+            storage_root,
             class_record.name,
             module.name,
             lecture.name,
@@ -2848,8 +2921,9 @@ def create_app(
             raise HTTPException(status_code=404, detail="Lecture not found")
 
         class_record, module = _require_hierarchy(lecture)
+        storage_root = _require_storage_root()
         lecture_paths = LecturePaths.build(
-            config.storage_root,
+            storage_root,
             class_record.name,
             module.name,
             lecture.name,
@@ -2893,8 +2967,9 @@ def create_app(
             raise HTTPException(status_code=404, detail="Lecture not found")
 
         class_record, module = _require_hierarchy(lecture)
+        storage_root = _require_storage_root()
         lecture_paths = LecturePaths.build(
-            config.storage_root,
+            storage_root,
             class_record.name,
             module.name,
             lecture.name,
@@ -2936,8 +3011,9 @@ def create_app(
             raise HTTPException(status_code=404, detail="Lecture not found")
 
         class_record, module = _require_hierarchy(lecture)
+        storage_root = _require_storage_root()
         lecture_paths = LecturePaths.build(
-            config.storage_root,
+            storage_root,
             class_record.name,
             module.name,
             lecture.name,
@@ -2969,8 +3045,9 @@ def create_app(
             raise HTTPException(status_code=404, detail="Lecture not found")
 
         class_record, module = _require_hierarchy(lecture)
+        storage_root = _require_storage_root()
         lecture_paths = LecturePaths.build(
-            config.storage_root,
+            storage_root,
             class_record.name,
             module.name,
             lecture.name,
@@ -3013,7 +3090,7 @@ def create_app(
                     detail=f"Failed to store slide preview: {error}",
                 ) from error
             _prune_preview_dir(preview_dir)
-            slide_relative = slide_destination.relative_to(config.storage_root).as_posix()
+            slide_relative = slide_destination.relative_to(storage_root).as_posix()
         elif file is not None:
             timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
             slide_stem = build_asset_stem(
@@ -3032,7 +3109,7 @@ def create_app(
                     shutil.copyfileobj(file.file, buffer)
             finally:
                 await file.close()
-            slide_relative = slide_destination.relative_to(config.storage_root).as_posix()
+            slide_relative = slide_destination.relative_to(storage_root).as_posix()
         elif (use_existing_flag or not preview_token) and existing_slide is not None:
             slide_destination = existing_slide
             slide_relative = lecture.slide_path
@@ -3136,7 +3213,20 @@ def create_app(
     @app.get("/api/storage/usage")
     async def get_storage_usage() -> Dict[str, Any]:
         _log_event("Computing storage usage")
-        usage = shutil.disk_usage(config.storage_root)
+        root_path = _require_storage_root()
+        try:
+            usage = shutil.disk_usage(root_path)
+        except (FileNotFoundError, PermissionError, OSError):
+            root_path = _require_storage_root(force=True)
+            try:
+                usage = shutil.disk_usage(root_path)
+            except (FileNotFoundError, PermissionError, OSError) as error:
+                LOGGER.error(
+                    "Failed to read storage usage for '%s': %s",
+                    root_path,
+                    error,
+                )
+                raise HTTPException(status_code=503, detail=storage_unavailable_detail) from error
         _log_event("Storage usage calculated", total=usage.total, used=usage.used)
         return {
             "usage": {
@@ -3149,31 +3239,36 @@ def create_app(
     @app.get("/api/storage/list")
     async def list_storage(path: str = "") -> StorageListResponse:
         _log_event("Listing storage", path=path or "./")
+        root_path = _require_storage_root()
         if path:
             try:
-                target = _resolve_storage_path(config.storage_root, path)
+                target = _resolve_storage_path(root_path, path)
             except ValueError as error:
                 raise HTTPException(status_code=400, detail="Path is outside storage root") from error
         else:
-            target = config.storage_root
+            target = root_path
 
         if not target.exists():
-            raise HTTPException(status_code=404, detail="Path not found")
+            if not path:
+                root_path = _require_storage_root(force=True)
+                target = root_path
+            if not target.exists():
+                raise HTTPException(status_code=404, detail="Path not found")
 
         if target.is_file():
             raise HTTPException(status_code=400, detail="Path is not a directory")
 
         relative_path = ""
         parent_relative: Optional[str]
-        if target == config.storage_root:
+        if target == root_path:
             parent_relative = None
         else:
-            relative_path = target.relative_to(config.storage_root).as_posix()
+            relative_path = target.relative_to(root_path).as_posix()
             parent_path = target.parent
-            if parent_path == config.storage_root:
+            if parent_path == root_path:
                 parent_relative = ""
             else:
-                parent_relative = parent_path.relative_to(config.storage_root).as_posix()
+                parent_relative = parent_path.relative_to(root_path).as_posix()
 
         entries: List[StorageEntry] = []
         try:
@@ -3280,12 +3375,13 @@ def create_app(
     @app.delete("/api/storage")
     async def delete_storage(payload: StorageDeleteRequest) -> Dict[str, str]:
         _log_event("Deleting storage path", path=payload.path)
+        root_path = _require_storage_root()
         try:
-            target = _resolve_storage_path(config.storage_root, payload.path)
+            target = _resolve_storage_path(root_path, payload.path)
         except ValueError as error:
             raise HTTPException(status_code=400, detail="Path is outside storage root") from error
 
-        if target == config.storage_root:
+        if target == root_path:
             raise HTTPException(status_code=400, detail="Cannot delete storage root")
 
         if not target.exists():
@@ -3320,8 +3416,9 @@ def create_app(
     )
     async def reveal_asset(payload: RevealRequest) -> Response:
         _log_event("Revealing asset", path=payload.path, select=payload.select)
+        root_path = _require_storage_root()
         try:
-            target = _resolve_storage_path(config.storage_root, payload.path)
+            target = _resolve_storage_path(root_path, payload.path)
         except ValueError as error:
             raise HTTPException(status_code=400, detail="Path is outside storage root") from error
 

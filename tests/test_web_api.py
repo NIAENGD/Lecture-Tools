@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -176,6 +177,43 @@ def test_static_storage_respects_root_path(temp_config):
     response = client.get("/lecture/storage/hello.txt")
     assert response.status_code == 200
     assert response.text == "hi"
+
+
+def test_storage_endpoints_recover_missing_root(temp_config):
+    repository = LectureRepository(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    shutil.rmtree(temp_config.storage_root, ignore_errors=True)
+    assert not temp_config.storage_root.exists()
+
+    usage_response = client.get("/api/storage/usage")
+    assert usage_response.status_code == 200
+    assert temp_config.storage_root.exists()
+
+    listing_response = client.get("/api/storage/list")
+    assert listing_response.status_code == 200
+    payload = listing_response.json()
+    assert payload.get("path") == ""
+    assert payload.get("entries") == []
+
+
+def test_storage_endpoints_fail_when_root_unwritable(temp_config):
+    repository = LectureRepository(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    shutil.rmtree(temp_config.storage_root, ignore_errors=True)
+    temp_config.storage_root.parent.mkdir(parents=True, exist_ok=True)
+    temp_config.storage_root.write_text("blocked", encoding="utf-8")
+
+    list_response = client.get("/api/storage/list")
+    assert list_response.status_code == 503
+    detail = list_response.json().get("detail", "")
+    assert "Storage directory" in detail
+
+    usage_response = client.get("/api/storage/usage")
+    assert usage_response.status_code == 503
 
 
 def test_spa_fallback_respects_root_path(temp_config):
