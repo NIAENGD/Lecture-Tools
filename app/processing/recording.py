@@ -206,7 +206,8 @@ def preprocess_audio(
         except Exception:  # pragma: no cover - defensive logging
             LOGGER.exception("Audio preprocessing progress callback failed")
 
-    _notify(1, False)
+    stage_index = 1
+    _notify(stage_index, False)
 
     if audio.ndim == 2 and audio.shape[1] > 1:
         mono = np.mean(audio, axis=1)
@@ -214,19 +215,59 @@ def preprocess_audio(
         mono = np.squeeze(audio)
     mono = np.asarray(mono, dtype=np.float32)
 
-    _notify(1, True)
-    _notify(2, False)
+    _notify(stage_index, True)
+    stage_index += 1
+    _notify(stage_index, False)
 
     if mono.size:
         mono = mono - float(np.mean(mono))
 
-    _notify(2, True)
-    _notify(3, False)
+    _notify(stage_index, True)
+    stage_index += 1
+    _notify(stage_index, False)
+
+    mono = _shape_frequency_response(
+        mono,
+        sample_rate,
+        highpass_hz=highpass_hz,
+        lowpass_hz=lowpass_hz,
+        presence_low_hz=presence_low_hz,
+        presence_high_hz=presence_high_hz,
+        presence_gain_db=presence_gain_db,
+    )
+
+    _notify(stage_index, True)
+    stage_index += 1
+    _notify(stage_index, False)
+
+    mono = _reduce_noise(
+        mono,
+        sample_rate,
+        reduction_db=noise_reduction_db,
+        sensitivity=noise_sensitivity,
+    )
+
+    _notify(stage_index, True)
+    stage_index += 1
+    _notify(stage_index, False)
+
+    mono = _compress_signal(
+        mono,
+        sample_rate,
+        threshold_db=compressor_threshold_db,
+        ratio=compressor_ratio,
+        attack_ms=compressor_attack_ms,
+        release_ms=compressor_release_ms,
+    )
+
+    _notify(stage_index, True)
+    stage_index += 1
+    _notify(stage_index, False)
 
     mono = _normalise_signal(mono, target_peak_db=target_peak_db, target_lufs_db=target_lufs_db)
     mono = np.clip(mono, -1.0, 1.0)
 
-    _notify(3, True)
+    _notify(stage_index, True)
     return mono.astype(np.float32)
 
 
@@ -259,23 +300,45 @@ def describe_preprocess_audio_stage(
     """Return a structured description of the mastering stage."""
 
     headline_steps = (
-        "downmix to mono",
-        "remove DC offset",
-        "loudness normalisation",
+        "downmix",
+        "DC removal",
+        "tone shaping",
+        "noise control",
+        "compression",
+        "loudness match",
     )
     headline = " \u2192 ".join(headline_steps)
 
     detail_lines = (
         "Downmixing multi-channel input to mono for a consistent reference track.",
-        "Removing steady DC offset before level normalisation.",
+        "Removing steady DC offset before any dynamics processing.",
+        "Gently shaping the spectrum for speech clarity with high/low filters and a presence lift.",
         (
-            f"Normalising loudness to {target_lufs_db:.0f} LUFS with a {target_peak_db:.0f} dBFS peak "
-            "ceiling for consistent playback volume."
+            f"Reducing steady background noise by about {noise_reduction_db:.0f} dB using adaptive spectral gating."
+        ),
+        (
+            f"Applying compression with a {compressor_ratio:.1f}:1 ratio above {compressor_threshold_db:.0f} dBFS to balance"
+            " level swings across the recording."
+        ),
+        (
+            f"Normalising loudness to {target_lufs_db:.0f} LUFS with a {target_peak_db:.0f} dBFS peak ceiling for consistent"
+            " playback volume."
         ),
     )
 
     parameters: Mapping[str, float] = MappingProxyType(
         {
+            "highpass_hz": float(highpass_hz),
+            "lowpass_hz": float(lowpass_hz),
+            "presence_low_hz": float(presence_low_hz),
+            "presence_high_hz": float(presence_high_hz),
+            "presence_gain_db": float(presence_gain_db),
+            "noise_reduction_db": float(noise_reduction_db),
+            "noise_sensitivity": float(noise_sensitivity),
+            "compressor_threshold_db": float(compressor_threshold_db),
+            "compressor_ratio": float(compressor_ratio),
+            "compressor_attack_ms": float(compressor_attack_ms),
+            "compressor_release_ms": float(compressor_release_ms),
             "target_peak_db": float(target_peak_db),
             "target_lufs_db": float(target_lufs_db),
         }
