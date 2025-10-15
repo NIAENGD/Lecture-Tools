@@ -1963,7 +1963,7 @@
           <h1 data-i18n="sidebar.heading">Lecture Tools</h1>
           <p data-i18n="sidebar.tagline">Review, organise, and process lecture resources quickly.</p>
         </section>
-        <section class="panel">
+        <section id="sidebar-overview" class="panel" hidden>
           <h2 data-i18n="sidebar.overview">Overview</h2>
           <dl id="stats" class="stats-grid"></dl>
         </section>
@@ -4582,6 +4582,8 @@
           selectedLectureId: null,
           selectedLectureDetail: null,
           buttonMap: new Map(),
+          expandedClasses: new Map(),
+          expandedModules: new Map(),
           editMode: false,
           activeView: 'details',
           settings: null,
@@ -4733,6 +4735,7 @@
             storage: document.getElementById('view-storage'),
             settings: document.getElementById('view-settings'),
           },
+          sidebarOverview: document.getElementById('sidebar-overview'),
           settingsForm: document.getElementById('settings-form'),
           settingsTheme: document.getElementById('settings-theme'),
           settingsLanguage: document.getElementById('settings-language'),
@@ -8412,6 +8415,9 @@
             button.classList.toggle('active', isActive);
             button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
           });
+          if (dom.sidebarOverview) {
+            dom.sidebarOverview.hidden = view !== 'settings';
+          }
           Object.entries(dom.views).forEach(([key, element]) => {
             if (!element) {
               return;
@@ -8581,6 +8587,33 @@
             }
           }
           return null;
+        }
+
+        function ensureLectureExpansion(lectureId) {
+          if (!lectureId) {
+            return false;
+          }
+          const location = findLectureLocation(lectureId);
+          if (!location) {
+            return false;
+          }
+          let changed = false;
+          const classId = location.classEntry?.id != null ? String(location.classEntry.id) : null;
+          if (classId) {
+            if (state.expandedClasses.get(classId) !== true) {
+              state.expandedClasses.set(classId, true);
+              changed = true;
+            }
+          }
+          const moduleId = location.moduleEntry?.id != null ? String(location.moduleEntry.id) : null;
+          if (classId && moduleId) {
+            const moduleKey = `${classId}:${moduleId}`;
+            if (state.expandedModules.get(moduleKey) !== true) {
+              state.expandedModules.set(moduleKey, true);
+              changed = true;
+            }
+          }
+          return changed;
         }
 
         function clearDragIndicators() {
@@ -8877,16 +8910,30 @@
           const syllabus = document.createElement('div');
           syllabus.className = 'syllabus';
 
-          filtered.forEach((entry, classIndex) => {
+          filtered.forEach((entry) => {
             const classDetails = document.createElement('details');
             classDetails.className = 'syllabus-class';
+            const classId = entry.class?.id != null ? String(entry.class.id) : null;
             const hasSelection = entry.modules.some((moduleEntry) =>
               (moduleEntry.lectures || []).some(
                 (lecture) => lecture.id === state.selectedLectureId,
               ),
             );
-            const expandClass =
-              state.query || hasSelection || (!state.query && !hasSelection && classIndex === 0);
+            let expandClass = Boolean(hasSelection);
+            if (classId) {
+              const storedValue = state.expandedClasses.get(classId);
+              if (typeof storedValue === 'boolean') {
+                expandClass = storedValue;
+              }
+              if (hasSelection) {
+                expandClass = true;
+                state.expandedClasses.set(classId, true);
+              }
+              classDetails.dataset.classId = classId;
+              classDetails.addEventListener('toggle', () => {
+                state.expandedClasses.set(classId, classDetails.open);
+              });
+            }
             classDetails.open = expandClass;
 
             const summary = document.createElement('summary');
@@ -8956,16 +9003,30 @@
               const modulesContainer = document.createElement('div');
               modulesContainer.className = 'syllabus-modules';
 
-              entry.modules.forEach((moduleEntry, moduleIndex) => {
+              entry.modules.forEach((moduleEntry) => {
                 const moduleDetails = document.createElement('details');
                 moduleDetails.className = 'syllabus-module';
                 const moduleHasSelection = (moduleEntry.lectures || []).some(
                   (lecture) => lecture.id === state.selectedLectureId,
                 );
-                const expandModule =
-                  state.query ||
-                  moduleHasSelection ||
-                  (!state.query && !moduleHasSelection && expandClass && moduleIndex === 0);
+                const moduleId = moduleEntry.module?.id != null ? String(moduleEntry.module.id) : null;
+                let expandModule = Boolean(moduleHasSelection);
+                if (classId && moduleId) {
+                  const moduleKey = `${classId}:${moduleId}`;
+                  const storedModuleValue = state.expandedModules.get(moduleKey);
+                  if (typeof storedModuleValue === 'boolean') {
+                    expandModule = storedModuleValue;
+                  }
+                  if (moduleHasSelection) {
+                    expandModule = true;
+                    state.expandedModules.set(moduleKey, true);
+                  }
+                  moduleDetails.dataset.classId = classId;
+                  moduleDetails.dataset.moduleId = moduleId;
+                  moduleDetails.addEventListener('toggle', () => {
+                    state.expandedModules.set(moduleKey, moduleDetails.open);
+                  });
+                }
                 moduleDetails.open = expandModule;
 
                 const moduleSummary = document.createElement('summary');
@@ -9093,6 +9154,36 @@
 
           dom.curriculum.appendChild(syllabus);
           highlightSelected();
+        }
+
+        function pruneExpansionState() {
+          const classIds = new Set(
+            state.classes.map((klass) => (klass?.id != null ? String(klass.id) : null)).filter(Boolean),
+          );
+          state.expandedClasses.forEach((_, key) => {
+            if (!classIds.has(key)) {
+              state.expandedClasses.delete(key);
+            }
+          });
+
+          const moduleKeys = new Set();
+          state.classes.forEach((klass) => {
+            const classId = klass?.id != null ? String(klass.id) : null;
+            if (!classId) {
+              return;
+            }
+            (klass.modules || []).forEach((module) => {
+              if (module?.id == null) {
+                return;
+              }
+              moduleKeys.add(`${classId}:${module.id}`);
+            });
+          });
+          state.expandedModules.forEach((_, key) => {
+            if (!moduleKeys.has(key)) {
+              state.expandedModules.delete(key);
+            }
+          });
         }
 
         function requireEditMode(message = t('status.requireEdit')) {
@@ -9541,6 +9632,7 @@
             const payload = await request('/api/classes');
             state.classes = payload?.classes || [];
             state.stats = payload?.stats || {};
+            pruneExpansionState();
             state.storage.initialized = false;
             state.storage.overview = null;
             state.storage.usage = null;
@@ -9567,6 +9659,10 @@
         async function selectLecture(lectureId) {
           state.selectedLectureId = lectureId;
           state.selectedLectureDetail = null;
+          const expanded = ensureLectureExpansion(lectureId);
+          if (expanded) {
+            renderCurriculum();
+          }
           highlightSelected();
           setActiveView('details');
           try {
