@@ -1888,6 +1888,59 @@
         gap: 16px;
       }
 
+      .update-status {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .update-meta {
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      .update-log-wrapper {
+        margin-top: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .update-log-label {
+        font-size: 0.9rem;
+        font-weight: 500;
+      }
+
+      .update-log {
+        background: rgba(15, 23, 42, 0.05);
+        border: 1px solid var(--panel-border);
+        border-radius: 6px;
+        padding: 12px;
+        font-family: 'JetBrains Mono', 'SFMono-Regular', Menlo, Monaco, Consolas,
+          'Liberation Mono', 'Courier New', monospace;
+        font-size: 0.85rem;
+        line-height: 1.4;
+        max-height: 240px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      body[data-theme='dark'] .update-log {
+        background: rgba(148, 163, 184, 0.12);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        body[data-theme='system'] .update-log {
+          background: rgba(148, 163, 184, 0.12);
+        }
+      }
+
+      .update-log-empty {
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
       .field-help {
         font-size: 0.85rem;
         color: var(--muted);
@@ -2306,6 +2359,51 @@
                       600 dpi (maximum)
                     </option>
                   </select>
+                </div>
+              </fieldset>
+              <fieldset>
+                <legend data-i18n="settings.update.legend">System updates</legend>
+                <p class="field-help" data-i18n="settings.update.description">
+                  Update Lecture Tools without leaving the browser.
+                </p>
+                <div class="field-inline">
+                  <button id="settings-update-run" type="button" class="secondary" data-i18n="settings.update.run">
+                    Run update
+                  </button>
+                  <button
+                    id="settings-update-refresh"
+                    type="button"
+                    class="ghost"
+                    data-i18n="settings.update.refresh"
+                  >
+                    Refresh status
+                  </button>
+                </div>
+                <div class="update-status">
+                  <div
+                    id="settings-update-status"
+                    class="field-help"
+                    data-i18n="settings.update.status.idle"
+                  >
+                    No update in progress.
+                  </div>
+                  <div id="settings-update-meta" class="update-meta" hidden></div>
+                </div>
+                <div id="settings-update-log-wrapper" class="update-log-wrapper" hidden>
+                  <div class="update-log-label" data-i18n="settings.update.logLabel">Activity log</div>
+                  <pre
+                    id="settings-update-log"
+                    class="update-log"
+                    aria-live="polite"
+                    hidden
+                  ></pre>
+                  <div
+                    id="settings-update-log-empty"
+                    class="update-log-empty"
+                    data-i18n="settings.update.logEmpty"
+                  >
+                    No update activity yet.
+                  </div>
                 </div>
               </fieldset>
               <fieldset>
@@ -2762,6 +2860,23 @@
                   600: '600 dpi (maximum)',
                 },
               },
+              update: {
+                legend: 'System updates',
+                description: 'Update Lecture Tools without leaving the browser.',
+                run: 'Run update',
+                refresh: 'Refresh status',
+                status: {
+                  idle: 'No update in progress.',
+                  running: 'Update running. Keep this window open until it completes.',
+                  success: 'The most recent update completed successfully.',
+                  failure: 'The most recent update encountered an error.',
+                },
+                startedAt: 'Started {{time}}.',
+                finishedAt: 'Finished {{time}}.',
+                exitCode: 'Exit code {{code}}.',
+                logLabel: 'Activity log',
+                logEmpty: 'No update activity yet.',
+              },
               archive: {
                 legend: 'Archive',
                 description:
@@ -3020,6 +3135,11 @@
               gpuUnavailable: 'GPU acceleration is unavailable on this platform.',
               gpuUnsupported: 'GPU Whisper is not supported on this platform.',
               gpuNotAvailable: 'GPU acceleration is not available on this platform.',
+              updateStarted: 'Update started.',
+              updateRunning: 'Update in progress. Keep this window open.',
+              updateCompleted: 'Update completed successfully.',
+              updateFailed: 'Update failed. Review the log for details.',
+              updateConflict: 'An update is already running.',
               shuttingDown: 'Shutting down application…',
               settingsSaved: 'Settings saved.',
               gpuFallback: 'Falling back to {{model}} model.',
@@ -3196,6 +3316,23 @@
                   400: '400 dpi（高细节）',
                   600: '600 dpi（最高）',
                 },
+              },
+              update: {
+                legend: '系统更新',
+                description: '在浏览器内更新 Lecture Tools。',
+                run: '运行更新',
+                refresh: '刷新状态',
+                status: {
+                  idle: '当前没有更新任务。',
+                  running: '正在更新。请保持此窗口打开直到完成。',
+                  success: '最近一次更新已成功完成。',
+                  failure: '最近一次更新时发生错误。',
+                },
+                startedAt: '开始于 {{time}}。',
+                finishedAt: '结束于 {{time}}。',
+                exitCode: '退出代码 {{code}}。',
+                logLabel: '活动日志',
+                logEmpty: '暂时没有更新活动。',
               },
               archive: {
                 legend: '归档',
@@ -3448,6 +3585,11 @@
               gpuUnavailable: '此平台不支持 GPU 加速。',
               gpuUnsupported: '此平台不支持 GPU Whisper。',
               gpuNotAvailable: '此平台无法使用 GPU 加速。',
+              updateStarted: '已开始更新。',
+              updateRunning: '正在更新，请保持此窗口打开。',
+              updateCompleted: '更新已成功完成。',
+              updateFailed: '更新失败。请查看日志了解详情。',
+              updateConflict: '已有更新任务正在运行。',
               shuttingDown: '正在关闭应用…',
               settingsSaved: '设置已保存。',
               gpuFallback: '将回退到 {{model}} 模型。',
@@ -3625,6 +3767,23 @@
                   400: '400 dpi (alto detalle)',
                   600: '600 dpi (máximo)',
                 },
+              },
+              update: {
+                legend: 'Actualizaciones del sistema',
+                description: 'Actualiza Lecture Tools sin salir del navegador.',
+                run: 'Ejecutar actualización',
+                refresh: 'Actualizar estado',
+                status: {
+                  idle: 'No hay ninguna actualización en curso.',
+                  running: 'Actualización en curso. Mantén esta ventana abierta hasta que termine.',
+                  success: 'La actualización más reciente se completó correctamente.',
+                  failure: 'La actualización más reciente tuvo un error.',
+                },
+                startedAt: 'Inició {{time}}.',
+                finishedAt: 'Finalizó {{time}}.',
+                exitCode: 'Código de salida {{code}}.',
+                logLabel: 'Registro de actividad',
+                logEmpty: 'Aún no hay actividad de actualización.',
               },
               archive: {
                 legend: 'Archivo',
@@ -3886,6 +4045,11 @@
               gpuUnavailable: 'GPU no disponible en esta plataforma.',
               gpuUnsupported: 'GPU Whisper no es compatible con esta plataforma.',
               gpuNotAvailable: 'La aceleración GPU no está disponible en esta plataforma.',
+              updateStarted: 'Actualización iniciada.',
+              updateRunning: 'Actualización en curso. Mantén esta ventana abierta.',
+              updateCompleted: 'Actualización completada correctamente.',
+              updateFailed: 'La actualización falló. Revisa el registro para más detalles.',
+              updateConflict: 'Ya hay una actualización en curso.',
               shuttingDown: 'Cerrando la aplicación…',
               settingsSaved: 'Configuración guardada.',
               gpuFallback: 'Se usará el modelo {{model}}.',
@@ -4064,6 +4228,23 @@
                   400: '400 dpi (très détaillé)',
                   600: '600 dpi (maximum)',
                 },
+              },
+              update: {
+                legend: 'Mises à jour du système',
+                description: 'Mettez Lecture Tools à jour sans quitter le navigateur.',
+                run: 'Lancer la mise à jour',
+                refresh: 'Actualiser l’état',
+                status: {
+                  idle: 'Aucune mise à jour en cours.',
+                  running: 'Mise à jour en cours. Laissez cette fenêtre ouverte jusqu’à la fin.',
+                  success: 'La dernière mise à jour s’est terminée avec succès.',
+                  failure: 'La dernière mise à jour a rencontré une erreur.',
+                },
+                startedAt: 'Démarrée {{time}}.',
+                finishedAt: 'Terminée {{time}}.',
+                exitCode: 'Code de sortie {{code}}.',
+                logLabel: 'Journal d’activité',
+                logEmpty: 'Aucune activité de mise à jour pour le moment.',
               },
               archive: {
                 legend: 'Archive',
@@ -4325,6 +4506,11 @@
               gpuUnavailable: 'GPU indisponible sur cette plateforme.',
               gpuUnsupported: 'GPU Whisper n’est pas pris en charge sur cette plateforme.',
               gpuNotAvailable: 'L’accélération GPU n’est pas disponible sur cette plateforme.',
+              updateStarted: 'Mise à jour lancée.',
+              updateRunning: 'Mise à jour en cours. Laissez cette fenêtre ouverte.',
+              updateCompleted: 'Mise à jour terminée avec succès.',
+              updateFailed: 'Échec de la mise à jour. Consultez le journal pour plus de détails.',
+              updateConflict: 'Une mise à jour est déjà en cours.',
               shuttingDown: 'Fermeture de l’application…',
               settingsSaved: 'Paramètres enregistrés.',
               gpuFallback: 'Bascule vers le modèle {{model}}.',
@@ -4524,6 +4710,7 @@
           }
 
           renderProgressQueue();
+          renderSystemUpdate();
           if (state.selectedLectureDetail) {
             renderAssets(state.selectedLectureDetail.lecture);
           }
@@ -4546,6 +4733,7 @@
         const MAX_DEBUG_LOG_ENTRIES = 500;
         const MAX_SERVER_STREAM_ENTRIES = 20;
         const SERVER_LOG_CATEGORY = 'server';
+        const UPDATE_POLL_INTERVAL_MS = 3000;
 
         function normalizeWhisperModel(value) {
           const candidate =
@@ -4616,6 +4804,16 @@
             entries: [],
             loading: false,
             timer: null,
+          },
+          systemUpdate: {
+            running: false,
+            startedAt: null,
+            finishedAt: null,
+            success: null,
+            exitCode: null,
+            error: null,
+            log: [],
+            pollTimer: null,
           },
           transcribeControls: {
             button: null,
@@ -4751,6 +4949,13 @@
           settingsExport: document.getElementById('settings-export'),
           settingsImport: document.getElementById('settings-import'),
           settingsImportMode: document.getElementById('settings-import-mode'),
+          settingsUpdateRun: document.getElementById('settings-update-run'),
+          settingsUpdateRefresh: document.getElementById('settings-update-refresh'),
+          settingsUpdateStatus: document.getElementById('settings-update-status'),
+          settingsUpdateMeta: document.getElementById('settings-update-meta'),
+          settingsUpdateLogWrapper: document.getElementById('settings-update-log-wrapper'),
+          settingsUpdateLog: document.getElementById('settings-update-log'),
+          settingsUpdateLogEmpty: document.getElementById('settings-update-log-empty'),
           gpuModelOptions: new Set(Array.from(document.querySelectorAll('option.gpu-only'))),
           debugPane: document.getElementById('debug-pane'),
           debugLog: document.getElementById('debug-log-window'),
@@ -5127,6 +5332,200 @@
           renderStorageClasses();
         }
 
+        function parseIsoDate(value) {
+          if (typeof value !== 'string' || !value) {
+            return null;
+          }
+          const date = new Date(value);
+          if (Number.isNaN(date.getTime())) {
+            return null;
+          }
+          return date;
+        }
+
+        function formatDateTime(date) {
+          if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+            return '';
+          }
+          try {
+            const locale = getLocale(currentLanguage);
+            return new Intl.DateTimeFormat(locale, {
+              dateStyle: 'medium',
+              timeStyle: 'medium',
+            }).format(date);
+          } catch (error) {
+            return date.toLocaleString();
+          }
+        }
+
+        function startUpdatePolling() {
+          if (state.systemUpdate.pollTimer) {
+            return;
+          }
+          state.systemUpdate.pollTimer = window.setInterval(() => {
+            void fetchSystemUpdateStatus();
+          }, UPDATE_POLL_INTERVAL_MS);
+        }
+
+        function stopUpdatePolling() {
+          if (state.systemUpdate.pollTimer) {
+            window.clearInterval(state.systemUpdate.pollTimer);
+            state.systemUpdate.pollTimer = null;
+          }
+        }
+
+        function renderSystemUpdate() {
+          if (!dom.settingsUpdateStatus) {
+            return;
+          }
+          const update = state.systemUpdate;
+          const statusKey = update.running
+            ? 'running'
+            : update.success === true
+            ? 'success'
+            : update.success === false
+            ? 'failure'
+            : 'idle';
+          dom.settingsUpdateStatus.textContent = t(`settings.update.status.${statusKey}`);
+
+          if (dom.settingsUpdateMeta) {
+            const parts = [];
+            if (update.startedAt) {
+              parts.push(t('settings.update.startedAt', { time: formatDateTime(update.startedAt) }));
+            }
+            if (update.finishedAt && !update.running) {
+              parts.push(t('settings.update.finishedAt', { time: formatDateTime(update.finishedAt) }));
+            }
+            if (typeof update.exitCode === 'number' && Number.isFinite(update.exitCode)) {
+              parts.push(t('settings.update.exitCode', { code: update.exitCode }));
+            }
+            if (update.error && !update.running) {
+              parts.push(update.error);
+            }
+            if (parts.length > 0) {
+              dom.settingsUpdateMeta.textContent = parts.join(' ');
+              dom.settingsUpdateMeta.hidden = false;
+            } else {
+              dom.settingsUpdateMeta.textContent = '';
+              dom.settingsUpdateMeta.hidden = true;
+            }
+          }
+
+          if (dom.settingsUpdateRun) {
+            dom.settingsUpdateRun.disabled = update.running;
+          }
+          if (dom.settingsUpdateRefresh) {
+            dom.settingsUpdateRefresh.disabled = update.running;
+          }
+
+          if (dom.settingsUpdateLogWrapper) {
+            const entries = Array.isArray(update.log) ? update.log : [];
+            const hasEntries = entries.length > 0;
+            const shouldShowWrapper = update.running || hasEntries;
+            dom.settingsUpdateLogWrapper.hidden = !shouldShowWrapper;
+            if (dom.settingsUpdateLog) {
+              if (hasEntries) {
+                const formatted = entries
+                  .map((entry) => {
+                    const stamp = parseIsoDate(entry.timestamp);
+                    const prefix = stamp ? `[${formatDateTime(stamp)}] ` : '';
+                    const message = typeof entry.message === 'string' ? entry.message : '';
+                    return `${prefix}${message}`.trimEnd();
+                  })
+                  .join('\n');
+                dom.settingsUpdateLog.textContent = formatted;
+                dom.settingsUpdateLog.hidden = false;
+                dom.settingsUpdateLog.scrollTop = dom.settingsUpdateLog.scrollHeight;
+              } else {
+                dom.settingsUpdateLog.textContent = '';
+                dom.settingsUpdateLog.hidden = true;
+              }
+            }
+            if (dom.settingsUpdateLogEmpty) {
+              dom.settingsUpdateLogEmpty.hidden = hasEntries;
+            }
+          }
+        }
+
+        function applySystemUpdate(update) {
+          if (!update || typeof update !== 'object') {
+            return;
+          }
+          const previousRunning = state.systemUpdate.running;
+          state.systemUpdate.running = Boolean(update.running);
+          state.systemUpdate.startedAt = parseIsoDate(update.started_at);
+          state.systemUpdate.finishedAt = parseIsoDate(update.finished_at);
+          state.systemUpdate.success =
+            typeof update.success === 'boolean' ? update.success : null;
+          state.systemUpdate.exitCode =
+            typeof update.exit_code === 'number' && Number.isFinite(update.exit_code)
+              ? update.exit_code
+              : null;
+          state.systemUpdate.error =
+            typeof update.error === 'string' && update.error ? update.error : null;
+          state.systemUpdate.log = Array.isArray(update.log) ? update.log : [];
+          renderSystemUpdate();
+          if (state.systemUpdate.running) {
+            if (!previousRunning) {
+              showStatus(t('status.updateRunning'), 'info', { persist: true });
+            }
+            startUpdatePolling();
+          } else {
+            stopUpdatePolling();
+            if (previousRunning) {
+              if (state.systemUpdate.success) {
+                showStatus(t('status.updateCompleted'), 'success');
+              } else if (state.systemUpdate.success === false) {
+                const message = state.systemUpdate.error || t('status.updateFailed');
+                showStatus(message, 'error');
+              }
+            }
+          }
+        }
+
+        async function fetchSystemUpdateStatus() {
+          try {
+            const payload = await request('/api/system/update');
+            applySystemUpdate(payload?.update);
+          } catch (error) {
+            if (state.systemUpdate.running) {
+              const message = error instanceof Error ? error.message : String(error);
+              showStatus(message || t('status.updateFailed'), 'error');
+              stopUpdatePolling();
+            }
+          } finally {
+            renderSystemUpdate();
+          }
+        }
+
+        async function triggerSystemUpdate() {
+          if (!dom.settingsUpdateRun) {
+            return;
+          }
+          if (dom.settingsUpdateRun.disabled) {
+            return;
+          }
+          showStatus(t('status.updateStarted'), 'info');
+          dom.settingsUpdateRun.disabled = true;
+          if (dom.settingsUpdateRefresh) {
+            dom.settingsUpdateRefresh.disabled = true;
+          }
+          try {
+            const payload = await request('/api/system/update', { method: 'POST' });
+            applySystemUpdate(payload?.update);
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            if (typeof message === 'string' && message.toLowerCase().includes('already')) {
+              showStatus(t('status.updateConflict'), 'info');
+            } else {
+              showStatus(message || t('status.updateFailed'), 'error');
+            }
+            await fetchSystemUpdateStatus();
+          } finally {
+            renderSystemUpdate();
+          }
+        }
+
         async function refreshStorage() {
           if (!dom.storage) {
             return;
@@ -5498,6 +5897,7 @@
 
         applyTranslations(DEFAULT_LANGUAGE);
         renderStorage();
+        renderSystemUpdate();
         renderProgressQueue();
         void refreshProgressQueue({ silent: true });
 
@@ -10197,6 +10597,26 @@
           });
         }
 
+        if (dom.settingsUpdateRun) {
+          dom.settingsUpdateRun.addEventListener('click', () => {
+            void triggerSystemUpdate();
+          });
+        }
+
+        if (dom.settingsUpdateRefresh) {
+          dom.settingsUpdateRefresh.addEventListener('click', async () => {
+            if (dom.settingsUpdateRefresh.disabled) {
+              return;
+            }
+            dom.settingsUpdateRefresh.disabled = true;
+            try {
+              await fetchSystemUpdateStatus();
+            } finally {
+              dom.settingsUpdateRefresh.disabled = state.systemUpdate.running;
+            }
+          });
+        }
+
         if (dom.settingsExport) {
           dom.settingsExport.addEventListener('click', async () => {
             dom.settingsExport.disabled = true;
@@ -10400,6 +10820,7 @@
         applyTheme('system');
         await loadGpuWhisperStatus();
         await loadSettings();
+        await fetchSystemUpdateStatus();
         await refreshData();
       })();
     </script>

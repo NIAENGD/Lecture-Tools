@@ -11,6 +11,7 @@ import mimetypes
 import os
 import platform
 import re
+import shlex
 import shutil
 import stat
 import sqlite3
@@ -102,6 +103,7 @@ _SLIDE_PREVIEW_DIR_NAME = ".previews"
 _SLIDE_PREVIEW_TOKEN_PATTERN = re.compile(r"^[a-f0-9]{16,64}$")
 
 _DEFAULT_MAX_UPLOAD_BYTES = 1024 * 1024 * 1024
+_UPDATE_LOG_LIMIT = 500
 try:
     _MAX_UPLOAD_BYTES = int(
         (os.environ.get("LECTURE_TOOLS_MAX_UPLOAD_BYTES") or "").strip() or _DEFAULT_MAX_UPLOAD_BYTES
@@ -584,6 +586,162 @@ def _open_in_file_manager(path: Path, *, select: bool = False) -> None:
         raise RuntimeError(f"Could not reveal path: {error}")
 
 
+class UpdateManager:
+    """Track and execute application update commands."""
+
+    def __init__(self, project_root: Path) -> None:
+        self._project_root = project_root
+        self._lock = threading.Lock()
+        self._running = False
+        self._started_at: datetime | None = None
+        self._finished_at: datetime | None = None
+        self._success: Optional[bool] = None
+        self._exit_code: Optional[int] = None
+        self._error: Optional[str] = None
+        self._log: Deque[Dict[str, str]] = deque(maxlen=_UPDATE_LOG_LIMIT)
+        self._thread: threading.Thread | None = None
+
+    def _append_log(self, message: str) -> None:
+        entry = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "message": message.rstrip("\n"),
+        }
+        with self._lock:
+            self._log.append(entry)
+
+    def _build_commands(self) -> List[List[str]]:
+        env_command = os.environ.get("LECTURE_TOOLS_UPDATE_COMMAND", "").strip()
+        if env_command:
+            try:
+                parsed = shlex.split(env_command)
+            except ValueError:
+                parsed = []
+            if parsed:
+                return [parsed]
+
+        helper_cli = shutil.which("lecturetool")
+        if helper_cli:
+            return [[helper_cli, "update"]]
+
+        helper_script = self._project_root / "scripts" / "install_server.sh"
+        if helper_script.exists():
+            return [["/usr/bin/env", "bash", str(helper_script), "update"]]
+
+        commands: List[List[str]] = [["/usr/bin/env", "git", "-C", str(self._project_root), "pull", "--ff-only"]]
+        requirements_dev = self._project_root / "requirements-dev.txt"
+        requirements = self._project_root / "requirements.txt"
+        if requirements_dev.exists():
+            commands.append([sys.executable, "-m", "pip", "install", "-r", str(requirements_dev)])
+        elif requirements.exists():
+            commands.append([sys.executable, "-m", "pip", "install", "-r", str(requirements)])
+        return commands
+
+    def _finalize(
+        self,
+        *,
+        success: bool,
+        exit_code: Optional[int],
+        error_message: Optional[str],
+    ) -> None:
+        with self._lock:
+            self._running = False
+            self._finished_at = datetime.now(timezone.utc)
+            self._success = success
+            self._exit_code = exit_code if exit_code is not None else None
+            self._error = error_message
+            self._thread = None
+
+    def _execute(self, commands: List[List[str]]) -> None:
+        env = os.environ.copy()
+        env.setdefault("PYTHONUNBUFFERED", "1")
+        env.setdefault("PIP_DISABLE_PIP_VERSION_CHECK", "1")
+
+        if not commands:
+            message = (
+                "No update commands are configured. Set LECTURE_TOOLS_UPDATE_COMMAND or "
+                "install the lecturetool helper CLI."
+            )
+            self._append_log(message)
+            self._finalize(success=False, exit_code=None, error_message=message)
+            return
+
+        self._append_log(f"Starting update (steps: {len(commands)})")
+        success = True
+        exit_code: Optional[int] = 0
+        error_message: Optional[str] = None
+
+        for command in commands:
+            display = " ".join(shlex.quote(part) for part in command)
+            self._append_log(f"$ {display}")
+            try:
+                process = subprocess.Popen(
+                    command,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    cwd=str(self._project_root),
+                    env=env,
+                )
+            except OSError as error:
+                error_message = str(error)
+                self._append_log(f"Failed to start command: {error_message}")
+                success = False
+                exit_code = None
+                break
+
+            assert process.stdout is not None
+            for raw_line in process.stdout:
+                self._append_log(raw_line.rstrip("\n"))
+            return_code = process.wait()
+            if return_code != 0:
+                exit_code = return_code
+                error_message = f"Command exited with status {return_code}"
+                self._append_log(error_message)
+                success = False
+                break
+
+        if success:
+            self._append_log("Update completed successfully.")
+        else:
+            self._append_log("Update stopped due to errors.")
+
+        self._finalize(success=success, exit_code=exit_code, error_message=error_message)
+
+    def get_status(self) -> Dict[str, Any]:
+        with self._lock:
+            return {
+                "running": self._running,
+                "started_at": self._started_at.isoformat() if self._started_at else None,
+                "finished_at": self._finished_at.isoformat() if self._finished_at else None,
+                "success": self._success,
+                "exit_code": self._exit_code,
+                "error": self._error,
+                "log": list(self._log),
+            }
+
+    def start(self) -> Dict[str, Any]:
+        with self._lock:
+            if self._running:
+                raise RuntimeError("Update already in progress")
+            commands = self._build_commands()
+            self._running = True
+            self._started_at = datetime.now(timezone.utc)
+            self._finished_at = None
+            self._success = None
+            self._exit_code = None
+            self._error = None
+            self._log.clear()
+            self._append_log("Update requested")
+            thread = threading.Thread(
+                target=self._execute,
+                args=(commands,),
+                daemon=True,
+            )
+            self._thread = thread
+        thread.start()
+        return self.get_status()
+
+
 class LectureCreatePayload(BaseModel):
     module_id: int
     name: str = Field(..., min_length=1)
@@ -898,6 +1056,10 @@ def create_app(
     settings_store = SettingsStore(config)
     progress_tracker = TranscriptionProgressTracker()
     processing_tracker = TranscriptionProgressTracker()
+
+    project_root = Path(__file__).resolve().parents[2]
+    update_manager = UpdateManager(project_root)
+    app.state.update_manager = update_manager
 
     background_executor = ThreadPoolExecutor(
         max_workers=1,
@@ -3488,6 +3650,24 @@ def create_app(
 
         _log_event("Asset revealed", path=payload.path)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    @app.get("/api/system/update")
+    async def get_update_status() -> Dict[str, Any]:
+        manager: UpdateManager | None = getattr(app.state, "update_manager", None)
+        if manager is None:
+            raise HTTPException(status_code=503, detail="Update service is unavailable")
+        return {"update": manager.get_status()}
+
+    @app.post("/api/system/update")
+    async def trigger_update() -> Dict[str, Any]:
+        manager: UpdateManager | None = getattr(app.state, "update_manager", None)
+        if manager is None:
+            raise HTTPException(status_code=503, detail="Update service is unavailable")
+        try:
+            status_payload = manager.start()
+        except RuntimeError as error:
+            raise HTTPException(status_code=409, detail=str(error)) from error
+        return {"update": status_payload}
 
     @app.post("/api/system/shutdown", status_code=status.HTTP_202_ACCEPTED)
     async def shutdown_application() -> Dict[str, str]:
