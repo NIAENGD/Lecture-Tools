@@ -7,6 +7,7 @@ from typing import Any
 
 import io
 import time
+import sys
 import wave
 from concurrent.futures import ThreadPoolExecutor, wait
 
@@ -197,6 +198,61 @@ def test_storage_endpoints_recover_missing_root(temp_config):
     assert payload.get("path") == ""
     assert payload.get("entries") == []
 
+
+def test_system_update_endpoint(temp_config):
+    repository = LectureRepository(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    script_path = temp_config.storage_root / "fake_update.py"
+    script_path.parent.mkdir(parents=True, exist_ok=True)
+    script_path.write_text(
+        "import sys, time\n"
+        "sys.stdout.write('update-start\\n')\n"
+        "sys.stdout.flush()\n"
+        "time.sleep(0.2)\n"
+        "sys.stdout.write('update-finish\\n')\n",
+        encoding="utf-8",
+    )
+
+    manager = getattr(app.state, "update_manager")
+
+    def fake_build_commands(self):
+        return [[sys.executable, str(script_path)]]
+
+    manager._build_commands = fake_build_commands.__get__(manager, type(manager))
+
+    status = client.get("/api/system/update")
+    assert status.status_code == 200
+    initial = status.json()["update"]
+    assert initial["running"] is False
+
+    started = client.post("/api/system/update")
+    assert started.status_code == 200
+    first_payload = started.json()["update"]
+    assert isinstance(first_payload, dict)
+
+    if first_payload.get("running"):
+        time.sleep(0.05)
+        conflict = client.post("/api/system/update")
+        assert conflict.status_code == 409
+        assert "detail" in conflict.json()
+
+    final_payload = None
+    for _ in range(40):
+        poll = client.get("/api/system/update")
+        assert poll.status_code == 200
+        body = poll.json()["update"]
+        if not body["running"]:
+            final_payload = body
+            break
+        time.sleep(0.05)
+
+    assert final_payload is not None
+    assert final_payload["success"] in {True, False}
+    log_messages = [entry.get("message", "") for entry in final_payload.get("log", [])]
+    assert any("update-start" in message for message in log_messages)
+    assert any("update-finish" in message for message in log_messages)
 
 def test_storage_endpoints_fail_when_root_unwritable(temp_config):
     repository = LectureRepository(temp_config)
