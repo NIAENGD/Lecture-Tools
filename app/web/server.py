@@ -621,6 +621,9 @@ class UpdateManager:
 
         helper_cli = shutil.which("lecturetool")
         if helper_cli:
+            sudo_cli = shutil.which("sudo")
+            if sudo_cli:
+                return [[sudo_cli, "-n", helper_cli, "update"]]
             return [[helper_cli, "update"]]
 
         helper_script = self._project_root / "scripts" / "install_server.sh"
@@ -681,6 +684,7 @@ class UpdateManager:
                     text=True,
                     cwd=str(self._project_root),
                     env=env,
+                    stdin=subprocess.DEVNULL,
                 )
             except OSError as error:
                 error_message = str(error)
