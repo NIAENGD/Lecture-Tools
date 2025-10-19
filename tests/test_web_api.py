@@ -199,6 +199,38 @@ def test_storage_endpoints_recover_missing_root(temp_config):
     assert payload.get("entries") == []
 
 
+def test_storage_listing_and_delete_orphan_directory(temp_config):
+    repository = LectureRepository(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    orphan_dir = temp_config.storage_root / "orphan"
+    orphan_dir.mkdir(parents=True, exist_ok=True)
+    (orphan_dir / "note.txt").write_text("orphan", encoding="utf-8")
+
+    root_listing = client.get("/api/storage/list")
+    assert root_listing.status_code == 200
+    entries = root_listing.json().get("entries", [])
+    orphan_entry = next((entry for entry in entries if entry.get("path") == "orphan"), None)
+    assert orphan_entry is not None
+    assert orphan_entry.get("is_dir") is True
+
+    nested_listing = client.get("/api/storage/list", params={"path": orphan_entry["path"]})
+    assert nested_listing.status_code == 200
+    nested_entries = nested_listing.json().get("entries", [])
+    assert any(item.get("name") == "note.txt" for item in nested_entries)
+
+    delete_response = client.request("DELETE", "/api/storage", json={"path": orphan_entry["path"]})
+    assert delete_response.status_code == 200
+    assert delete_response.json().get("status") == "deleted"
+    assert not orphan_dir.exists()
+
+    refreshed_listing = client.get("/api/storage/list")
+    assert refreshed_listing.status_code == 200
+    refreshed_entries = refreshed_listing.json().get("entries", [])
+    assert all(entry.get("path") != orphan_entry["path"] for entry in refreshed_entries)
+
+
 def test_system_update_endpoint(temp_config):
     repository = LectureRepository(temp_config)
     app = create_app(repository, config=temp_config)
