@@ -258,6 +258,53 @@
         color: #22d3ee;
       }
 
+      .debug-pane-controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: flex-end;
+      }
+
+      .debug-filter {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-size: 0.75rem;
+        color: rgba(148, 163, 184, 0.85);
+      }
+
+      .debug-filter input {
+        padding: 6px 8px;
+        border: 1px solid rgba(94, 117, 148, 0.6);
+        border-radius: 6px;
+        background: rgba(15, 23, 42, 0.85);
+        color: #e2e8f0;
+        font-size: 0.8rem;
+      }
+
+      .debug-filter input::placeholder {
+        color: rgba(148, 163, 184, 0.6);
+      }
+
+      .debug-filter-clear {
+        padding: 6px 10px;
+        border: 1px solid rgba(94, 117, 148, 0.6);
+        border-radius: 6px;
+        background: transparent;
+        color: rgba(226, 232, 240, 0.9);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        cursor: pointer;
+        transition: background 0.15s ease, color 0.15s ease;
+      }
+
+      .debug-filter-clear:hover,
+      .debug-filter-clear:focus {
+        background: rgba(59, 130, 246, 0.18);
+        color: #f8fafc;
+      }
+
       .debug-log-window {
         flex: 1;
         background: rgba(15, 23, 42, 0.8);
@@ -265,8 +312,9 @@
         border-radius: 8px;
         padding: 12px;
         overflow-y: auto;
-        white-space: pre-wrap;
-        word-break: break-word;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
       }
 
       .debug-log-window:focus {
@@ -276,13 +324,72 @@
 
       .debug-log-line {
         margin: 0;
+        padding: 10px 12px;
+        border-radius: 6px;
+        border-left: 3px solid rgba(59, 130, 246, 0.4);
+        background: rgba(30, 41, 59, 0.75);
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
         font-size: 0.82rem;
-        line-height: 1.4;
         color: #e2e8f0;
+        word-break: break-word;
       }
 
       .debug-log-line + .debug-log-line {
         margin-top: 4px;
+      }
+
+      .debug-log-line[data-level='WARNING'] {
+        border-left-color: rgba(250, 204, 21, 0.75);
+      }
+
+      .debug-log-line[data-level='ERROR'],
+      .debug-log-line[data-level='CRITICAL'] {
+        border-left-color: rgba(248, 113, 113, 0.85);
+      }
+
+      .debug-log-meta {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.72rem;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+        color: rgba(148, 163, 184, 0.9);
+      }
+
+      .debug-log-badge {
+        padding: 2px 6px;
+        border-radius: 999px;
+        background: rgba(37, 99, 235, 0.25);
+        color: rgba(191, 219, 254, 0.95);
+        font-weight: 600;
+      }
+
+      .debug-log-time {
+        font-variant-numeric: tabular-nums;
+        opacity: 0.75;
+      }
+
+      .debug-log-tag {
+        padding: 2px 6px;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.65);
+        border: 1px solid rgba(71, 85, 105, 0.7);
+        color: rgba(226, 232, 240, 0.95);
+      }
+
+      .debug-log-message {
+        white-space: pre-wrap;
+        line-height: 1.5;
+      }
+
+      .debug-log-details {
+        font-size: 0.72rem;
+        color: rgba(148, 163, 184, 0.9);
+        white-space: normal;
       }
 
       .debug-log-empty {
@@ -2653,6 +2760,38 @@
       <div class="debug-pane-header">
         <h2 class="debug-pane-title" data-i18n="debug.title">Debug console</h2>
         <span class="debug-indicator" data-i18n="debug.live">Live</span>
+      </div>
+      <div class="debug-pane-controls">
+        <label class="debug-filter">
+          <span class="debug-filter-label">Request</span>
+          <input
+            id="debug-filter-request"
+            type="search"
+            placeholder="Filter by request ID"
+            autocomplete="off"
+          />
+        </label>
+        <label class="debug-filter">
+          <span class="debug-filter-label">Job</span>
+          <input
+            id="debug-filter-job"
+            type="search"
+            placeholder="Filter by job ID"
+            autocomplete="off"
+          />
+        </label>
+        <label class="debug-filter">
+          <span class="debug-filter-label">Actor</span>
+          <input
+            id="debug-filter-actor"
+            type="search"
+            placeholder="Filter by actor"
+            autocomplete="off"
+          />
+        </label>
+        <button id="debug-filter-clear" type="button" class="debug-filter-clear">
+          Clear
+        </button>
       </div>
       <div
         id="debug-log-window"
@@ -5150,6 +5289,12 @@
             pending: false,
             autoScroll: true,
             serverEntries: [],
+            entries: [],
+            filters: {
+              requestId: '',
+              jobId: '',
+              actor: '',
+            },
           },
         };
 
@@ -5287,6 +5432,10 @@
           debugStream: document.getElementById('debug-stream-window'),
           debugStreamEntries: document.getElementById('debug-stream-entries'),
           debugStreamEmpty: document.getElementById('debug-stream-empty'),
+          debugFilterRequest: document.getElementById('debug-filter-request'),
+          debugFilterJob: document.getElementById('debug-filter-job'),
+          debugFilterActor: document.getElementById('debug-filter-actor'),
+          debugFilterClear: document.getElementById('debug-filter-clear'),
           storage: {
             container: document.getElementById('view-storage'),
             path: document.getElementById('storage-path'),
@@ -5383,11 +5532,50 @@
           },
         };
 
+        const DEFAULT_DEBUG_EMPTY_TEXT = dom.debugEmpty
+          ? dom.debugEmpty.textContent || ''
+          : '';
+        const FILTERED_DEBUG_EMPTY_TEXT = 'No log entries match the current filters.';
+
         if (dom.debugLog) {
           dom.debugLog.addEventListener('scroll', () => {
             const element = dom.debugLog;
             const remaining = element.scrollHeight - element.scrollTop - element.clientHeight;
             state.debug.autoScroll = remaining <= 40;
+          });
+        }
+
+        if (dom.debugFilterRequest) {
+          dom.debugFilterRequest.addEventListener('input', (event) => {
+            setDebugFilter('requestId', event.target.value || '');
+          });
+        }
+
+        if (dom.debugFilterJob) {
+          dom.debugFilterJob.addEventListener('input', (event) => {
+            setDebugFilter('jobId', event.target.value || '');
+          });
+        }
+
+        if (dom.debugFilterActor) {
+          dom.debugFilterActor.addEventListener('input', (event) => {
+            setDebugFilter('actor', event.target.value || '');
+          });
+        }
+
+        if (dom.debugFilterClear) {
+          dom.debugFilterClear.addEventListener('click', () => {
+            state.debug.filters = { requestId: '', jobId: '', actor: '' };
+            if (dom.debugFilterRequest) {
+              dom.debugFilterRequest.value = '';
+            }
+            if (dom.debugFilterJob) {
+              dom.debugFilterJob.value = '';
+            }
+            if (dom.debugFilterActor) {
+              dom.debugFilterActor.value = '';
+            }
+            renderDebugLogs();
           });
         }
 
@@ -6774,23 +6962,318 @@
             if (state.settings) {
               state.settings.whisper_model = GPU_MODEL;
             }
+        }
+      }
+
+      function ensureDebugPlaceholder() {
+        if (!dom.debugLog || !dom.debugEmpty) {
+          return;
+        }
+        if (!dom.debugEmpty.parentElement) {
+          dom.debugLog.appendChild(dom.debugEmpty);
+        }
+      }
+
+      function normalizeCorrelationValue(value) {
+        if (typeof value === 'string') {
+          return value.trim();
+        }
+        if (value == null) {
+          return '';
+        }
+        return String(value).trim();
+      }
+
+      function getEntryCorrelation(entry, key) {
+        if (!entry || typeof entry !== 'object') {
+          return '';
+        }
+        const sources = [entry[key], entry?.context?.[key], entry?.payload?.[key]];
+        for (const source of sources) {
+          const normalized = normalizeCorrelationValue(source);
+          if (normalized) {
+            return normalized;
+          }
+        }
+        return '';
+      }
+
+      function normalizeFilterValue(value) {
+        if (typeof value === 'string') {
+          return value.trim().toLowerCase();
+        }
+        return '';
+      }
+
+      function hasActiveFilters() {
+        const filters = state.debug.filters || {};
+        return Boolean(
+          normalizeFilterValue(filters.requestId) ||
+            normalizeFilterValue(filters.jobId) ||
+            normalizeFilterValue(filters.actor)
+        );
+      }
+
+      function formatTimestamp(value) {
+        if (typeof value !== 'string' || !value) {
+          return '';
+        }
+        const parsed = new Date(value);
+        if (!Number.isNaN(parsed.getTime())) {
+          return parsed.toLocaleTimeString([], {
+            hour12: false,
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+          });
+        }
+        return value;
+      }
+
+      function matchesDebugFilters(entry) {
+        const filters = state.debug.filters || {};
+        const requestFilter = normalizeFilterValue(filters.requestId);
+        const jobFilter = normalizeFilterValue(filters.jobId);
+        const actorFilter = normalizeFilterValue(filters.actor);
+        if (!requestFilter && !jobFilter && !actorFilter) {
+          return true;
+        }
+        const requestId = getEntryCorrelation(entry, 'request_id').toLowerCase();
+        const jobId = getEntryCorrelation(entry, 'job_id').toLowerCase();
+        const actor = getEntryCorrelation(entry, 'actor').toLowerCase();
+        if (requestFilter && !requestId.includes(requestFilter)) {
+          return false;
+        }
+        if (jobFilter && !jobId.includes(jobFilter)) {
+          return false;
+        }
+        if (actorFilter && !actor.includes(actorFilter)) {
+          return false;
+        }
+        return true;
+      }
+
+      function applyDebugFilters(entries) {
+        const list = Array.isArray(entries) ? entries : [];
+        return list.filter((entry) => matchesDebugFilters(entry));
+      }
+
+      function summarizeEntryDetails(entry) {
+        const ignore = new Set(['request_id', 'job_id', 'actor']);
+        const segments = [];
+        const seen = new Set();
+        const appendFrom = (source) => {
+          if (!source || typeof source !== 'object') {
+            return;
+          }
+          Object.entries(source).forEach(([key, value]) => {
+            if (!key || ignore.has(key)) {
+              return;
+            }
+            const normalized = normalizeCorrelationValue(value);
+            if (!normalized) {
+              return;
+            }
+            const label = `${key}: ${normalized}`;
+            if (seen.has(label)) {
+              return;
+            }
+            seen.add(label);
+            segments.push(label);
+          });
+        };
+        appendFrom(entry?.context);
+        appendFrom(entry?.payload);
+        if (typeof entry?.count === 'number' && entry.count > 1) {
+          const label = `occurrences: ${entry.count}`;
+          if (!seen.has(label)) {
+            seen.add(label);
+            segments.push(label);
+          }
+        }
+        if (typeof entry?.last_duration_ms === 'number') {
+          const last = entry.last_duration_ms.toFixed(1).replace(/\.0$/, '');
+          const label = `last ${last} ms`;
+          if (!seen.has(label)) {
+            seen.add(label);
+            segments.push(label);
+          }
+        }
+        if (typeof entry?.average_duration_ms === 'number' && entry.average_duration_ms > 0) {
+          const avg = entry.average_duration_ms.toFixed(1).replace(/\.0$/, '');
+          const label = `avg ${avg} ms`;
+          if (!seen.has(label)) {
+            seen.add(label);
+            segments.push(label);
+          }
+        }
+        return segments;
+      }
+
+      function buildDebugLogEntry(entry) {
+        const line = document.createElement('article');
+        line.className = 'debug-log-line';
+        if (entry && typeof entry === 'object') {
+          if (entry.level) {
+            line.dataset.level = String(entry.level);
+          }
+          if (entry.id != null) {
+            line.dataset.entryId = String(entry.id);
           }
         }
 
-        function ensureDebugPlaceholder() {
-          if (!dom.debugLog || !dom.debugEmpty) {
-            return;
-          }
-          if (!dom.debugEmpty.parentElement) {
-            dom.debugLog.appendChild(dom.debugEmpty);
-          }
+        const requestId = getEntryCorrelation(entry, 'request_id');
+        const jobId = getEntryCorrelation(entry, 'job_id');
+        const actor = getEntryCorrelation(entry, 'actor');
+        if (requestId) {
+          line.dataset.requestId = requestId;
+        }
+        if (jobId) {
+          line.dataset.jobId = jobId;
+        }
+        if (actor) {
+          line.dataset.actor = actor;
         }
 
-        function updateDebugStatus(message) {
-          if (!dom.debugStatus) {
-            return;
+        const meta = document.createElement('div');
+        meta.className = 'debug-log-meta';
+
+        const eventType = normalizeCorrelationValue(entry?.event_type || entry?.logger);
+        if (eventType) {
+          const badge = document.createElement('span');
+          badge.className = 'debug-log-badge';
+          badge.textContent = eventType;
+          meta.appendChild(badge);
+        }
+
+        if (entry?.level) {
+          const level = document.createElement('span');
+          level.className = 'debug-log-tag';
+          level.textContent = String(entry.level);
+          meta.appendChild(level);
+        }
+
+        const timestampSource = entry?.last_seen || entry?.first_seen || entry?.timestamp;
+        const formattedTime = formatTimestamp(timestampSource);
+        if (formattedTime) {
+          const timeElement = document.createElement('span');
+          timeElement.className = 'debug-log-time';
+          timeElement.textContent = formattedTime;
+          meta.appendChild(timeElement);
+        }
+
+        if (requestId) {
+          const requestTag = document.createElement('span');
+          requestTag.className = 'debug-log-tag';
+          requestTag.textContent = `req ${requestId}`;
+          meta.appendChild(requestTag);
+        }
+
+        if (jobId) {
+          const jobTag = document.createElement('span');
+          jobTag.className = 'debug-log-tag';
+          jobTag.textContent = `job ${jobId}`;
+          meta.appendChild(jobTag);
+        }
+
+        if (actor) {
+          const actorTag = document.createElement('span');
+          actorTag.className = 'debug-log-tag';
+          actorTag.textContent = actor;
+          meta.appendChild(actorTag);
+        }
+
+        const messageElement = document.createElement('div');
+        messageElement.className = 'debug-log-message';
+        const rendered =
+          typeof entry?.rendered === 'string' && entry.rendered
+            ? entry.rendered
+            : entry?.message;
+        messageElement.textContent = typeof rendered === 'string' ? rendered : '';
+
+        line.appendChild(meta);
+        line.appendChild(messageElement);
+
+        const details = summarizeEntryDetails(entry);
+        if (details.length) {
+          const detailElement = document.createElement('div');
+          detailElement.className = 'debug-log-details';
+          detailElement.textContent = details.join(' · ');
+          line.appendChild(detailElement);
+        }
+
+        return line;
+      }
+
+      function renderDebugLogs() {
+        if (!dom.debugLog) {
+          return;
+        }
+        ensureDebugPlaceholder();
+        const entries = Array.isArray(state.debug.entries)
+          ? state.debug.entries.slice(-MAX_DEBUG_LOG_ENTRIES)
+          : [];
+        const filtered = applyDebugFilters(entries);
+        const container = dom.debugLog;
+        const existing = Array.from(container.children).filter((child) => child !== dom.debugEmpty);
+        existing.forEach((child) => {
+          container.removeChild(child);
+        });
+        const hasServerEntries = Array.isArray(state.debug.serverEntries)
+          ? state.debug.serverEntries.length > 0
+          : false;
+        if (!filtered.length) {
+          if (dom.debugEmpty) {
+            if (hasActiveFilters()) {
+              dom.debugEmpty.textContent = FILTERED_DEBUG_EMPTY_TEXT;
+              dom.debugEmpty.hidden = false;
+            } else {
+              dom.debugEmpty.textContent = DEFAULT_DEBUG_EMPTY_TEXT;
+              dom.debugEmpty.hidden = hasServerEntries;
+            }
           }
-          if (message) {
+          if (state.debug.autoScroll) {
+            container.scrollTop = container.scrollHeight;
+          }
+          return;
+        }
+
+        if (dom.debugEmpty) {
+          dom.debugEmpty.textContent = DEFAULT_DEBUG_EMPTY_TEXT;
+          dom.debugEmpty.hidden = true;
+        }
+
+        filtered.forEach((entry) => {
+          container.appendChild(buildDebugLogEntry(entry));
+        });
+
+        if (state.debug.autoScroll) {
+          container.scrollTop = container.scrollHeight;
+        }
+      }
+
+      function setDebugFilter(field, value) {
+        const filters = state.debug.filters || {
+          requestId: '',
+          jobId: '',
+          actor: '',
+        };
+        const next = typeof value === 'string' ? value.trim() : '';
+        if (filters[field] === next) {
+          return;
+        }
+        state.debug.filters = {
+          ...filters,
+          [field]: next,
+        };
+        renderDebugLogs();
+      }
+
+      function updateDebugStatus(message) {
+        if (!dom.debugStatus) {
+          return;
+        }
+        if (message) {
             dom.debugStatus.hidden = false;
             dom.debugStatus.textContent = message;
           } else {
@@ -6856,13 +7339,6 @@
           if (!dom.debugLog) {
             return;
           }
-          if (reset) {
-            dom.debugLog.innerHTML = '';
-            ensureDebugPlaceholder();
-            if (dom.debugEmpty) {
-              dom.debugEmpty.hidden = false;
-            }
-          }
           const list = Array.isArray(entries) ? entries : [];
           const serverLogs = [];
           const regularLogs = [];
@@ -6878,47 +7354,15 @@
           });
 
           updateServerStream(serverLogs, { reset });
-
-          if (!regularLogs.length) {
-            if (dom.debugEmpty) {
-              const hasEntries = Array.from(dom.debugLog.children).some(
-                (child) => child !== dom.debugEmpty,
-              );
-              const hasServerEntries = Array.isArray(state.debug.serverEntries)
-                ? state.debug.serverEntries.length > 0
-                : false;
-              dom.debugEmpty.hidden = hasEntries || hasServerEntries;
-            }
-            return;
+          if (reset || !Array.isArray(state.debug.entries)) {
+            state.debug.entries = [];
           }
-
-          ensureDebugPlaceholder();
-          if (dom.debugEmpty) {
-            dom.debugEmpty.hidden = true;
+          if (regularLogs.length) {
+            state.debug.entries = state.debug.entries
+              .concat(regularLogs)
+              .slice(-MAX_DEBUG_LOG_ENTRIES);
           }
-
-          regularLogs.forEach((entry) => {
-            const line = document.createElement('p');
-            line.className = 'debug-log-line';
-            line.textContent = String(entry.message || '');
-            dom.debugLog.appendChild(line);
-          });
-
-          const rendered = Array.from(dom.debugLog.children).filter(
-            (child) => child !== dom.debugEmpty,
-          );
-          let excess = rendered.length - MAX_DEBUG_LOG_ENTRIES;
-          for (const child of rendered) {
-            if (excess <= 0) {
-              break;
-            }
-            dom.debugLog.removeChild(child);
-            excess -= 1;
-          }
-
-          if (state.debug.autoScroll) {
-            dom.debugLog.scrollTop = dom.debugLog.scrollHeight;
-          }
+          renderDebugLogs();
         }
 
         async function fetchDebugLogs(reset = false) {
@@ -7000,6 +7444,8 @@
             stopDebugPolling();
             updateDebugStatus('');
             updateServerStream([], { reset: true });
+            state.debug.entries = [];
+            renderDebugLogs();
             if (dom.debugEmpty) {
               ensureDebugPlaceholder();
               dom.debugEmpty.hidden = false;

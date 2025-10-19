@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import functools
 import contextlib
+import contextvars
 import json
 import logging
 import mimetypes
@@ -119,6 +120,46 @@ def get_max_upload_bytes() -> int:
     return int(_MAX_UPLOAD_BYTES)
 
 
+_REQUEST_ID_VAR: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar(
+    "lecture_tools_request_id",
+    default=None,
+)
+_JOB_ID_VAR: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar(
+    "lecture_tools_job_id",
+    default=None,
+)
+_ACTOR_VAR: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar(
+    "lecture_tools_actor",
+    default=None,
+)
+
+
+def _new_correlation_id() -> str:
+    return uuid.uuid4().hex
+
+
+def _format_actor_label(role: str, detail: Optional[str] = None) -> str:
+    base = role.strip() if role else "actor"
+    if detail is None:
+        return base
+    suffix = str(detail).strip()
+    return f"{base}:{suffix}" if suffix else base
+
+
+def _collect_correlation_context() -> Dict[str, str]:
+    context: Dict[str, str] = {}
+    request_id = _REQUEST_ID_VAR.get()
+    if request_id:
+        context["request_id"] = str(request_id)
+    job_id = _JOB_ID_VAR.get()
+    if job_id:
+        context["job_id"] = str(job_id)
+    actor = _ACTOR_VAR.get()
+    if actor:
+        context["actor"] = str(actor)
+    return context
+
+
 class LargeUploadRequest(Request):
     """Request subclass that applies the configured multipart upload limit."""
 
@@ -140,6 +181,41 @@ class LargeUploadRequest(Request):
             max_fields=max_fields,
             max_part_size=effective_limit,
         )
+
+
+class RequestContextMiddleware:
+    """Assign a correlation identifier to each request and expose it via contextvars."""
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope.get("type") != "http":
+            await self.app(scope, receive, send)
+            return
+
+        request_id = _new_correlation_id()
+        scope_state = scope.get("state")
+        if scope_state is None:
+            scope_state = {}
+            scope["state"] = scope_state
+        if isinstance(scope_state, dict):
+            scope_state["request_id"] = request_id
+        else:
+            setattr(scope_state, "request_id", request_id)
+
+        method = scope.get("method")
+        actor_hint = _format_actor_label("request", method.upper() if isinstance(method, str) else None)
+        request_token = _REQUEST_ID_VAR.set(request_id)
+        actor_token = _ACTOR_VAR.set(actor_hint)
+        job_token = _JOB_ID_VAR.set(None)
+
+        try:
+            await self.app(scope, receive, send)
+        finally:
+            _JOB_ID_VAR.reset(job_token)
+            _ACTOR_VAR.reset(actor_token)
+            _REQUEST_ID_VAR.reset(request_token)
 
 
 def _copy_upload_stream(
@@ -170,8 +246,23 @@ async def _persist_upload_file(
     copy_operation = functools.partial(_copy_upload_stream, upload, target, chunk_size=chunk_size)
     await loop.run_in_executor(None, copy_operation)
 
-LOGGER = logging.getLogger(__name__)
-EVENT_LOGGER = logging.getLogger("lecture_tools.ui.events")
+class ContextualLoggerAdapter(logging.LoggerAdapter):
+    """Logger adapter that injects correlation context into records."""
+
+    def process(self, msg: Any, kwargs: Dict[str, Any]) -> tuple[Any, Dict[str, Any]]:  # type: ignore[override]
+        extra: Dict[str, Any] = dict(self.extra)
+        provided = kwargs.get("extra")
+        if isinstance(provided, dict):
+            extra.update(provided)
+        correlation = _collect_correlation_context()
+        for key, value in correlation.items():
+            extra.setdefault(key, value)
+        kwargs["extra"] = extra
+        return msg, kwargs
+
+
+LOGGER = ContextualLoggerAdapter(logging.getLogger(__name__), {})
+EVENT_LOGGER = ContextualLoggerAdapter(logging.getLogger("lecture_tools.ui.events"), {})
 
 
 _PDF_PAGE_COUNT_TIMEOUT_SECONDS = 8.0
@@ -372,7 +463,16 @@ class DebugLogHandler(logging.Handler):
         for key, value in record.__dict__.items():
             if key in self._IGNORED_FIELDS or key.startswith("_"):
                 continue
-            if key in {"debug_context", "debug_event", "debug_event_type", "debug_payload", "debug_duration_ms"}:
+            if key in {
+                "debug_context",
+                "debug_event",
+                "debug_event_type",
+                "debug_payload",
+                "debug_duration_ms",
+                "request_id",
+                "job_id",
+                "actor",
+            }:
                 continue
             sanitized = _sanitize_context_value(value)
             if sanitized is None:
@@ -382,16 +482,30 @@ class DebugLogHandler(logging.Handler):
             payload.pop("duration_ms")
         return payload
 
+    def _extract_correlation(self, record: logging.LogRecord) -> Dict[str, str]:
+        correlation: Dict[str, str] = {}
+        for field in ("request_id", "job_id", "actor"):
+            value = getattr(record, field, None)
+            if value is None:
+                continue
+            sanitized = _sanitize_context_value(value)
+            if sanitized is None:
+                continue
+            correlation[field] = str(sanitized)
+        return correlation
+
     def _build_key(
         self,
         event_type: str,
         message: str,
         context: Dict[str, Any],
         payload: Dict[str, Any],
+        correlation: Dict[str, Any],
     ) -> Tuple[Any, ...]:
         context_items = tuple(sorted(context.items())) if context else tuple()
         payload_items = tuple(sorted(payload.items())) if payload else tuple()
-        return (event_type, message, context_items, payload_items)
+        correlation_items = tuple(sorted(correlation.items())) if correlation else tuple()
+        return (event_type, message, context_items, payload_items, correlation_items)
 
     def _serialize_entry(self, entry: Dict[str, Any]) -> Dict[str, Any]:
         exported = {key: value for key, value in entry.items() if key != "_key"}
@@ -421,6 +535,7 @@ class DebugLogHandler(logging.Handler):
         context = self._extract_context(record)
         payload = self._extract_payload(record)
         duration_ms = self._extract_duration(record)
+        correlation = self._extract_correlation(record)
 
         timestamp = datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat()
         event_type = str(getattr(record, "debug_event_type", record.name))
@@ -429,7 +544,7 @@ class DebugLogHandler(logging.Handler):
             if any(record.name.startswith(prefix) for prefix in _SERVER_LOGGER_PREFIXES)
             else "application"
         )
-        key = self._build_key(event_type, base_message, context, payload)
+        key = self._build_key(event_type, base_message, context, payload, correlation)
 
         with self._lock:
             self._last_id += 1
@@ -469,6 +584,8 @@ class DebugLogHandler(logging.Handler):
                     existing["max_duration_ms"] = max(
                         existing.get("max_duration_ms", duration_ms), duration_ms
                     )
+                if correlation:
+                    existing.update(correlation)
                 existing["_key"] = key
                 self._entries.append(existing)
             else:
@@ -496,6 +613,8 @@ class DebugLogHandler(logging.Handler):
                     entry["last_duration_ms"] = duration_ms
                     entry["min_duration_ms"] = duration_ms
                     entry["max_duration_ms"] = duration_ms
+                if correlation:
+                    entry.update(correlation)
                 self._entries.append(entry)
                 self._entry_index[key] = entry
                 while len(self._entries) > self._capacity:
@@ -545,18 +664,27 @@ class TranscriptionProgressTracker:
     def _merge_context(
         self, state: Dict[str, Any], context: Optional[Dict[str, Any]] = None
     ) -> None:
-        if not context:
-            return
-        filtered = {
-            key: value for key, value in context.items() if key is not None and value is not None
-        }
-        if not filtered:
-            return
-        existing = state.get("context")
-        if not isinstance(existing, dict):
-            existing = {}
-        existing.update(filtered)
-        state["context"] = existing
+        filtered: Dict[str, Any] = {}
+        if context:
+            filtered = {
+                key: value
+                for key, value in context.items()
+                if key is not None and value is not None
+            }
+        existing_context = state.get("context")
+        combined: Dict[str, Any] = {}
+        if isinstance(existing_context, dict):
+            combined.update(existing_context)
+        correlation = _collect_correlation_context()
+        correlation_keys = set(correlation)
+        if correlation:
+            combined.update(correlation)
+        for key, value in filtered.items():
+            if key in correlation_keys and correlation.get(key) is not None:
+                continue
+            combined[key] = value
+        if combined:
+            state["context"] = combined
 
     def start(
         self,
@@ -1377,6 +1505,7 @@ def create_app(
         root_logger.addHandler(debug_handler)
     app.state.debug_log_handler = debug_handler
     app.state.debug_enabled = False
+    app.add_middleware(RequestContextMiddleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
@@ -1410,6 +1539,7 @@ def create_app(
         *,
         context_label: str,
         queued_callback: Optional[Callable[[], None]] = None,
+        job_id: Optional[str] = None,
     ) -> T:
         """Run ``operation`` in the shared worker, queueing if necessary."""
 
@@ -1417,8 +1547,26 @@ def create_app(
         jobs: Set[Future] = getattr(app.state, "background_jobs")
         jobs_lock: threading.Lock = getattr(app.state, "background_jobs_lock")
 
+        current_job_id = _JOB_ID_VAR.get()
+        active_job_id = job_id or current_job_id or _new_correlation_id()
+        job_token: Optional[contextvars.Token[Optional[str]]] = None
+        if current_job_id != active_job_id:
+            job_token = _JOB_ID_VAR.set(active_job_id)
+
         loop = asyncio.get_running_loop()
-        future = loop.run_in_executor(executor, operation)
+        parent_context = contextvars.copy_context()
+
+        def _run_with_context() -> T:
+            def _invoke() -> T:
+                actor_token = _ACTOR_VAR.set(_format_actor_label("job", context_label))
+                try:
+                    return operation()
+                finally:
+                    _ACTOR_VAR.reset(actor_token)
+
+            return parent_context.run(_invoke)
+
+        future = loop.run_in_executor(executor, _run_with_context)
 
         with jobs_lock:
             active_jobs = {job for job in jobs if not job.done()}
@@ -1445,6 +1593,8 @@ def create_app(
         finally:
             with jobs_lock:
                 jobs.discard(future)
+            if job_token is not None:
+                _JOB_ID_VAR.reset(job_token)
 
         return result
 
@@ -3214,309 +3364,316 @@ def create_app(
         compute_type = settings.whisper_compute_type or default_settings.whisper_compute_type
         beam_size = settings.whisper_beam_size or default_settings.whisper_beam_size
 
-        progress_tracker.start(
-            lecture_id,
-            context={"operation": "transcription", "model": payload.model},
-        )
-
-        def _perform_audio_mastering(source: Path) -> Tuple[Path, str]:
-            timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-            base_stem = Path(source.name).stem or build_asset_stem(
-                class_record.name,
-                module.name,
-                lecture.name,
-                "audio",
-            )
-            total_steps = float(AUDIO_MASTERING_TOTAL_STEPS)
-            progress_tracker.update(
+        job_id = _new_correlation_id()
+        job_token = _JOB_ID_VAR.set(job_id)
+        try:
+            progress_tracker.start(
                 lecture_id,
-                0.0,
-                total_steps,
-                format_progress_message(
-                    "====> Preparing audio mastering…",
+                context={"operation": "transcription", "model": payload.model},
+            )
+    
+            def _perform_audio_mastering(source: Path) -> Tuple[Path, str]:
+                timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+                base_stem = Path(source.name).stem or build_asset_stem(
+                    class_record.name,
+                    module.name,
+                    lecture.name,
+                    "audio",
+                )
+                total_steps = float(AUDIO_MASTERING_TOTAL_STEPS)
+                progress_tracker.update(
+                    lecture_id,
                     0.0,
                     total_steps,
-                ),
-            )
-
-            wav_path, _ = ensure_wav(
-                source,
-                output_dir=lecture_paths.raw_dir,
-                stem=base_stem,
-                timestamp=timestamp,
-            )
-
-            completed_steps = 1.0
-            progress_tracker.update(
-                lecture_id,
-                completed_steps,
-                total_steps,
-                format_progress_message(
-                    "====> Analysing uploaded audio…",
-                    completed_steps,
-                    total_steps,
-                ),
-            )
-
-            samples, sample_rate = load_wav_file(wav_path)
-            if LOGGER.isEnabledFor(logging.DEBUG):
-                LOGGER.debug(
-                    "Audio mastering diagnostics before preprocessing for lecture %s: %s",
-                    lecture_id,
-                    describe_audio_debug_stats(samples, sample_rate),
-                )
-
-            completed_steps += 1.0
-            (
-                stage_message,
-                stage_description,
-                stage_index,
-                total_stage_count,
-            ) = build_mastering_stage_progress_message(completed_steps, total_steps)
-            progress_tracker.update(
-                lecture_id,
-                completed_steps,
-                total_steps,
-                stage_message,
-            )
-            if LOGGER.isEnabledFor(logging.INFO):
-                LOGGER.info(
-                    "Mastering stage %s/%s operations: %s",
-                    stage_index,
-                    total_stage_count,
-                    "; ".join(stage_description.detail_lines),
-                )
-                LOGGER.info(
-                    "Mastering stage %s/%s parameters: %s",
-                    stage_index,
-                    total_stage_count,
-                    ", ".join(
-                        f"{name}={value}" for name, value in stage_description.parameters.items()
+                    format_progress_message(
+                        "====> Preparing audio mastering…",
+                        0.0,
+                        total_steps,
                     ),
                 )
-
-            stage_base = completed_steps
-
-            def _handle_mastering_substage(
-                step_index: int,
-                step_count: int,
-                detail: str,
-                completed: bool,
-            ) -> None:
-                if step_count <= 0:
-                    return
-                if completed:
-                    fraction = float(step_index) / float(step_count)
-                else:
-                    fraction = float(step_index - 1) / float(step_count)
-                fraction = max(0.0, min(fraction, 1.0))
-                progress_value = min(stage_base + fraction, total_steps)
-                message_detail = detail.strip() or stage_description.summary
-                if stage_index is not None and total_stage_count is not None:
-                    progress_label = f"====> Stage {stage_index}/{total_stage_count} – {message_detail}"
-                else:
-                    progress_label = f"====> {message_detail}"
-                progress_message = format_progress_message(
-                    progress_label,
-                    progress_value,
+    
+                wav_path, _ = ensure_wav(
+                    source,
+                    output_dir=lecture_paths.raw_dir,
+                    stem=base_stem,
+                    timestamp=timestamp,
+                )
+    
+                completed_steps = 1.0
+                progress_tracker.update(
+                    lecture_id,
+                    completed_steps,
+                    total_steps,
+                    format_progress_message(
+                        "====> Analysing uploaded audio…",
+                        completed_steps,
+                        total_steps,
+                    ),
+                )
+    
+                samples, sample_rate = load_wav_file(wav_path)
+                if LOGGER.isEnabledFor(logging.DEBUG):
+                    LOGGER.debug(
+                        "Audio mastering diagnostics before preprocessing for lecture %s: %s",
+                        lecture_id,
+                        describe_audio_debug_stats(samples, sample_rate),
+                    )
+    
+                completed_steps += 1.0
+                (
+                    stage_message,
+                    stage_description,
+                    stage_index,
+                    total_stage_count,
+                ) = build_mastering_stage_progress_message(completed_steps, total_steps)
+                progress_tracker.update(
+                    lecture_id,
+                    completed_steps,
+                    total_steps,
+                    stage_message,
+                )
+                if LOGGER.isEnabledFor(logging.INFO):
+                    LOGGER.info(
+                        "Mastering stage %s/%s operations: %s",
+                        stage_index,
+                        total_stage_count,
+                        "; ".join(stage_description.detail_lines),
+                    )
+                    LOGGER.info(
+                        "Mastering stage %s/%s parameters: %s",
+                        stage_index,
+                        total_stage_count,
+                        ", ".join(
+                            f"{name}={value}" for name, value in stage_description.parameters.items()
+                        ),
+                    )
+    
+                stage_base = completed_steps
+    
+                def _handle_mastering_substage(
+                    step_index: int,
+                    step_count: int,
+                    detail: str,
+                    completed: bool,
+                ) -> None:
+                    if step_count <= 0:
+                        return
+                    if completed:
+                        fraction = float(step_index) / float(step_count)
+                    else:
+                        fraction = float(step_index - 1) / float(step_count)
+                    fraction = max(0.0, min(fraction, 1.0))
+                    progress_value = min(stage_base + fraction, total_steps)
+                    message_detail = detail.strip() or stage_description.summary
+                    if stage_index is not None and total_stage_count is not None:
+                        progress_label = f"====> Stage {stage_index}/{total_stage_count} – {message_detail}"
+                    else:
+                        progress_label = f"====> {message_detail}"
+                    progress_message = format_progress_message(
+                        progress_label,
+                        progress_value,
+                        total_steps,
+                    )
+                    progress_tracker.update(
+                        lecture_id,
+                        progress_value,
+                        total_steps,
+                        progress_message,
+                    )
+    
+                processed = preprocess_audio(
+                    samples,
+                    sample_rate,
+                    progress_callback=_handle_mastering_substage,
+                )
+    
+                if LOGGER.isEnabledFor(logging.DEBUG):
+                    LOGGER.debug(
+                        "Audio mastering diagnostics after preprocessing for lecture %s: %s",
+                        lecture_id,
+                        describe_audio_debug_stats(processed, sample_rate),
+                    )
+    
+                completed_steps += 1.0
+                progress_tracker.update(
+                    lecture_id,
+                    completed_steps,
+                    total_steps,
+                    format_progress_message(
+                        "====> Rendering mastered waveform…",
+                        completed_steps,
+                        total_steps,
+                    ),
+                )
+    
+                lecture_paths.processed_audio_dir.mkdir(parents=True, exist_ok=True)
+                processed_name = f"{base_stem}-master.wav"
+                processed_target = lecture_paths.processed_audio_dir / processed_name
+                if processed_target.exists():
+                    processed_name = build_timestamped_name(
+                        f"{base_stem}-master",
+                        timestamp=timestamp,
+                        extension=".wav",
+                    )
+                    processed_target = lecture_paths.processed_audio_dir / processed_name
+    
+                save_preprocessed_wav(processed_target, processed, sample_rate)
+    
+                completion_message = format_progress_message(
+                    "====> Audio mastering completed.",
+                    total_steps,
                     total_steps,
                 )
                 progress_tracker.update(
                     lecture_id,
-                    progress_value,
                     total_steps,
-                    progress_message,
-                )
-
-            processed = preprocess_audio(
-                samples,
-                sample_rate,
-                progress_callback=_handle_mastering_substage,
-            )
-
-            if LOGGER.isEnabledFor(logging.DEBUG):
-                LOGGER.debug(
-                    "Audio mastering diagnostics after preprocessing for lecture %s: %s",
-                    lecture_id,
-                    describe_audio_debug_stats(processed, sample_rate),
-                )
-
-            completed_steps += 1.0
-            progress_tracker.update(
-                lecture_id,
-                completed_steps,
-                total_steps,
-                format_progress_message(
-                    "====> Rendering mastered waveform…",
-                    completed_steps,
                     total_steps,
-                ),
-            )
-
-            lecture_paths.processed_audio_dir.mkdir(parents=True, exist_ok=True)
-            processed_name = f"{base_stem}-master.wav"
-            processed_target = lecture_paths.processed_audio_dir / processed_name
-            if processed_target.exists():
-                processed_name = build_timestamped_name(
-                    f"{base_stem}-master",
-                    timestamp=timestamp,
-                    extension=".wav",
+                    completion_message,
                 )
-                processed_target = lecture_paths.processed_audio_dir / processed_name
-
-            save_preprocessed_wav(processed_target, processed, sample_rate)
-
-            completion_message = format_progress_message(
-                "====> Audio mastering completed.",
-                total_steps,
-                total_steps,
-            )
-            progress_tracker.update(
-                lecture_id,
-                total_steps,
-                total_steps,
-                completion_message,
-            )
-
-            return processed_target, completion_message
-
-        if audio_mastering_required:
-            if not ffmpeg_available():
-                message = (
-                    "Audio mastering requires FFmpeg to be installed on the server. "
-                    "Install FFmpeg or disable audio mastering."
+    
+                return processed_target, completion_message
+    
+            if audio_mastering_required:
+                if not ffmpeg_available():
+                    message = (
+                        "Audio mastering requires FFmpeg to be installed on the server. "
+                        "Install FFmpeg or disable audio mastering."
+                    )
+                    progress_tracker.fail(lecture_id, f"====> {message}")
+                    raise HTTPException(status_code=503, detail=message)
+                try:
+                    mastered_path, _completion = await _run_serialized_background_task(
+                        lambda: _perform_audio_mastering(audio_file),
+                        context_label="audio mastering",
+                        queued_callback=lambda: progress_tracker.note(
+                            lecture_id, "====> Waiting for other tasks to finish…"
+                        ),
+                        job_id=job_id,
+                    )
+                except ValueError as error:
+                    progress_tracker.fail(lecture_id, f"====> {error}")
+                    raise HTTPException(status_code=400, detail=str(error)) from error
+                except Exception as error:  # noqa: BLE001 - mastering may raise arbitrary errors
+                    LOGGER.exception(
+                        "Audio mastering failed during transcription for lecture %s", lecture_id
+                    )
+                    progress_tracker.fail(lecture_id, f"====> {error}")
+                    raise HTTPException(status_code=500, detail=str(error)) from error
+                else:
+                    processed_relative = mastered_path.relative_to(storage_root).as_posix()
+                    try:
+                        repository.update_lecture_assets(
+                            lecture_id,
+                            processed_audio_path=processed_relative,
+                        )
+                    except Exception:  # noqa: BLE001 - repository update may fail
+                        LOGGER.exception(
+                            "Failed to record processed audio path for lecture %s", lecture_id
+                        )
+                    else:
+                        _log_event(
+                            "Audio mastering completed",
+                            lecture_id=lecture_id,
+                            path=processed_relative,
+                        )
+                    audio_file = mastered_path
+            def handle_progress(current: float, total: Optional[float], message: str) -> None:
+                progress_tracker.update(lecture_id, current, total, message)
+    
+            def _perform_transcription() -> Tuple[
+                TranscriptResult,
+                Optional[str],
+                Optional[str],
+                Optional[Dict[str, Any]],
+            ]:
+                fallback_model: Optional[str] = None
+                fallback_reason: Optional[str] = None
+                gpu_probe: Optional[Dict[str, Any]] = None
+    
+                def _build_engine(model_name: str) -> FasterWhisperTranscription:
+                    return FasterWhisperTranscription(
+                        model_name,
+                        download_root=config.assets_root,
+                        compute_type=compute_type,
+                        beam_size=beam_size,
+                    )
+    
+                try:
+                    engine = _build_engine(payload.model)
+                except GPUWhisperUnsupportedError as error:
+                    fallback_model = _DEFAULT_UI_SETTINGS.whisper_model
+                    fallback_reason = str(error)
+                    gpu_probe = {"supported": False, "message": str(error), "output": ""}
+                    progress_tracker.note(
+                        lecture_id,
+                        f"====> {error} Falling back to {fallback_model} model.",
+                    )
+                    engine = _build_engine(fallback_model)
+                except GPUWhisperModelMissingError as error:
+                    http_error = HTTPException(status_code=400, detail=str(error))
+                    setattr(
+                        http_error,
+                        "gpu_probe",
+                        {"supported": False, "message": str(error), "output": ""},
+                    )
+                    raise http_error from error
+    
+                result = engine.transcribe(
+                    audio_file,
+                    lecture_paths.transcript_dir,
+                    progress_callback=handle_progress,
                 )
-                progress_tracker.fail(lecture_id, f"====> {message}")
-                raise HTTPException(status_code=503, detail=message)
+    
+                return result, fallback_model, fallback_reason, gpu_probe
+    
             try:
-                mastered_path, _completion = await _run_serialized_background_task(
-                    lambda: _perform_audio_mastering(audio_file),
-                    context_label="audio mastering",
+                result, fallback_model, fallback_reason, gpu_probe = await _run_serialized_background_task(
+                    _perform_transcription,
+                    context_label="transcription",
                     queued_callback=lambda: progress_tracker.note(
                         lecture_id, "====> Waiting for other tasks to finish…"
                     ),
+                    job_id=job_id,
                 )
-            except ValueError as error:
-                progress_tracker.fail(lecture_id, f"====> {error}")
-                raise HTTPException(status_code=400, detail=str(error)) from error
-            except Exception as error:  # noqa: BLE001 - mastering may raise arbitrary errors
-                LOGGER.exception(
-                    "Audio mastering failed during transcription for lecture %s", lecture_id
-                )
+            except HTTPException as error:
+                detail = getattr(error, "detail", str(error))
+                progress_tracker.fail(lecture_id, f"====> {detail}")
+                probe = getattr(error, "gpu_probe", None)
+                if probe:
+                    _record_gpu_probe(probe)
+                raise
+            except Exception as error:  # noqa: BLE001 - backend may raise arbitrary errors
                 progress_tracker.fail(lecture_id, f"====> {error}")
                 raise HTTPException(status_code=500, detail=str(error)) from error
             else:
-                processed_relative = mastered_path.relative_to(storage_root).as_posix()
-                try:
-                    repository.update_lecture_assets(
-                        lecture_id,
-                        processed_audio_path=processed_relative,
+                if gpu_probe:
+                    _record_gpu_probe(gpu_probe)
+                elif payload.model == "gpu" and fallback_model is None:
+                    _record_gpu_probe(
+                        {"supported": True, "message": "GPU Whisper CLI active.", "output": ""}
                     )
-                except Exception:  # noqa: BLE001 - repository update may fail
-                    LOGGER.exception(
-                        "Failed to record processed audio path for lecture %s", lecture_id
-                    )
-                else:
-                    _log_event(
-                        "Audio mastering completed",
-                        lecture_id=lecture_id,
-                        path=processed_relative,
-                    )
-                audio_file = mastered_path
-        def handle_progress(current: float, total: Optional[float], message: str) -> None:
-            progress_tracker.update(lecture_id, current, total, message)
-
-        def _perform_transcription() -> Tuple[
-            TranscriptResult,
-            Optional[str],
-            Optional[str],
-            Optional[Dict[str, Any]],
-        ]:
-            fallback_model: Optional[str] = None
-            fallback_reason: Optional[str] = None
-            gpu_probe: Optional[Dict[str, Any]] = None
-
-            def _build_engine(model_name: str) -> FasterWhisperTranscription:
-                return FasterWhisperTranscription(
-                    model_name,
-                    download_root=config.assets_root,
-                    compute_type=compute_type,
-                    beam_size=beam_size,
-                )
-
-            try:
-                engine = _build_engine(payload.model)
-            except GPUWhisperUnsupportedError as error:
-                fallback_model = _DEFAULT_UI_SETTINGS.whisper_model
-                fallback_reason = str(error)
-                gpu_probe = {"supported": False, "message": str(error), "output": ""}
-                progress_tracker.note(
-                    lecture_id,
-                    f"====> {error} Falling back to {fallback_model} model.",
-                )
-                engine = _build_engine(fallback_model)
-            except GPUWhisperModelMissingError as error:
-                http_error = HTTPException(status_code=400, detail=str(error))
-                setattr(
-                    http_error,
-                    "gpu_probe",
-                    {"supported": False, "message": str(error), "output": ""},
-                )
-                raise http_error from error
-
-            result = engine.transcribe(
-                audio_file,
-                lecture_paths.transcript_dir,
-                progress_callback=handle_progress,
+                progress_tracker.finish(lecture_id, "====> Transcription completed.")
+    
+            transcript_relative = result.text_path.relative_to(storage_root).as_posix()
+            repository.update_lecture_assets(lecture_id, transcript_path=transcript_relative)
+            updated = repository.get_lecture(lecture_id)
+            if updated is None:
+                raise HTTPException(status_code=500, detail="Lecture update failed")
+            response = {"lecture": _serialize_lecture(updated), "transcript_path": transcript_relative}
+            if result.segments_path:
+                response["segments_path"] = result.segments_path.relative_to(storage_root).as_posix()
+            if fallback_model:
+                response["fallback_model"] = fallback_model
+                if fallback_reason:
+                    response["fallback_reason"] = fallback_reason
+            _log_event(
+                "Transcription finished",
+                lecture_id=lecture_id,
+                transcript_path=transcript_relative,
+                fallback=fallback_model,
             )
-
-            return result, fallback_model, fallback_reason, gpu_probe
-
-        try:
-            result, fallback_model, fallback_reason, gpu_probe = await _run_serialized_background_task(
-                _perform_transcription,
-                context_label="transcription",
-                queued_callback=lambda: progress_tracker.note(
-                    lecture_id, "====> Waiting for other tasks to finish…"
-                ),
-            )
-        except HTTPException as error:
-            detail = getattr(error, "detail", str(error))
-            progress_tracker.fail(lecture_id, f"====> {detail}")
-            probe = getattr(error, "gpu_probe", None)
-            if probe:
-                _record_gpu_probe(probe)
-            raise
-        except Exception as error:  # noqa: BLE001 - backend may raise arbitrary errors
-            progress_tracker.fail(lecture_id, f"====> {error}")
-            raise HTTPException(status_code=500, detail=str(error)) from error
-        else:
-            if gpu_probe:
-                _record_gpu_probe(gpu_probe)
-            elif payload.model == "gpu" and fallback_model is None:
-                _record_gpu_probe(
-                    {"supported": True, "message": "GPU Whisper CLI active.", "output": ""}
-                )
-            progress_tracker.finish(lecture_id, "====> Transcription completed.")
-
-        transcript_relative = result.text_path.relative_to(storage_root).as_posix()
-        repository.update_lecture_assets(lecture_id, transcript_path=transcript_relative)
-        updated = repository.get_lecture(lecture_id)
-        if updated is None:
-            raise HTTPException(status_code=500, detail="Lecture update failed")
-        response = {"lecture": _serialize_lecture(updated), "transcript_path": transcript_relative}
-        if result.segments_path:
-            response["segments_path"] = result.segments_path.relative_to(storage_root).as_posix()
-        if fallback_model:
-            response["fallback_model"] = fallback_model
-            if fallback_reason:
-                response["fallback_reason"] = fallback_reason
-        _log_event(
-            "Transcription finished",
-            lecture_id=lecture_id,
-            transcript_path=transcript_relative,
-            fallback=fallback_model,
-        )
+        finally:
+            _JOB_ID_VAR.reset(job_token)
         return response
 
     @app.post(
@@ -3878,125 +4035,132 @@ def create_app(
             "slide markdown extraction" if is_markdown else "slide conversion"
         )
 
-        processing_tracker.start(
-            lecture_id,
-            start_message,
-            context={
-                "operation": operation_label,
-                "mode": mode_value,
-                "preview_token": preview_token,
-                "page_range": {
-                    "start": selected_range[0],
-                    "end": selected_range[1],
-                }
-                if selected_range
-                else None,
-            },
-        )
-
-        progress_total: Optional[float] = None
-
-        def _handle_slide_progress(processed: int, total: Optional[int]) -> None:
-            nonlocal progress_total
-            if total and total > 0:
-                progress_total = float(total)
-                current = float(max(0, min(processed, total)))
-                message = format_progress_message(
-                    progress_label,
-                    current,
-                    progress_total,
-                )
-                processing_tracker.update(
-                    lecture_id,
-                    current,
-                    progress_total,
-                    message,
-                )
-            else:
-                processing_tracker.note(lecture_id, progress_label)
-
-        slide_image_relative: Optional[str] = None
-        notes_relative: Optional[str] = None
-
+        job_id = _new_correlation_id()
+        job_token = _JOB_ID_VAR.set(job_id)
         try:
-            if is_markdown:
-                notes_relative = await _run_serialized_background_task(
-                    lambda: _generate_slide_markdown(
-                        slide_destination,
-                        lecture_paths,
-                        page_range=selected_range,
-                        progress_callback=_handle_slide_progress,
-                    ),
-                    context_label=context_label,
-                    queued_callback=lambda: processing_tracker.note(
-                        lecture_id, "====> Waiting for other tasks to finish…"
-                    ),
-                )
+            processing_tracker.start(
+                lecture_id,
+                start_message,
+                context={
+                    "operation": operation_label,
+                    "mode": mode_value,
+                    "preview_token": preview_token,
+                    "page_range": {
+                        "start": selected_range[0],
+                        "end": selected_range[1],
+                    }
+                    if selected_range
+                    else None,
+                },
+            )
+    
+            progress_total: Optional[float] = None
+    
+            def _handle_slide_progress(processed: int, total: Optional[int]) -> None:
+                nonlocal progress_total
+                if total and total > 0:
+                    progress_total = float(total)
+                    current = float(max(0, min(processed, total)))
+                    message = format_progress_message(
+                        progress_label,
+                        current,
+                        progress_total,
+                    )
+                    processing_tracker.update(
+                        lecture_id,
+                        current,
+                        progress_total,
+                        message,
+                    )
+                else:
+                    processing_tracker.note(lecture_id, progress_label)
+    
+            slide_image_relative: Optional[str] = None
+            notes_relative: Optional[str] = None
+    
+            try:
+                if is_markdown:
+                    notes_relative = await _run_serialized_background_task(
+                        lambda: _generate_slide_markdown(
+                            slide_destination,
+                            lecture_paths,
+                            page_range=selected_range,
+                            progress_callback=_handle_slide_progress,
+                        ),
+                        context_label=context_label,
+                        queued_callback=lambda: processing_tracker.note(
+                            lecture_id, "====> Waiting for other tasks to finish…"
+                        ),
+                        job_id=job_id,
+                    )
+                else:
+                    slide_image_relative = await _run_serialized_background_task(
+                        lambda: _generate_slide_archive(
+                            slide_destination,
+                            lecture_paths,
+                            _make_slide_converter(),
+                            page_range=selected_range,
+                            progress_callback=_handle_slide_progress,
+                        ),
+                        context_label=context_label,
+                        queued_callback=lambda: processing_tracker.note(
+                            lecture_id, "====> Waiting for other tasks to finish…"
+                        ),
+                        job_id=job_id,
+                    )
+            except HTTPException as error:
+                detail = getattr(error, "detail", str(error))
+                processing_tracker.fail(lecture_id, f"====> {detail}")
+                raise
+            except SlideMarkdownDependencyError as error:
+                processing_tracker.fail(lecture_id, f"====> {error}")
+                raise HTTPException(status_code=503, detail=str(error)) from error
+            except SlideMarkdownError as error:
+                processing_tracker.fail(lecture_id, f"====> {error}")
+                raise HTTPException(status_code=500, detail=str(error)) from error
+            except SlideConversionDependencyError as error:
+                LOGGER.warning("Slide conversion unavailable: %s", error)
+                processing_tracker.fail(lecture_id, f"====> {error}")
+                raise HTTPException(status_code=503, detail=str(error)) from error
+            except Exception as error:  # noqa: BLE001 - conversion may raise arbitrary errors
+                processing_tracker.fail(lecture_id, f"====> {error}")
+                raise HTTPException(status_code=500, detail=str(error)) from error
             else:
-                slide_image_relative = await _run_serialized_background_task(
-                    lambda: _generate_slide_archive(
-                        slide_destination,
-                        lecture_paths,
-                        _make_slide_converter(),
-                        page_range=selected_range,
-                        progress_callback=_handle_slide_progress,
-                    ),
-                    context_label=context_label,
-                    queued_callback=lambda: processing_tracker.note(
-                        lecture_id, "====> Waiting for other tasks to finish…"
-                    ),
-                )
-        except HTTPException as error:
-            detail = getattr(error, "detail", str(error))
-            processing_tracker.fail(lecture_id, f"====> {detail}")
-            raise
-        except SlideMarkdownDependencyError as error:
-            processing_tracker.fail(lecture_id, f"====> {error}")
-            raise HTTPException(status_code=503, detail=str(error)) from error
-        except SlideMarkdownError as error:
-            processing_tracker.fail(lecture_id, f"====> {error}")
-            raise HTTPException(status_code=500, detail=str(error)) from error
-        except SlideConversionDependencyError as error:
-            LOGGER.warning("Slide conversion unavailable: %s", error)
-            processing_tracker.fail(lecture_id, f"====> {error}")
-            raise HTTPException(status_code=503, detail=str(error)) from error
-        except Exception as error:  # noqa: BLE001 - conversion may raise arbitrary errors
-            processing_tracker.fail(lecture_id, f"====> {error}")
-            raise HTTPException(status_code=500, detail=str(error)) from error
-        else:
-            if progress_total and progress_total > 0:
-                completion_message = format_progress_message(
-                    completion_label,
-                    progress_total,
-                    progress_total,
-                )
-            else:
-                completion_message = completion_label
-            processing_tracker.finish(lecture_id, completion_message)
-
-        update_kwargs: Dict[str, Optional[str]] = {"slide_path": slide_relative}
-        if slide_image_relative is not None:
-            update_kwargs["slide_image_dir"] = slide_image_relative
-        if notes_relative is not None:
-            update_kwargs["notes_path"] = notes_relative
-
-        repository.update_lecture_assets(
-            lecture_id,
-            **update_kwargs,
-        )
-
-        updated = repository.get_lecture(lecture_id)
-        if updated is None:
-            raise HTTPException(status_code=500, detail="Lecture update failed")
-
-        _log_event(
-            "Slides processed",
-            lecture_id=lecture_id,
-            slide_path=slide_relative,
-            slide_image_dir=slide_image_relative,
-            notes_path=notes_relative,
-            mode=mode_value,
-        )
+                if progress_total and progress_total > 0:
+                    completion_message = format_progress_message(
+                        completion_label,
+                        progress_total,
+                        progress_total,
+                    )
+                else:
+                    completion_message = completion_label
+                processing_tracker.finish(lecture_id, completion_message)
+    
+            update_kwargs: Dict[str, Optional[str]] = {"slide_path": slide_relative}
+            if slide_image_relative is not None:
+                update_kwargs["slide_image_dir"] = slide_image_relative
+            if notes_relative is not None:
+                update_kwargs["notes_path"] = notes_relative
+    
+            repository.update_lecture_assets(
+                lecture_id,
+                **update_kwargs,
+            )
+    
+            updated = repository.get_lecture(lecture_id)
+            if updated is None:
+                raise HTTPException(status_code=500, detail="Lecture update failed")
+    
+            _log_event(
+                "Slides processed",
+                lecture_id=lecture_id,
+                slide_path=slide_relative,
+                slide_image_dir=slide_image_relative,
+                notes_path=notes_relative,
+                mode=mode_value,
+            )
+        finally:
+            _JOB_ID_VAR.reset(job_token)
         return {
             "lecture": _serialize_lecture(updated),
             "slide_path": slide_relative,
