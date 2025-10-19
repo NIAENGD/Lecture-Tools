@@ -951,6 +951,19 @@
         align-self: flex-start;
       }
 
+      .storage-lecture-processed {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        background: var(--status-info-bg);
+        color: var(--status-info-text);
+        border-radius: 999px;
+        padding: 2px 8px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        align-self: flex-start;
+      }
+
       .dialog-title {
         margin: 0;
         font-size: 1.1rem;
@@ -2916,18 +2929,22 @@
               classes: {
                 summary: '{{moduleCount}} {{moduleWord}} • {{lectureCount}} {{lectureWord}}',
                 empty: 'No modules stored for this class yet.',
+                masteredCount: '{{count}} {{lectureWord}} with mastered audio',
               },
               modules: {
                 summary: '{{lectureCount}} {{lectureWord}}',
                 empty: 'No lectures stored for this module yet.',
+                masteredCount: '{{count}} {{lectureWord}} with mastered audio',
               },
               lecture: {
                 audio: 'Audio',
+                processedAudio: 'Mastered audio',
                 transcript: 'Transcript',
                 notes: 'Notes',
                 slides: 'Slides',
                 empty: 'No linked assets.',
                 eligible: 'Audio ready for removal',
+                processedBadge: 'Mastered audio',
               },
               dialogs: {
                 purgeTitle: 'Remove processed audio',
@@ -3372,18 +3389,22 @@
               classes: {
                 summary: '{{moduleCount}} 个{{moduleWord}} • {{lectureCount}} 个{{lectureWord}}',
                 empty: '该班级暂无存储的模块。',
+                masteredCount: '{{count}} 个{{lectureWord}}含优化音频',
               },
               modules: {
                 summary: '{{lectureCount}} 个{{lectureWord}}',
                 empty: '该模块暂无存储的讲座。',
+                masteredCount: '{{count}} 个{{lectureWord}}含优化音频',
               },
               lecture: {
                 audio: '音频',
+                processedAudio: '优化音频',
                 transcript: '逐字稿',
                 notes: '笔记',
                 slides: '课件',
                 empty: '尚未关联资源。',
                 eligible: '音频可安全移除',
+                processedBadge: '已生成优化音频',
               },
               dialogs: {
                 purgeTitle: '移除已处理的音频',
@@ -3824,18 +3845,22 @@
               classes: {
                 summary: '{{moduleCount}} {{moduleWord}} • {{lectureCount}} {{lectureWord}}',
                 empty: 'Esta clase no tiene módulos almacenados.',
+                masteredCount: '{{count}} {{lectureWord}} con audio masterizado',
               },
               modules: {
                 summary: '{{lectureCount}} {{lectureWord}}',
                 empty: 'Este módulo no tiene clases almacenadas.',
+                masteredCount: '{{count}} {{lectureWord}} con audio masterizado',
               },
               lecture: {
                 audio: 'Audio',
+                processedAudio: 'Audio masterizado',
                 transcript: 'Transcripción',
                 notes: 'Notas',
                 slides: 'Diapositivas',
                 empty: 'Sin recursos vinculados.',
                 eligible: 'Audio listo para eliminarse',
+                processedBadge: 'Audio masterizado',
               },
               dialogs: {
                 purgeTitle: 'Quitar audio procesado',
@@ -4285,18 +4310,22 @@
               classes: {
                 summary: '{{moduleCount}} {{moduleWord}} • {{lectureCount}} {{lectureWord}}',
                 empty: 'Ce cours n’a pas encore de modules stockés.',
+                masteredCount: '{{count}} {{lectureWord}} avec audio masterisé',
               },
               modules: {
                 summary: '{{lectureCount}} {{lectureWord}}',
                 empty: 'Ce module n’a pas encore de séances stockées.',
+                masteredCount: '{{count}} {{lectureWord}} avec audio masterisé',
               },
               lecture: {
                 audio: 'Audio',
+                processedAudio: 'Audio masterisé',
                 transcript: 'Transcription',
                 notes: 'Notes',
                 slides: 'Diapositives',
                 empty: 'Aucune ressource liée.',
                 eligible: 'Audio prêt à être supprimé',
+                processedBadge: 'Audio masterisé',
               },
               dialogs: {
                 purgeTitle: 'Supprimer l’audio traité',
@@ -5171,6 +5200,15 @@
                 }),
               );
             }
+            const classMastered = Number(klass.processed_audio_count) || 0;
+            if (classMastered > 0) {
+              classSummaryParts.push(
+                t('storage.classes.masteredCount', {
+                  count: classMastered,
+                  lectureWord: pluralize(currentLanguage, 'counts.lecture', classMastered),
+                }),
+              );
+            }
             const classMeta = document.createElement('p');
             classMeta.className = 'storage-class-meta';
             classMeta.textContent = classSummaryParts.filter(Boolean).join(' • ');
@@ -5231,6 +5269,15 @@
                     }),
                   );
                 }
+                const moduleMastered = Number(module.processed_audio_count) || 0;
+                if (moduleMastered > 0) {
+                  moduleSummaryParts.push(
+                    t('storage.modules.masteredCount', {
+                      count: moduleMastered,
+                      lectureWord: pluralize(currentLanguage, 'counts.lecture', moduleMastered),
+                    }),
+                  );
+                }
                 const moduleMeta = document.createElement('p');
                 moduleMeta.className = 'storage-module-meta';
                 moduleMeta.textContent = moduleSummaryParts.filter(Boolean).join(' • ');
@@ -5276,6 +5323,9 @@
                     if (lecture.has_audio) {
                       assetLabels.push(t('storage.lecture.audio'));
                     }
+                    if (lecture.has_processed_audio) {
+                      assetLabels.push(t('storage.lecture.processedAudio'));
+                    }
                     if (lecture.has_transcript) {
                       assetLabels.push(t('storage.lecture.transcript'));
                     }
@@ -5290,11 +5340,25 @@
                       : t('storage.lecture.empty');
                     lectureItem.appendChild(lectureMeta);
 
+                    const badgeContainer = document.createElement('div');
+                    badgeContainer.className = 'storage-lecture-badges';
+
+                    if (lecture.has_processed_audio) {
+                      const processedBadge = document.createElement('span');
+                      processedBadge.className = 'storage-lecture-processed';
+                      processedBadge.textContent = t('storage.lecture.processedBadge');
+                      badgeContainer.appendChild(processedBadge);
+                    }
+
                     if (lecture.eligible_audio) {
                       const eligibleBadge = document.createElement('span');
                       eligibleBadge.className = 'storage-lecture-eligible';
                       eligibleBadge.textContent = t('storage.lecture.eligible');
-                      lectureItem.appendChild(eligibleBadge);
+                      badgeContainer.appendChild(eligibleBadge);
+                    }
+
+                    if (badgeContainer.childElementCount > 0) {
+                      lectureItem.appendChild(badgeContainer);
                     }
 
                     lectureList.appendChild(lectureItem);
