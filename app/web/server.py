@@ -177,6 +177,132 @@ EVENT_LOGGER = logging.getLogger("lecture_tools.ui.events")
 _PDF_PAGE_COUNT_TIMEOUT_SECONDS = 8.0
 
 
+def _sanitize_context_value(value: Any) -> Any:
+    if value is None:
+        return None
+    if isinstance(value, (bool, int, float)):
+        return value
+    if isinstance(value, datetime):
+        return value.isoformat()
+    if isinstance(value, Path):
+        return str(value)
+    if isinstance(value, (list, tuple, set)):
+        joined = ", ".join(str(item) for item in value)
+        return joined[:200] + ("…" if len(joined) > 200 else "")
+    text = str(value)
+    return text[:200] + ("…" if len(text) > 200 else "")
+
+
+def _normalize_event_context(values: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    if not values:
+        return {}
+    normalized: Dict[str, Any] = {}
+    for key, raw_value in values.items():
+        if not key:
+            continue
+        value = _sanitize_context_value(raw_value)
+        if value is None or value == "":
+            continue
+        normalized[str(key)] = value
+    return normalized
+
+
+def _emit_debug_event(
+    event_type: str,
+    message: str,
+    *,
+    payload: Optional[Dict[str, Any]] = None,
+    context: Optional[Dict[str, Any]] = None,
+    duration_ms: Optional[float] = None,
+    level: int = logging.INFO,
+    logger: logging.Logger = EVENT_LOGGER,
+) -> None:
+    base_message = str(message).strip()
+    normalized_context = _normalize_event_context(context)
+    normalized_payload = _normalize_event_context(payload)
+    combined_details = {**normalized_context, **normalized_payload}
+    details_text = ", ".join(f"{key}={value}" for key, value in combined_details.items())
+    display_message = f"[{event_type}] {base_message}" if event_type else base_message
+    log_message = f"{display_message} ({details_text})" if details_text else display_message
+    extra: Dict[str, Any] = {
+        "debug_event": base_message,
+        "debug_event_type": event_type,
+    }
+    if normalized_context:
+        extra["debug_context"] = normalized_context
+    if normalized_payload:
+        extra["debug_payload"] = normalized_payload
+    if duration_ms is not None:
+        extra["debug_duration_ms"] = float(duration_ms)
+    if LOGGER.isEnabledFor(logging.DEBUG):
+        LOGGER.debug(log_message)
+    logger.log(level, log_message, extra=extra)
+
+
+def _emit_db_event(
+    action: str,
+    *,
+    payload: Optional[Dict[str, Any]] = None,
+    context: Optional[Dict[str, Any]] = None,
+    duration_ms: Optional[float] = None,
+    level: int = logging.INFO,
+) -> None:
+    _emit_debug_event(
+        "DB_QUERY",
+        action,
+        payload=payload,
+        context=context,
+        duration_ms=duration_ms,
+        level=level,
+    )
+
+
+def _emit_file_event(
+    operation: str,
+    *,
+    payload: Optional[Dict[str, Any]] = None,
+    context: Optional[Dict[str, Any]] = None,
+    duration_ms: Optional[float] = None,
+    level: int = logging.INFO,
+) -> None:
+    _emit_debug_event(
+        "FILE_OP",
+        operation,
+        payload=payload,
+        context=context,
+        duration_ms=duration_ms,
+        level=level,
+    )
+
+
+def _emit_task_state(
+    phase: str,
+    *,
+    tracker: str,
+    lecture_id: Optional[int],
+    message: str,
+    payload: Optional[Dict[str, Any]] = None,
+    context: Optional[Dict[str, Any]] = None,
+    duration_ms: Optional[float] = None,
+) -> None:
+    event_payload: Dict[str, Any] = {"task": tracker, "phase": phase}
+    if lecture_id is not None:
+        event_payload["lecture_id"] = lecture_id
+    if payload:
+        event_payload.update(payload)
+    _emit_debug_event(
+        "TASK_STATE",
+        message or phase,
+        payload=event_payload,
+        context=context,
+        duration_ms=duration_ms,
+    )
+
+
+def _log_event(message: str, **context: Any) -> None:
+    _emit_debug_event("APP_EVENT", message, context=context)
+
+
 # Ensure PDF.js module assets are served with the correct MIME type for dynamic import.
 mimetypes.add_type("text/javascript", ".mjs")
 mimetypes.add_type("application/javascript", ".mjs")
@@ -185,58 +311,209 @@ mimetypes.add_type("application/javascript", ".mjs")
 class DebugLogHandler(logging.Handler):
     """In-memory log handler used to power the live debug console."""
 
+    _IGNORED_FIELDS: Set[str] = {
+        "name",
+        "msg",
+        "args",
+        "levelname",
+        "levelno",
+        "pathname",
+        "filename",
+        "module",
+        "exc_info",
+        "exc_text",
+        "stack_info",
+        "lineno",
+        "funcName",
+        "created",
+        "msecs",
+        "relativeCreated",
+        "thread",
+        "threadName",
+        "process",
+        "processName",
+        "getMessage",
+    }
+
     def __init__(self, capacity: int = 500) -> None:
         super().__init__(level=logging.DEBUG)
-        self._entries: Deque[Dict[str, Any]] = deque(maxlen=capacity)
+        self._capacity = max(1, capacity)
+        self._entries: Deque[Dict[str, Any]] = deque()
+        self._entry_index: Dict[Tuple[Any, ...], Dict[str, Any]] = {}
         self._lock = threading.Lock()
         self._last_id = 0
         self.setFormatter(logging.Formatter(DEFAULT_LOG_FORMAT))
 
+    def _extract_duration(self, record: logging.LogRecord) -> Optional[float]:
+        candidate = getattr(record, "debug_duration_ms", None)
+        if candidate is None:
+            candidate = getattr(record, "duration_ms", None)
+        if candidate is None:
+            return None
+        try:
+            return float(candidate)
+        except (TypeError, ValueError):
+            return None
+
+    def _extract_context(self, record: logging.LogRecord) -> Dict[str, Any]:
+        context = getattr(record, "debug_context", None)
+        if isinstance(context, dict):
+            return {
+                str(key): value
+                for key, value in _normalize_event_context(context).items()
+            }
+        return {}
+
+    def _extract_payload(self, record: logging.LogRecord) -> Dict[str, Any]:
+        payload: Dict[str, Any] = {}
+        raw_payload = getattr(record, "debug_payload", None)
+        if isinstance(raw_payload, dict):
+            payload.update(_normalize_event_context(raw_payload))
+        for key, value in record.__dict__.items():
+            if key in self._IGNORED_FIELDS or key.startswith("_"):
+                continue
+            if key in {"debug_context", "debug_event", "debug_event_type", "debug_payload", "debug_duration_ms"}:
+                continue
+            sanitized = _sanitize_context_value(value)
+            if sanitized is None:
+                continue
+            payload[str(key)] = sanitized
+        if "duration_ms" in payload:
+            payload.pop("duration_ms")
+        return payload
+
+    def _build_key(
+        self,
+        event_type: str,
+        message: str,
+        context: Dict[str, Any],
+        payload: Dict[str, Any],
+    ) -> Tuple[Any, ...]:
+        context_items = tuple(sorted(context.items())) if context else tuple()
+        payload_items = tuple(sorted(payload.items())) if payload else tuple()
+        return (event_type, message, context_items, payload_items)
+
+    def _serialize_entry(self, entry: Dict[str, Any]) -> Dict[str, Any]:
+        exported = {key: value for key, value in entry.items() if key != "_key"}
+        if "last_seen" in exported and "timestamp" not in exported:
+            exported["timestamp"] = exported["last_seen"]
+        return exported
+
     def emit(self, record: logging.LogRecord) -> None:  # noqa: D401 - inherited documentation
-        message = record.getMessage()
-        if not isinstance(message, str):
-            message = str(message)
+        rendered_message = record.getMessage()
+        if not isinstance(rendered_message, str):
+            rendered_message = str(rendered_message)
         if record.exc_info:
             formatter = self.formatter or logging.Formatter()
             try:
                 exception_text = formatter.formatException(record.exc_info)
             except Exception:  # pragma: no cover - defensive
                 exception_text = logging.Formatter().formatException(record.exc_info)
-            message = f"{message}\n{exception_text}" if exception_text else message
-        context = getattr(record, "debug_context", None)
-        if isinstance(context, dict):
-            context = {key: value for key, value in context.items() if value is not None}
+            if exception_text:
+                rendered_message = f"{rendered_message}\n{exception_text}"
+
+        base_message = getattr(record, "debug_event", None)
+        if base_message is None:
+            base_message = rendered_message
         else:
-            context = None
-        entry = {
-            "id": None,
-            "timestamp": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(),
-            "level": record.levelname,
-            "message": message,
-            "logger": record.name,
-            "category": "server"
+            base_message = str(base_message)
+
+        context = self._extract_context(record)
+        payload = self._extract_payload(record)
+        duration_ms = self._extract_duration(record)
+
+        timestamp = datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat()
+        event_type = str(getattr(record, "debug_event_type", record.name))
+        category = (
+            "server"
             if any(record.name.startswith(prefix) for prefix in _SERVER_LOGGER_PREFIXES)
-            else "application",
-        }
-        if context:
-            entry["context"] = context
-        debug_event = getattr(record, "debug_event", None)
-        if debug_event:
-            entry["event"] = str(debug_event)
+            else "application"
+        )
+        key = self._build_key(event_type, base_message, context, payload)
+
         with self._lock:
             self._last_id += 1
-            entry["id"] = self._last_id
-            self._entries.append(entry)
+            occurrence_id = self._last_id
+            existing = self._entry_index.get(key)
+            if existing is not None:
+                try:
+                    self._entries.remove(existing)
+                except ValueError:  # pragma: no cover - defensive
+                    pass
+                existing["id"] = occurrence_id
+                existing["last_seen"] = timestamp
+                existing["count"] = existing.get("count", 1) + 1
+                existing["level"] = record.levelname
+                existing["logger"] = record.name
+                existing["category"] = category
+                if context:
+                    existing["context"] = context
+                elif "context" in existing:
+                    existing.pop("context", None)
+                if payload:
+                    existing["payload"] = payload
+                elif "payload" in existing:
+                    existing.pop("payload", None)
+                if rendered_message != base_message:
+                    existing["rendered"] = rendered_message
+                elif "rendered" in existing:
+                    existing.pop("rendered", None)
+                if duration_ms is not None:
+                    total_duration = existing.get("total_duration_ms", 0.0) + duration_ms
+                    existing["total_duration_ms"] = total_duration
+                    existing["last_duration_ms"] = duration_ms
+                    existing["average_duration_ms"] = total_duration / existing["count"]
+                    existing["min_duration_ms"] = min(
+                        existing.get("min_duration_ms", duration_ms), duration_ms
+                    )
+                    existing["max_duration_ms"] = max(
+                        existing.get("max_duration_ms", duration_ms), duration_ms
+                    )
+                existing["_key"] = key
+                self._entries.append(existing)
+            else:
+                entry: Dict[str, Any] = {
+                    "id": occurrence_id,
+                    "message": base_message,
+                    "event_type": event_type,
+                    "level": record.levelname,
+                    "logger": record.name,
+                    "category": category,
+                    "count": 1,
+                    "first_seen": timestamp,
+                    "last_seen": timestamp,
+                    "_key": key,
+                }
+                if context:
+                    entry["context"] = context
+                if payload:
+                    entry["payload"] = payload
+                if rendered_message != base_message:
+                    entry["rendered"] = rendered_message
+                if duration_ms is not None:
+                    entry["total_duration_ms"] = duration_ms
+                    entry["average_duration_ms"] = duration_ms
+                    entry["last_duration_ms"] = duration_ms
+                    entry["min_duration_ms"] = duration_ms
+                    entry["max_duration_ms"] = duration_ms
+                self._entries.append(entry)
+                self._entry_index[key] = entry
+                while len(self._entries) > self._capacity:
+                    oldest = self._entries.popleft()
+                    old_key = oldest.pop("_key", None)
+                    if old_key is not None:
+                        self._entry_index.pop(old_key, None)
 
     def collect(self, after: Optional[int] = None, limit: int = 200) -> List[Dict[str, Any]]:
         with self._lock:
             if after is None or after <= 0:
                 data = list(self._entries)
             else:
-                data = [entry for entry in self._entries if entry["id"] > after]
+                data = [entry for entry in self._entries if entry.get("id", 0) > after]
         if not data:
             return []
-        return data[-limit:]
+        sliced = data[-limit:]
+        return [self._serialize_entry(entry) for entry in sliced]
 
     @property
     def last_id(self) -> int:
@@ -247,9 +524,10 @@ class DebugLogHandler(logging.Handler):
 class TranscriptionProgressTracker:
     """Track transcription status for UI polling."""
 
-    def __init__(self) -> None:
+    def __init__(self, *, name: str = "task") -> None:
         self._lock = threading.Lock()
         self._states: Dict[int, Dict[str, Any]] = {}
+        self._name = name
 
     def _baseline(self) -> Dict[str, Any]:
         return {
@@ -298,9 +576,18 @@ class TranscriptionProgressTracker:
             )
             self._merge_context(state, context)
             self._states[lecture_id] = state
-        LOGGER.debug(
-            "Progress start",
-            extra={"lecture_id": lecture_id, "progress_message": message},
+        snapshot = dict(state)
+        _emit_task_state(
+            "start",
+            tracker=self._name,
+            lecture_id=lecture_id,
+            message=message,
+            payload={
+                "active": snapshot["active"],
+                "finished": snapshot["finished"],
+                "message": snapshot["message"],
+            },
+            context=snapshot.get("context"),
         )
 
     def update(
@@ -331,14 +618,21 @@ class TranscriptionProgressTracker:
             )
             self._merge_context(state, context)
             self._states[lecture_id] = state
-        LOGGER.debug(
-            "Progress update",
-            extra={
-                "lecture_id": lecture_id,
-                "current": current,
-                "total": total,
-                "progress_message": message,
+        snapshot = dict(state)
+        _emit_task_state(
+            "update",
+            tracker=self._name,
+            lecture_id=lecture_id,
+            message=message,
+            payload={
+                "active": snapshot["active"],
+                "finished": snapshot["finished"],
+                "current": snapshot.get("current"),
+                "total": snapshot.get("total"),
+                "ratio": snapshot.get("ratio"),
+                "message": snapshot.get("message"),
             },
+            context=snapshot.get("context"),
         )
 
     def note(
@@ -369,9 +663,18 @@ class TranscriptionProgressTracker:
             )
             self._merge_context(state, context)
             self._states[lecture_id] = state
-        LOGGER.debug(
-            "Progress finish",
-            extra={"lecture_id": lecture_id, "progress_message": message},
+        snapshot = dict(state)
+        _emit_task_state(
+            "finish",
+            tracker=self._name,
+            lecture_id=lecture_id,
+            message=snapshot.get("message", message or ""),
+            payload={
+                "active": snapshot["active"],
+                "finished": snapshot["finished"],
+                "message": snapshot.get("message"),
+            },
+            context=snapshot.get("context"),
         )
 
     def fail(
@@ -394,9 +697,19 @@ class TranscriptionProgressTracker:
             )
             self._merge_context(state, context)
             self._states[lecture_id] = state
-        LOGGER.debug(
-            "Progress failure",
-            extra={"lecture_id": lecture_id, "progress_message": message},
+        snapshot = dict(state)
+        _emit_task_state(
+            "fail",
+            tracker=self._name,
+            lecture_id=lecture_id,
+            message=message,
+            payload={
+                "active": snapshot["active"],
+                "finished": snapshot["finished"],
+                "message": snapshot.get("message"),
+                "error": snapshot.get("error"),
+            },
+            context=snapshot.get("context"),
         )
 
     def get(self, lecture_id: int) -> Dict[str, Any]:
@@ -1043,6 +1356,17 @@ def create_app(
         request_class=LargeUploadRequest,
     )
     app.state.server = None
+    def _repository_event_emitter(event_type: str, message: str, **kwargs: Any) -> None:
+        if event_type == "DB_QUERY":
+            _emit_db_event(message, **kwargs)
+        elif event_type == "FILE_OP":
+            _emit_file_event(message, **kwargs)
+        else:
+            _emit_debug_event(event_type, message, **kwargs)
+
+    configure_emitter = getattr(repository, "configure_event_emitter", None)
+    if callable(configure_emitter):
+        configure_emitter(_repository_event_emitter)
     root_logger = logging.getLogger()
     debug_handler = next(
         (handler for handler in root_logger.handlers if isinstance(handler, DebugLogHandler)),
@@ -1061,8 +1385,8 @@ def create_app(
     )
     app.add_middleware(ForwardedRootPathMiddleware)
     settings_store = SettingsStore(config)
-    progress_tracker = TranscriptionProgressTracker()
-    processing_tracker = TranscriptionProgressTracker()
+    progress_tracker = TranscriptionProgressTracker(name="transcription")
+    processing_tracker = TranscriptionProgressTracker(name="processing")
 
     project_root = Path(__file__).resolve().parents[2]
     update_manager = UpdateManager(project_root)
@@ -1241,47 +1565,6 @@ def create_app(
         safe_value = json.dumps(resolved)[1:-1]
         return rendered.replace("__LECTURE_TOOLS_ROOT_PATH__", safe_value)
 
-    def _sanitize_context_value(value: Any) -> Any:
-        if value is None:
-            return None
-        if isinstance(value, (bool, int, float)):
-            return value
-        if isinstance(value, datetime):
-            return value.isoformat()
-        if isinstance(value, Path):
-            return str(value)
-        if isinstance(value, (list, tuple, set)):
-            joined = ", ".join(str(item) for item in value)
-            return joined[:200] + ("…" if len(joined) > 200 else "")
-        text = str(value)
-        return text[:200] + ("…" if len(text) > 200 else "")
-
-    def _normalize_event_context(values: Dict[str, Any]) -> Dict[str, Any]:
-        normalized: Dict[str, Any] = {}
-        for key, raw_value in values.items():
-            if not key:
-                continue
-            value = _sanitize_context_value(raw_value)
-            if value is None or value == "":
-                continue
-            normalized[str(key)] = value
-        return normalized
-
-    def _log_event(message: str, **context: Any) -> None:
-        normalized_context = _normalize_event_context(context) if context else {}
-        context_details = ", ".join(
-            f"{key}={value}" for key, value in normalized_context.items()
-        )
-        extra = {"debug_context": normalized_context, "debug_event": message}
-        if context_details:
-            if LOGGER.isEnabledFor(logging.DEBUG):
-                LOGGER.debug("%s (%s)", message, context_details)
-            EVENT_LOGGER.info("%s (%s)", message, context_details, extra=extra)
-        else:
-            if LOGGER.isEnabledFor(logging.DEBUG):
-                LOGGER.debug(message)
-            EVENT_LOGGER.info(message, extra=extra)
-
     def _summarize_lecture(lecture_id: int) -> Optional[Dict[str, Any]]:
         lecture_record = repository.get_lecture(lecture_id)
         if lecture_record is None:
@@ -1426,7 +1709,20 @@ def create_app(
             asset_path = _resolve_storage_path(root_path, relative)
         except ValueError:
             return
+        start_time = time.perf_counter()
+        existed = asset_path.exists()
+        is_dir = asset_path.is_dir() if existed else None
         _delete_storage_path(asset_path)
+        duration_ms = (time.perf_counter() - start_time) * 1000.0
+        _emit_file_event(
+            "delete_asset",
+            payload={
+                "path": relative,
+                "existed": existed,
+                "is_dir": is_dir,
+            },
+            duration_ms=duration_ms,
+        )
 
     def _collect_archive_metadata() -> Dict[str, Any]:
         classes: List[Dict[str, Any]] = []
