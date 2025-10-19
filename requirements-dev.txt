@@ -3,6 +3,7 @@ typer==0.12.5
 click==8.1.7
 Pillow>=10.0
 PyMuPDF>=1.23
+numpy>=1.26,<2
 faster-whisper>=0.10
 rich>=13.7
 fastapi>=0.111
