@@ -3638,12 +3638,21 @@ def create_app(
         for class_record in repository.iter_classes():
             for module in repository.iter_modules(class_record.id):
                 for lecture in repository.iter_lectures(module.id):
-                    if not (lecture.audio_path and lecture.transcript_path):
+                    has_audio = bool(lecture.audio_path)
+                    has_processed = bool(lecture.processed_audio_path)
+                    if not lecture.transcript_path or not (has_audio or has_processed):
                         continue
-                    audio_path = _resolve_existing_asset(lecture.audio_path)
-                    if audio_path:
-                        _delete_storage_path(audio_path)
-                    repository.update_lecture_assets(lecture.id, audio_path=None)
+
+                    for relative_path in (lecture.audio_path, lecture.processed_audio_path):
+                        asset_path = _resolve_existing_asset(relative_path)
+                        if asset_path:
+                            _delete_storage_path(asset_path)
+
+                    repository.update_lecture_assets(
+                        lecture.id,
+                        audio_path=None,
+                        processed_audio_path=None,
+                    )
                     deleted += 1
         _log_event("Purged processed audio", deleted=deleted)
         return {"deleted": deleted}

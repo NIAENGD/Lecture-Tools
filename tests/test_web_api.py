@@ -767,6 +767,40 @@ def test_delete_audio_asset_removes_processed_audio(temp_config):
     assert not processed_file.exists()
 
 
+def test_purge_audio_clears_processed_only_assets(temp_config):
+    repository, lecture_id, _module_id = _create_sample_data(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    processed_file = (
+        temp_config.storage_root
+        / "Astronomy"
+        / "Stellar Physics"
+        / "Stellar Evolution"
+        / "lecture-mastered.wav"
+    )
+    processed_file.parent.mkdir(parents=True, exist_ok=True)
+    processed_file.write_bytes(b"processed")
+
+    repository.update_lecture_assets(
+        lecture_id,
+        audio_path=None,
+        processed_audio_path=processed_file.relative_to(temp_config.storage_root).as_posix(),
+    )
+
+    response = client.post("/api/storage/purge-audio")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload.get("deleted") == 1
+
+    updated = repository.get_lecture(lecture_id)
+    assert updated is not None
+    assert updated.audio_path is None
+    assert updated.processed_audio_path is None
+    assert not processed_file.exists()
+
+
 def test_delete_slides_asset_removes_related_files(temp_config):
     repository, lecture_id, _module_id = _create_sample_data(temp_config)
     app = create_app(repository, config=temp_config)
