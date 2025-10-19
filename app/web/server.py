@@ -64,7 +64,7 @@ from ..processing import (
     save_preprocessed_wav,
 )
 from ..services.audio_conversion import ensure_wav, ffmpeg_available
-from ..services.ingestion import LecturePaths
+from ..services.ingestion import LecturePaths, TranscriptResult
 from ..services.naming import build_asset_stem, build_timestamped_name, slugify
 from ..services.progress import (
     AUDIO_MASTERING_TOTAL_STEPS,
@@ -2930,63 +2930,77 @@ def create_app(
                         path=processed_relative,
                     )
                 audio_file = mastered_path
-        fallback_model: Optional[str] = None
-        fallback_reason: Optional[str] = None
-        error_reported = False
-
         def handle_progress(current: float, total: Optional[float], message: str) -> None:
             progress_tracker.update(lecture_id, current, total, message)
 
-        try:
-            try:
-                engine = FasterWhisperTranscription(
-                    payload.model,
+        def _perform_transcription() -> Tuple[
+            TranscriptResult,
+            Optional[str],
+            Optional[str],
+            Optional[Dict[str, Any]],
+        ]:
+            fallback_model: Optional[str] = None
+            fallback_reason: Optional[str] = None
+            gpu_probe: Optional[Dict[str, Any]] = None
+
+            def _build_engine(model_name: str) -> FasterWhisperTranscription:
+                return FasterWhisperTranscription(
+                    model_name,
                     download_root=config.assets_root,
                     compute_type=compute_type,
                     beam_size=beam_size,
                 )
+
+            try:
+                engine = _build_engine(payload.model)
             except GPUWhisperUnsupportedError as error:
                 fallback_model = _DEFAULT_UI_SETTINGS.whisper_model
                 fallback_reason = str(error)
-                _record_gpu_probe({"supported": False, "message": str(error), "output": ""})
+                gpu_probe = {"supported": False, "message": str(error), "output": ""}
                 progress_tracker.note(
                     lecture_id,
                     f"====> {error} Falling back to {fallback_model} model.",
                 )
-                engine = FasterWhisperTranscription(
-                    fallback_model,
-                    download_root=config.assets_root,
-                    compute_type=compute_type,
-                    beam_size=beam_size,
-                )
+                engine = _build_engine(fallback_model)
             except GPUWhisperModelMissingError as error:
-                message = f"====> {error}"
-                progress_tracker.fail(lecture_id, message)
-                _record_gpu_probe({"supported": False, "message": str(error), "output": ""})
-                error_reported = True
-                raise HTTPException(status_code=400, detail=str(error)) from error
+                http_error = HTTPException(status_code=400, detail=str(error))
+                setattr(
+                    http_error,
+                    "gpu_probe",
+                    {"supported": False, "message": str(error), "output": ""},
+                )
+                raise http_error from error
 
-            result = await _run_serialized_background_task(
-                lambda: engine.transcribe(
-                    audio_file,
-                    lecture_paths.transcript_dir,
-                    progress_callback=handle_progress,
-                ),
+            result = engine.transcribe(
+                audio_file,
+                lecture_paths.transcript_dir,
+                progress_callback=handle_progress,
+            )
+
+            return result, fallback_model, fallback_reason, gpu_probe
+
+        try:
+            result, fallback_model, fallback_reason, gpu_probe = await _run_serialized_background_task(
+                _perform_transcription,
                 context_label="transcription",
                 queued_callback=lambda: progress_tracker.note(
                     lecture_id, "====> Waiting for other tasks to finish…"
                 ),
             )
         except HTTPException as error:
-            if not error_reported:
-                detail = getattr(error, "detail", str(error))
-                progress_tracker.fail(lecture_id, f"====> {detail}")
+            detail = getattr(error, "detail", str(error))
+            progress_tracker.fail(lecture_id, f"====> {detail}")
+            probe = getattr(error, "gpu_probe", None)
+            if probe:
+                _record_gpu_probe(probe)
             raise
         except Exception as error:  # noqa: BLE001 - backend may raise arbitrary errors
             progress_tracker.fail(lecture_id, f"====> {error}")
             raise HTTPException(status_code=500, detail=str(error)) from error
         else:
-            if payload.model == "gpu" and fallback_model is None:
+            if gpu_probe:
+                _record_gpu_probe(gpu_probe)
+            elif payload.model == "gpu" and fallback_model is None:
                 _record_gpu_probe(
                     {"supported": True, "message": "GPU Whisper CLI active.", "output": ""}
                 )
