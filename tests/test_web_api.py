@@ -1039,6 +1039,45 @@ def test_process_slides_generates_archive(monkeypatch, temp_config):
     assert slide_asset.exists()
 
 
+def test_process_slides_generates_markdown(monkeypatch, temp_config):
+    repository, lecture_id, _module_id = _create_sample_data(temp_config)
+
+    class DummyOCREngine:
+        def ocr(self, image, cls=True):  # noqa: ARG002 - signature matches PaddleOCR
+            return [
+                (
+                    [(0, 0), (10, 0), (10, 10), (0, 10)],
+                    ("Section Title", 0.99),
+                ),
+                (
+                    [(0, 20), (10, 20), (10, 30), (0, 30)],
+                    ("Key insight here", 0.95),
+                ),
+            ]
+
+    app = create_app(repository, config=temp_config)
+    app.state.slide_markdown_engine_factory = lambda: DummyOCREngine()
+
+    client = TestClient(app)
+
+    response = client.post(
+        f"/api/lectures/{lecture_id}/process-slides",
+        data={"mode": "markdown"},
+        files={"file": ("deck.pdf", _build_sample_pdf(2), "application/pdf")},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    notes_path = payload.get("notes_path")
+    assert notes_path and notes_path.endswith("-ocr.md")
+    notes_asset = temp_config.storage_root / notes_path
+    assert notes_asset.exists()
+    content = notes_asset.read_text(encoding="utf-8")
+    assert "Slide 1" in content
+    assert "Section Title" in content
+    assert "Key insight here" in content
+
+
 def test_slide_preview_lifecycle(temp_config):
     repository, lecture_id, _module_id = _create_sample_data(temp_config)
     app = create_app(repository, config=temp_config)

@@ -2959,6 +2959,8 @@
               actions: {
                 upload: 'Upload',
                 processSlides: 'Process slides',
+                processSlidesImage: 'Slide to Image',
+                processSlidesMarkdown: 'Slide to MD',
                 download: 'Download',
                 remove: 'Remove',
               },
@@ -2979,6 +2981,7 @@
               labels: {
                 transcription: 'Transcription',
                 slideConversion: 'Slide conversion',
+                slideMarkdown: 'Slide text extraction',
                 audioMastering: 'Audio mastering',
                 processing: 'Processing task',
                 untitled: 'Untitled lecture',
@@ -3331,10 +3334,14 @@
               lectureTitleRequired: 'Lecture title is required.',
               createLectureRequirements: 'Select a module and enter a title.',
               slidesProcessed: 'Slides uploaded and processed into an image archive.',
+              slidesProcessedImage: 'Slides uploaded and processed into an image archive.',
+              slidesProcessedMarkdown: 'Slides processed into Markdown notes.',
               slidesUploaded: 'Slides uploaded. Process them to generate an image archive.',
               slidesUploadRequired: 'Upload a PDF before processing slides.',
               slidePreviewFailed: 'Unable to prepare the slide preview. Try re-uploading the PDF.',
               processingSlides: 'Processing slides…',
+              processingSlidesImage: 'Rendering slide images…',
+              processingSlidesMarkdown: 'Extracting slide text…',
               audioProcessingQueued: 'Audio uploaded. Mastering will continue in the background.',
               assetUploaded: 'Asset uploaded successfully.',
               assetRemoved: 'Asset removed.',
@@ -3440,6 +3447,8 @@
               actions: {
                 upload: '上传',
                 processSlides: '处理课件',
+                processSlidesImage: '转换为图像',
+                processSlidesMarkdown: '转换为 Markdown',
                 download: '下载',
                 remove: '移除',
               },
@@ -3460,6 +3469,7 @@
               labels: {
                 transcription: '音频转录',
                 slideConversion: '课件转换',
+                slideMarkdown: '课件文本提取',
                 audioMastering: '音频优化',
                 processing: '处理任务',
                 untitled: '未命名讲座',
@@ -3804,10 +3814,14 @@
               lectureTitleRequired: '需要填写讲座标题。',
               createLectureRequirements: '请选择模块并输入标题。',
               slidesProcessed: '课件已上传并转换为图像压缩包。',
+              slidesProcessedImage: '课件已上传并转换为图像压缩包。',
+              slidesProcessedMarkdown: '课件已转换为 Markdown 笔记。',
               slidesUploaded: '课件已上传。处理后可生成图像压缩包。',
               slidesUploadRequired: '请先上传 PDF 再处理课件。',
               slidePreviewFailed: '无法准备课件预览，请尝试重新上传 PDF。',
               processingSlides: '正在处理课件…',
+              processingSlidesImage: '正在生成课件图像…',
+              processingSlidesMarkdown: '正在提取课件文本…',
               audioProcessingQueued: '音频已上传，母带处理将在后台继续进行。',
               assetUploaded: '资源上传成功。',
               assetRemoved: '资源已移除。',
@@ -3913,6 +3927,8 @@
               actions: {
                 upload: 'Subir',
                 processSlides: 'Procesar diapositivas',
+                processSlidesImage: 'Convertir a imágenes',
+                processSlidesMarkdown: 'Convertir a Markdown',
                 download: 'Descargar',
                 remove: 'Eliminar',
               },
@@ -3933,6 +3949,7 @@
               labels: {
                 transcription: 'Transcripción',
                 slideConversion: 'Conversión de diapositivas',
+                slideMarkdown: 'Extracción de texto de diapositivas',
                 audioMastering: 'Masterización de audio',
                 processing: 'Tarea de procesamiento',
                 untitled: 'Clase sin título',
@@ -4287,10 +4304,14 @@
               lectureTitleRequired: 'El título de la clase es obligatorio.',
               createLectureRequirements: 'Selecciona un módulo e ingresa un título.',
               slidesProcessed: 'Diapositivas cargadas y convertidas en un archivo de imágenes.',
+              slidesProcessedImage: 'Diapositivas cargadas y convertidas en un archivo de imágenes.',
+              slidesProcessedMarkdown: 'Diapositivas convertidas a notas en Markdown.',
               slidesUploaded: 'Diapositivas subidas. Procésalas para generar un archivo de imágenes.',
               slidesUploadRequired: 'Sube un PDF antes de procesar las diapositivas.',
               slidePreviewFailed: 'No se pudo preparar la vista previa de las diapositivas. Intenta subir el PDF nuevamente.',
               processingSlides: 'Procesando diapositivas…',
+              processingSlidesImage: 'Generando imágenes de diapositivas…',
+              processingSlidesMarkdown: 'Extrayendo texto de las diapositivas…',
               audioProcessingQueued: 'Audio subido. La masterización continuará en segundo plano.',
               assetUploaded: 'Recurso subido correctamente.',
               assetRemoved: 'Recurso eliminado.',
@@ -4397,6 +4418,8 @@
               actions: {
                 upload: 'Importer',
                 processSlides: 'Traiter les diapositives',
+                processSlidesImage: 'Convertir en images',
+                processSlidesMarkdown: 'Convertir en Markdown',
                 download: 'Télécharger',
                 remove: 'Supprimer',
               },
@@ -4417,6 +4440,7 @@
               labels: {
                 transcription: 'Transcription',
                 slideConversion: 'Conversion des diapositives',
+                slideMarkdown: 'Extraction du texte des diapositives',
                 audioMastering: 'Masterisation audio',
                 processing: 'Tâche de traitement',
                 untitled: 'Leçon sans titre',
@@ -4771,10 +4795,14 @@
               lectureTitleRequired: 'Le titre de la leçon est requis.',
               createLectureRequirements: 'Sélectionnez un module et saisissez un titre.',
               slidesProcessed: 'Diapositives importées et converties en archive d’images.',
+              slidesProcessedImage: 'Diapositives importées et converties en archive d’images.',
+              slidesProcessedMarkdown: 'Diapositives converties en notes Markdown.',
               slidesUploaded: 'Diapositives importées. Traitez-les pour générer une archive d’images.',
               slidesUploadRequired: 'Importez un PDF avant de traiter les diapositives.',
               slidePreviewFailed: 'Impossible de préparer l’aperçu des diapositives. Réessayez en important le PDF à nouveau.',
               processingSlides: 'Traitement des diapositives…',
+              processingSlidesImage: 'Génération des images des diapositives…',
+              processingSlidesMarkdown: 'Extraction du texte des diapositives…',
               audioProcessingQueued: 'Audio téléversé. Le mastering se poursuit en arrière-plan.',
               assetUploaded: 'Ressource importée avec succès.',
               assetRemoved: 'Ressource supprimée.',
@@ -6191,6 +6219,9 @@
           if (operation === 'slide_conversion') {
             return t('progress.labels.slideConversion');
           }
+          if (operation === 'slide_markdown') {
+            return t('progress.labels.slideMarkdown');
+          }
           if (operation === 'audio_mastering') {
             return t('progress.labels.audioMastering');
           }
@@ -6428,7 +6459,7 @@
               startTranscriptionProgress(lectureId);
             } else if (entry.type === 'processing') {
               const operation = entry?.context?.operation || entry?.context?.type;
-              if (operation === 'slide_conversion') {
+              if (operation === 'slide_conversion' || operation === 'slide_markdown') {
                 const formData = new FormData();
                 if (entry?.context?.preview_token) {
                   formData.append('preview_token', entry.context.preview_token);
@@ -6439,6 +6470,9 @@
                 }
                 if (pageRange?.end) {
                   formData.append('page_end', String(pageRange.end));
+                }
+                if (operation === 'slide_markdown' || entry?.context?.mode === 'markdown') {
+                  formData.append('mode', 'markdown');
                 }
                 await request(`/api/lectures/${lectureId}/process-slides`, {
                   method: 'POST',
@@ -10608,16 +10642,28 @@
             });
 
             if (definition.type === 'slides') {
-              const processButton = document.createElement('button');
-              processButton.type = 'button';
-              processButton.className = 'secondary';
-              processButton.textContent = t('assets.actions.processSlides');
               const isProcessing = state.processingProgressLectureId === lecture.id;
-              processButton.disabled = !value || isProcessing;
-              processButton.addEventListener('click', () => {
-                handleSlideProcessing(definition);
+              const processImagesButton = document.createElement('button');
+              processImagesButton.type = 'button';
+              processImagesButton.className = 'secondary';
+              processImagesButton.setAttribute('data-i18n', 'assets.actions.processSlidesImage');
+              processImagesButton.textContent = t('assets.actions.processSlidesImage');
+              processImagesButton.disabled = !value || isProcessing;
+              processImagesButton.addEventListener('click', () => {
+                handleSlideProcessing(definition, 'image');
               });
-              actions.appendChild(processButton);
+              actions.appendChild(processImagesButton);
+
+              const processMarkdownButton = document.createElement('button');
+              processMarkdownButton.type = 'button';
+              processMarkdownButton.className = 'secondary';
+              processMarkdownButton.setAttribute('data-i18n', 'assets.actions.processSlidesMarkdown');
+              processMarkdownButton.textContent = t('assets.actions.processSlidesMarkdown');
+              processMarkdownButton.disabled = !value || isProcessing;
+              processMarkdownButton.addEventListener('click', () => {
+                handleSlideProcessing(definition, 'markdown');
+              });
+              actions.appendChild(processMarkdownButton);
             }
 
             actions.appendChild(downloadButton);
@@ -10890,7 +10936,7 @@
           }
         }
 
-        async function handleSlideProcessing(definition) {
+        async function handleSlideProcessing(definition, mode = 'image') {
           if (!definition || definition.type !== 'slides' || !state.selectedLectureId) {
             return;
           }
@@ -10902,6 +10948,8 @@
             showStatus(t('status.slidesUploadRequired'), 'info');
             return;
           }
+
+          const normalizedMode = mode === 'markdown' ? 'markdown' : 'image';
 
           let preview = null;
           try {
@@ -10950,6 +10998,7 @@
           if (typeof selection.pageEnd === 'number' && Number.isFinite(selection.pageEnd)) {
             formData.append('page_end', String(selection.pageEnd));
           }
+          formData.append('mode', normalizedMode);
           try {
             await deleteSlidePreview(lectureId, preview.id);
           } catch (error) {
@@ -10960,14 +11009,22 @@
           state.lastProgressMessage = '';
           state.lastProgressRatio = null;
           startProcessingProgress(lectureId);
-          showStatus(t('status.processingSlides'), 'info', { persist: true });
+          const processingStatusKey =
+            normalizedMode === 'markdown'
+              ? 'processingSlidesMarkdown'
+              : 'processingSlidesImage';
+          const processedStatusKey =
+            normalizedMode === 'markdown'
+              ? 'slidesProcessedMarkdown'
+              : 'slidesProcessedImage';
+          showStatus(t(`status.${processingStatusKey}`), 'info', { persist: true });
 
           try {
             await request(`/api/lectures/${lectureId}/process-slides`, {
               method: 'POST',
               body: formData,
             });
-            showStatus(t('status.slidesProcessed'), 'success');
+            showStatus(t(`status.${processedStatusKey}`), 'success');
             await refreshData();
             await selectLecture(lectureId);
           } catch (error) {

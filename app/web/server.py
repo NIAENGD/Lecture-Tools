@@ -1711,6 +1711,42 @@ def create_app(
         with contextlib.suppress(OSError):
             preview_dir.rmdir()
 
+    class SlideMarkdownError(RuntimeError):
+        """Raised when slide Markdown extraction fails."""
+
+    class SlideMarkdownDependencyError(SlideMarkdownError):
+        """Raised when PaddleOCR or its dependencies are unavailable."""
+
+    def _get_slide_markdown_engine():
+        engine = getattr(app.state, "slide_markdown_engine", None)
+        if engine is not None:
+            return engine
+
+        factory = getattr(app.state, "slide_markdown_engine_factory", None)
+        if factory is not None:
+            try:
+                engine = factory()
+            except Exception as error:  # noqa: BLE001 - factory may raise
+                raise SlideMarkdownError("Slide Markdown engine factory failed") from error
+        else:
+            try:
+                from paddleocr import PaddleOCR  # type: ignore
+            except ImportError as exc:  # pragma: no cover - runtime dependency check
+                raise SlideMarkdownDependencyError("PaddleOCR is not installed") from exc
+
+            try:
+                engine = PaddleOCR(
+                    use_angle_cls=True,
+                    lang="en",
+                    use_gpu=False,
+                    show_log=False,
+                )
+            except Exception as error:  # noqa: BLE001 - PaddleOCR may raise
+                raise SlideMarkdownError("Failed to initialise PaddleOCR") from error
+
+        setattr(app.state, "slide_markdown_engine", engine)
+        return engine
+
     def _generate_slide_archive(
         pdf_path: Path,
         lecture_paths: LecturePaths,
@@ -1763,6 +1799,159 @@ def create_app(
                     continue
 
         return slide_image_relative
+
+    def _generate_slide_markdown(
+        pdf_path: Path,
+        lecture_paths: LecturePaths,
+        *,
+        page_range: Optional[Tuple[int, int]] = None,
+        progress_callback: Optional[Callable[[int, Optional[int]], None]] = None,
+    ) -> Optional[str]:
+        try:
+            import fitz  # type: ignore
+        except ImportError as exc:  # pragma: no cover - runtime dependency check
+            raise SlideMarkdownDependencyError("PyMuPDF (fitz) is not installed") from exc
+
+        try:
+            import numpy as np
+        except ImportError as exc:  # pragma: no cover - runtime dependency check
+            raise SlideMarkdownDependencyError("NumPy is required for slide text extraction") from exc
+
+        try:
+            from PIL import Image
+        except ImportError as exc:  # pragma: no cover - runtime dependency check
+            raise SlideMarkdownDependencyError("Pillow is required for slide text extraction") from exc
+
+        engine = _get_slide_markdown_engine()
+
+        root_path = _require_storage_root()
+        ocr_dir = lecture_paths.notes_dir / "ocr"
+        ocr_dir.mkdir(parents=True, exist_ok=True)
+        existing_items: List[Path] = list(ocr_dir.iterdir())
+
+        matrix = fitz.Matrix(200 / 72, 200 / 72)
+
+        def _format_page_markdown(page_number: int, recognition: Any) -> str:
+            entries: List[str] = []
+
+            def _sort_key(item: Any) -> Tuple[float, float]:
+                box = item[0] if item and isinstance(item, (list, tuple)) else []
+                if not box:
+                    return (float(page_number), float(page_number))
+                y_values = [float(point[1]) for point in box]
+                x_values = [float(point[0]) for point in box]
+                avg_y = sum(y_values) / len(y_values)
+                avg_x = sum(x_values) / len(x_values)
+                return (avg_y, avg_x)
+
+            groups: List[Tuple[float, List[str]]] = []
+            threshold = 24.0
+            for item in sorted(recognition or [], key=_sort_key):
+                if not item or len(item) < 2:
+                    continue
+                text_info = item[1]
+                if not isinstance(text_info, (list, tuple)) or not text_info:
+                    continue
+                text = str(text_info[0]).strip()
+                confidence = 1.0
+                if len(text_info) > 1:
+                    try:
+                        confidence = float(text_info[1])
+                    except (TypeError, ValueError):
+                        confidence = 1.0
+                if not text or confidence < 0.3:
+                    continue
+                box = item[0]
+                try:
+                    center_y = sum(float(point[1]) for point in box) / len(box)
+                except Exception:  # pragma: no cover - defensive fallback
+                    center_y = float(page_number)
+                sanitized = " ".join(part for part in text.splitlines()).strip()
+                if not sanitized:
+                    continue
+                if not groups:
+                    groups.append((center_y, [sanitized]))
+                else:
+                    last_y, last_parts = groups[-1]
+                    if abs(center_y - last_y) <= threshold:
+                        last_parts.append(sanitized)
+                    else:
+                        groups.append((center_y, [sanitized]))
+
+            if not groups:
+                entries.append("_No text detected._")
+            else:
+                for _center, parts in groups:
+                    line = " ".join(parts).strip()
+                    if line:
+                        entries.append(f"- {line}")
+
+            page_header = f"## Slide {page_number}"
+            return "\n".join([page_header, "", *entries])
+
+        sections: List[str] = ["# Slide Notes"]
+
+        try:
+            with fitz.open(pdf_path) as document:
+                page_count = document.page_count
+                if page_range is None:
+                    start_index = 0
+                    end_index = page_count - 1
+                else:
+                    start, end = page_range
+                    start_index = max(0, min(page_count - 1, start - 1))
+                    end_index = max(start_index, min(page_count - 1, end - 1))
+
+                if page_count == 0 or start_index > end_index:
+                    return None
+
+                total_pages = end_index - start_index + 1
+                if progress_callback is not None:
+                    try:
+                        progress_callback(0, total_pages)
+                    except Exception:  # pragma: no cover - defensive against callback errors
+                        LOGGER.exception("Slide Markdown progress callback failed at start")
+
+                for processed_index, page_number in enumerate(
+                    range(start_index, end_index + 1),
+                    start=1,
+                ):
+                    page = document.load_page(page_number)
+                    pix = page.get_pixmap(matrix=matrix, alpha=False)
+                    image = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+                    array = np.asarray(image)
+                    try:
+                        recognition = engine.ocr(array, cls=True)
+                    except Exception as error:  # noqa: BLE001 - OCR may raise
+                        raise SlideMarkdownError("Slide text extraction failed") from error
+                    sections.append(_format_page_markdown(page_number + 1, recognition))
+                    if progress_callback is not None:
+                        try:
+                            progress_callback(processed_index, total_pages)
+                        except Exception:  # pragma: no cover - defensive against callback errors
+                            LOGGER.exception("Slide Markdown progress callback failed mid-run")
+        except SlideMarkdownError:
+            raise
+        except Exception as error:  # noqa: BLE001 - propagate unexpected errors
+            raise SlideMarkdownError("Slide text extraction failed") from error
+
+        stem = pdf_path.stem or "slides"
+        target = ocr_dir / f"{stem}-ocr.md"
+        content = "\n\n".join(section for section in sections if section)
+        target.write_text(content, encoding="utf-8")
+
+        for leftover in existing_items:
+            if leftover.resolve() == target.resolve():
+                continue
+            try:
+                if leftover.is_dir():
+                    shutil.rmtree(leftover)
+                else:
+                    leftover.unlink()
+            except OSError:
+                continue
+
+        return target.relative_to(root_path).as_posix()
 
     @app.get("/", response_class=HTMLResponse)
     async def index(request: Request) -> HTMLResponse:
@@ -3273,6 +3462,7 @@ def create_app(
         page_start: Optional[int] = Form(None),
         page_end: Optional[int] = Form(None),
         preview_token: Optional[str] = Form(None),
+        mode: Optional[str] = Form(None),
         use_existing: Optional[str] = Form(None),
     ) -> Dict[str, Any]:
         _log_event(
@@ -3367,11 +3557,37 @@ def create_app(
             selected_range = (start, end)
 
         assert slide_destination is not None and slide_relative is not None
+        mode_value = (mode or "image").strip().lower() if mode else "image"
+        if mode_value not in {"image", "markdown"}:
+            raise HTTPException(status_code=400, detail="Unsupported slide processing mode")
+
+        is_markdown = mode_value == "markdown"
+        operation_label = "slide_markdown" if is_markdown else "slide_conversion"
+        start_message = (
+            "====> Preparing slide text extraction…"
+            if is_markdown
+            else "====> Preparing slide conversion…"
+        )
+        progress_label = (
+            "====> Extracting slide text…"
+            if is_markdown
+            else "====> Rendering slide images…"
+        )
+        completion_label = (
+            "====> Slide text extraction completed."
+            if is_markdown
+            else "====> Slide conversion completed."
+        )
+        context_label = (
+            "slide markdown extraction" if is_markdown else "slide conversion"
+        )
+
         processing_tracker.start(
             lecture_id,
-            "====> Preparing slide conversion…",
+            start_message,
             context={
-                "operation": "slide_conversion",
+                "operation": operation_label,
+                "mode": mode_value,
                 "preview_token": preview_token,
                 "page_range": {
                     "start": selected_range[0],
@@ -3390,7 +3606,7 @@ def create_app(
                 progress_total = float(total)
                 current = float(max(0, min(processed, total)))
                 message = format_progress_message(
-                    "====> Rendering slide images…",
+                    progress_label,
                     current,
                     progress_total,
                 )
@@ -3401,44 +3617,76 @@ def create_app(
                     message,
                 )
             else:
-                processing_tracker.note(lecture_id, "====> Rendering slide images…")
+                processing_tracker.note(lecture_id, progress_label)
+
+        slide_image_relative: Optional[str] = None
+        notes_relative: Optional[str] = None
 
         try:
-            slide_image_relative = await _run_serialized_background_task(
-                lambda: _generate_slide_archive(
-                    slide_destination,
-                    lecture_paths,
-                    _make_slide_converter(),
-                    page_range=selected_range,
-                    progress_callback=_handle_slide_progress,
-                ),
-                context_label="slide conversion",
-                queued_callback=lambda: processing_tracker.note(
-                    lecture_id, "====> Waiting for other tasks to finish…"
-                ),
-            )
+            if is_markdown:
+                notes_relative = await _run_serialized_background_task(
+                    lambda: _generate_slide_markdown(
+                        slide_destination,
+                        lecture_paths,
+                        page_range=selected_range,
+                        progress_callback=_handle_slide_progress,
+                    ),
+                    context_label=context_label,
+                    queued_callback=lambda: processing_tracker.note(
+                        lecture_id, "====> Waiting for other tasks to finish…"
+                    ),
+                )
+            else:
+                slide_image_relative = await _run_serialized_background_task(
+                    lambda: _generate_slide_archive(
+                        slide_destination,
+                        lecture_paths,
+                        _make_slide_converter(),
+                        page_range=selected_range,
+                        progress_callback=_handle_slide_progress,
+                    ),
+                    context_label=context_label,
+                    queued_callback=lambda: processing_tracker.note(
+                        lecture_id, "====> Waiting for other tasks to finish…"
+                    ),
+                )
         except HTTPException as error:
             detail = getattr(error, "detail", str(error))
             processing_tracker.fail(lecture_id, f"====> {detail}")
             raise
+        except SlideMarkdownDependencyError as error:
+            processing_tracker.fail(lecture_id, f"====> {error}")
+            raise HTTPException(status_code=503, detail=str(error)) from error
+        except SlideMarkdownError as error:
+            processing_tracker.fail(lecture_id, f"====> {error}")
+            raise HTTPException(status_code=500, detail=str(error)) from error
+        except SlideConversionDependencyError as error:
+            LOGGER.warning("Slide conversion unavailable: %s", error)
+            processing_tracker.fail(lecture_id, f"====> {error}")
+            raise HTTPException(status_code=503, detail=str(error)) from error
         except Exception as error:  # noqa: BLE001 - conversion may raise arbitrary errors
             processing_tracker.fail(lecture_id, f"====> {error}")
             raise HTTPException(status_code=500, detail=str(error)) from error
         else:
             if progress_total and progress_total > 0:
                 completion_message = format_progress_message(
-                    "====> Slide conversion completed.",
+                    completion_label,
                     progress_total,
                     progress_total,
                 )
             else:
-                completion_message = "====> Slide conversion completed."
+                completion_message = completion_label
             processing_tracker.finish(lecture_id, completion_message)
+
+        update_kwargs: Dict[str, Optional[str]] = {"slide_path": slide_relative}
+        if slide_image_relative is not None:
+            update_kwargs["slide_image_dir"] = slide_image_relative
+        if notes_relative is not None:
+            update_kwargs["notes_path"] = notes_relative
 
         repository.update_lecture_assets(
             lecture_id,
-            slide_path=slide_relative,
-            slide_image_dir=slide_image_relative,
+            **update_kwargs,
         )
 
         updated = repository.get_lecture(lecture_id)
@@ -3450,11 +3698,14 @@ def create_app(
             lecture_id=lecture_id,
             slide_path=slide_relative,
             slide_image_dir=slide_image_relative,
+            notes_path=notes_relative,
+            mode=mode_value,
         )
         return {
             "lecture": _serialize_lecture(updated),
             "slide_path": slide_relative,
             "slide_image_dir": slide_image_relative,
+            "notes_path": notes_relative,
         }
 
     @app.get("/api/storage/usage")
