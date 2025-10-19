@@ -799,6 +799,7 @@ class LectureStorageSummary(BaseModel):
     name: str
     size: int
     has_audio: bool
+    has_processed_audio: bool
     has_transcript: bool
     has_notes: bool
     has_slides: bool
@@ -811,6 +812,7 @@ class ModuleStorageSummary(BaseModel):
     size: int
     lecture_count: int
     audio_count: int
+    processed_audio_count: int
     transcript_count: int
     notes_count: int
     slide_count: int
@@ -825,6 +827,7 @@ class ClassStorageSummary(BaseModel):
     module_count: int
     lecture_count: int
     audio_count: int
+    processed_audio_count: int
     transcript_count: int
     notes_count: int
     slide_count: int
@@ -1584,6 +1587,7 @@ def create_app(
             counted_files.add(resolved)
 
         _add_path(lecture.audio_path)
+        _add_path(lecture.processed_audio_path)
         _add_path(lecture.slide_path)
         _add_path(lecture.transcript_path)
         _add_path(lecture.notes_path)
@@ -1594,10 +1598,14 @@ def create_app(
             name=lecture.name,
             size=total_size,
             has_audio=bool(lecture.audio_path),
+            has_processed_audio=bool(lecture.processed_audio_path),
             has_transcript=bool(lecture.transcript_path),
             has_notes=bool(lecture.notes_path),
             has_slides=bool(lecture.slide_path or lecture.slide_image_dir),
-            eligible_audio=bool(lecture.audio_path and lecture.transcript_path),
+            eligible_audio=bool(
+                (lecture.audio_path or lecture.processed_audio_path)
+                and lecture.transcript_path
+            ),
         )
 
     def _iter_class_dirs(class_record: ClassRecord) -> List[Path]:
@@ -3536,6 +3544,7 @@ def create_app(
             class_size = 0
             class_lecture_count = 0
             class_audio = 0
+            class_processed = 0
             class_transcripts = 0
             class_notes = 0
             class_slides = 0
@@ -3546,6 +3555,7 @@ def create_app(
                 lectures: List[LectureStorageSummary] = []
                 module_size = 0
                 module_audio = 0
+                module_processed = 0
                 module_transcripts = 0
                 module_notes = 0
                 module_slides = 0
@@ -3559,6 +3569,7 @@ def create_app(
                     class_size += summary.size
 
                     module_audio += int(summary.has_audio)
+                    module_processed += int(summary.has_processed_audio)
                     module_transcripts += int(summary.has_transcript)
                     module_notes += int(summary.has_notes)
                     module_slides += int(summary.has_slides)
@@ -3567,6 +3578,7 @@ def create_app(
                 module_lecture_count = len(lectures)
                 class_lecture_count += module_lecture_count
                 class_audio += module_audio
+                class_processed += module_processed
                 class_transcripts += module_transcripts
                 class_notes += module_notes
                 class_slides += module_slides
@@ -3580,6 +3592,7 @@ def create_app(
                         size=module_size,
                         lecture_count=module_lecture_count,
                         audio_count=module_audio,
+                        processed_audio_count=module_processed,
                         transcript_count=module_transcripts,
                         notes_count=module_notes,
                         slide_count=module_slides,
@@ -3596,6 +3609,7 @@ def create_app(
                     module_count=len(module_records),
                     lecture_count=class_lecture_count,
                     audio_count=class_audio,
+                    processed_audio_count=class_processed,
                     transcript_count=class_transcripts,
                     notes_count=class_notes,
                     slide_count=class_slides,

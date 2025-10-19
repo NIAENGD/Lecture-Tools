@@ -801,6 +801,53 @@ def test_purge_audio_clears_processed_only_assets(temp_config):
     assert not processed_file.exists()
 
 
+def test_storage_overview_includes_processed_audio(temp_config):
+    repository, lecture_id, module_id = _create_sample_data(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    processed_file = (
+        temp_config.storage_root
+        / "Astronomy"
+        / "Stellar Physics"
+        / "Stellar Evolution"
+        / "mastered.wav"
+    )
+    processed_file.write_bytes(b"processed-audio")
+    repository.update_lecture_assets(
+        lecture_id,
+        processed_audio_path=processed_file.relative_to(temp_config.storage_root).as_posix(),
+    )
+
+    response = client.get("/api/storage/overview")
+    assert response.status_code == 200
+    payload = response.json()
+
+    classes = payload.get("classes") or []
+    assert classes
+    class_entry = classes[0]
+    assert class_entry.get("processed_audio_count") == 1
+
+    modules = class_entry.get("modules") or []
+    module_entry = next((module for module in modules if module.get("id") == module_id), None)
+    assert module_entry is not None
+    assert module_entry.get("processed_audio_count") == 1
+
+    lectures = module_entry.get("lectures") or []
+    lecture_entry = next((item for item in lectures if item.get("id") == lecture_id), None)
+    assert lecture_entry is not None
+    assert lecture_entry.get("has_processed_audio") is True
+
+    base_dir = (
+        temp_config.storage_root
+        / "Astronomy"
+        / "Stellar Physics"
+        / "Stellar Evolution"
+    )
+    total_size = sum(path.stat().st_size for path in base_dir.rglob("*") if path.is_file())
+    assert lecture_entry.get("size") == total_size
+
+
 def test_delete_slides_asset_removes_related_files(temp_config):
     repository, lecture_id, _module_id = _create_sample_data(temp_config)
     app = create_app(repository, config=temp_config)
