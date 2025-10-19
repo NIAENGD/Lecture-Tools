@@ -1248,6 +1248,95 @@ def test_process_slides_tasks_are_queued(monkeypatch, temp_config):
     assert call_events[2][1] >= call_events[1][1]
 
 
+def test_transcription_requests_are_serialized(monkeypatch, temp_config):
+    repository, lecture_id, _module_id = _create_sample_data(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    events: list[tuple[int, str, float]] = []
+    request_counter = {"value": 0}
+
+    def next_request_id() -> int:
+        request_counter["value"] += 1
+        return request_counter["value"]
+
+    class DummyEngine:
+        def __init__(
+            self,
+            model: str,
+            *,
+            download_root: Path,
+            compute_type: str,
+            beam_size: int,
+        ) -> None:
+            self._request_id = next_request_id()
+            events.append((self._request_id, "init-start", time.perf_counter()))
+            time.sleep(0.05)
+            events.append((self._request_id, "init-end", time.perf_counter()))
+
+        def transcribe(
+            self,
+            audio_path: Path,
+            output_dir: Path,
+            *,
+            progress_callback=None,
+        ) -> TranscriptResult:
+            events.append((self._request_id, "transcribe-start", time.perf_counter()))
+            time.sleep(0.1)
+            output_dir.mkdir(parents=True, exist_ok=True)
+            transcript = output_dir / f"auto-{self._request_id}.txt"
+            transcript.write_text("auto", encoding="utf-8")
+            if progress_callback is not None:
+                progress_callback(1.0, 1.0, "====> done")
+            events.append((self._request_id, "transcribe-end", time.perf_counter()))
+            return TranscriptResult(text_path=transcript, segments_path=None)
+
+    monkeypatch.setattr(web_server, "FasterWhisperTranscription", DummyEngine)
+
+    def trigger_request() -> None:
+        response = client.post(
+            f"/api/lectures/{lecture_id}/transcribe",
+            json={"model": "base"},
+        )
+        assert response.status_code == 200
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        first = pool.submit(trigger_request)
+        time.sleep(0.05)
+        second = pool.submit(trigger_request)
+        first.result(timeout=5)
+        second.result(timeout=5)
+
+    _wait_for_background_jobs(app)
+
+    ordered_events = [(request_id, name) for request_id, name, _ in events]
+    assert ordered_events == [
+        (1, "init-start"),
+        (1, "init-end"),
+        (1, "transcribe-start"),
+        (1, "transcribe-end"),
+        (2, "init-start"),
+        (2, "init-end"),
+        (2, "transcribe-start"),
+        (2, "transcribe-end"),
+    ]
+
+    first_init_end = next(
+        timestamp for req_id, name, timestamp in events if req_id == 1 and name == "init-end"
+    )
+    second_init_start = next(
+        timestamp for req_id, name, timestamp in events if req_id == 2 and name == "init-start"
+    )
+    assert second_init_start > first_init_end
+
+    first_transcribe_end = next(
+        timestamp for req_id, name, timestamp in events if req_id == 1 and name == "transcribe-end"
+    )
+    second_transcribe_start = next(
+        timestamp for req_id, name, timestamp in events if req_id == 2 and name == "transcribe-start"
+    )
+    assert second_transcribe_start > first_transcribe_end
+
 def test_transcribe_audio_uses_backend(monkeypatch, temp_config):
     repository, lecture_id, _module_id = _create_sample_data(temp_config)
 
