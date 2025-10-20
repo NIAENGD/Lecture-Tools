@@ -24,6 +24,7 @@ import traceback
 import uuid
 import zipfile
 from collections import deque
+from collections.abc import Mapping, Sequence, Set as AbstractSet
 from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -508,6 +509,28 @@ class DebugLogHandler(logging.Handler):
             return "warning"
         return None
 
+    def _freeze_value(self, value: Any) -> Any:
+        """Return a hashable representation of *value* for key construction."""
+
+        if isinstance(value, Mapping):
+            return tuple(
+                (str(key), self._freeze_value(item))
+                for key, item in sorted(value.items(), key=lambda pair: str(pair[0]))
+            )
+        if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+            return tuple(self._freeze_value(item) for item in value)
+        if isinstance(value, AbstractSet):
+            return tuple(sorted(self._freeze_value(item) for item in value))
+        if isinstance(value, datetime):
+            return value.isoformat()
+        if isinstance(value, Path):
+            return str(value)
+        try:
+            hash(value)
+        except TypeError:
+            return str(value)
+        return value
+
     def _build_key(
         self,
         event_type: str,
@@ -516,9 +539,23 @@ class DebugLogHandler(logging.Handler):
         payload: Dict[str, Any],
         correlation: Dict[str, Any],
     ) -> Tuple[Any, ...]:
-        context_items = tuple(sorted(context.items())) if context else tuple()
-        payload_items = tuple(sorted(payload.items())) if payload else tuple()
-        correlation_items = tuple(sorted(correlation.items())) if correlation else tuple()
+        context_items = (
+            tuple((key, self._freeze_value(value)) for key, value in sorted(context.items()))
+            if context
+            else tuple()
+        )
+        payload_items = (
+            tuple((key, self._freeze_value(value)) for key, value in sorted(payload.items()))
+            if payload
+            else tuple()
+        )
+        correlation_items = (
+            tuple(
+                (key, self._freeze_value(value)) for key, value in sorted(correlation.items())
+            )
+            if correlation
+            else tuple()
+        )
         return (event_type, message, context_items, payload_items, correlation_items)
 
     def _serialize_entry(self, entry: Dict[str, Any]) -> Dict[str, Any]:
