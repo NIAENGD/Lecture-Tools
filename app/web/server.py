@@ -1353,6 +1353,10 @@ class StorageDeleteRequest(BaseModel):
     path: str
 
 
+class StorageBatchDownloadRequest(BaseModel):
+    paths: List[str] = Field(default_factory=list)
+
+
 class LectureStorageSummary(BaseModel):
     id: int
     name: str
@@ -4501,6 +4505,108 @@ def create_app(
         response = StorageListResponse(path=relative_path, parent=parent_relative, entries=entries)
         _log_event("Storage listing prepared", path=response.path, entries=len(entries))
         return response
+
+    @app.post("/api/storage/download")
+    async def download_storage_selection(
+        payload: StorageBatchDownloadRequest,
+    ) -> Dict[str, Any]:
+        raw_paths = payload.paths if isinstance(payload.paths, list) else []
+        normalized_paths: List[str] = []
+        seen: Set[str] = set()
+        for item in raw_paths:
+            if not isinstance(item, str):
+                continue
+            candidate = item.strip().strip("/")
+            if not candidate or candidate in seen:
+                continue
+            seen.add(candidate)
+            normalized_paths.append(candidate)
+
+        if not normalized_paths:
+            raise HTTPException(status_code=400, detail="No storage paths selected")
+
+        root_path = _require_storage_root().resolve()
+        archive_root = config.archive_root
+        archive_root.mkdir(parents=True, exist_ok=True)
+
+        filename = build_timestamped_name("storage-selection", extension="zip")
+        archive_path = archive_root / filename
+
+        written: Set[Path] = set()
+        file_count = 0
+
+        try:
+            with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as bundle:
+                for relative in normalized_paths:
+                    try:
+                        target = _resolve_storage_path(root_path, relative)
+                    except ValueError as error:
+                        raise HTTPException(
+                            status_code=400,
+                            detail=f"Invalid storage path: {relative}",
+                        ) from error
+
+                    if not target.exists():
+                        continue
+
+                    if target.is_dir():
+                        for child in target.rglob("*"):
+                            if child.is_dir():
+                                continue
+                            if child.resolve() == archive_path.resolve():
+                                continue
+                            relative_child = child.relative_to(root_path)
+                            if relative_child in written:
+                                continue
+                            bundle.write(
+                                child,
+                                (Path("storage") / relative_child).as_posix(),
+                            )
+                            written.add(relative_child)
+                            file_count += 1
+                    else:
+                        if target.resolve() == archive_path.resolve():
+                            continue
+                        relative_file = target.relative_to(root_path)
+                        if relative_file in written:
+                            continue
+                        bundle.write(
+                            target,
+                            (Path("storage") / relative_file).as_posix(),
+                        )
+                        written.add(relative_file)
+                        file_count += 1
+        except OSError as error:
+            with contextlib.suppress(OSError):
+                archive_path.unlink()
+            raise HTTPException(status_code=500, detail="Failed to create archive") from error
+
+        if file_count == 0:
+            with contextlib.suppress(OSError):
+                archive_path.unlink()
+            raise HTTPException(
+                status_code=400, detail="No files found for selected paths"
+            )
+
+        relative_path = archive_path.relative_to(root_path).as_posix()
+        info = archive_path.stat()
+
+        _log_event(
+            "Prepared storage selection download",
+            filename=filename,
+            size=info.st_size,
+            file_count=file_count,
+            selection_count=len(normalized_paths),
+        )
+
+        return {
+            "archive": {
+                "filename": filename,
+                "path": relative_path,
+                "size": info.st_size,
+                "count": file_count,
+            }
+        }
 
     @app.get("/api/storage/overview")
     async def get_storage_overview() -> StorageOverviewResponse:

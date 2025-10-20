@@ -1248,6 +1248,21 @@
         border-bottom: 1px solid var(--panel-border);
       }
 
+      .storage-select-header,
+      .storage-select-cell {
+        width: 48px;
+        text-align: center;
+      }
+
+      .storage-select-checkbox {
+        width: 16px;
+        height: 16px;
+      }
+
+      .storage-browser-table tbody tr.is-selected {
+        background: var(--accent-muted);
+      }
+
       .storage-browser-table tbody tr:last-child td {
         border-bottom: none;
       }
@@ -2763,6 +2778,15 @@
                     Refresh
                   </button>
                   <button
+                    id="storage-download-selected"
+                    type="button"
+                    class="secondary"
+                    data-i18n="storage.actions.downloadSelected"
+                    disabled
+                  >
+                    Download selected
+                  </button>
+                  <button
                     id="storage-purge"
                     type="button"
                     class="danger"
@@ -2816,6 +2840,16 @@
                   <table class="storage-browser-table">
                     <thead>
                       <tr>
+                        <th scope="col" class="storage-select-header">
+                          <label
+                            class="sr-only"
+                            for="storage-select-all"
+                            data-i18n="storage.browser.select"
+                          >
+                            Select
+                          </label>
+                          <input id="storage-select-all" type="checkbox" disabled />
+                        </th>
                         <th scope="col" data-i18n="storage.browser.name">Name</th>
                         <th scope="col" data-i18n="storage.browser.type">Type</th>
                         <th scope="col" data-i18n="storage.browser.size">Size</th>
@@ -3577,6 +3611,7 @@
               },
               actions: {
                 refresh: 'Refresh',
+                downloadSelected: 'Download selected',
                 purge: 'Remove processed audio',
               },
               browser: {
@@ -3584,6 +3619,7 @@
                 up: 'Up',
                 loading: 'Loading…',
                 empty: 'No files or folders found.',
+                select: 'Select',
                 name: 'Name',
                 type: 'Type',
                 size: 'Size',
@@ -3592,6 +3628,7 @@
                 directory: 'Folder',
                 file: 'File',
                 unnamed: 'Unnamed item',
+                selectAction: 'Select {{name}}',
               },
               purge: {
                 none: 'No processed audio to remove.',
@@ -3829,6 +3866,9 @@
               storagePurgeFailed: 'Unable to remove processed audio files.',
               storageDeleted: 'Storage item deleted.',
               storageDeleteFailed: 'Unable to delete storage item.',
+              storageDownloadReady: 'Download ready.',
+              storageDownloadFailed: 'Unable to prepare download.',
+              storageDownloadNone: 'Select at least one item to download.',
               gpuChecking: '====> Checking GPU Whisper support…',
               gpuConfirmed: 'GPU Whisper support confirmed.',
               gpuUnavailable: 'GPU acceleration is unavailable on this platform.',
@@ -4063,6 +4103,7 @@
               },
               actions: {
                 refresh: '刷新',
+                downloadSelected: '下载所选项',
                 purge: '移除已处理的音频',
               },
               browser: {
@@ -4070,6 +4111,7 @@
                 up: '上一级',
                 loading: '正在加载…',
                 empty: '此位置没有文件或文件夹。',
+                select: '选择',
                 name: '名称',
                 type: '类型',
                 size: '大小',
@@ -4078,6 +4120,7 @@
                 directory: '文件夹',
                 file: '文件',
                 unnamed: '未命名项目',
+                selectAction: '选择{{name}}',
               },
               purge: {
                 none: '没有可移除的音频。',
@@ -4309,6 +4352,9 @@
               storagePurgeFailed: '无法移除已处理的音频。',
               storageDeleted: '已删除存储项目。',
               storageDeleteFailed: '无法删除存储项目。',
+              storageDownloadReady: '已准备好下载。',
+              storageDownloadFailed: '无法准备下载。',
+              storageDownloadNone: '请选择至少一个项目。',
               gpuChecking: '====> 正在检查 GPU Whisper 支持…',
               gpuConfirmed: 'GPU Whisper 支持已确认。',
               gpuUnavailable: '此平台不支持 GPU 加速。',
@@ -4545,6 +4591,7 @@
               },
               actions: {
                 refresh: 'Actualizar',
+                downloadSelected: 'Descargar seleccionados',
                 purge: 'Quitar audio procesado',
               },
               browser: {
@@ -4552,6 +4599,7 @@
                 up: 'Subir',
                 loading: 'Cargando…',
                 empty: 'No hay archivos ni carpetas en esta ubicación.',
+                select: 'Seleccionar',
                 name: 'Nombre',
                 type: 'Tipo',
                 size: 'Tamaño',
@@ -4560,6 +4608,7 @@
                 directory: 'Carpeta',
                 file: 'Archivo',
                 unnamed: 'Elemento sin nombre',
+                selectAction: 'Seleccionar {{name}}',
               },
               purge: {
                 none: 'No hay audio procesado para eliminar.',
@@ -4799,6 +4848,9 @@
               storagePurgeFailed: 'No se pudo eliminar el audio procesado.',
               storageDeleted: 'Elemento de almacenamiento eliminado.',
               storageDeleteFailed: 'No se pudo eliminar el elemento de almacenamiento.',
+              storageDownloadReady: 'Descarga preparada.',
+              storageDownloadFailed: 'No se pudo preparar la descarga.',
+              storageDownloadNone: 'Selecciona al menos un elemento.',
               gpuChecking: '====> Comprobando compatibilidad con GPU Whisper…',
               gpuConfirmed: 'Compatibilidad con GPU Whisper confirmada.',
               gpuUnavailable: 'GPU no disponible en esta plataforma.',
@@ -5036,6 +5088,7 @@
               },
               actions: {
                 refresh: 'Actualiser',
+                downloadSelected: 'Télécharger la sélection',
                 purge: 'Supprimer l’audio traité',
               },
               browser: {
@@ -5043,6 +5096,7 @@
                 up: 'Dossier parent',
                 loading: 'Chargement…',
                 empty: 'Aucun fichier ou dossier à cet emplacement.',
+                select: 'Sélectionner',
                 name: 'Nom',
                 type: 'Type',
                 size: 'Taille',
@@ -5051,6 +5105,7 @@
                 directory: 'Dossier',
                 file: 'Fichier',
                 unnamed: 'Élément sans nom',
+                selectAction: 'Sélectionner {{name}}',
               },
               purge: {
                 none: 'Aucun audio traité à supprimer.',
@@ -5290,6 +5345,9 @@
               storagePurgeFailed: 'Impossible de supprimer les audios traités.',
               storageDeleted: 'Élément de stockage supprimé.',
               storageDeleteFailed: 'Impossible de supprimer l’élément de stockage.',
+              storageDownloadReady: 'Téléchargement prêt.',
+              storageDownloadFailed: 'Impossible de préparer le téléchargement.',
+              storageDownloadNone: 'Sélectionnez au moins un élément.',
               gpuChecking: '====> Vérification de la compatibilité GPU Whisper…',
               gpuConfirmed: 'Compatibilité GPU Whisper confirmée.',
               gpuUnavailable: 'GPU indisponible sur cette plateforme.',
@@ -5596,6 +5654,7 @@
               initialized: false,
               deleting: new Set(),
               error: null,
+              selected: new Set(),
             },
           },
           progress: {
@@ -5783,6 +5842,7 @@
             container: document.getElementById('view-storage'),
             path: document.getElementById('storage-path'),
             refresh: document.getElementById('storage-refresh'),
+            downloadSelected: document.getElementById('storage-download-selected'),
             used: document.getElementById('storage-used'),
             available: document.getElementById('storage-available'),
             total: document.getElementById('storage-total'),
@@ -5799,6 +5859,7 @@
               empty: document.getElementById('storage-browser-empty'),
               tableWrapper: document.getElementById('storage-browser-table-wrapper'),
               tableBody: document.getElementById('storage-browser-body'),
+              selectAll: document.getElementById('storage-select-all'),
             },
           },
           progress: {
@@ -6274,6 +6335,16 @@
                 : [],
             );
           }
+          if (!(browserState.selected instanceof Set)) {
+            const existingSelected = browserState.selected;
+            browserState.selected = new Set(
+              Array.isArray(existingSelected)
+                ? existingSelected
+                : existingSelected && typeof existingSelected === 'string'
+                ? [existingSelected]
+                : [],
+            );
+          }
           if (browserState.error !== null && typeof browserState.error !== 'string') {
             browserState.error = null;
           }
@@ -6305,6 +6376,8 @@
           const emptyElement = dom.storage.browser.empty;
           const tableWrapper = dom.storage.browser.tableWrapper;
           const tableBody = dom.storage.browser.tableBody;
+          const downloadButton = dom.storage.downloadSelected;
+          const selectAllControl = dom.storage.browser.selectAll;
 
           const isLoading = Boolean(browserState.loading);
           const entries = Array.isArray(browserState.entries) ? browserState.entries : [];
@@ -6327,6 +6400,8 @@
 
           if (tableBody) {
             tableBody.innerHTML = '';
+            let visibleSelectableCount = 0;
+            let visibleSelectedCount = 0;
             if (!isLoading && hasEntries) {
               entries.forEach((entry) => {
                 if (!entry || typeof entry !== 'object') {
@@ -6338,8 +6413,35 @@
                   ? entry.name
                   : entryPath;
                 const isDirectory = Boolean(entry.is_dir);
+                const isDeleting = browserState.deleting.has(entryPath);
+                const isSelected = browserState.selected.has(entryPath);
+                if (isSelected) {
+                  row.classList.add('is-selected');
+                }
                 row.dataset.storagePath = entryPath;
                 row.dataset.storageType = isDirectory ? 'directory' : 'file';
+
+                const selectCell = document.createElement('td');
+                selectCell.className = 'storage-select-cell';
+                if (entryPath) {
+                  const checkbox = document.createElement('input');
+                  checkbox.type = 'checkbox';
+                  checkbox.className = 'storage-select-checkbox';
+                  checkbox.dataset.storageSelect = entryPath;
+                  checkbox.checked = isSelected;
+                  checkbox.disabled = browserState.loading || isDeleting;
+                  const labelName = entryName || t('storage.browser.unnamed');
+                  checkbox.setAttribute(
+                    'aria-label',
+                    t('storage.browser.selectAction', { name: labelName }),
+                  );
+                  selectCell.appendChild(checkbox);
+                  visibleSelectableCount += 1;
+                  if (isSelected) {
+                    visibleSelectedCount += 1;
+                  }
+                }
+                row.appendChild(selectCell);
 
                 const nameCell = document.createElement('td');
                 if (isDirectory) {
@@ -6392,13 +6494,26 @@
                 deleteButton.dataset.storagePath = entryPath;
                 deleteButton.dataset.storageName = entryName || entryPath || '';
                 deleteButton.textContent = t('common.actions.delete');
-                const isDeleting = browserState.deleting.has(entryPath);
                 deleteButton.disabled = !entryPath || browserState.loading || isDeleting;
                 actionsCell.appendChild(deleteButton);
                 row.appendChild(actionsCell);
 
                 tableBody.appendChild(row);
               });
+            }
+            if (selectAllControl) {
+              selectAllControl.disabled =
+                browserState.loading || isLoading || visibleSelectableCount === 0;
+              selectAllControl.indeterminate =
+                visibleSelectedCount > 0 && visibleSelectedCount < visibleSelectableCount;
+              selectAllControl.checked =
+                visibleSelectableCount > 0 &&
+                visibleSelectedCount === visibleSelectableCount &&
+                !selectAllControl.indeterminate;
+            }
+            if (downloadButton) {
+              downloadButton.disabled =
+                browserState.loading || isLoading || browserState.selected.size === 0;
             }
           }
         }
@@ -6625,7 +6740,11 @@
 
         async function loadStorageBrowser(path, options = {}) {
           const browserState = getStorageBrowserState();
-          const targetPath = typeof path === 'string' ? path : browserState.path || '';
+          const previousPath = browserState.path || '';
+          const targetPath = typeof path === 'string' ? path : previousPath;
+          if (targetPath !== previousPath) {
+            browserState.selected.clear();
+          }
           try {
             const payload = await request(buildStorageListUrl(targetPath));
             const entries = Array.isArray(payload?.entries) ? payload.entries : [];
@@ -6640,6 +6759,16 @@
             browserState.entries = entries;
             browserState.error = null;
             browserState.deleting.clear();
+            const validPaths = new Set(
+              entries
+                .map((entry) => (typeof entry?.path === 'string' ? entry.path : ''))
+                .filter((value) => typeof value === 'string' && value),
+            );
+            Array.from(browserState.selected).forEach((value) => {
+              if (!validPaths.has(value)) {
+                browserState.selected.delete(value);
+              }
+            });
             browserState.initialized = true;
             return browserState.path;
           } catch (error) {
@@ -6722,6 +6851,7 @@
             return;
           }
           browserState.deleting.add(targetPath);
+          browserState.selected.delete(targetPath);
           renderStorageBrowser();
           try {
             await request('/api/storage', {
@@ -6767,6 +6897,102 @@
             }
             const name = actionElement.dataset.storageName || '';
             await handleStorageEntryDeletion(path, name);
+          }
+        }
+
+        function handleStorageSelectionChange(event) {
+          const target = event.target;
+          if (!(target instanceof HTMLInputElement)) {
+            return;
+          }
+          if (target.type !== 'checkbox') {
+            return;
+          }
+          const entryPath = target.dataset.storageSelect || '';
+          if (!entryPath) {
+            return;
+          }
+          const browserState = getStorageBrowserState();
+          if (target.checked) {
+            browserState.selected.add(entryPath);
+          } else {
+            browserState.selected.delete(entryPath);
+          }
+          renderStorageBrowser();
+        }
+
+        function handleStorageSelectAll(event) {
+          const target = event.target;
+          if (!(target instanceof HTMLInputElement)) {
+            return;
+          }
+          if (target.disabled) {
+            return;
+          }
+          const browserState = getStorageBrowserState();
+          browserState.selected.clear();
+          if (target.checked) {
+            const entries = Array.isArray(browserState.entries) ? browserState.entries : [];
+            entries.forEach((entry) => {
+              if (!entry || typeof entry !== 'object') {
+                return;
+              }
+              const entryPath = typeof entry.path === 'string' ? entry.path : '';
+              if (entryPath) {
+                browserState.selected.add(entryPath);
+              }
+            });
+          }
+          renderStorageBrowser();
+        }
+
+        async function handleStorageDownloadSelected() {
+          if (!dom.storage || !dom.storage.downloadSelected) {
+            return;
+          }
+          const browserState = getStorageBrowserState();
+          const selected = Array.from(browserState.selected);
+          if (selected.length === 0) {
+            showStatus(t('status.storageDownloadNone'), 'info');
+            return;
+          }
+          dom.storage.downloadSelected.disabled = true;
+          let success = false;
+          try {
+            const response = await request('/api/storage/download', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ paths: selected }),
+            });
+            const archive = response?.archive;
+            if (!archive || typeof archive.path !== 'string' || !archive.path) {
+              throw new Error(t('status.storageDownloadFailed'));
+            }
+            const downloadUrl = buildStorageURL(archive.path);
+            const fileName =
+              typeof archive.filename === 'string' && archive.filename
+                ? archive.filename
+                : 'storage-selection.zip';
+            const anchor = document.createElement('a');
+            anchor.href = downloadUrl;
+            anchor.download = fileName;
+            anchor.rel = 'noopener noreferrer';
+            document.body.appendChild(anchor);
+            anchor.click();
+            anchor.remove();
+            success = true;
+            showStatus(t('status.storageDownloadReady'), 'success');
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            showStatus(message || t('status.storageDownloadFailed'), 'error');
+          } finally {
+            if (dom.storage && dom.storage.downloadSelected) {
+              dom.storage.downloadSelected.disabled = false;
+            }
+            if (success) {
+              browserState.selected.clear();
+            }
+            renderStorageBrowser();
           }
         }
 
@@ -12732,6 +12958,21 @@
         if (dom.storage && dom.storage.browser && dom.storage.browser.tableBody) {
           dom.storage.browser.tableBody.addEventListener('click', (event) => {
             void handleStorageBrowserAction(event);
+          });
+          dom.storage.browser.tableBody.addEventListener('change', (event) => {
+            handleStorageSelectionChange(event);
+          });
+        }
+
+        if (dom.storage && dom.storage.browser && dom.storage.browser.selectAll) {
+          dom.storage.browser.selectAll.addEventListener('change', (event) => {
+            handleStorageSelectAll(event);
+          });
+        }
+
+        if (dom.storage && dom.storage.downloadSelected) {
+          dom.storage.downloadSelected.addEventListener('click', () => {
+            void handleStorageDownloadSelected();
           });
         }
 
