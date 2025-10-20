@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import shutil
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterable, Optional, Protocol
@@ -11,6 +12,7 @@ from typing import Callable, Iterable, Optional, Protocol
 from .. import config as config_module
 from ..config import AppConfig
 from .naming import build_asset_stem, build_timestamped_name, slugify
+from .events import emit_file_event
 from .storage import ClassRecord, LectureRecord, LectureRepository, ModuleRecord
 
 
@@ -113,11 +115,52 @@ class LecturePaths:
             ("notes", self.notes_dir),
         )
         for label, path in directories:
-            if not config_module._ensure_writable_directory(path):
+            start = time.perf_counter()
+            existed_before = path.exists()
+            try:
+                writable = config_module._ensure_writable_directory(path)
+            except Exception as error:  # pragma: no cover - defensive
+                duration_ms = (time.perf_counter() - start) * 1000.0
+                emit_file_event(
+                    "ensure_directory_error",
+                    payload={
+                        "label": label,
+                        "path": str(path),
+                        "status": "error",
+                        "error": f"{error.__class__.__name__}: {error}",
+                    },
+                    duration_ms=duration_ms,
+                    level=logging.ERROR,
+                )
+                raise IngestionError(
+                    f"Unable to prepare {label} directory '{path}'. It is not writable. "
+                    "Update config/default.json or adjust permissions."
+                ) from error
+            created = path.exists() and not existed_before
+            duration_ms = (time.perf_counter() - start) * 1000.0
+            event_payload = {
+                "label": label,
+                "path": str(path),
+                "created": created,
+                "existed": existed_before,
+                "writable": bool(writable),
+            }
+            if not writable:
+                emit_file_event(
+                    "ensure_directory_failed",
+                    payload={**event_payload, "status": "error"},
+                    duration_ms=duration_ms,
+                    level=logging.ERROR,
+                )
                 raise IngestionError(
                     f"Unable to prepare {label} directory '{path}'. It is not writable. "
                     "Update config/default.json or adjust permissions."
                 )
+            emit_file_event(
+                "ensure_directory",
+                payload={**event_payload, "status": "ok"},
+                duration_ms=duration_ms,
+            )
             LOGGER.debug("Ensured %s path exists and is writable: %s", label, path)
 class LectureIngestor:
     """Coordinates the ingestion of lecture assets."""

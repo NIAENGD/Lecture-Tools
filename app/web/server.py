@@ -20,6 +20,7 @@ import sys
 import subprocess
 import threading
 import time
+import traceback
 import uuid
 import zipfile
 from collections import deque
@@ -65,6 +66,14 @@ from ..processing import (
     save_preprocessed_wav,
 )
 from ..services.audio_conversion import ensure_wav, ffmpeg_available
+from ..services.events import (
+    emit_db_event,
+    emit_file_event,
+    emit_structured_event,
+    emit_task_event,
+    normalize_context as _normalize_event_context,
+    sanitize_context_value as _sanitize_context_value,
+)
 from ..services.ingestion import LecturePaths, TranscriptResult
 from ..services.naming import build_asset_stem, build_timestamped_name, slugify
 from ..services.progress import (
@@ -102,6 +111,8 @@ _DEFAULT_UI_SETTINGS = UISettings()
 _SERVER_LOGGER_PREFIXES: Tuple[str, ...] = ("uvicorn", "gunicorn", "hypercorn", "werkzeug")
 _SLIDE_PREVIEW_DIR_NAME = ".previews"
 _SLIDE_PREVIEW_TOKEN_PATTERN = re.compile(r"^[a-f0-9]{16,64}$")
+_DB_SLOW_WARNING_MS = 450.0
+_FILE_SLOW_WARNING_MS = 300.0
 
 _DEFAULT_MAX_UPLOAD_BYTES = 1024 * 1024 * 1024
 _UPDATE_LOG_LIMIT = 500
@@ -266,38 +277,6 @@ EVENT_LOGGER = ContextualLoggerAdapter(logging.getLogger("lecture_tools.ui.event
 
 
 _PDF_PAGE_COUNT_TIMEOUT_SECONDS = 8.0
-
-
-def _sanitize_context_value(value: Any) -> Any:
-    if value is None:
-        return None
-    if isinstance(value, (bool, int, float)):
-        return value
-    if isinstance(value, datetime):
-        return value.isoformat()
-    if isinstance(value, Path):
-        return str(value)
-    if isinstance(value, (list, tuple, set)):
-        joined = ", ".join(str(item) for item in value)
-        return joined[:200] + ("…" if len(joined) > 200 else "")
-    text = str(value)
-    return text[:200] + ("…" if len(text) > 200 else "")
-
-
-def _normalize_event_context(values: Optional[Dict[str, Any]]) -> Dict[str, Any]:
-    if not values:
-        return {}
-    normalized: Dict[str, Any] = {}
-    for key, raw_value in values.items():
-        if not key:
-            continue
-        value = _sanitize_context_value(raw_value)
-        if value is None or value == "":
-            continue
-        normalized[str(key)] = value
-    return normalized
-
-
 def _emit_debug_event(
     event_type: str,
     message: str,
@@ -308,26 +287,17 @@ def _emit_debug_event(
     level: int = logging.INFO,
     logger: logging.Logger = EVENT_LOGGER,
 ) -> None:
-    base_message = str(message).strip()
-    normalized_context = _normalize_event_context(context)
-    normalized_payload = _normalize_event_context(payload)
-    combined_details = {**normalized_context, **normalized_payload}
-    details_text = ", ".join(f"{key}={value}" for key, value in combined_details.items())
-    display_message = f"[{event_type}] {base_message}" if event_type else base_message
-    log_message = f"{display_message} ({details_text})" if details_text else display_message
-    extra: Dict[str, Any] = {
-        "debug_event": base_message,
-        "debug_event_type": event_type,
-    }
-    if normalized_context:
-        extra["debug_context"] = normalized_context
-    if normalized_payload:
-        extra["debug_payload"] = normalized_payload
-    if duration_ms is not None:
-        extra["debug_duration_ms"] = float(duration_ms)
-    if LOGGER.isEnabledFor(logging.DEBUG):
-        LOGGER.debug(log_message)
-    logger.log(level, log_message, extra=extra)
+    correlation = _collect_correlation_context()
+    emit_structured_event(
+        event_type,
+        message,
+        payload=payload,
+        context=context,
+        correlation=correlation,
+        duration_ms=duration_ms,
+        level=level,
+        logger=logger,
+    )
 
 
 def _emit_db_event(
@@ -338,13 +308,15 @@ def _emit_db_event(
     duration_ms: Optional[float] = None,
     level: int = logging.INFO,
 ) -> None:
-    _emit_debug_event(
-        "DB_QUERY",
+    correlation = _collect_correlation_context()
+    emit_db_event(
         action,
         payload=payload,
         context=context,
+        correlation=correlation,
         duration_ms=duration_ms,
         level=level,
+        logger=EVENT_LOGGER,
     )
 
 
@@ -356,13 +328,15 @@ def _emit_file_event(
     duration_ms: Optional[float] = None,
     level: int = logging.INFO,
 ) -> None:
-    _emit_debug_event(
-        "FILE_OP",
+    correlation = _collect_correlation_context()
+    emit_file_event(
         operation,
         payload=payload,
         context=context,
+        correlation=correlation,
         duration_ms=duration_ms,
         level=level,
+        logger=EVENT_LOGGER,
     )
 
 
@@ -381,12 +355,15 @@ def _emit_task_state(
         event_payload["lecture_id"] = lecture_id
     if payload:
         event_payload.update(payload)
-    _emit_debug_event(
-        "TASK_STATE",
+    correlation = _collect_correlation_context()
+    emit_task_event(
+        phase,
         message or phase,
         payload=event_payload,
         context=context,
+        correlation=correlation,
         duration_ms=duration_ms,
+        logger=EVENT_LOGGER,
     )
 
 
@@ -425,6 +402,7 @@ class DebugLogHandler(logging.Handler):
         "processName",
         "getMessage",
     }
+    _SEVERITY_PRIORITY: Dict[str, int] = {"error": 3, "warning": 2, "info": 1}
 
     def __init__(self, capacity: int = 500) -> None:
         super().__init__(level=logging.DEBUG)
@@ -484,6 +462,13 @@ class DebugLogHandler(logging.Handler):
 
     def _extract_correlation(self, record: logging.LogRecord) -> Dict[str, str]:
         correlation: Dict[str, str] = {}
+        stored = getattr(record, "debug_correlation", None)
+        if isinstance(stored, dict):
+            for key, value in stored.items():
+                sanitized = _sanitize_context_value(value)
+                if sanitized is None:
+                    continue
+                correlation[str(key)] = str(sanitized)
         for field in ("request_id", "job_id", "actor"):
             value = getattr(record, field, None)
             if value is None:
@@ -491,8 +476,37 @@ class DebugLogHandler(logging.Handler):
             sanitized = _sanitize_context_value(value)
             if sanitized is None:
                 continue
-            correlation[field] = str(sanitized)
+            correlation.setdefault(field, str(sanitized))
         return correlation
+
+    def _compute_severity(
+        self,
+        record: logging.LogRecord,
+        payload: Dict[str, Any],
+        duration_ms: Optional[float],
+    ) -> Optional[str]:
+        event_type = str(getattr(record, "debug_event_type", "") or "")
+        level = record.levelno
+        error_flag = False
+        if payload:
+            error_flag = bool(
+                payload.get("error")
+                or payload.get("status") in {"error", "failed", "exception"}
+                or payload.get("severity") == "error"
+            )
+        if level >= logging.ERROR or error_flag:
+            return "error"
+        slow_threshold: Optional[float] = None
+        if event_type == "DB_QUERY":
+            slow_threshold = _DB_SLOW_WARNING_MS
+        elif event_type == "FILE_OP":
+            slow_threshold = _FILE_SLOW_WARNING_MS
+        if slow_threshold is not None and duration_ms is not None:
+            if duration_ms >= slow_threshold:
+                return "warning"
+        if level >= logging.WARNING:
+            return "warning"
+        return None
 
     def _build_key(
         self,
@@ -536,6 +550,7 @@ class DebugLogHandler(logging.Handler):
         payload = self._extract_payload(record)
         duration_ms = self._extract_duration(record)
         correlation = self._extract_correlation(record)
+        severity = self._compute_severity(record, payload, duration_ms)
 
         timestamp = datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat()
         event_type = str(getattr(record, "debug_event_type", record.name))
@@ -544,6 +559,8 @@ class DebugLogHandler(logging.Handler):
             if any(record.name.startswith(prefix) for prefix in _SERVER_LOGGER_PREFIXES)
             else "application"
         )
+        if event_type == "TASK_STATE":
+            category = "task"
         key = self._build_key(event_type, base_message, context, payload, correlation)
 
         with self._lock:
@@ -584,6 +601,12 @@ class DebugLogHandler(logging.Handler):
                     existing["max_duration_ms"] = max(
                         existing.get("max_duration_ms", duration_ms), duration_ms
                     )
+                if severity:
+                    previous = str(existing.get("severity", "")) if existing.get("severity") else ""
+                    prev_rank = self._SEVERITY_PRIORITY.get(previous.lower(), 0)
+                    new_rank = self._SEVERITY_PRIORITY.get(severity, 0)
+                    if new_rank >= prev_rank:
+                        existing["severity"] = severity
                 if correlation:
                     existing.update(correlation)
                 existing["_key"] = key
@@ -601,6 +624,8 @@ class DebugLogHandler(logging.Handler):
                     "last_seen": timestamp,
                     "_key": key,
                 }
+                if severity:
+                    entry["severity"] = severity
                 if context:
                     entry["context"] = context
                 if payload:
@@ -645,19 +670,31 @@ class TranscriptionProgressTracker:
 
     def __init__(self, *, name: str = "task") -> None:
         self._lock = threading.Lock()
-        self._states: Dict[int, Dict[str, Any]] = {}
+        self._states: Dict[str, Dict[str, Any]] = {}
         self._name = name
 
-    def _baseline(self) -> Dict[str, Any]:
+    def _task_id(self, lecture_id: int) -> str:
+        return f"{self._name}:{lecture_id}"
+
+    def _baseline(self, task_id: str, lecture_id: int) -> Dict[str, Any]:
         return {
+            "task_id": task_id,
+            "lecture_id": lecture_id,
+            "operation": self._name,
+            "status": "idle",
+            "phase": "idle",
+            "step": None,
             "active": False,
+            "finished": False,
+            "message": "",
+            "error": None,
+            "exception": None,
             "current": None,
             "total": None,
             "ratio": None,
-            "message": "",
-            "finished": False,
-            "error": None,
-            "timestamp": None,
+            "started_at": None,
+            "updated_at": None,
+            "completed_at": None,
             "context": {},
         }
 
@@ -686,37 +723,72 @@ class TranscriptionProgressTracker:
         if combined:
             state["context"] = combined
 
+    def _emit(self, lecture_id: int, state: Dict[str, Any], message: str) -> None:
+        snapshot = dict(state)
+        payload = {
+            "task_id": snapshot.get("task_id"),
+            "operation": snapshot.get("operation"),
+            "status": snapshot.get("status"),
+            "phase": snapshot.get("phase"),
+            "step": snapshot.get("step"),
+            "lecture_id": snapshot.get("lecture_id"),
+            "active": snapshot.get("active"),
+            "finished": snapshot.get("finished"),
+            "message": snapshot.get("message"),
+            "error": snapshot.get("error"),
+            "exception": snapshot.get("exception"),
+            "current": snapshot.get("current"),
+            "total": snapshot.get("total"),
+            "ratio": snapshot.get("ratio"),
+            "started_at": snapshot.get("started_at"),
+            "updated_at": snapshot.get("updated_at"),
+            "completed_at": snapshot.get("completed_at"),
+        }
+        _emit_task_state(
+            snapshot.get("phase", "update"),
+            tracker=self._name,
+            lecture_id=lecture_id,
+            message=message,
+            payload=payload,
+            context=snapshot.get("context"),
+        )
+
+    def _calculate_ratio(
+        self, current: Optional[float], total: Optional[float]
+    ) -> Optional[float]:
+        if total and total > 0 and current is not None:
+            return max(0.0, min(current / total, 1.0))
+        return None
+
     def start(
         self,
         lecture_id: int,
         message: str = "====> Preparing transcription…",
         *,
         context: Optional[Dict[str, Any]] = None,
-    ) -> None:
+    ) -> str:
+        task_id = self._task_id(lecture_id)
+        timestamp = time.time()
         with self._lock:
-            state = self._baseline()
+            state = self._baseline(task_id, lecture_id)
             state.update(
                 {
                     "active": True,
+                    "status": "running",
+                    "phase": "start",
+                    "step": message,
                     "message": message,
-                    "timestamp": time.time(),
+                    "started_at": timestamp,
+                    "updated_at": timestamp,
+                    "finished": False,
+                    "error": None,
+                    "exception": None,
                 }
             )
             self._merge_context(state, context)
-            self._states[lecture_id] = state
-        snapshot = dict(state)
-        _emit_task_state(
-            "start",
-            tracker=self._name,
-            lecture_id=lecture_id,
-            message=message,
-            payload={
-                "active": snapshot["active"],
-                "finished": snapshot["finished"],
-                "message": snapshot["message"],
-            },
-            context=snapshot.get("context"),
-        )
+            self._states[task_id] = state
+        self._emit(lecture_id, state, message)
+        return task_id
 
     def update(
         self,
@@ -727,41 +799,30 @@ class TranscriptionProgressTracker:
         *,
         context: Optional[Dict[str, Any]] = None,
     ) -> None:
+        task_id = self._task_id(lecture_id)
+        timestamp = time.time()
         with self._lock:
-            state = self._states.get(lecture_id, self._baseline())
-            ratio = None
-            if total and total > 0 and current is not None:
-                ratio = max(0.0, min(current / total, 1.0))
+            state = self._states.get(task_id, self._baseline(task_id, lecture_id))
+            ratio = self._calculate_ratio(current, total)
             state.update(
                 {
                     "active": True,
+                    "status": "running",
+                    "phase": "progress",
+                    "step": message,
+                    "message": message,
                     "current": current,
                     "total": total,
                     "ratio": ratio,
-                    "message": message,
+                    "updated_at": timestamp,
                     "finished": False,
                     "error": None,
-                    "timestamp": time.time(),
+                    "exception": None,
                 }
             )
             self._merge_context(state, context)
-            self._states[lecture_id] = state
-        snapshot = dict(state)
-        _emit_task_state(
-            "update",
-            tracker=self._name,
-            lecture_id=lecture_id,
-            message=message,
-            payload={
-                "active": snapshot["active"],
-                "finished": snapshot["finished"],
-                "current": snapshot.get("current"),
-                "total": snapshot.get("total"),
-                "ratio": snapshot.get("ratio"),
-                "message": snapshot.get("message"),
-            },
-            context=snapshot.get("context"),
-        )
+            self._states[task_id] = state
+        self._emit(lecture_id, state, message)
 
     def note(
         self,
@@ -770,7 +831,24 @@ class TranscriptionProgressTracker:
         *,
         context: Optional[Dict[str, Any]] = None,
     ) -> None:
-        self.update(lecture_id, None, None, message, context=context)
+        task_id = self._task_id(lecture_id)
+        timestamp = time.time()
+        with self._lock:
+            state = self._states.get(task_id, self._baseline(task_id, lecture_id))
+            state.update(
+                {
+                    "active": True,
+                    "status": "running",
+                    "phase": "note",
+                    "step": message,
+                    "message": message,
+                    "updated_at": timestamp,
+                    "finished": False,
+                }
+            )
+            self._merge_context(state, context)
+            self._states[task_id] = state
+        self._emit(lecture_id, state, message)
 
     def finish(
         self,
@@ -779,31 +857,27 @@ class TranscriptionProgressTracker:
         *,
         context: Optional[Dict[str, Any]] = None,
     ) -> None:
+        task_id = self._task_id(lecture_id)
+        timestamp = time.time()
         with self._lock:
-            state = self._states.get(lecture_id, self._baseline())
+            state = self._states.get(task_id, self._baseline(task_id, lecture_id))
+            final_message = message or state.get("message", "")
             state.update(
                 {
                     "active": False,
+                    "status": "succeeded",
+                    "phase": "finish",
+                    "step": final_message,
+                    "message": final_message,
                     "finished": True,
-                    "message": message or state.get("message", ""),
-                    "timestamp": time.time(),
+                    "updated_at": timestamp,
+                    "completed_at": timestamp,
+                    "error": None,
                 }
             )
             self._merge_context(state, context)
-            self._states[lecture_id] = state
-        snapshot = dict(state)
-        _emit_task_state(
-            "finish",
-            tracker=self._name,
-            lecture_id=lecture_id,
-            message=snapshot.get("message", message or ""),
-            payload={
-                "active": snapshot["active"],
-                "finished": snapshot["finished"],
-                "message": snapshot.get("message"),
-            },
-            context=snapshot.get("context"),
-        )
+            self._states[task_id] = state
+        self._emit(lecture_id, state, final_message)
 
     def fail(
         self,
@@ -811,49 +885,56 @@ class TranscriptionProgressTracker:
         message: str,
         *,
         context: Optional[Dict[str, Any]] = None,
+        exception: Optional[BaseException] = None,
     ) -> None:
+        task_id = self._task_id(lecture_id)
+        timestamp = time.time()
+        exception_info: Optional[Dict[str, Any]] = None
+        if exception is not None:
+            stack = "".join(
+                traceback.format_exception(type(exception), exception, exception.__traceback__)
+            ).strip()
+            exception_info = {
+                "type": exception.__class__.__name__,
+                "message": str(exception),
+                "stack": stack or None,
+            }
         with self._lock:
-            state = self._states.get(lecture_id, self._baseline())
+            state = self._states.get(task_id, self._baseline(task_id, lecture_id))
             state.update(
                 {
                     "active": False,
-                    "finished": True,
+                    "status": "failed",
+                    "phase": "failure",
+                    "step": message,
                     "message": message,
                     "error": message,
-                    "timestamp": time.time(),
+                    "exception": exception_info,
+                    "finished": True,
+                    "updated_at": timestamp,
+                    "completed_at": timestamp,
                 }
             )
             self._merge_context(state, context)
-            self._states[lecture_id] = state
-        snapshot = dict(state)
-        _emit_task_state(
-            "fail",
-            tracker=self._name,
-            lecture_id=lecture_id,
-            message=message,
-            payload={
-                "active": snapshot["active"],
-                "finished": snapshot["finished"],
-                "message": snapshot.get("message"),
-                "error": snapshot.get("error"),
-            },
-            context=snapshot.get("context"),
-        )
+            self._states[task_id] = state
+        self._emit(lecture_id, state, message)
 
     def get(self, lecture_id: int) -> Dict[str, Any]:
+        task_id = self._task_id(lecture_id)
         with self._lock:
-            state = self._states.get(lecture_id)
+            state = self._states.get(task_id)
             if state is None:
-                return self._baseline()
+                return self._baseline(task_id, lecture_id)
             return dict(state)
 
-    def all(self) -> Dict[int, Dict[str, Any]]:
+    def all(self) -> Dict[str, Dict[str, Any]]:
         with self._lock:
-            return {lecture_id: dict(state) for lecture_id, state in self._states.items()}
+            return {task_id: dict(state) for task_id, state in self._states.items()}
 
     def clear(self, lecture_id: int) -> bool:
+        task_id = self._task_id(lecture_id)
         with self._lock:
-            return self._states.pop(lecture_id, None) is not None
+            return self._states.pop(task_id, None) is not None
 
 
 def _normalize_whisper_model(value: Any) -> str:
@@ -1734,22 +1815,35 @@ def create_app(
 
     def _progress_entry(
         kind: Literal["transcription", "processing"],
-        lecture_id: int,
         state: Dict[str, Any],
     ) -> Dict[str, Any]:
-        lecture = _summarize_lecture(lecture_id)
+        lecture_id = state.get("lecture_id")
+        lecture = _summarize_lecture(lecture_id) if isinstance(lecture_id, int) else None
         context = state.get("context") if isinstance(state.get("context"), dict) else {}
         operation = context.get("operation") or context.get("type")
         retryable = False
         if kind == "transcription":
             if lecture:
-                lecture_record = repository.get_lecture(lecture_id)
+                lecture_record = repository.get_lecture(lecture["id"])
                 if lecture_record and (
                     lecture_record.audio_path or lecture_record.processed_audio_path
                 ):
                     retryable = True
         elif kind == "processing":
             retryable = operation == "slide_conversion"
+
+        descriptor = {
+            "task_id": state.get("task_id"),
+            "operation": state.get("operation"),
+            "status": state.get("status"),
+            "phase": state.get("phase"),
+            "step": state.get("step"),
+            "message": state.get("message"),
+            "started_at": state.get("started_at"),
+            "updated_at": state.get("updated_at"),
+            "completed_at": state.get("completed_at"),
+            "exception": state.get("exception"),
+        }
 
         return {
             "type": kind,
@@ -1761,11 +1855,12 @@ def create_app(
             "current": state.get("current"),
             "total": state.get("total"),
             "error": state.get("error"),
-            "timestamp": state.get("timestamp"),
+            "timestamp": state.get("updated_at") or state.get("started_at"),
             "lecture": lecture,
             "context": context,
             "retryable": retryable,
             "dismissible": True,
+            "task": descriptor,
         }
 
     def _update_debug_state(enabled: bool) -> None:
@@ -3263,10 +3358,10 @@ def create_app(
     @app.get("/api/progress")
     async def list_progress_entries() -> Dict[str, Any]:
         entries: List[Dict[str, Any]] = []
-        for lecture_id, state in progress_tracker.all().items():
-            entries.append(_progress_entry("transcription", lecture_id, state))
-        for lecture_id, state in processing_tracker.all().items():
-            entries.append(_progress_entry("processing", lecture_id, state))
+        for state in progress_tracker.all().values():
+            entries.append(_progress_entry("transcription", state))
+        for state in processing_tracker.all().values():
+            entries.append(_progress_entry("processing", state))
         entries.sort(key=lambda entry: entry.get("timestamp") or 0, reverse=True)
         if entries:
             _log_event("Enumerated active tasks", count=len(entries))
@@ -3551,13 +3646,21 @@ def create_app(
                         job_id=job_id,
                     )
                 except ValueError as error:
-                    progress_tracker.fail(lecture_id, f"====> {error}")
+                    progress_tracker.fail(
+                        lecture_id,
+                        f"====> {error}",
+                        exception=error,
+                    )
                     raise HTTPException(status_code=400, detail=str(error)) from error
                 except Exception as error:  # noqa: BLE001 - mastering may raise arbitrary errors
                     LOGGER.exception(
                         "Audio mastering failed during transcription for lecture %s", lecture_id
                     )
-                    progress_tracker.fail(lecture_id, f"====> {error}")
+                    progress_tracker.fail(
+                        lecture_id,
+                        f"====> {error}",
+                        exception=error,
+                    )
                     raise HTTPException(status_code=500, detail=str(error)) from error
                 else:
                     processed_relative = mastered_path.relative_to(storage_root).as_posix()
@@ -3637,13 +3740,21 @@ def create_app(
                 )
             except HTTPException as error:
                 detail = getattr(error, "detail", str(error))
-                progress_tracker.fail(lecture_id, f"====> {detail}")
+                progress_tracker.fail(
+                    lecture_id,
+                    f"====> {detail}",
+                    exception=error,
+                )
                 probe = getattr(error, "gpu_probe", None)
                 if probe:
                     _record_gpu_probe(probe)
                 raise
             except Exception as error:  # noqa: BLE001 - backend may raise arbitrary errors
-                progress_tracker.fail(lecture_id, f"====> {error}")
+                progress_tracker.fail(
+                    lecture_id,
+                    f"====> {error}",
+                    exception=error,
+                )
                 raise HTTPException(status_code=500, detail=str(error)) from error
             else:
                 if gpu_probe:
@@ -4110,20 +4221,40 @@ def create_app(
                     )
             except HTTPException as error:
                 detail = getattr(error, "detail", str(error))
-                processing_tracker.fail(lecture_id, f"====> {detail}")
+                processing_tracker.fail(
+                    lecture_id,
+                    f"====> {detail}",
+                    exception=error,
+                )
                 raise
             except SlideMarkdownDependencyError as error:
-                processing_tracker.fail(lecture_id, f"====> {error}")
+                processing_tracker.fail(
+                    lecture_id,
+                    f"====> {error}",
+                    exception=error,
+                )
                 raise HTTPException(status_code=503, detail=str(error)) from error
             except SlideMarkdownError as error:
-                processing_tracker.fail(lecture_id, f"====> {error}")
+                processing_tracker.fail(
+                    lecture_id,
+                    f"====> {error}",
+                    exception=error,
+                )
                 raise HTTPException(status_code=500, detail=str(error)) from error
             except SlideConversionDependencyError as error:
                 LOGGER.warning("Slide conversion unavailable: %s", error)
-                processing_tracker.fail(lecture_id, f"====> {error}")
+                processing_tracker.fail(
+                    lecture_id,
+                    f"====> {error}",
+                    exception=error,
+                )
                 raise HTTPException(status_code=503, detail=str(error)) from error
             except Exception as error:  # noqa: BLE001 - conversion may raise arbitrary errors
-                processing_tracker.fail(lecture_id, f"====> {error}")
+                processing_tracker.fail(
+                    lecture_id,
+                    f"====> {error}",
+                    exception=error,
+                )
                 raise HTTPException(status_code=500, detail=str(error)) from error
             else:
                 if progress_total and progress_total > 0:

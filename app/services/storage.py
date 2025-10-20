@@ -8,7 +8,7 @@ import sqlite3
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, List, Optional
+from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from ..config import AppConfig
 
@@ -78,11 +78,21 @@ class LectureRepository:
 
         start = time.perf_counter()
         event_payload: Dict[str, Any] = dict(payload)
+        error: BaseException | None = None
         try:
             yield event_payload
+        except Exception as exc:  # pragma: no cover - instrumentation only
+            error = exc
+            event_payload.setdefault("status", "error")
+            event_payload.setdefault("error", f"{exc.__class__.__name__}: {exc}")
+            raise
         finally:
             duration_ms = (time.perf_counter() - start) * 1000.0
-            filtered = {key: value for key, value in event_payload.items() if value is not None}
+            if error is None:
+                event_payload.setdefault("status", "ok")
+            filtered = {
+                key: value for key, value in event_payload.items() if value is not None
+            }
             try:
                 self._event_emitter(
                     "DB_QUERY",
@@ -94,11 +104,60 @@ class LectureRepository:
                 # Backwards compatibility for emitters that only accept positional arguments.
                 self._event_emitter("DB_QUERY", action)  # type: ignore[misc]
 
+    @staticmethod
+    def _summarize_sql(statement: str) -> str:
+        collapsed = " ".join(statement.strip().split())
+        return collapsed[:180] + ("…" if len(collapsed) > 180 else "")
+
+    def _execute(
+        self,
+        connection: sqlite3.Connection,
+        statement: str,
+        parameters: Sequence[Any] | Tuple[Any, ...] | None = None,
+        *,
+        action: str,
+        table: Optional[str] = None,
+    ) -> sqlite3.Cursor:
+        params: Tuple[Any, ...]
+        if parameters is None:
+            params = ()
+        elif isinstance(parameters, tuple):
+            params = parameters
+        else:
+            params = tuple(parameters)
+        sql_summary = self._summarize_sql(statement)
+        with self._track_db_event(
+            action,
+            table=table,
+            sql=sql_summary,
+            parameter_count=len(params),
+        ) as event:
+            try:
+                cursor = connection.execute(statement, params)
+            except Exception as exc:
+                event.setdefault("status", "error")
+                event.setdefault("error", f"{exc.__class__.__name__}: {exc}")
+                raise
+            rowcount = cursor.rowcount if cursor.rowcount >= 0 else None
+            if rowcount is not None:
+                event.setdefault("rowcount", int(rowcount))
+            return cursor
+
     def _connect(self) -> sqlite3.Connection:
         LOGGER.debug("Opening SQLite connection to %s", self._db_path)
-        connection = sqlite3.connect(self._db_path)
+        connection: Optional[sqlite3.Connection] = None
+        with self._track_db_event(
+            "connect", database=str(self._db_path)
+        ) as event:
+            connection = sqlite3.connect(self._db_path)
+            event.setdefault("sqlite_version", sqlite3.sqlite_version)
+        assert connection is not None  # nosec - validated above
         connection.row_factory = sqlite3.Row
-        connection.execute("PRAGMA foreign_keys = ON")
+        self._execute(
+            connection,
+            "PRAGMA foreign_keys = ON",
+            action="pragma_foreign_keys",
+        )
         LOGGER.debug("SQLite connection ready with foreign_keys pragma enabled")
         return connection
 
@@ -115,7 +174,13 @@ class LectureRepository:
         if filter_field is not None:
             query += f" WHERE {filter_field} = ?"
             params.append(filter_value)
-        cursor = connection.execute(query, params)
+        cursor = self._execute(
+            connection,
+            query,
+            params,
+            action=f"{table}.next_position",
+            table=table,
+        )
         row = cursor.fetchone()
         if row is None:
             return 0
@@ -146,13 +211,18 @@ class LectureRepository:
         ) as event:
             with self._connect() as connection:
                 position = self._next_position(connection, "classes")
-                cursor = connection.execute(
+                cursor = self._execute(
+                    connection,
                     "INSERT INTO classes(name, description, position) VALUES (?, ?, ?)",
                     (name, description, position),
+                    action="classes.insert",
+                    table="classes",
                 )
+                rowcount = cursor.rowcount if cursor.rowcount and cursor.rowcount > 0 else 1
                 event.update({
                     "class_id": int(cursor.lastrowid),
                     "position": position,
+                    "rowcount": int(rowcount),
                 })
                 LOGGER.debug(
                     "Class '%s' inserted with id=%s at position=%s",
@@ -166,13 +236,22 @@ class LectureRepository:
         LOGGER.debug("Looking up class by name '%s'", name)
         with self._track_db_event("find_class_by_name", table="classes", name=name) as event:
             with self._connect() as connection:
-                cursor = connection.execute(
+                cursor = self._execute(
+                    connection,
                     "SELECT id, name, description, position FROM classes WHERE name = ?",
                     (name,),
+                    action="classes.lookup_by_name",
+                    table="classes",
                 )
                 row = cursor.fetchone()
                 found = bool(row)
-                event.update({"found": found, "class_id": int(row["id"]) if found else None})
+                event.update(
+                    {
+                        "found": found,
+                        "class_id": int(row["id"]) if found else None,
+                        "rowcount": 1 if found else 0,
+                    }
+                )
                 if row:
                     LOGGER.debug("Class '%s' resolved to id=%s", name, row["id"])
                 else:
@@ -198,13 +277,18 @@ class LectureRepository:
                 position = self._next_position(
                     connection, "modules", filter_field="class_id", filter_value=class_id
                 )
-                cursor = connection.execute(
+                cursor = self._execute(
+                    connection,
                     "INSERT INTO modules(class_id, name, description, position) VALUES (?, ?, ?, ?)",
                     (class_id, name, description, position),
+                    action="modules.insert",
+                    table="modules",
                 )
+                rowcount = cursor.rowcount if cursor.rowcount and cursor.rowcount > 0 else 1
                 event.update({
                     "module_id": int(cursor.lastrowid),
                     "position": position,
+                    "rowcount": int(rowcount),
                 })
                 LOGGER.debug(
                     "Module '%s' inserted with id=%s at position=%s for class_id=%s",
@@ -224,13 +308,22 @@ class LectureRepository:
             name=name,
         ) as event:
             with self._connect() as connection:
-                cursor = connection.execute(
+                cursor = self._execute(
+                    connection,
                     "SELECT id, class_id, name, description, position FROM modules WHERE class_id = ? AND name = ?",
                     (class_id, name),
+                    action="modules.lookup_by_name",
+                    table="modules",
                 )
                 row = cursor.fetchone()
                 found = bool(row)
-                event.update({"found": found, "module_id": int(row["id"]) if found else None})
+                event.update(
+                    {
+                        "found": found,
+                        "module_id": int(row["id"]) if found else None,
+                        "rowcount": 1 if found else 0,
+                    }
+                )
                 if row:
                     LOGGER.debug(
                         "Module '%s' resolved to id=%s for class_id=%s",
@@ -279,7 +372,8 @@ class LectureRepository:
                 position = self._next_position(
                     connection, "lectures", filter_field="module_id", filter_value=module_id
                 )
-                cursor = connection.execute(
+                cursor = self._execute(
+                    connection,
                     """
                     INSERT INTO lectures(
                         module_id,
@@ -306,10 +400,14 @@ class LectureRepository:
                         notes_path,
                         slide_image_dir,
                     ),
+                    action="lectures.insert",
+                    table="lectures",
                 )
+                rowcount = cursor.rowcount if cursor.rowcount and cursor.rowcount > 0 else 1
                 event.update({
                     "lecture_id": int(cursor.lastrowid),
                     "position": position,
+                    "rowcount": int(rowcount),
                 })
                 LOGGER.debug(
                     "Lecture '%s' inserted with id=%s at position=%s for module_id=%s",
@@ -329,7 +427,8 @@ class LectureRepository:
             name=name,
         ) as event:
             with self._connect() as connection:
-                cursor = connection.execute(
+                cursor = self._execute(
+                    connection,
                     """
                     SELECT
                         id,
@@ -347,10 +446,18 @@ class LectureRepository:
                     WHERE module_id = ? AND name = ?
                     """,
                     (module_id, name),
+                    action="lectures.lookup_by_name",
+                    table="lectures",
                 )
                 row = cursor.fetchone()
                 found = bool(row)
-                event.update({"found": found, "lecture_id": int(row["id"]) if found else None})
+                event.update(
+                    {
+                        "found": found,
+                        "lecture_id": int(row["id"]) if found else None,
+                        "rowcount": 1 if found else 0,
+                    }
+                )
                 if row:
                     LOGGER.debug(
                         "Lecture '%s' resolved to id=%s for module_id=%s",
@@ -369,8 +476,11 @@ class LectureRepository:
         LOGGER.debug("Iterating over all classes")
         with self._track_db_event("iter_classes", table="classes") as event:
             with self._connect() as connection:
-                cursor = connection.execute(
-                    "SELECT id, name, description, position FROM classes ORDER BY position, id"
+                cursor = self._execute(
+                    connection,
+                    "SELECT id, name, description, position FROM classes ORDER BY position, id",
+                    action="classes.iter",
+                    table="classes",
                 )
                 count = 0
                 for row in cursor.fetchall():
@@ -389,7 +499,8 @@ class LectureRepository:
         LOGGER.debug("Iterating modules for class_id=%s", class_id)
         with self._track_db_event("iter_modules", table="modules", class_id=class_id) as event:
             with self._connect() as connection:
-                cursor = connection.execute(
+                cursor = self._execute(
+                    connection,
                     """
                     SELECT id, class_id, name, description, position
                     FROM modules
@@ -397,6 +508,8 @@ class LectureRepository:
                     ORDER BY position, id
                     """,
                     (class_id,),
+                    action="modules.iter",
+                    table="modules",
                 )
                 count = 0
                 for row in cursor.fetchall():
@@ -418,7 +531,8 @@ class LectureRepository:
             "iter_lectures", table="lectures", module_id=module_id
         ) as event:
             with self._connect() as connection:
-                cursor = connection.execute(
+                cursor = self._execute(
+                    connection,
                     """
                     SELECT
                         id,
@@ -437,6 +551,8 @@ class LectureRepository:
                     ORDER BY position, id
                     """,
                     (module_id,),
+                    action="lectures.iter",
+                    table="lectures",
                 )
                 count = 0
                 for row in cursor.fetchall():
@@ -456,13 +572,16 @@ class LectureRepository:
         LOGGER.debug("Fetching class id=%s", class_id)
         with self._track_db_event("get_class", table="classes", class_id=class_id) as event:
             with self._connect() as connection:
-                cursor = connection.execute(
+                cursor = self._execute(
+                    connection,
                     "SELECT id, name, description, position FROM classes WHERE id = ?",
                     (class_id,),
+                    action="classes.get",
+                    table="classes",
                 )
                 row = cursor.fetchone()
                 found = bool(row)
-                event.update({"found": found})
+                event.update({"found": found, "rowcount": 1 if found else 0})
                 if row:
                     LOGGER.debug("Class id=%s resolved to name='%s'", class_id, row["name"])
                 else:
@@ -473,13 +592,22 @@ class LectureRepository:
         LOGGER.debug("Fetching module id=%s", module_id)
         with self._track_db_event("get_module", table="modules", module_id=module_id) as event:
             with self._connect() as connection:
-                cursor = connection.execute(
+                cursor = self._execute(
+                    connection,
                     "SELECT id, class_id, name, description, position FROM modules WHERE id = ?",
                     (module_id,),
+                    action="modules.get",
+                    table="modules",
                 )
                 row = cursor.fetchone()
                 found = bool(row)
-                event.update({"found": found, "class_id": row["class_id"] if row else None})
+                event.update(
+                    {
+                        "found": found,
+                        "class_id": row["class_id"] if row else None,
+                        "rowcount": 1 if found else 0,
+                    }
+                )
                 if row:
                     LOGGER.debug(
                         "Module id=%s resolved to name='%s' (class_id=%s)",
@@ -495,7 +623,8 @@ class LectureRepository:
         LOGGER.debug("Fetching lecture id=%s", lecture_id)
         with self._track_db_event("get_lecture", table="lectures", lecture_id=lecture_id) as event:
             with self._connect() as connection:
-                cursor = connection.execute(
+                cursor = self._execute(
+                    connection,
                     """
                     SELECT
                         id,
@@ -512,10 +641,18 @@ class LectureRepository:
                     FROM lectures WHERE id = ?
                     """,
                     (lecture_id,),
+                    action="lectures.get",
+                    table="lectures",
                 )
                 row = cursor.fetchone()
                 found = bool(row)
-                event.update({"found": found, "module_id": row["module_id"] if row else None})
+                event.update(
+                    {
+                        "found": found,
+                        "module_id": row["module_id"] if row else None,
+                        "rowcount": 1 if found else 0,
+                    }
+                )
                 if row:
                     LOGGER.debug(
                         "Lecture id=%s resolved to name='%s' (module_id=%s)",
@@ -579,13 +716,21 @@ class LectureRepository:
 
                 params.append(lecture_id)
                 query = "UPDATE lectures SET " + ", ".join(assignments) + " WHERE id = ?"
-                connection.execute(query, params)
+                cursor = self._execute(
+                    connection,
+                    query,
+                    params,
+                    action="lectures.update",
+                    table="lectures",
+                )
+                affected = cursor.rowcount if cursor.rowcount and cursor.rowcount > 0 else 0
                 LOGGER.debug(
                     "Lecture id=%s updated with assignments=%s", lecture_id, assignments
                 )
                 event.update({
                     "result": "updated",
                     "fields_changed": len(assignments),
+                    "rowcount": int(affected),
                 })
 
     def update_lecture_description(self, lecture_id: int, description: str) -> None:
@@ -599,12 +744,16 @@ class LectureRepository:
             description_length=description_length,
         ) as event:
             with self._connect() as connection:
-                connection.execute(
+                cursor = self._execute(
+                    connection,
                     "UPDATE lectures SET description = ? WHERE id = ?",
                     (description, lecture_id),
+                    action="lectures.update_description",
+                    table="lectures",
                 )
+                affected = cursor.rowcount if cursor.rowcount and cursor.rowcount > 0 else 0
                 LOGGER.debug("Lecture id=%s description updated", lecture_id)
-                event["result"] = "updated"
+                event.update({"result": "updated", "rowcount": int(affected)})
 
     def update_lecture_assets(
         self,
@@ -664,37 +813,65 @@ class LectureRepository:
             "update_lecture_assets", lecture_id=lecture_id, changes=len(assignments), **asset_flags
         ) as event:
             with self._connect() as connection:
-                connection.execute(query, params)
+                cursor = self._execute(
+                    connection,
+                    query,
+                    params,
+                    action="lectures.update_assets",
+                    table="lectures",
+                )
+                affected = cursor.rowcount if cursor.rowcount and cursor.rowcount > 0 else 0
                 LOGGER.debug(
                     "Lecture id=%s asset paths updated (%s)",
                     lecture_id,
                     ", ".join(assignments),
                 )
-                event["result"] = "updated"
+                event.update({"result": "updated", "rowcount": int(affected)})
 
     def remove_class(self, class_id: int) -> None:
         LOGGER.debug("Removing class id=%s", class_id)
         with self._track_db_event("remove_class", table="classes", class_id=class_id) as event:
             with self._connect() as connection:
-                connection.execute("DELETE FROM classes WHERE id = ?", (class_id,))
+                cursor = self._execute(
+                    connection,
+                    "DELETE FROM classes WHERE id = ?",
+                    (class_id,),
+                    action="classes.delete",
+                    table="classes",
+                )
+                affected = cursor.rowcount if cursor.rowcount and cursor.rowcount > 0 else 0
                 LOGGER.debug("Class id=%s removed", class_id)
-                event["result"] = "deleted"
+                event.update({"result": "deleted", "rowcount": int(affected)})
 
     def remove_module(self, module_id: int) -> None:
         LOGGER.debug("Removing module id=%s", module_id)
         with self._track_db_event("remove_module", table="modules", module_id=module_id) as event:
             with self._connect() as connection:
-                connection.execute("DELETE FROM modules WHERE id = ?", (module_id,))
+                cursor = self._execute(
+                    connection,
+                    "DELETE FROM modules WHERE id = ?",
+                    (module_id,),
+                    action="modules.delete",
+                    table="modules",
+                )
+                affected = cursor.rowcount if cursor.rowcount and cursor.rowcount > 0 else 0
                 LOGGER.debug("Module id=%s removed", module_id)
-                event["result"] = "deleted"
+                event.update({"result": "deleted", "rowcount": int(affected)})
 
     def remove_lecture(self, lecture_id: int) -> None:
         LOGGER.debug("Removing lecture id=%s", lecture_id)
         with self._track_db_event("remove_lecture", table="lectures", lecture_id=lecture_id) as event:
             with self._connect() as connection:
-                connection.execute("DELETE FROM lectures WHERE id = ?", (lecture_id,))
+                cursor = self._execute(
+                    connection,
+                    "DELETE FROM lectures WHERE id = ?",
+                    (lecture_id,),
+                    action="lectures.delete",
+                    table="lectures",
+                )
+                affected = cursor.rowcount if cursor.rowcount and cursor.rowcount > 0 else 0
                 LOGGER.debug("Lecture id=%s removed", lecture_id)
-                event["result"] = "deleted"
+                event.update({"result": "deleted", "rowcount": int(affected)})
 
     def reorder_lectures(self, module_orders: Dict[int, List[int]]) -> None:
         if not module_orders:
@@ -707,15 +884,17 @@ class LectureRepository:
             "reorder_lectures", modules=len(module_orders), changes=total_updates
         ) as event:
             with self._connect() as connection:
-                cursor = connection.cursor()
                 for module_id, lecture_ids in module_orders.items():
                     LOGGER.debug(
                         "Reordering %d lectures for module_id=%s", len(lecture_ids), module_id
                     )
                     for index, lecture_id in enumerate(lecture_ids):
-                        cursor.execute(
+                        self._execute(
+                            connection,
                             "UPDATE lectures SET module_id = ?, position = ? WHERE id = ?",
                             (module_id, index, lecture_id),
+                            action="lectures.reorder",
+                            table="lectures",
                         )
                         LOGGER.debug(
                             "Lecture id=%s assigned to module_id=%s position=%s",
@@ -723,7 +902,7 @@ class LectureRepository:
                             module_id,
                             index,
                         )
-            event["result"] = "reordered"
+            event.update({"result": "reordered", "rowcount": total_updates})
 
 
 __all__ = [

@@ -349,6 +349,15 @@
         border-left-color: rgba(248, 113, 113, 0.85);
       }
 
+      .debug-log-line[data-severity='warning'] {
+        border-left-color: rgba(250, 204, 21, 0.7);
+      }
+
+      .debug-log-line[data-severity='error'] {
+        border-left-color: rgba(248, 113, 113, 0.85);
+        background: rgba(127, 29, 29, 0.35);
+      }
+
       .debug-log-meta {
         display: flex;
         flex-wrap: wrap;
@@ -366,6 +375,27 @@
         background: rgba(37, 99, 235, 0.25);
         color: rgba(191, 219, 254, 0.95);
         font-weight: 600;
+      }
+
+      .debug-log-severity {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 6px;
+        border-radius: 999px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+      }
+
+      .debug-log-severity-warning {
+        background: rgba(250, 204, 21, 0.25);
+        color: #92400e;
+      }
+
+      .debug-log-severity-error {
+        background: rgba(248, 113, 113, 0.3);
+        color: #fee2e2;
       }
 
       .debug-log-time {
@@ -434,6 +464,54 @@
         margin: 0;
         line-height: 1.4;
         color: rgba(226, 232, 240, 0.9);
+      }
+
+      .debug-stream-task {
+        padding: 6px 8px;
+        border-radius: 6px;
+        background: rgba(30, 41, 59, 0.6);
+        border-left: 3px solid rgba(59, 130, 246, 0.45);
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .debug-stream-task[data-status='failed'] {
+        border-left-color: rgba(248, 113, 113, 0.8);
+      }
+
+      .debug-stream-task[data-status='succeeded'],
+      .debug-stream-task[data-status='success'] {
+        border-left-color: rgba(74, 222, 128, 0.65);
+      }
+
+      .debug-stream-task[data-severity='warning'] {
+        border-left-color: rgba(250, 204, 21, 0.7);
+      }
+
+      .debug-stream-task[data-severity='error'] {
+        border-left-color: rgba(248, 113, 113, 0.85);
+      }
+
+      .debug-stream-task-title {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: rgba(191, 219, 254, 0.95);
+      }
+
+      .debug-stream-task-detail {
+        font-size: 0.78rem;
+        color: rgba(226, 232, 240, 0.85);
+      }
+
+      .debug-stream-task-error {
+        font-size: 0.78rem;
+        color: #fecaca;
       }
 
       .debug-stream-empty {
@@ -5289,6 +5367,7 @@
             pending: false,
             autoScroll: true,
             serverEntries: [],
+            tasks: [],
             entries: [],
             filters: {
               requestId: '',
@@ -7138,6 +7217,15 @@
         const meta = document.createElement('div');
         meta.className = 'debug-log-meta';
 
+        if (entry?.severity) {
+          const severity = String(entry.severity).toLowerCase();
+          line.dataset.severity = severity;
+          const severityBadge = document.createElement('span');
+          severityBadge.className = `debug-log-severity debug-log-severity-${severity}`;
+          severityBadge.textContent = severity;
+          meta.appendChild(severityBadge);
+        }
+
         const eventType = normalizeCorrelationValue(entry?.event_type || entry?.logger);
         if (eventType) {
           const badge = document.createElement('span');
@@ -7222,6 +7310,9 @@
         const hasServerEntries = Array.isArray(state.debug.serverEntries)
           ? state.debug.serverEntries.length > 0
           : false;
+        const hasTaskEntries = Array.isArray(state.debug.tasks)
+          ? state.debug.tasks.length > 0
+          : false;
         if (!filtered.length) {
           if (dom.debugEmpty) {
             if (hasActiveFilters()) {
@@ -7229,7 +7320,7 @@
               dom.debugEmpty.hidden = false;
             } else {
               dom.debugEmpty.textContent = DEFAULT_DEBUG_EMPTY_TEXT;
-              dom.debugEmpty.hidden = hasServerEntries;
+              dom.debugEmpty.hidden = hasServerEntries || hasTaskEntries;
             }
           }
           if (state.debug.autoScroll) {
@@ -7282,13 +7373,17 @@
           }
         }
 
-        function updateServerStream(entries, { reset = false } = {}) {
+        function updateServerStream(serverEntries, taskEntries, { reset = false } = {}) {
           if (reset || !Array.isArray(state.debug.serverEntries)) {
             state.debug.serverEntries = [];
           }
-          const items = Array.isArray(entries) ? entries : [];
-          if (items.length) {
-            const messages = items
+          if (reset || !Array.isArray(state.debug.tasks)) {
+            state.debug.tasks = [];
+          }
+
+          const serverItems = Array.isArray(serverEntries) ? serverEntries : [];
+          if (serverItems.length) {
+            const messages = serverItems
               .map((entry) => {
                 if (!entry || typeof entry !== 'object') {
                   return '';
@@ -7310,12 +7405,56 @@
             }
           }
 
+          const taskItems = Array.isArray(taskEntries) ? taskEntries : [];
+          if (taskItems.length) {
+            const existing = new Map();
+            state.debug.tasks
+              .filter((task) => task && task.taskId)
+              .forEach((task) => {
+                existing.set(task.taskId, task);
+              });
+            taskItems.forEach((entry) => {
+              if (!entry || typeof entry !== 'object') {
+                return;
+              }
+              const payload = entry.payload && typeof entry.payload === 'object' ? entry.payload : {};
+              const rawId = payload.task_id || entry.id;
+              const taskId = rawId ? String(rawId) : `${entry.event_type || 'task'}:${entry.id}`;
+              const updated = payload.updated_at
+                ? Number(payload.updated_at)
+                : Number(Date.parse(entry.last_seen || entry.timestamp || ''));
+              const record = existing.get(taskId) || { taskId };
+              record.operation = payload.operation || entry.event_type || 'task';
+              record.status = payload.status || payload.phase || entry.level || '';
+              record.phase = payload.phase || payload.status || '';
+              record.step = payload.step || payload.message || entry.message || '';
+              record.message = payload.message || entry.message || '';
+              record.error = payload.error || (payload.exception && payload.exception.message) || '';
+              record.exception = payload.exception || null;
+              record.updatedAt = Number.isFinite(updated) ? updated : Date.now();
+              const lectureIdValue =
+                payload.lecture_id !== '' && payload.lecture_id != null
+                  ? Number(payload.lecture_id)
+                  : null;
+              record.lectureId = Number.isFinite(lectureIdValue)
+                ? lectureIdValue
+                : null;
+              record.severity = entry.severity || null;
+              existing.set(taskId, record);
+            });
+            state.debug.tasks = Array.from(existing.values())
+              .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
+              .slice(0, MAX_SERVER_STREAM_ENTRIES);
+          }
+
           if (!dom.debugStreamEntries) {
             return;
           }
 
           dom.debugStreamEntries.innerHTML = '';
-          if (!state.debug.serverEntries.length) {
+          const hasTasks = Array.isArray(state.debug.tasks) && state.debug.tasks.length > 0;
+          const hasServerMessages = state.debug.serverEntries.length > 0;
+          if (!hasTasks && !hasServerMessages) {
             if (dom.debugStreamEmpty) {
               dom.debugStreamEmpty.hidden = false;
               dom.debugStreamEntries.appendChild(dom.debugStreamEmpty);
@@ -7327,12 +7466,58 @@
             dom.debugStreamEmpty.hidden = true;
           }
 
-          state.debug.serverEntries.forEach((value) => {
-            const line = document.createElement('p');
-            line.className = 'debug-stream-line';
-            line.textContent = value;
-            dom.debugStreamEntries.appendChild(line);
-          });
+          if (hasTasks) {
+            state.debug.tasks.forEach((task) => {
+              if (!task || typeof task !== 'object') {
+                return;
+              }
+              const container = document.createElement('div');
+              container.className = 'debug-stream-task';
+              if (task.status) {
+                container.dataset.status = String(task.status).toLowerCase();
+              }
+              if (task.severity) {
+                container.dataset.severity = String(task.severity).toLowerCase();
+              }
+              const title = document.createElement('div');
+              title.className = 'debug-stream-task-title';
+              const opLabel = document.createElement('span');
+              opLabel.textContent = String(task.operation || 'Task');
+              title.appendChild(opLabel);
+              if (task.status) {
+                const statusLabel = document.createElement('span');
+                statusLabel.textContent = String(task.status).toUpperCase();
+                title.appendChild(statusLabel);
+              } else if (task.phase) {
+                const phaseLabel = document.createElement('span');
+                phaseLabel.textContent = String(task.phase).toUpperCase();
+                title.appendChild(phaseLabel);
+              }
+              container.appendChild(title);
+              if (task.step || task.message) {
+                const detail = document.createElement('div');
+                detail.className = 'debug-stream-task-detail';
+                detail.textContent = String(task.step || task.message || '');
+                container.appendChild(detail);
+              }
+              if (task.error) {
+                const errorLine = document.createElement('div');
+                errorLine.className = 'debug-stream-task-error';
+                errorLine.textContent = String(task.error);
+                container.appendChild(errorLine);
+              }
+              dom.debugStreamEntries.appendChild(container);
+            });
+          }
+
+          if (hasServerMessages) {
+            state.debug.serverEntries.forEach((value) => {
+              const line = document.createElement('p');
+              line.className = 'debug-stream-line';
+              line.textContent = value;
+              dom.debugStreamEntries.appendChild(line);
+            });
+          }
         }
 
         function appendDebugLogs(entries, { reset = false } = {}) {
@@ -7341,6 +7526,7 @@
           }
           const list = Array.isArray(entries) ? entries : [];
           const serverLogs = [];
+          const taskLogs = [];
           const regularLogs = [];
           list.forEach((entry) => {
             if (!entry || typeof entry !== 'object') {
@@ -7350,10 +7536,14 @@
               serverLogs.push(entry);
               return;
             }
+            if (entry.category === 'task') {
+              taskLogs.push(entry);
+              return;
+            }
             regularLogs.push(entry);
           });
 
-          updateServerStream(serverLogs, { reset });
+          updateServerStream(serverLogs, taskLogs, { reset });
           if (reset || !Array.isArray(state.debug.entries)) {
             state.debug.entries = [];
           }
@@ -7443,7 +7633,7 @@
           } else {
             stopDebugPolling();
             updateDebugStatus('');
-            updateServerStream([], { reset: true });
+            updateServerStream([], [], { reset: true });
             state.debug.entries = [];
             renderDebugLogs();
             if (dom.debugEmpty) {
