@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import shutil
 import types
+import zipfile
 from pathlib import Path
 from typing import Any
 
@@ -230,6 +231,50 @@ def test_storage_listing_and_delete_orphan_directory(temp_config):
     assert refreshed_listing.status_code == 200
     refreshed_entries = refreshed_listing.json().get("entries", [])
     assert all(entry.get("path") != orphan_entry["path"] for entry in refreshed_entries)
+
+
+def test_storage_batch_download_creates_archive(temp_config):
+    repository = LectureRepository(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    first_file = temp_config.storage_root / "audio" / "lecture.wav"
+    first_file.parent.mkdir(parents=True, exist_ok=True)
+    first_file.write_text("audio", encoding="utf-8")
+
+    second_dir = temp_config.storage_root / "slides"
+    second_dir.mkdir(parents=True, exist_ok=True)
+    second_file = second_dir / "deck.pdf"
+    second_file.write_text("pdf", encoding="utf-8")
+
+    payload = {
+        "paths": [
+            first_file.relative_to(temp_config.storage_root).as_posix(),
+            "slides",
+        ]
+    }
+
+    response = client.post("/api/storage/download", json=payload)
+    assert response.status_code == 200
+    archive_info = response.json()["archive"]
+    archive_path = temp_config.storage_root / archive_info["path"]
+    assert archive_path.exists()
+
+    with zipfile.ZipFile(archive_path, "r") as bundle:
+        names = set(bundle.namelist())
+        assert f"storage/{first_file.relative_to(temp_config.storage_root).as_posix()}" in names
+        assert f"storage/{second_file.relative_to(temp_config.storage_root).as_posix()}" in names
+        assert archive_info["count"] == 2
+
+
+def test_storage_batch_download_requires_selection(temp_config):
+    repository = LectureRepository(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    response = client.post("/api/storage/download", json={"paths": []})
+    assert response.status_code == 400
+    assert "selected" in response.json()["detail"].lower()
 
 
 def test_system_update_endpoint(temp_config):
