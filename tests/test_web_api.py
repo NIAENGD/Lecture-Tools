@@ -1079,6 +1079,50 @@ def test_process_slides_generates_markdown(monkeypatch, temp_config):
     assert "Key insight here" in content
 
 
+def test_process_slides_generates_markdown_without_cls(monkeypatch, temp_config):
+    repository, lecture_id, _module_id = _create_sample_data(temp_config)
+
+    class DummyOCREngine:
+        def __init__(self):
+            self.calls = []
+
+        def ocr(self, image, **kwargs):  # noqa: ARG002
+            self.calls.append(kwargs)
+            if kwargs:
+                raise TypeError("predict() got an unexpected keyword argument 'cls'")
+
+            return [
+                (
+                    [(0, 0), (10, 0), (10, 10), (0, 10)],
+                    ("Section Title", 0.99),
+                ),
+            ]
+
+    engine = DummyOCREngine()
+
+    app = create_app(repository, config=temp_config)
+    app.state.slide_markdown_engine_factory = lambda: engine
+
+    client = TestClient(app)
+
+    response = client.post(
+        f"/api/lectures/{lecture_id}/process-slides",
+        data={"mode": "markdown"},
+        files={"file": ("deck.pdf", _build_sample_pdf(1), "application/pdf")},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    notes_path = payload.get("notes_path")
+    assert notes_path and notes_path.endswith("-ocr.md")
+    notes_asset = temp_config.storage_root / notes_path
+    assert notes_asset.exists()
+    content = notes_asset.read_text(encoding="utf-8")
+    assert "Slide 1" in content
+    assert "Section Title" in content
+    assert engine.calls == [{}]
+
+
 def test_slide_markdown_factory_error_includes_reason(monkeypatch, temp_config):
     repository, _lecture_id, _module_id = _create_sample_data(temp_config)
     app = create_app(repository, config=temp_config)
