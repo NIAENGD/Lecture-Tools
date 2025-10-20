@@ -259,8 +259,8 @@
       }
 
       .debug-pane-controls {
-        display: flex;
-        flex-wrap: wrap;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
         gap: 8px;
         align-items: flex-end;
       }
@@ -273,7 +273,8 @@
         color: rgba(148, 163, 184, 0.85);
       }
 
-      .debug-filter input {
+      .debug-filter input,
+      .debug-filter select {
         padding: 6px 8px;
         border: 1px solid rgba(94, 117, 148, 0.6);
         border-radius: 6px;
@@ -282,8 +283,19 @@
         font-size: 0.8rem;
       }
 
-      .debug-filter input::placeholder {
+      .debug-filter input::placeholder,
+      .debug-filter select:invalid {
         color: rgba(148, 163, 184, 0.6);
+      }
+
+      .debug-filter--wide {
+        grid-column: span 2;
+      }
+
+      @media (max-width: 720px) {
+        .debug-filter--wide {
+          grid-column: span 1;
+        }
       }
 
       .debug-filter-clear {
@@ -305,16 +317,58 @@
         color: #f8fafc;
       }
 
+      .debug-heartbeat {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin: 12px 0 4px;
+        min-height: 16px;
+      }
+
+      .debug-heartbeat[data-state='idle'] .debug-heartbeat-dot {
+        opacity: 0.4;
+      }
+
+      .debug-heartbeat-track {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        flex-wrap: wrap;
+      }
+
+      .debug-heartbeat-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: rgba(56, 189, 248, 0.8);
+        opacity: 0.8;
+        transition: transform 0.2s ease, opacity 0.2s ease;
+      }
+
+      .debug-heartbeat-dot[data-severity='warning'] {
+        background: rgba(250, 204, 21, 0.9);
+      }
+
+      .debug-heartbeat-dot[data-severity='error'],
+      .debug-heartbeat-dot[data-severity='critical'] {
+        background: rgba(248, 113, 113, 0.95);
+      }
+
+      .debug-heartbeat-dot.is-failure {
+        transform: scale(1.4);
+        box-shadow: 0 0 0 2px rgba(248, 113, 113, 0.2);
+      }
+
       .debug-log-window {
         flex: 1;
-        background: rgba(15, 23, 42, 0.8);
-        border: 1px solid rgba(51, 65, 85, 0.6);
-        border-radius: 8px;
-        padding: 12px;
+        background: rgba(15, 23, 42, 0.82);
+        border: 1px solid rgba(51, 65, 85, 0.65);
+        border-radius: 12px;
+        padding: 16px;
         overflow-y: auto;
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 12px;
       }
 
       .debug-log-window:focus {
@@ -322,78 +376,134 @@
         outline-offset: 2px;
       }
 
-      .debug-log-line {
-        margin: 0;
-        padding: 10px 12px;
-        border-radius: 6px;
-        border-left: 3px solid rgba(59, 130, 246, 0.4);
-        background: rgba(30, 41, 59, 0.75);
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        font-size: 0.82rem;
+      .debug-log-entry {
+        position: relative;
+        display: grid;
+        grid-template-columns: 16px 1fr;
+        gap: 12px;
+        padding: 12px 14px;
+        border-radius: 10px;
+        background: rgba(30, 41, 59, 0.78);
+        border: 1px solid rgba(71, 85, 105, 0.55);
+        box-shadow: 0 4px 12px rgba(2, 6, 23, 0.22);
         color: #e2e8f0;
         word-break: break-word;
+        font-size: 0.84rem;
       }
 
-      .debug-log-line + .debug-log-line {
+      .debug-log-entry[data-severity='warning'] {
+        border-color: rgba(250, 204, 21, 0.55);
+      }
+
+      .debug-log-entry[data-severity='error'],
+      .debug-log-entry[data-severity='critical'] {
+        background: rgba(127, 29, 29, 0.32);
+        border-color: rgba(248, 113, 113, 0.7);
+        box-shadow: 0 6px 18px rgba(127, 29, 29, 0.35);
+      }
+
+      .debug-log-entry.is-first-failure::after {
+        content: '';
+        position: absolute;
+        inset: 4px;
+        border-radius: 9px;
+        border: 1px dashed rgba(248, 113, 113, 0.8);
+        pointer-events: none;
+      }
+
+      .debug-log-entry-timeline {
+        position: relative;
+        display: flex;
+        justify-content: center;
+      }
+
+      .debug-log-entry-timeline::before {
+        content: '';
+        position: absolute;
+        top: -16px;
+        bottom: -16px;
+        width: 2px;
+        background: rgba(148, 163, 184, 0.22);
+      }
+
+      .debug-log-entry-dot {
         margin-top: 4px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: rgba(59, 130, 246, 0.85);
+        border: 2px solid rgba(15, 23, 42, 0.85);
+        z-index: 1;
       }
 
-      .debug-log-line[data-level='WARNING'] {
-        border-left-color: rgba(250, 204, 21, 0.75);
+      .debug-log-entry[data-severity='warning'] .debug-log-entry-dot {
+        background: rgba(250, 204, 21, 0.9);
       }
 
-      .debug-log-line[data-level='ERROR'],
-      .debug-log-line[data-level='CRITICAL'] {
-        border-left-color: rgba(248, 113, 113, 0.85);
+      .debug-log-entry[data-severity='error'] .debug-log-entry-dot,
+      .debug-log-entry[data-severity='critical'] .debug-log-entry-dot {
+        background: rgba(248, 113, 113, 0.95);
       }
 
-      .debug-log-line[data-severity='warning'] {
-        border-left-color: rgba(250, 204, 21, 0.7);
+      .debug-log-entry-body {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
       }
 
-      .debug-log-line[data-severity='error'] {
-        border-left-color: rgba(248, 113, 113, 0.85);
-        background: rgba(127, 29, 29, 0.35);
-      }
-
-      .debug-log-meta {
+      .debug-log-entry-header {
         display: flex;
         flex-wrap: wrap;
         align-items: center;
-        gap: 6px;
-        font-size: 0.72rem;
+        gap: 8px;
+        font-size: 0.78rem;
         letter-spacing: 0.02em;
         text-transform: uppercase;
         color: rgba(148, 163, 184, 0.9);
       }
 
-      .debug-log-badge {
-        padding: 2px 6px;
-        border-radius: 999px;
-        background: rgba(37, 99, 235, 0.25);
-        color: rgba(191, 219, 254, 0.95);
-        font-weight: 600;
+      .debug-log-entry-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+        font-size: 0.76rem;
+        color: rgba(148, 163, 184, 0.92);
+      }
+
+      .debug-log-entry-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .debug-log-entry-title {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
       }
 
       .debug-log-severity {
         display: inline-flex;
         align-items: center;
         gap: 4px;
-        padding: 2px 6px;
+        padding: 2px 8px;
         border-radius: 999px;
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.02em;
+        background: rgba(56, 189, 248, 0.2);
+        color: rgba(191, 219, 254, 0.95);
       }
 
-      .debug-log-severity-warning {
+      .debug-log-severity[data-variant='warning'] {
         background: rgba(250, 204, 21, 0.25);
-        color: #92400e;
+        color: #facc15;
       }
 
-      .debug-log-severity-error {
+      .debug-log-severity[data-variant='error'],
+      .debug-log-severity[data-variant='critical'] {
         background: rgba(248, 113, 113, 0.3);
         color: #fee2e2;
       }
@@ -403,23 +513,88 @@
         opacity: 0.75;
       }
 
+      .debug-log-badge,
       .debug-log-tag {
-        padding: 2px 6px;
+        padding: 2px 8px;
         border-radius: 999px;
         background: rgba(15, 23, 42, 0.65);
         border: 1px solid rgba(71, 85, 105, 0.7);
         color: rgba(226, 232, 240, 0.95);
+        font-weight: 500;
+      }
+
+      .debug-log-badge[data-variant='accent'] {
+        background: rgba(37, 99, 235, 0.25);
+        color: rgba(191, 219, 254, 0.95);
+        border-color: rgba(37, 99, 235, 0.55);
+      }
+
+      .debug-log-badge[data-variant='warning'] {
+        background: rgba(250, 204, 21, 0.25);
+        color: #facc15;
+        border-color: rgba(250, 204, 21, 0.6);
+      }
+
+      .debug-log-badge[data-variant='danger'] {
+        background: rgba(248, 113, 113, 0.3);
+        color: #fecaca;
+        border-color: rgba(248, 113, 113, 0.6);
       }
 
       .debug-log-message {
         white-space: pre-wrap;
         line-height: 1.5;
+        font-size: 0.9rem;
+        color: #f8fafc;
       }
 
-      .debug-log-details {
+      .debug-log-context {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        font-size: 0.74rem;
+        color: rgba(148, 163, 184, 0.92);
+      }
+
+      .debug-log-entry-expandable {
+        background: rgba(15, 23, 42, 0.55);
+        border-radius: 8px;
+        border: 1px solid rgba(71, 85, 105, 0.7);
+        padding: 6px 10px;
+        font-size: 0.78rem;
+      }
+
+      .debug-log-entry-expandable summary {
+        cursor: pointer;
+        font-weight: 600;
+        color: rgba(191, 219, 254, 0.95);
+      }
+
+      .debug-log-entry-expandable pre {
+        margin: 8px 0 0;
+        padding: 8px;
+        border-radius: 6px;
+        background: rgba(15, 23, 42, 0.85);
+        border: 1px solid rgba(71, 85, 105, 0.55);
+        max-height: 240px;
+        overflow: auto;
         font-size: 0.72rem;
-        color: rgba(148, 163, 184, 0.9);
-        white-space: normal;
+        line-height: 1.45;
+        color: rgba(226, 232, 240, 0.95);
+      }
+
+      .debug-log-entry-expandable-block {
+        margin-top: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .debug-log-entry-expandable-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: rgba(148, 163, 184, 0.85);
       }
 
       .debug-log-empty {
@@ -428,17 +603,17 @@
       }
 
       .debug-stream-window {
-        background: rgba(15, 23, 42, 0.65);
-        border: 1px solid rgba(51, 65, 85, 0.5);
-        border-radius: 8px;
-        padding: 10px 12px;
+        background: rgba(15, 23, 42, 0.7);
+        border: 1px solid rgba(51, 65, 85, 0.6);
+        border-radius: 10px;
+        padding: 12px;
         display: flex;
         flex-direction: column;
-        gap: 6px;
+        gap: 10px;
         font-size: 0.8rem;
-        color: rgba(226, 232, 240, 0.85);
+        color: rgba(226, 232, 240, 0.88);
         flex-shrink: 0;
-        max-height: 180px;
+        max-height: 220px;
         overflow-y: auto;
       }
 
@@ -449,69 +624,77 @@
         gap: 8px;
         font-weight: 600;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: rgba(125, 211, 252, 0.9);
+        letter-spacing: 0.06em;
+        color: rgba(125, 211, 252, 0.85);
       }
 
       .debug-stream-entries {
         display: flex;
         flex-direction: column;
-        gap: 4px;
+        gap: 8px;
         min-height: 1.5em;
       }
 
-      .debug-stream-line {
-        margin: 0;
-        line-height: 1.4;
-        color: rgba(226, 232, 240, 0.9);
-      }
-
-      .debug-stream-task {
-        padding: 6px 8px;
-        border-radius: 6px;
-        background: rgba(30, 41, 59, 0.6);
-        border-left: 3px solid rgba(59, 130, 246, 0.45);
+      .debug-stream-entry {
         display: flex;
         flex-direction: column;
-        gap: 4px;
+        gap: 6px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        background: rgba(30, 41, 59, 0.62);
+        border: 1px solid rgba(51, 65, 85, 0.6);
+        box-shadow: 0 2px 8px rgba(2, 6, 23, 0.25);
       }
 
-      .debug-stream-task[data-status='failed'] {
-        border-left-color: rgba(248, 113, 113, 0.8);
+      .debug-stream-entry[data-severity='warning'] {
+        border-color: rgba(250, 204, 21, 0.5);
       }
 
-      .debug-stream-task[data-status='succeeded'],
-      .debug-stream-task[data-status='success'] {
-        border-left-color: rgba(74, 222, 128, 0.65);
+      .debug-stream-entry[data-severity='error'],
+      .debug-stream-entry[data-severity='critical'] {
+        background: rgba(127, 29, 29, 0.28);
+        border-color: rgba(248, 113, 113, 0.65);
       }
 
-      .debug-stream-task[data-severity='warning'] {
-        border-left-color: rgba(250, 204, 21, 0.7);
+      .debug-stream-entry-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: rgba(148, 163, 184, 0.88);
       }
 
-      .debug-stream-task[data-severity='error'] {
-        border-left-color: rgba(248, 113, 113, 0.85);
+      .debug-stream-entry-title {
+        font-weight: 600;
+        color: rgba(191, 219, 254, 0.92);
       }
 
-      .debug-stream-task-title {
+      .debug-stream-entry-time {
+        font-variant-numeric: tabular-nums;
+        color: rgba(148, 163, 184, 0.75);
+      }
+
+      .debug-stream-entry-message {
+        font-size: 0.82rem;
+        color: rgba(226, 232, 240, 0.92);
+      }
+
+      .debug-stream-entry-meta {
         display: flex;
         flex-wrap: wrap;
-        align-items: center;
         gap: 6px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        color: rgba(191, 219, 254, 0.95);
+        font-size: 0.72rem;
+        color: rgba(148, 163, 184, 0.9);
       }
 
-      .debug-stream-task-detail {
-        font-size: 0.78rem;
-        color: rgba(226, 232, 240, 0.85);
-      }
-
-      .debug-stream-task-error {
-        font-size: 0.78rem;
-        color: #fecaca;
+      .debug-stream-entry-error {
+        font-size: 0.74rem;
+        color: rgba(248, 113, 113, 0.92);
+        border-top: 1px solid rgba(248, 113, 113, 0.35);
+        padding-top: 4px;
       }
 
       .debug-stream-empty {
@@ -2839,31 +3022,55 @@
         <h2 class="debug-pane-title" data-i18n="debug.title">Debug console</h2>
         <span class="debug-indicator" data-i18n="debug.live">Live</span>
       </div>
+      <div id="debug-heartbeat" class="debug-heartbeat" data-state="idle">
+        <div class="debug-heartbeat-track" aria-hidden="true"></div>
+        <span class="sr-only">Recent activity timeline</span>
+      </div>
       <div class="debug-pane-controls">
         <label class="debug-filter">
-          <span class="debug-filter-label">Request</span>
+          <span class="debug-filter-label">Severity</span>
+          <select id="debug-filter-severity">
+            <option value="all">All</option>
+            <option value="debug">Debug</option>
+            <option value="info">Info</option>
+            <option value="warning">Warning</option>
+            <option value="error">Error</option>
+            <option value="critical">Critical</option>
+          </select>
+        </label>
+        <label class="debug-filter">
+          <span class="debug-filter-label">Category</span>
+          <select id="debug-filter-category">
+            <option value="all">All</option>
+            <option value="app">App</option>
+            <option value="task">Task</option>
+            <option value="server">Server</option>
+          </select>
+        </label>
+        <label class="debug-filter">
+          <span class="debug-filter-label">Correlation</span>
           <input
-            id="debug-filter-request"
+            id="debug-filter-correlation"
             type="search"
-            placeholder="Filter by request ID"
+            placeholder="Filter by correlation ID"
             autocomplete="off"
           />
         </label>
         <label class="debug-filter">
-          <span class="debug-filter-label">Job</span>
+          <span class="debug-filter-label">Task</span>
           <input
-            id="debug-filter-job"
+            id="debug-filter-task"
             type="search"
-            placeholder="Filter by job ID"
+            placeholder="Filter by task ID"
             autocomplete="off"
           />
         </label>
-        <label class="debug-filter">
-          <span class="debug-filter-label">Actor</span>
+        <label class="debug-filter debug-filter--wide">
+          <span class="debug-filter-label">Quick search</span>
           <input
-            id="debug-filter-actor"
+            id="debug-filter-query"
             type="search"
-            placeholder="Filter by actor"
+            placeholder="Search message, context, or trace"
             autocomplete="off"
           />
         </label>
@@ -5370,9 +5577,11 @@
             tasks: [],
             entries: [],
             filters: {
-              requestId: '',
-              jobId: '',
-              actor: '',
+              severity: 'all',
+              category: 'all',
+              correlationId: '',
+              taskId: '',
+              query: '',
             },
           },
         };
@@ -5508,12 +5717,16 @@
           debugLog: document.getElementById('debug-log-window'),
           debugEmpty: document.getElementById('debug-log-empty'),
           debugStatus: document.getElementById('debug-log-status'),
+          debugHeartbeat: document.getElementById('debug-heartbeat'),
+          debugHeartbeatTrack: document.querySelector('#debug-heartbeat .debug-heartbeat-track'),
           debugStream: document.getElementById('debug-stream-window'),
           debugStreamEntries: document.getElementById('debug-stream-entries'),
           debugStreamEmpty: document.getElementById('debug-stream-empty'),
-          debugFilterRequest: document.getElementById('debug-filter-request'),
-          debugFilterJob: document.getElementById('debug-filter-job'),
-          debugFilterActor: document.getElementById('debug-filter-actor'),
+          debugFilterSeverity: document.getElementById('debug-filter-severity'),
+          debugFilterCategory: document.getElementById('debug-filter-category'),
+          debugFilterCorrelation: document.getElementById('debug-filter-correlation'),
+          debugFilterTask: document.getElementById('debug-filter-task'),
+          debugFilterQuery: document.getElementById('debug-filter-query'),
           debugFilterClear: document.getElementById('debug-filter-clear'),
           storage: {
             container: document.getElementById('view-storage'),
@@ -5624,35 +5837,66 @@
           });
         }
 
-        if (dom.debugFilterRequest) {
-          dom.debugFilterRequest.addEventListener('input', (event) => {
-            setDebugFilter('requestId', event.target.value || '');
+        if (dom.debugFilterSeverity) {
+          dom.debugFilterSeverity.addEventListener('change', (event) => {
+            const value = event.target.value || 'all';
+            setDebugFilter('severity', value);
           });
         }
 
-        if (dom.debugFilterJob) {
-          dom.debugFilterJob.addEventListener('input', (event) => {
-            setDebugFilter('jobId', event.target.value || '');
+        if (dom.debugFilterCategory) {
+          dom.debugFilterCategory.addEventListener('change', (event) => {
+            const value = event.target.value || 'all';
+            setDebugFilter('category', value);
           });
         }
 
-        if (dom.debugFilterActor) {
-          dom.debugFilterActor.addEventListener('input', (event) => {
-            setDebugFilter('actor', event.target.value || '');
+        if (dom.debugFilterCorrelation) {
+          dom.debugFilterCorrelation.addEventListener('input', (event) => {
+            setDebugFilter('correlationId', event.target.value || '');
+          });
+        }
+
+        if (dom.debugFilterTask) {
+          dom.debugFilterTask.addEventListener('input', (event) => {
+            setDebugFilter('taskId', event.target.value || '');
+          });
+        }
+
+        if (dom.debugFilterQuery) {
+          let queryTimer = null;
+          dom.debugFilterQuery.addEventListener('input', (event) => {
+            window.clearTimeout(queryTimer);
+            const value = event.target.value || '';
+            queryTimer = window.setTimeout(() => {
+              setDebugFilter('query', value);
+            }, 120);
           });
         }
 
         if (dom.debugFilterClear) {
           dom.debugFilterClear.addEventListener('click', () => {
-            state.debug.filters = { requestId: '', jobId: '', actor: '' };
-            if (dom.debugFilterRequest) {
-              dom.debugFilterRequest.value = '';
+            state.debug.filters = {
+              severity: 'all',
+              category: 'all',
+              correlationId: '',
+              taskId: '',
+              query: '',
+            };
+            if (dom.debugFilterSeverity) {
+              dom.debugFilterSeverity.value = 'all';
             }
-            if (dom.debugFilterJob) {
-              dom.debugFilterJob.value = '';
+            if (dom.debugFilterCategory) {
+              dom.debugFilterCategory.value = 'all';
             }
-            if (dom.debugFilterActor) {
-              dom.debugFilterActor.value = '';
+            if (dom.debugFilterCorrelation) {
+              dom.debugFilterCorrelation.value = '';
+            }
+            if (dom.debugFilterTask) {
+              dom.debugFilterTask.value = '';
+            }
+            if (dom.debugFilterQuery) {
+              dom.debugFilterQuery.value = '';
             }
             renderDebugLogs();
           });
@@ -7081,20 +7325,191 @@
         if (typeof value === 'string') {
           return value.trim().toLowerCase();
         }
+        if (typeof value === 'number' || typeof value === 'boolean') {
+          return String(value).trim().toLowerCase();
+        }
         return '';
       }
 
       function hasActiveFilters() {
         const filters = state.debug.filters || {};
+        if (normalizeFilterValue(filters.severity) && normalizeFilterValue(filters.severity) !== 'all') {
+          return true;
+        }
+        if (normalizeFilterValue(filters.category) && normalizeFilterValue(filters.category) !== 'all') {
+          return true;
+        }
         return Boolean(
-          normalizeFilterValue(filters.requestId) ||
-            normalizeFilterValue(filters.jobId) ||
-            normalizeFilterValue(filters.actor)
+          normalizeFilterValue(filters.correlationId) ||
+            normalizeFilterValue(filters.taskId) ||
+            normalizeFilterValue(filters.query),
         );
       }
 
+      function getEntrySeverity(entry) {
+        const sources = [entry?.severity, entry?.level, entry?.status];
+        for (const source of sources) {
+          if (typeof source === 'string') {
+            const normalized = source.trim().toLowerCase();
+            if (!normalized) {
+              continue;
+            }
+            if (normalized === 'failed' || normalized === 'failure') {
+              return 'error';
+            }
+            return normalized;
+          }
+        }
+        if (typeof entry?.context?.severity === 'string') {
+          const normalized = entry.context.severity.trim().toLowerCase();
+          if (normalized) {
+            return normalized;
+          }
+        }
+        if (typeof entry?.payload?.severity === 'string') {
+          const normalized = entry.payload.severity.trim().toLowerCase();
+          if (normalized) {
+            return normalized;
+          }
+        }
+        return 'info';
+      }
+
+      function getEntryCategory(entry) {
+        const category = normalizeFilterValue(entry?.category);
+        if (category) {
+          return category;
+        }
+        const hasTaskId = Boolean(getEntryCorrelation(entry, 'task_id') || getEntryCorrelation(entry, 'taskId'));
+        if (hasTaskId) {
+          return 'task';
+        }
+        return 'app';
+      }
+
+      function getEntryTaskId(entry) {
+        const taskKeys = ['task_id', 'taskId', 'job_id', 'jobId'];
+        for (const key of taskKeys) {
+          const value = getEntryCorrelation(entry, key);
+          if (value) {
+            return value;
+          }
+        }
+        if (typeof entry?.task === 'string' && entry.task.trim()) {
+          return entry.task.trim();
+        }
+        return '';
+      }
+
+      function collectEntryCorrelations(entry) {
+        const values = new Set();
+        const append = (value) => {
+          const normalized = normalizeCorrelationValue(value);
+          if (normalized) {
+            values.add(normalized);
+          }
+        };
+        const correlationKeys = [
+          'correlation_id',
+          'correlationId',
+          'request_id',
+          'requestId',
+          'job_id',
+          'jobId',
+          'actor',
+          'task_id',
+          'taskId',
+          'trace_id',
+          'span_id',
+          'parent_request_id',
+        ];
+        correlationKeys.forEach((key) => {
+          append(getEntryCorrelation(entry, key));
+        });
+        if (Array.isArray(entry?.correlation_ids)) {
+          entry.correlation_ids.forEach((value) => append(value));
+        }
+        if (typeof entry?.correlation_id === 'string') {
+          append(entry.correlation_id);
+        }
+        return Array.from(values);
+      }
+
+      function entryMatchesQuery(entry, query) {
+        const normalizedQuery = normalizeFilterValue(query);
+        if (!normalizedQuery) {
+          return true;
+        }
+        const segments = [];
+        const append = (value) => {
+          if (value == null) {
+            return;
+          }
+          if (typeof value === 'string') {
+            const normalized = value.toLowerCase();
+            if (normalized) {
+              segments.push(normalized);
+            }
+            return;
+          }
+          if (typeof value === 'number' || typeof value === 'boolean') {
+            segments.push(String(value).toLowerCase());
+            return;
+          }
+          if (typeof value === 'object') {
+            try {
+              const serialized = JSON.stringify(value);
+              if (serialized) {
+                segments.push(serialized.toLowerCase());
+              }
+            } catch (error) {
+              console.warn('Unable to serialize log entry for search', error);
+            }
+          }
+        };
+
+        append(entry?.message);
+        append(entry?.rendered);
+        append(entry?.event_type);
+        append(entry?.logger);
+        append(entry?.category);
+        append(entry?.context);
+        append(entry?.payload);
+        append(entry?.stack);
+        append(entry?.error);
+        append(entry?.exception);
+
+        return segments.some((segment) => segment.includes(normalizedQuery));
+      }
+
+      function isEntryFailure(entry) {
+        const severity = getEntrySeverity(entry);
+        if (severity === 'error' || severity === 'critical') {
+          return true;
+        }
+        const status = normalizeFilterValue(entry?.status);
+        if (status === 'failed' || status === 'error') {
+          return true;
+        }
+        const contextStatus = normalizeFilterValue(entry?.context?.status);
+        if (contextStatus === 'failed' || contextStatus === 'error') {
+          return true;
+        }
+        const payloadStatus = normalizeFilterValue(entry?.payload?.status);
+        if (payloadStatus === 'failed' || payloadStatus === 'error') {
+          return true;
+        }
+        if (typeof entry?.error === 'string' && entry.error.trim()) {
+          return true;
+        }
+        if (typeof entry?.exception === 'string' && entry.exception.trim()) {
+          return true;
+        }
+        return false;
+      }
+
       function formatTimestamp(value) {
-        if (typeof value !== 'string' || !value) {
+        if ((typeof value !== 'string' && typeof value !== 'number') || value === '') {
           return '';
         }
         const parsed = new Date(value);
@@ -7106,29 +7521,58 @@
             second: '2-digit',
           });
         }
-        return value;
+        if (typeof value === 'string') {
+          return value;
+        }
+        return '';
       }
 
       function matchesDebugFilters(entry) {
         const filters = state.debug.filters || {};
-        const requestFilter = normalizeFilterValue(filters.requestId);
-        const jobFilter = normalizeFilterValue(filters.jobId);
-        const actorFilter = normalizeFilterValue(filters.actor);
-        if (!requestFilter && !jobFilter && !actorFilter) {
-          return true;
+        const severityFilter = normalizeFilterValue(filters.severity);
+        if (severityFilter && severityFilter !== 'all') {
+          const entrySeverity = getEntrySeverity(entry);
+          if (severityFilter === 'error') {
+            if (entrySeverity !== 'error' && entrySeverity !== 'critical') {
+              return false;
+            }
+          } else if (entrySeverity !== severityFilter) {
+            return false;
+          }
         }
-        const requestId = getEntryCorrelation(entry, 'request_id').toLowerCase();
-        const jobId = getEntryCorrelation(entry, 'job_id').toLowerCase();
-        const actor = getEntryCorrelation(entry, 'actor').toLowerCase();
-        if (requestFilter && !requestId.includes(requestFilter)) {
-          return false;
+
+        const categoryFilter = normalizeFilterValue(filters.category);
+        if (categoryFilter && categoryFilter !== 'all') {
+          const entryCategory = getEntryCategory(entry);
+          if (entryCategory !== categoryFilter) {
+            return false;
+          }
         }
-        if (jobFilter && !jobId.includes(jobFilter)) {
-          return false;
+
+        const correlationFilter = normalizeFilterValue(filters.correlationId);
+        if (correlationFilter) {
+          const correlations = collectEntryCorrelations(entry).map((value) => value.toLowerCase());
+          const match = correlations.some((value) => value.includes(correlationFilter));
+          if (!match) {
+            return false;
+          }
         }
-        if (actorFilter && !actor.includes(actorFilter)) {
-          return false;
+
+        const taskFilter = normalizeFilterValue(filters.taskId);
+        if (taskFilter) {
+          const taskId = normalizeFilterValue(getEntryTaskId(entry));
+          if (!taskId || !taskId.includes(taskFilter)) {
+            return false;
+          }
         }
+
+        const query = filters.query;
+        if (typeof query === 'string' && normalizeFilterValue(query)) {
+          if (!entryMatchesQuery(entry, query)) {
+            return false;
+          }
+        }
+
         return true;
       }
 
@@ -7138,7 +7582,22 @@
       }
 
       function summarizeEntryDetails(entry) {
-        const ignore = new Set(['request_id', 'job_id', 'actor']);
+        const ignore = new Set([
+          'request_id',
+          'requestId',
+          'job_id',
+          'jobId',
+          'actor',
+          'correlation_id',
+          'correlationId',
+          'task_id',
+          'taskId',
+          'retry',
+          'retry_count',
+          'attempt',
+          'duplicate',
+          'is_duplicate',
+        ]);
         const segments = [];
         const seen = new Set();
         const appendFrom = (source) => {
@@ -7189,108 +7648,490 @@
         return segments;
       }
 
-      function buildDebugLogEntry(entry) {
-        const line = document.createElement('article');
-        line.className = 'debug-log-line';
-        if (entry && typeof entry === 'object') {
-          if (entry.level) {
-            line.dataset.level = String(entry.level);
+      function extractStackTrace(entry) {
+        const candidates = [
+          entry?.stack,
+          entry?.exception?.stack,
+          entry?.exception?.stacktrace,
+          entry?.exception?.traceback,
+          entry?.traceback,
+          entry?.context?.stack,
+          entry?.context?.stacktrace,
+          entry?.context?.traceback,
+          entry?.payload?.stack,
+          entry?.payload?.stacktrace,
+          entry?.payload?.trace,
+        ];
+        for (const candidate of candidates) {
+          if (typeof candidate === 'string' && candidate.trim()) {
+            return candidate.trim();
           }
-          if (entry.id != null) {
-            line.dataset.entryId = String(entry.id);
+          if (Array.isArray(candidate) && candidate.length) {
+            return candidate.join('\n');
+          }
+        }
+        return '';
+      }
+
+      function extractCombinedContext(entry) {
+        const combined = {};
+        let hasValues = false;
+        const merge = (source) => {
+          if (!source || typeof source !== 'object') {
+            return;
+          }
+          Object.entries(source).forEach(([key, value]) => {
+            if (value === undefined) {
+              return;
+            }
+            if (typeof key !== 'string' || !key) {
+              return;
+            }
+            combined[key] = value;
+            hasValues = true;
+          });
+        };
+        merge(entry?.context);
+        merge(entry?.payload);
+        merge(entry?.extra);
+        if (!hasValues) {
+          return '';
+        }
+        try {
+          return JSON.stringify(combined, null, 2);
+        } catch (error) {
+          console.warn('Unable to stringify log context', error);
+          return String(combined);
+        }
+      }
+
+      function extractEntryBadges(entry) {
+        const badges = [];
+        const retryCandidates = [
+          entry?.retry,
+          entry?.context?.retry,
+          entry?.context?.retry_count,
+          entry?.payload?.retry,
+          entry?.payload?.retry_count,
+          entry?.attempt,
+          entry?.context?.attempt,
+          entry?.payload?.attempt,
+        ];
+        let retryCount = null;
+        retryCandidates.forEach((value) => {
+          if (Number.isFinite(value)) {
+            const numeric = Number(value);
+            if (numeric > 0) {
+              retryCount = retryCount === null ? numeric : Math.max(retryCount, numeric);
+            }
+          } else if (typeof value === 'string' && value.trim()) {
+            const numeric = Number.parseInt(value.trim(), 10);
+            if (!Number.isNaN(numeric) && numeric > 0) {
+              retryCount = retryCount === null ? numeric : Math.max(retryCount, numeric);
+            }
+          }
+        });
+        if (retryCount !== null) {
+          badges.push({ label: `retry ×${retryCount}`, variant: 'warning' });
+        } else {
+          const retryFlag = retryCandidates.some((value) => {
+            if (typeof value === 'boolean') {
+              return value;
+            }
+            if (typeof value === 'string') {
+              const normalized = value.trim().toLowerCase();
+              return normalized === 'true' || normalized === 'retry';
+            }
+            return false;
+          });
+          if (retryFlag) {
+            badges.push({ label: 'retry', variant: 'warning' });
           }
         }
 
-        const requestId = getEntryCorrelation(entry, 'request_id');
-        const jobId = getEntryCorrelation(entry, 'job_id');
-        const actor = getEntryCorrelation(entry, 'actor');
-        if (requestId) {
-          line.dataset.requestId = requestId;
-        }
-        if (jobId) {
-          line.dataset.jobId = jobId;
-        }
-        if (actor) {
-          line.dataset.actor = actor;
-        }
-
-        const meta = document.createElement('div');
-        meta.className = 'debug-log-meta';
-
-        if (entry?.severity) {
-          const severity = String(entry.severity).toLowerCase();
-          line.dataset.severity = severity;
-          const severityBadge = document.createElement('span');
-          severityBadge.className = `debug-log-severity debug-log-severity-${severity}`;
-          severityBadge.textContent = severity;
-          meta.appendChild(severityBadge);
+        const duplicateCandidates = [
+          entry?.duplicate,
+          entry?.is_duplicate,
+          entry?.context?.duplicate,
+          entry?.context?.is_duplicate,
+          entry?.payload?.duplicate,
+          entry?.payload?.is_duplicate,
+        ];
+        const hasDuplicate = duplicateCandidates.some((value) => {
+          if (typeof value === 'boolean') {
+            return value;
+          }
+          if (typeof value === 'string') {
+            const normalized = value.trim().toLowerCase();
+            return normalized === 'true' || normalized === 'duplicate';
+          }
+          return false;
+        });
+        if (hasDuplicate) {
+          badges.push({ label: 'duplicate', variant: 'accent' });
         }
 
-        const eventType = normalizeCorrelationValue(entry?.event_type || entry?.logger);
+        return badges;
+      }
+
+      function buildDebugLogEntry(entry, { isFirstFailure = false } = {}) {
+        const severity = getEntrySeverity(entry);
+        const category = getEntryCategory(entry);
+        const element = document.createElement('article');
+        element.className = 'debug-log-entry';
+        element.dataset.severity = severity;
+        element.dataset.category = category;
+        if (entry && typeof entry === 'object' && entry.id != null) {
+          element.dataset.entryId = String(entry.id);
+        }
+        if (isFirstFailure) {
+          element.classList.add('is-first-failure');
+        }
+
+        const timeline = document.createElement('div');
+        timeline.className = 'debug-log-entry-timeline';
+        const dot = document.createElement('div');
+        dot.className = 'debug-log-entry-dot';
+        timeline.appendChild(dot);
+        element.appendChild(timeline);
+
+        const body = document.createElement('div');
+        body.className = 'debug-log-entry-body';
+        element.appendChild(body);
+
+        const header = document.createElement('header');
+        header.className = 'debug-log-entry-header';
+        body.appendChild(header);
+
+        const title = document.createElement('div');
+        title.className = 'debug-log-entry-title';
+        header.appendChild(title);
+
+        const severityBadge = document.createElement('span');
+        severityBadge.className = 'debug-log-severity';
+        severityBadge.dataset.variant = severity;
+        severityBadge.textContent = severity;
+        title.appendChild(severityBadge);
+
+        const eventType = normalizeCorrelationValue(entry?.event_type || entry?.logger || entry?.category);
         if (eventType) {
           const badge = document.createElement('span');
           badge.className = 'debug-log-badge';
+          badge.dataset.variant = 'accent';
           badge.textContent = eventType;
-          meta.appendChild(badge);
+          title.appendChild(badge);
         }
 
-        if (entry?.level) {
-          const level = document.createElement('span');
-          level.className = 'debug-log-tag';
-          level.textContent = String(entry.level);
-          meta.appendChild(level);
+        if (entry?.level != null && entry.level !== '') {
+          const levelText =
+            typeof entry.level === 'string' && entry.level.trim()
+              ? entry.level.trim()
+              : String(entry.level);
+          if (levelText) {
+            const levelBadge = document.createElement('span');
+            levelBadge.className = 'debug-log-tag';
+            levelBadge.textContent = levelText;
+            title.appendChild(levelBadge);
+          }
         }
 
-        const timestampSource = entry?.last_seen || entry?.first_seen || entry?.timestamp;
+        if (category && category !== 'app') {
+          const categoryBadge = document.createElement('span');
+          categoryBadge.className = 'debug-log-tag';
+          categoryBadge.textContent = category;
+          title.appendChild(categoryBadge);
+        }
+
+        const timestampSource =
+          entry?.last_seen || entry?.first_seen || entry?.timestamp || entry?.time || entry?.created_at;
         const formattedTime = formatTimestamp(timestampSource);
         if (formattedTime) {
           const timeElement = document.createElement('span');
           timeElement.className = 'debug-log-time';
           timeElement.textContent = formattedTime;
-          meta.appendChild(timeElement);
-        }
-
-        if (requestId) {
-          const requestTag = document.createElement('span');
-          requestTag.className = 'debug-log-tag';
-          requestTag.textContent = `req ${requestId}`;
-          meta.appendChild(requestTag);
-        }
-
-        if (jobId) {
-          const jobTag = document.createElement('span');
-          jobTag.className = 'debug-log-tag';
-          jobTag.textContent = `job ${jobId}`;
-          meta.appendChild(jobTag);
-        }
-
-        if (actor) {
-          const actorTag = document.createElement('span');
-          actorTag.className = 'debug-log-tag';
-          actorTag.textContent = actor;
-          meta.appendChild(actorTag);
+          header.appendChild(timeElement);
         }
 
         const messageElement = document.createElement('div');
         messageElement.className = 'debug-log-message';
-        const rendered =
+        const renderedValue =
           typeof entry?.rendered === 'string' && entry.rendered
             ? entry.rendered
-            : entry?.message;
-        messageElement.textContent = typeof rendered === 'string' ? rendered : '';
+            : entry?.message != null
+            ? entry.message
+            : '';
+        const messageText =
+          typeof renderedValue === 'string' ? renderedValue : String(renderedValue ?? '');
+        messageElement.textContent = messageText;
+        body.appendChild(messageElement);
 
-        line.appendChild(meta);
-        line.appendChild(messageElement);
+        const meta = document.createElement('div');
+        meta.className = 'debug-log-entry-meta';
+        const correlationLabels = [
+          ['request_id', 'req'],
+          ['job_id', 'job'],
+          ['actor', 'actor'],
+          ['correlation_id', 'corr'],
+          ['task_id', 'task'],
+          ['trace_id', 'trace'],
+        ];
+        const seenCorrelation = new Set();
+        correlationLabels.forEach(([key, label]) => {
+          const value = getEntryCorrelation(entry, key);
+          if (value && !seenCorrelation.has(`${key}:${value}`)) {
+            seenCorrelation.add(`${key}:${value}`);
+            const tag = document.createElement('span');
+            tag.className = 'debug-log-tag';
+            tag.textContent = `${label} ${value}`;
+            meta.appendChild(tag);
+          }
+        });
 
-        const details = summarizeEntryDetails(entry);
-        if (details.length) {
-          const detailElement = document.createElement('div');
-          detailElement.className = 'debug-log-details';
-          detailElement.textContent = details.join(' · ');
-          line.appendChild(detailElement);
+        const correlations = collectEntryCorrelations(entry);
+        correlations.forEach((value) => {
+          if (!seenCorrelation.has(value)) {
+            seenCorrelation.add(value);
+            const tag = document.createElement('span');
+            tag.className = 'debug-log-tag';
+            tag.textContent = value;
+            meta.appendChild(tag);
+          }
+        });
+
+        const badges = extractEntryBadges(entry);
+        if (badges.length) {
+          const badgeRow = document.createElement('div');
+          badgeRow.className = 'debug-log-entry-badges';
+          badges.forEach((badge) => {
+            const badgeElement = document.createElement('span');
+            badgeElement.className = 'debug-log-badge';
+            if (badge.variant) {
+              badgeElement.dataset.variant = badge.variant;
+            }
+            badgeElement.textContent = badge.label;
+            badgeRow.appendChild(badgeElement);
+          });
+          meta.appendChild(badgeRow);
         }
 
-        return line;
+        if (meta.childElementCount > 0) {
+          body.appendChild(meta);
+        }
+
+        const detailTags = summarizeEntryDetails(entry);
+        if (detailTags.length) {
+          const detailRow = document.createElement('div');
+          detailRow.className = 'debug-log-context';
+          detailTags.slice(0, 8).forEach((detail) => {
+            const detailTag = document.createElement('span');
+            detailTag.className = 'debug-log-tag';
+            detailTag.textContent = detail;
+            detailRow.appendChild(detailTag);
+          });
+          body.appendChild(detailRow);
+        }
+
+        const stackTrace = extractStackTrace(entry);
+        const contextJson = extractCombinedContext(entry);
+        if (stackTrace || contextJson) {
+          const expandable = document.createElement('details');
+          expandable.className = 'debug-log-entry-expandable';
+          if (severity === 'error' || severity === 'critical') {
+            expandable.dataset.variant = 'error';
+          }
+          const summary = document.createElement('summary');
+          if (stackTrace && contextJson) {
+            summary.textContent = 'View stack trace & context';
+          } else if (stackTrace) {
+            summary.textContent = 'View stack trace';
+          } else {
+            summary.textContent = 'View context';
+          }
+          expandable.appendChild(summary);
+
+          if (stackTrace) {
+            const stackBlock = document.createElement('div');
+            stackBlock.className = 'debug-log-entry-expandable-block';
+            const stackLabel = document.createElement('div');
+            stackLabel.className = 'debug-log-entry-expandable-label';
+            stackLabel.textContent = 'Stack trace';
+            const stackPre = document.createElement('pre');
+            stackPre.textContent = stackTrace;
+            stackBlock.appendChild(stackLabel);
+            stackBlock.appendChild(stackPre);
+            expandable.appendChild(stackBlock);
+          }
+
+          if (contextJson) {
+            const contextBlock = document.createElement('div');
+            contextBlock.className = 'debug-log-entry-expandable-block';
+            const contextLabel = document.createElement('div');
+            contextLabel.className = 'debug-log-entry-expandable-label';
+            contextLabel.textContent = 'Context';
+            const contextPre = document.createElement('pre');
+            contextPre.textContent = contextJson;
+            contextBlock.appendChild(contextLabel);
+            contextBlock.appendChild(contextPre);
+            expandable.appendChild(contextBlock);
+          }
+
+          body.appendChild(expandable);
+        }
+
+        return element;
+      }
+
+      function buildDebugStreamEntry(entry) {
+        const severity = getEntrySeverity(entry);
+        const element = document.createElement('div');
+        element.className = 'debug-stream-entry';
+        element.dataset.severity = severity;
+
+        const header = document.createElement('div');
+        header.className = 'debug-stream-entry-header';
+        const title = document.createElement('span');
+        title.className = 'debug-stream-entry-title';
+        title.textContent = normalizeCorrelationValue(
+          entry?.event_type || entry?.logger || entry?.category || 'event',
+        );
+        header.appendChild(title);
+
+        const timestamp =
+          entry?.timestamp || entry?.last_seen || entry?.first_seen || entry?.time || entry?.created_at;
+        const formattedTime = formatTimestamp(timestamp);
+        if (formattedTime) {
+          const timeElement = document.createElement('span');
+          timeElement.className = 'debug-stream-entry-time';
+          timeElement.textContent = formattedTime;
+          header.appendChild(timeElement);
+        }
+        element.appendChild(header);
+
+        const messageElement = document.createElement('div');
+        messageElement.className = 'debug-stream-entry-message';
+        const rendered =
+          typeof entry?.message === 'string' && entry.message
+            ? entry.message
+            : typeof entry?.rendered === 'string'
+            ? entry.rendered
+            : entry?.message != null
+            ? String(entry.message)
+            : '';
+        messageElement.textContent = rendered;
+        element.appendChild(messageElement);
+
+        const meta = document.createElement('div');
+        meta.className = 'debug-stream-entry-meta';
+        const statusValue =
+          entry?.status != null ? entry.status : entry?.context?.status ?? entry?.payload?.status;
+        const statusText =
+          typeof statusValue === 'string'
+            ? statusValue
+            : statusValue != null
+            ? String(statusValue)
+            : '';
+        if (statusText) {
+          const statusTag = document.createElement('span');
+          statusTag.className = 'debug-log-tag';
+          statusTag.textContent = `status ${statusText}`;
+          meta.appendChild(statusTag);
+        }
+        const phaseValue = entry?.context?.phase || entry?.payload?.phase || entry?.phase;
+        const phaseText =
+          typeof phaseValue === 'string'
+            ? phaseValue
+            : phaseValue != null
+            ? String(phaseValue)
+            : '';
+        if (phaseText) {
+          const phaseTag = document.createElement('span');
+          phaseTag.className = 'debug-log-tag';
+          phaseTag.textContent = `phase ${phaseText}`;
+          meta.appendChild(phaseTag);
+        }
+        const correlations = collectEntryCorrelations(entry);
+        correlations.slice(0, 3).forEach((value) => {
+          const tag = document.createElement('span');
+          tag.className = 'debug-log-tag';
+          tag.textContent = value;
+          meta.appendChild(tag);
+        });
+        const badges = extractEntryBadges(entry);
+        badges.forEach((badge) => {
+          const badgeElement = document.createElement('span');
+          badgeElement.className = 'debug-log-badge';
+          if (badge.variant) {
+            badgeElement.dataset.variant = badge.variant;
+          }
+          badgeElement.textContent = badge.label;
+          meta.appendChild(badgeElement);
+        });
+        if (meta.childElementCount > 0) {
+          element.appendChild(meta);
+        }
+
+        if (entry?.error != null && entry.error !== '') {
+          const errorText =
+            typeof entry.error === 'string' ? entry.error : String(entry.error);
+          const errorLine = document.createElement('div');
+          errorLine.className = 'debug-stream-entry-error';
+          errorLine.textContent = errorText;
+          element.appendChild(errorLine);
+        }
+
+        return element;
+      }
+
+      function renderDebugHeartbeat(entries, firstFailureIndex) {
+        if (!dom.debugHeartbeat || !dom.debugHeartbeatTrack) {
+          return;
+        }
+        const track = dom.debugHeartbeatTrack;
+        track.innerHTML = '';
+        if (!Array.isArray(entries) || entries.length === 0) {
+          dom.debugHeartbeat.dataset.state = 'idle';
+          return;
+        }
+        dom.debugHeartbeat.dataset.state = 'active';
+        const maxDots = 60;
+        const startIndex = Math.max(0, entries.length - maxDots);
+        const visible = entries.slice(startIndex);
+        let highlightIndex = firstFailureIndex;
+        if (highlightIndex < startIndex) {
+          highlightIndex = -1;
+          for (let index = startIndex; index < entries.length; index += 1) {
+            if (isEntryFailure(entries[index])) {
+              highlightIndex = index;
+              break;
+            }
+          }
+        }
+        const fragment = document.createDocumentFragment();
+        visible.forEach((entry, index) => {
+          const absoluteIndex = startIndex + index;
+          const dot = document.createElement('span');
+          dot.className = 'debug-heartbeat-dot';
+          dot.dataset.severity = getEntrySeverity(entry);
+          const timestampSource = entry?.last_seen || entry?.first_seen || entry?.timestamp || entry?.time;
+          const formattedTime = formatTimestamp(timestampSource);
+          const eventType = normalizeCorrelationValue(entry?.event_type || entry?.logger || entry?.category);
+          const messageSource =
+            typeof entry?.message === 'string'
+              ? entry.message
+              : entry?.message != null
+              ? String(entry.message)
+              : '';
+          const messageSnippet = messageSource ? messageSource.slice(0, 80) : '';
+          const parts = [formattedTime, eventType, messageSnippet].filter(Boolean);
+          if (parts.length) {
+            dot.title = parts.join(' · ');
+          }
+          if (absoluteIndex === highlightIndex) {
+            dot.classList.add('is-failure');
+          }
+          fragment.appendChild(dot);
+        });
+        track.appendChild(fragment);
       }
 
       function renderDebugLogs() {
@@ -7302,6 +8143,8 @@
           ? state.debug.entries.slice(-MAX_DEBUG_LOG_ENTRIES)
           : [];
         const filtered = applyDebugFilters(entries);
+        const firstFailureIndex = filtered.findIndex((entry) => isEntryFailure(entry));
+        renderDebugHeartbeat(filtered, firstFailureIndex);
         const container = dom.debugLog;
         const existing = Array.from(container.children).filter((child) => child !== dom.debugEmpty);
         existing.forEach((child) => {
@@ -7334,9 +8177,13 @@
           dom.debugEmpty.hidden = true;
         }
 
-        filtered.forEach((entry) => {
-          container.appendChild(buildDebugLogEntry(entry));
+        const fragment = document.createDocumentFragment();
+        filtered.forEach((entry, index) => {
+          fragment.appendChild(
+            buildDebugLogEntry(entry, { isFirstFailure: index === firstFailureIndex }),
+          );
         });
+        container.appendChild(fragment);
 
         if (state.debug.autoScroll) {
           container.scrollTop = container.scrollHeight;
@@ -7345,11 +8192,16 @@
 
       function setDebugFilter(field, value) {
         const filters = state.debug.filters || {
-          requestId: '',
-          jobId: '',
-          actor: '',
+          severity: 'all',
+          category: 'all',
+          correlationId: '',
+          taskId: '',
+          query: '',
         };
-        const next = typeof value === 'string' ? value.trim() : '';
+        let next = typeof value === 'string' ? value.trim() : '';
+        if ((field === 'severity' || field === 'category') && !next) {
+          next = 'all';
+        }
         if (filters[field] === next) {
           return;
         }
@@ -7358,6 +8210,125 @@
           [field]: next,
         };
         renderDebugLogs();
+      }
+
+      function normalizeServerEntry(entry) {
+        if (entry == null) {
+          return null;
+        }
+        if (typeof entry === 'string') {
+          return {
+            id: `server-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+            category: SERVER_LOG_CATEGORY,
+            severity: 'info',
+            event_type: 'server',
+            timestamp: new Date().toISOString(),
+            message: entry,
+            context: {},
+            payload: {},
+          };
+        }
+        if (typeof entry !== 'object') {
+          return null;
+        }
+        const message =
+          typeof entry.message === 'string' && entry.message
+            ? entry.message
+            : typeof entry.rendered === 'string'
+            ? entry.rendered
+            : '';
+        const timestamp =
+          entry.last_seen ||
+          entry.first_seen ||
+          entry.timestamp ||
+          entry.time ||
+          entry.created_at ||
+          '';
+        return {
+          id:
+            entry.id != null
+              ? `server-${entry.id}`
+              : `server-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+          category: normalizeFilterValue(entry.category) || SERVER_LOG_CATEGORY,
+          severity: getEntrySeverity(entry),
+          event_type: entry.event_type || entry.logger || 'server',
+          timestamp,
+          message,
+          context: typeof entry.context === 'object' && entry.context ? entry.context : {},
+          payload: typeof entry.payload === 'object' && entry.payload ? entry.payload : {},
+          error: entry.error,
+          stack: entry.stack,
+        };
+      }
+
+      function normalizeTaskEntry(entry) {
+        if (!entry || typeof entry !== 'object') {
+          return null;
+        }
+        const payload = typeof entry.payload === 'object' && entry.payload ? entry.payload : {};
+        const rawTaskId =
+          payload.task_id ||
+          entry.task_id ||
+          entry.taskId ||
+          payload.job_id ||
+          entry.id;
+        const taskId = normalizeCorrelationValue(rawTaskId) || `task-${Date.now()}`;
+        const statusValue = payload.status || payload.phase || entry.status || entry.level || '';
+        const normalizedStatus = normalizeFilterValue(statusValue);
+        let severity = getEntrySeverity(entry);
+        if (normalizedStatus === 'failed' || normalizedStatus === 'failure' || normalizedStatus === 'error') {
+          severity = 'error';
+        } else if (normalizedStatus === 'warning' || normalizedStatus === 'warn') {
+          severity = 'warning';
+        }
+        const timestamp =
+          payload.updated_at ||
+          payload.completed_at ||
+          payload.started_at ||
+          entry.last_seen ||
+          entry.timestamp ||
+          entry.time ||
+          entry.created_at ||
+          '';
+        const message =
+          payload.message ||
+          payload.step ||
+          entry.message ||
+          entry.rendered ||
+          '';
+        const context = {
+          status: statusValue || '',
+          phase: payload.phase || '',
+          task_id: taskId,
+          lecture_id: payload.lecture_id || '',
+        };
+        const updatedAt = (() => {
+          const candidate = Date.parse(timestamp || '');
+          if (!Number.isNaN(candidate)) {
+            return candidate;
+          }
+          return Date.now();
+        })();
+        const normalized = {
+          id: taskId,
+          taskId,
+          category: 'task',
+          severity,
+          status: statusValue || '',
+          event_type: payload.operation || entry.event_type || 'task',
+          timestamp,
+          message,
+          context,
+          payload,
+          updatedAt,
+        };
+        if (payload.error || entry.error) {
+          normalized.error = payload.error || entry.error;
+        }
+        if (entry.exception) {
+          normalized.exception = entry.exception;
+        }
+        return normalized;
       }
 
       function updateDebugStatus(message) {
@@ -7381,70 +8352,37 @@
             state.debug.tasks = [];
           }
 
-          const serverItems = Array.isArray(serverEntries) ? serverEntries : [];
-          if (serverItems.length) {
-            const messages = serverItems
-              .map((entry) => {
-                if (!entry || typeof entry !== 'object') {
-                  return '';
-                }
-                const value = entry.message;
-                if (typeof value === 'string') {
-                  return value;
-                }
-                if (value == null) {
-                  return '';
-                }
-                return String(value);
-              })
-              .filter((value) => value);
-            if (messages.length) {
-              state.debug.serverEntries = state.debug.serverEntries
-                .concat(messages)
-                .slice(-MAX_SERVER_STREAM_ENTRIES);
-            }
-          }
+          const normalizedServerEntries = Array.isArray(serverEntries)
+            ? serverEntries.map((entry) => normalizeServerEntry(entry)).filter(Boolean)
+            : [];
+          const existingServerEntries = Array.isArray(state.debug.serverEntries)
+            ? state.debug.serverEntries.map((entry) => normalizeServerEntry(entry)).filter(Boolean)
+            : [];
+          state.debug.serverEntries = existingServerEntries
+            .concat(normalizedServerEntries)
+            .slice(-MAX_SERVER_STREAM_ENTRIES);
 
-          const taskItems = Array.isArray(taskEntries) ? taskEntries : [];
-          if (taskItems.length) {
+          const normalizedTaskEntries = Array.isArray(taskEntries)
+            ? taskEntries.map((entry) => normalizeTaskEntry(entry)).filter(Boolean)
+            : [];
+          const existingTasks = Array.isArray(state.debug.tasks)
+            ? state.debug.tasks.map((task) => normalizeTaskEntry(task)).filter(Boolean)
+            : [];
+          if (normalizedTaskEntries.length) {
             const existing = new Map();
-            state.debug.tasks
-              .filter((task) => task && task.taskId)
-              .forEach((task) => {
+            existingTasks.forEach((task) => {
+              if (task && task.taskId) {
                 existing.set(task.taskId, task);
-              });
-            taskItems.forEach((entry) => {
-              if (!entry || typeof entry !== 'object') {
-                return;
               }
-              const payload = entry.payload && typeof entry.payload === 'object' ? entry.payload : {};
-              const rawId = payload.task_id || entry.id;
-              const taskId = rawId ? String(rawId) : `${entry.event_type || 'task'}:${entry.id}`;
-              const updated = payload.updated_at
-                ? Number(payload.updated_at)
-                : Number(Date.parse(entry.last_seen || entry.timestamp || ''));
-              const record = existing.get(taskId) || { taskId };
-              record.operation = payload.operation || entry.event_type || 'task';
-              record.status = payload.status || payload.phase || entry.level || '';
-              record.phase = payload.phase || payload.status || '';
-              record.step = payload.step || payload.message || entry.message || '';
-              record.message = payload.message || entry.message || '';
-              record.error = payload.error || (payload.exception && payload.exception.message) || '';
-              record.exception = payload.exception || null;
-              record.updatedAt = Number.isFinite(updated) ? updated : Date.now();
-              const lectureIdValue =
-                payload.lecture_id !== '' && payload.lecture_id != null
-                  ? Number(payload.lecture_id)
-                  : null;
-              record.lectureId = Number.isFinite(lectureIdValue)
-                ? lectureIdValue
-                : null;
-              record.severity = entry.severity || null;
-              existing.set(taskId, record);
+            });
+            normalizedTaskEntries.forEach((task) => {
+              existing.set(task.taskId, task);
             });
             state.debug.tasks = Array.from(existing.values())
               .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
               .slice(0, MAX_SERVER_STREAM_ENTRIES);
+          } else {
+            state.debug.tasks = existingTasks.slice(0, MAX_SERVER_STREAM_ENTRIES);
           }
 
           if (!dom.debugStreamEntries) {
@@ -7453,7 +8391,8 @@
 
           dom.debugStreamEntries.innerHTML = '';
           const hasTasks = Array.isArray(state.debug.tasks) && state.debug.tasks.length > 0;
-          const hasServerMessages = state.debug.serverEntries.length > 0;
+          const hasServerMessages =
+            Array.isArray(state.debug.serverEntries) && state.debug.serverEntries.length > 0;
           if (!hasTasks && !hasServerMessages) {
             if (dom.debugStreamEmpty) {
               dom.debugStreamEmpty.hidden = false;
@@ -7466,58 +8405,18 @@
             dom.debugStreamEmpty.hidden = true;
           }
 
+          const fragment = document.createDocumentFragment();
           if (hasTasks) {
             state.debug.tasks.forEach((task) => {
-              if (!task || typeof task !== 'object') {
-                return;
-              }
-              const container = document.createElement('div');
-              container.className = 'debug-stream-task';
-              if (task.status) {
-                container.dataset.status = String(task.status).toLowerCase();
-              }
-              if (task.severity) {
-                container.dataset.severity = String(task.severity).toLowerCase();
-              }
-              const title = document.createElement('div');
-              title.className = 'debug-stream-task-title';
-              const opLabel = document.createElement('span');
-              opLabel.textContent = String(task.operation || 'Task');
-              title.appendChild(opLabel);
-              if (task.status) {
-                const statusLabel = document.createElement('span');
-                statusLabel.textContent = String(task.status).toUpperCase();
-                title.appendChild(statusLabel);
-              } else if (task.phase) {
-                const phaseLabel = document.createElement('span');
-                phaseLabel.textContent = String(task.phase).toUpperCase();
-                title.appendChild(phaseLabel);
-              }
-              container.appendChild(title);
-              if (task.step || task.message) {
-                const detail = document.createElement('div');
-                detail.className = 'debug-stream-task-detail';
-                detail.textContent = String(task.step || task.message || '');
-                container.appendChild(detail);
-              }
-              if (task.error) {
-                const errorLine = document.createElement('div');
-                errorLine.className = 'debug-stream-task-error';
-                errorLine.textContent = String(task.error);
-                container.appendChild(errorLine);
-              }
-              dom.debugStreamEntries.appendChild(container);
+              fragment.appendChild(buildDebugStreamEntry(task));
             });
           }
-
           if (hasServerMessages) {
-            state.debug.serverEntries.forEach((value) => {
-              const line = document.createElement('p');
-              line.className = 'debug-stream-line';
-              line.textContent = value;
-              dom.debugStreamEntries.appendChild(line);
+            state.debug.serverEntries.forEach((entry) => {
+              fragment.appendChild(buildDebugStreamEntry(entry));
             });
           }
+          dom.debugStreamEntries.appendChild(fragment);
         }
 
         function appendDebugLogs(entries, { reset = false } = {}) {
