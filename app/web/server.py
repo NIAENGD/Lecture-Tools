@@ -2305,7 +2305,9 @@ def create_app(
             try:
                 engine = factory()
             except Exception as error:  # noqa: BLE001 - factory may raise
-                raise SlideMarkdownError("Slide Markdown engine factory failed") from error
+                message = f"Slide Markdown engine factory failed: {error}"
+                LOGGER.exception(message)
+                raise SlideMarkdownError(message) from error
         else:
             try:
                 from paddleocr import PaddleOCR  # type: ignore
@@ -2320,10 +2322,14 @@ def create_app(
                     show_log=False,
                 )
             except Exception as error:  # noqa: BLE001 - PaddleOCR may raise
-                raise SlideMarkdownError("Failed to initialise PaddleOCR") from error
+                message = f"Failed to initialise PaddleOCR: {error}"
+                LOGGER.exception(message)
+                raise SlideMarkdownError(message) from error
 
         setattr(app.state, "slide_markdown_engine", engine)
         return engine
+
+    setattr(app.state, "get_slide_markdown_engine", _get_slide_markdown_engine)
 
     def _generate_slide_archive(
         pdf_path: Path,
