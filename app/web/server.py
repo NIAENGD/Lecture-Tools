@@ -29,7 +29,7 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any, Callable, Deque, Dict, List, Literal, Optional, Set, Tuple, TypeVar
+from typing import Any, Callable, Deque, Dict, Iterable, List, Literal, Optional, Set, Tuple, TypeVar
 
 from concurrent.futures import Future, ThreadPoolExecutor
 
@@ -2416,36 +2416,98 @@ def create_app(
         def _format_page_markdown(page_number: int, recognition: Any) -> str:
             entries: List[str] = []
 
-            def _sort_key(item: Any) -> Tuple[float, float]:
-                box = item[0] if item and isinstance(item, (list, tuple)) else []
-                if not box:
+            def _normalise_dict(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
+                line = candidate.get("line")
+                if isinstance(line, Mapping):
+                    return line
+                return candidate
+
+            def _extract_entry(raw: Any) -> Optional[Tuple[List[Any], str, float]]:
+                box: List[Any] = []
+                text = ""
+                confidence = 1.0
+
+                candidate = raw
+                if isinstance(candidate, Mapping):
+                    candidate = _normalise_dict(candidate)
+                    box = list(candidate.get("points") or candidate.get("box") or candidate.get("bbox") or [])
+                    text_value = candidate.get("text") or candidate.get("transcription") or candidate.get("label")
+                    if isinstance(text_value, str):
+                        text = text_value.strip()
+                    confidence_value = None
+                    for key in ("score", "confidence", "probability", "prob", "certainty"):
+                        if key in candidate:
+                            confidence_value = candidate[key]
+                            break
+                    if confidence_value is not None:
+                        try:
+                            confidence = float(confidence_value)
+                        except (TypeError, ValueError):
+                            confidence = 1.0
+                elif isinstance(candidate, (list, tuple)):
+                    if candidate and isinstance(candidate[0], (list, tuple)):
+                        box = list(candidate[0])
+                    if len(candidate) > 1:
+                        text_info = candidate[1]
+                        if isinstance(text_info, Mapping):
+                            text = str(
+                                text_info.get("text")
+                                or text_info.get("transcription")
+                                or text_info.get("label")
+                                or ""
+                            ).strip()
+                            confidence_value = None
+                            for key in ("score", "confidence", "probability", "prob", "certainty"):
+                                if key in text_info:
+                                    confidence_value = text_info[key]
+                                    break
+                            if confidence_value is not None:
+                                try:
+                                    confidence = float(confidence_value)
+                                except (TypeError, ValueError):
+                                    confidence = 1.0
+                        elif isinstance(text_info, (list, tuple)) and text_info:
+                            text = str(text_info[0]).strip()
+                            if len(text_info) > 1:
+                                try:
+                                    confidence = float(text_info[1])
+                                except (TypeError, ValueError):
+                                    confidence = 1.0
+                        elif isinstance(text_info, str):
+                            text = text_info.strip()
+                else:
+                    return None
+
+                if not text:
+                    return None
+                return (box, text, confidence)
+
+            def _sort_key(box: Iterable[Any]) -> Tuple[float, float]:
+                points = list(box) if isinstance(box, Iterable) else []
+                if not points:
                     return (float(page_number), float(page_number))
-                y_values = [float(point[1]) for point in box]
-                x_values = [float(point[0]) for point in box]
+                try:
+                    y_values = [float(point[1]) for point in points]
+                    x_values = [float(point[0]) for point in points]
+                except Exception:  # pragma: no cover - defensive fallback
+                    return (float(page_number), float(page_number))
                 avg_y = sum(y_values) / len(y_values)
                 avg_x = sum(x_values) / len(x_values)
                 return (avg_y, avg_x)
 
             groups: List[Tuple[float, List[str]]] = []
             threshold = 24.0
-            for item in sorted(recognition or [], key=_sort_key):
-                if not item or len(item) < 2:
-                    continue
-                text_info = item[1]
-                if not isinstance(text_info, (list, tuple)) or not text_info:
-                    continue
-                text = str(text_info[0]).strip()
-                confidence = 1.0
-                if len(text_info) > 1:
-                    try:
-                        confidence = float(text_info[1])
-                    except (TypeError, ValueError):
-                        confidence = 1.0
+            parsed_entries: List[Tuple[List[Any], str, float]] = []
+            for raw in recognition or []:
+                entry = _extract_entry(raw)
+                if entry is not None:
+                    parsed_entries.append(entry)
+
+            for box, text, confidence in sorted(parsed_entries, key=lambda item: _sort_key(item[0])):
                 if not text or confidence < 0.3:
                     continue
-                box = item[0]
                 try:
-                    center_y = sum(float(point[1]) for point in box) / len(box)
+                    center_y = sum(float(point[1]) for point in box) / len(box) if box else float(page_number)
                 except Exception:  # pragma: no cover - defensive fallback
                     center_y = float(page_number)
                 sanitized = " ".join(part for part in text.splitlines()).strip()
