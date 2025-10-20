@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import shutil
+import types
 from pathlib import Path
 from typing import Any
 
@@ -1076,6 +1077,46 @@ def test_process_slides_generates_markdown(monkeypatch, temp_config):
     assert "Slide 1" in content
     assert "Section Title" in content
     assert "Key insight here" in content
+
+
+def test_slide_markdown_factory_error_includes_reason(monkeypatch, temp_config):
+    repository, _lecture_id, _module_id = _create_sample_data(temp_config)
+    app = create_app(repository, config=temp_config)
+
+    def failing_factory():
+        raise RuntimeError("You must provide the 'source_filter' parameter for every msearch call.")
+
+    app.state.slide_markdown_engine_factory = failing_factory
+
+    with pytest.raises(RuntimeError) as excinfo:
+        app.state.get_slide_markdown_engine()
+
+    message = str(excinfo.value)
+    assert "Slide Markdown engine factory failed" in message
+    assert "source_filter" in message
+
+
+def test_slide_markdown_default_engine_error_includes_reason(monkeypatch, temp_config):
+    repository, _lecture_id, _module_id = _create_sample_data(temp_config)
+    app = create_app(repository, config=temp_config)
+
+    class DummyPaddleOCR:
+        def __init__(self, *args, **kwargs):  # noqa: D401, ANN001, ANN002 - mimic PaddleOCR signature
+            raise RuntimeError(
+                "You must provide the 'source_filter' parameter for every msearch call."
+            )
+
+    dummy_module = types.SimpleNamespace(PaddleOCR=DummyPaddleOCR)
+    monkeypatch.setitem(sys.modules, "paddleocr", dummy_module)
+    app.state.slide_markdown_engine_factory = None
+    app.state.__dict__.pop("slide_markdown_engine", None)
+
+    with pytest.raises(RuntimeError) as excinfo:
+        app.state.get_slide_markdown_engine()
+
+    message = str(excinfo.value)
+    assert "Failed to initialise PaddleOCR" in message
+    assert "source_filter" in message
 
 
 def test_slide_preview_lifecycle(temp_config):
