@@ -2505,7 +2505,9 @@ def create_app(
                     try:
                         recognition = engine.ocr(array, cls=True)
                     except Exception as error:  # noqa: BLE001 - OCR may raise
-                        raise SlideMarkdownError("Slide text extraction failed") from error
+                        message = f"Slide text extraction failed: {error}"
+                        LOGGER.exception(message)
+                        raise SlideMarkdownError(message) from error
                     sections.append(_format_page_markdown(page_number + 1, recognition))
                     if progress_callback is not None:
                         try:
@@ -2515,7 +2517,9 @@ def create_app(
         except SlideMarkdownError:
             raise
         except Exception as error:  # noqa: BLE001 - propagate unexpected errors
-            raise SlideMarkdownError("Slide text extraction failed") from error
+            message = f"Slide text extraction failed: {error}"
+            LOGGER.exception(message)
+            raise SlideMarkdownError(message) from error
 
         stem = pdf_path.stem or "slides"
         target = ocr_dir / f"{stem}-ocr.md"
