@@ -2503,7 +2503,7 @@ def create_app(
                     image = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
                     array = np.asarray(image)
                     try:
-                        recognition = engine.ocr(array, cls=True)
+                        recognition = engine.ocr(array)
                     except Exception as error:  # noqa: BLE001 - OCR may raise
                         message = f"Slide text extraction failed: {error}"
                         LOGGER.exception(message)
