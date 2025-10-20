@@ -2318,7 +2318,6 @@ def create_app(
                 engine = PaddleOCR(
                     use_angle_cls=True,
                     lang="en",
-                    use_gpu=False,
                     show_log=False,
                 )
             except Exception as error:  # noqa: BLE001 - PaddleOCR may raise

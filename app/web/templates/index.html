@@ -541,11 +541,60 @@
         border-color: rgba(248, 113, 113, 0.6);
       }
 
+      .debug-log-message-wrapper,
+      .debug-stream-entry-message-wrapper {
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+      }
+
       .debug-log-message {
+        flex: 1 1 auto;
         white-space: pre-wrap;
         line-height: 1.5;
         font-size: 0.9rem;
         color: #f8fafc;
+      }
+
+      .debug-copy-button {
+        flex: 0 0 auto;
+        align-self: flex-start;
+        background: rgba(30, 41, 59, 0.9);
+        border: 1px solid rgba(148, 163, 184, 0.4);
+        border-radius: 6px;
+        color: rgba(226, 232, 240, 0.9);
+        cursor: pointer;
+        font-size: 0.7rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        padding: 4px 10px;
+        text-transform: uppercase;
+        transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+      }
+
+      .debug-copy-button:hover:not(:disabled),
+      .debug-copy-button:focus-visible:not(:disabled) {
+        background: rgba(59, 130, 246, 0.25);
+        border-color: rgba(96, 165, 250, 0.8);
+        color: rgba(191, 219, 254, 0.95);
+        outline: none;
+      }
+
+      .debug-copy-button:disabled {
+        cursor: not-allowed;
+        opacity: 0.55;
+      }
+
+      .debug-copy-button[data-state='copied'] {
+        background: rgba(34, 197, 94, 0.25);
+        border-color: rgba(134, 239, 172, 0.8);
+        color: rgba(220, 252, 231, 0.95);
+      }
+
+      .debug-copy-button[data-state='error'] {
+        background: rgba(248, 113, 113, 0.25);
+        border-color: rgba(248, 113, 113, 0.7);
+        color: rgba(254, 202, 202, 0.95);
       }
 
       .debug-log-context {
@@ -678,8 +727,10 @@
       }
 
       .debug-stream-entry-message {
+        flex: 1 1 auto;
         font-size: 0.82rem;
         color: rgba(226, 232, 240, 0.92);
+        white-space: pre-wrap;
       }
 
       .debug-stream-entry-meta {
@@ -7774,6 +7825,81 @@
         return badges;
       }
 
+      async function copyTextToClipboard(text) {
+        if (!text) {
+          throw new Error('Nothing to copy');
+        }
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'fixed';
+        textarea.style.top = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.select();
+        textarea.setSelectionRange(0, textarea.value.length);
+        try {
+          const successful = document.execCommand('copy');
+          if (!successful) {
+            throw new Error('execCommand copy failed');
+          }
+        } finally {
+          document.body.removeChild(textarea);
+        }
+      }
+
+      function createCopyButton(getText) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'debug-copy-button';
+        button.textContent = 'Copy';
+        button.setAttribute('aria-label', 'Copy message');
+        button.title = 'Copy message';
+
+        const updateDisabledState = () => {
+          try {
+            const text = getText();
+            button.disabled = !text;
+          } catch (error) {
+            button.disabled = true;
+          }
+        };
+
+        updateDisabledState();
+
+        let resetTimer = null;
+        button.addEventListener('click', async () => {
+          const originalText = 'Copy';
+          const copiedText = 'Copied!';
+          const errorText = 'Copy failed';
+          window.clearTimeout(resetTimer);
+          try {
+            const text = getText();
+            if (!text) {
+              throw new Error('Nothing to copy');
+            }
+            await copyTextToClipboard(text);
+            button.dataset.state = 'copied';
+            button.textContent = copiedText;
+          } catch (error) {
+            console.error('Failed to copy message', error);
+            button.dataset.state = 'error';
+            button.textContent = errorText;
+          }
+          resetTimer = window.setTimeout(() => {
+            button.dataset.state = '';
+            button.textContent = originalText;
+            updateDisabledState();
+          }, 2000);
+        });
+
+        return button;
+      }
+
       function buildDebugLogEntry(entry, { isFirstFailure = false } = {}) {
         const severity = getEntrySeverity(entry);
         const category = getEntryCategory(entry);
@@ -7852,8 +7978,6 @@
           header.appendChild(timeElement);
         }
 
-        const messageElement = document.createElement('div');
-        messageElement.className = 'debug-log-message';
         const renderedValue =
           typeof entry?.rendered === 'string' && entry.rendered
             ? entry.rendered
@@ -7862,8 +7986,15 @@
             : '';
         const messageText =
           typeof renderedValue === 'string' ? renderedValue : String(renderedValue ?? '');
+        const messageWrapper = document.createElement('div');
+        messageWrapper.className = 'debug-log-message-wrapper';
+        const messageElement = document.createElement('div');
+        messageElement.className = 'debug-log-message';
         messageElement.textContent = messageText;
-        body.appendChild(messageElement);
+        messageWrapper.appendChild(messageElement);
+        const copyButton = createCopyButton(() => messageElement.textContent || '');
+        messageWrapper.appendChild(copyButton);
+        body.appendChild(messageWrapper);
 
         const meta = document.createElement('div');
         meta.className = 'debug-log-entry-meta';
@@ -8007,8 +8138,6 @@
         }
         element.appendChild(header);
 
-        const messageElement = document.createElement('div');
-        messageElement.className = 'debug-stream-entry-message';
         const rendered =
           typeof entry?.message === 'string' && entry.message
             ? entry.message
@@ -8017,8 +8146,16 @@
             : entry?.message != null
             ? String(entry.message)
             : '';
-        messageElement.textContent = rendered;
-        element.appendChild(messageElement);
+        const messageWrapper = document.createElement('div');
+        messageWrapper.className = 'debug-stream-entry-message-wrapper';
+        const messageElement = document.createElement('div');
+        messageElement.className = 'debug-stream-entry-message';
+        messageElement.textContent =
+          typeof rendered === 'string' ? rendered : String(rendered ?? '');
+        messageWrapper.appendChild(messageElement);
+        const copyButton = createCopyButton(() => messageElement.textContent || '');
+        messageWrapper.appendChild(copyButton);
+        element.appendChild(messageWrapper);
 
         const meta = document.createElement('div');
         meta.className = 'debug-stream-entry-meta';
