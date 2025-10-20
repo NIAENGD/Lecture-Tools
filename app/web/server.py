@@ -2413,7 +2413,11 @@ def create_app(
 
         matrix = fitz.Matrix(200 / 72, 200 / 72)
 
-        def _format_page_markdown(page_number: int, recognition: Any) -> str:
+        def _format_page_markdown(
+            page_number: int,
+            recognition: Any,
+            fallback_lines: Optional[List[str]] = None,
+        ) -> str:
             entries: List[str] = []
 
             def _normalise_dict(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
@@ -2523,7 +2527,13 @@ def create_app(
                         groups.append((center_y, [sanitized]))
 
             if not groups:
-                entries.append("_No text detected._")
+                if fallback_lines:
+                    for fallback in fallback_lines:
+                        sanitized_fallback = fallback.strip()
+                        if sanitized_fallback:
+                            entries.append(f"- {sanitized_fallback}")
+                else:
+                    entries.append("_No text detected._")
             else:
                 for _center, parts in groups:
                     line = " ".join(parts).strip()
@@ -2570,7 +2580,17 @@ def create_app(
                         message = f"Slide text extraction failed: {error}"
                         LOGGER.exception(message)
                         raise SlideMarkdownError(message) from error
-                    sections.append(_format_page_markdown(page_number + 1, recognition))
+                    page_text = page.get_text("text") or ""
+                    fallback_lines = [
+                        line.strip()
+                        for line in page_text.splitlines()
+                        if line.strip()
+                    ]
+                    sections.append(
+                        _format_page_markdown(
+                            page_number + 1, recognition, fallback_lines or None
+                        )
+                    )
                     if progress_callback is not None:
                         try:
                             progress_callback(processed_index, total_pages)

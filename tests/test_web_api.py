@@ -1079,6 +1079,36 @@ def test_process_slides_generates_markdown(monkeypatch, temp_config):
     assert "Key insight here" in content
 
 
+def test_process_slides_markdown_uses_pdf_text_when_ocr_empty(monkeypatch, temp_config):
+    repository, lecture_id, _module_id = _create_sample_data(temp_config)
+
+    class EmptyOCREngine:
+        def ocr(self, image, cls=True):  # noqa: ARG002 - signature matches PaddleOCR
+            return []
+
+    app = create_app(repository, config=temp_config)
+    app.state.slide_markdown_engine_factory = lambda: EmptyOCREngine()
+
+    client = TestClient(app)
+
+    response = client.post(
+        f"/api/lectures/{lecture_id}/process-slides",
+        data={"mode": "markdown"},
+        files={"file": ("deck.pdf", _build_sample_pdf(1), "application/pdf")},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    notes_path = payload.get("notes_path")
+    assert notes_path and notes_path.endswith("-ocr.md")
+    notes_asset = temp_config.storage_root / notes_path
+    assert notes_asset.exists()
+    content = notes_asset.read_text(encoding="utf-8")
+    assert "Slide 1" in content
+    assert "Sample page 1" in content
+    assert "_No text detected._" not in content
+
+
 def test_process_slides_generates_markdown_without_cls(monkeypatch, temp_config):
     repository, lecture_id, _module_id = _create_sample_data(temp_config)
 
