@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import shutil
-import types
 import zipfile
 from pathlib import Path
 from typing import Any
@@ -21,6 +20,7 @@ pytest.importorskip("httpx")
 from fastapi.testclient import TestClient
 
 from app.processing import SlideConversionDependencyError
+from app.services.ingestion import SlideConversionResult
 from app.web import create_app
 from app.web import server as web_server
 from app.services.storage import LectureRepository
@@ -991,7 +991,15 @@ def test_upload_slides_does_not_process_automatically(monkeypatch, temp_config):
     repository, lecture_id, _module_id = _create_sample_data(temp_config)
 
     class DummyConverter:
-        def convert(self, slide_path, output_dir, *, page_range=None):
+        def convert(
+            self,
+            slide_path,
+            bundle_dir,
+            notes_dir,
+            *,
+            page_range=None,
+            progress_callback=None,
+        ):  # noqa: D401, ANN001, ANN002 - signature mirrors real converter
             raise AssertionError("Slide conversion should not run during upload")
 
     monkeypatch.setattr(web_server, "PyMuPDFSlideConverter", lambda: DummyConverter())
@@ -1024,7 +1032,8 @@ def test_upload_slides_gracefully_handles_missing_converter(monkeypatch, temp_co
         def convert(
             self,
             slide_path,
-            output_dir,
+            bundle_dir,
+            notes_dir,
             *,
             page_range=None,
             progress_callback=None,
@@ -1058,15 +1067,19 @@ def test_process_slides_generates_archive(monkeypatch, temp_config):
         def convert(
             self,
             slide_path,
-            output_dir,
+            bundle_dir,
+            notes_dir,
             *,
             page_range=None,
             progress_callback=None,
         ):
-            output_dir.mkdir(parents=True, exist_ok=True)
-            archive = output_dir / "slides.zip"
+            bundle_dir.mkdir(parents=True, exist_ok=True)
+            notes_dir.mkdir(parents=True, exist_ok=True)
+            archive = bundle_dir / "slides.zip"
             archive.write_bytes(b"zip")
-            return [archive]
+            markdown = notes_dir / "slides-ocr.md"
+            markdown.write_text("# Notes", encoding="utf-8")
+            return SlideConversionResult(bundle_path=archive, markdown_path=markdown)
 
     monkeypatch.setattr(web_server, "PyMuPDFSlideConverter", lambda: DummyConverter())
 
@@ -1083,159 +1096,53 @@ def test_process_slides_generates_archive(monkeypatch, temp_config):
     assert payload["slide_image_dir"].endswith("slides.zip")
     slide_asset = temp_config.storage_root / payload["slide_image_dir"]
     assert slide_asset.exists()
+    assert payload["notes_path"].endswith(".md")
+    notes_asset = temp_config.storage_root / payload["notes_path"]
+    assert notes_asset.exists()
 
 
-def test_process_slides_generates_markdown(monkeypatch, temp_config):
+def test_process_slides_uses_converter_result(monkeypatch, temp_config):
     repository, lecture_id, _module_id = _create_sample_data(temp_config)
 
-    class DummyOCREngine:
-        def ocr(self, image, cls=True):  # noqa: ARG002 - signature matches PaddleOCR
-            return [
-                (
-                    [(0, 0), (10, 0), (10, 10), (0, 10)],
-                    ("Section Title", 0.99),
-                ),
-                (
-                    [(0, 20), (10, 20), (10, 30), (0, 30)],
-                    ("Key insight here", 0.95),
-                ),
-            ]
+    class DummyConverter:
+        def convert(
+            self,
+            slide_path,
+            bundle_dir,
+            notes_dir,
+            *,
+            page_range=None,
+            progress_callback=None,
+        ) -> SlideConversionResult:
+            bundle_dir.mkdir(parents=True, exist_ok=True)
+            notes_dir.mkdir(parents=True, exist_ok=True)
+            archive = bundle_dir / "slides.zip"
+            archive.write_bytes(b"zip")
+            markdown = notes_dir / "slides-ocr.md"
+            markdown.write_text("# Slide Notes\n\n## Slide 1\n- Section Title\n- Key insight here", encoding="utf-8")
+            if progress_callback is not None:
+                progress_callback(1, 2)
+            return SlideConversionResult(bundle_path=archive, markdown_path=markdown)
+
+    monkeypatch.setattr(web_server, "PyMuPDFSlideConverter", lambda: DummyConverter())
 
     app = create_app(repository, config=temp_config)
-    app.state.slide_markdown_engine_factory = lambda: DummyOCREngine()
-
     client = TestClient(app)
 
     response = client.post(
         f"/api/lectures/{lecture_id}/process-slides",
-        data={"mode": "markdown"},
-        files={"file": ("deck.pdf", _build_sample_pdf(2), "application/pdf")},
+        files={"file": ("deck.pdf", b"%PDF-1.4", "application/pdf")},
     )
 
     assert response.status_code == 200
     payload = response.json()
-    notes_path = payload.get("notes_path")
-    assert notes_path and notes_path.endswith("-ocr.md")
-    notes_asset = temp_config.storage_root / notes_path
+    assert payload["slide_image_dir"].endswith("slides.zip")
+    assert payload["notes_path"].endswith("slides-ocr.md")
+    notes_asset = temp_config.storage_root / payload["notes_path"]
     assert notes_asset.exists()
     content = notes_asset.read_text(encoding="utf-8")
-    assert "Slide 1" in content
     assert "Section Title" in content
     assert "Key insight here" in content
-
-
-def test_process_slides_markdown_uses_pdf_text_when_ocr_empty(monkeypatch, temp_config):
-    repository, lecture_id, _module_id = _create_sample_data(temp_config)
-
-    class EmptyOCREngine:
-        def ocr(self, image, cls=True):  # noqa: ARG002 - signature matches PaddleOCR
-            return []
-
-    app = create_app(repository, config=temp_config)
-    app.state.slide_markdown_engine_factory = lambda: EmptyOCREngine()
-
-    client = TestClient(app)
-
-    response = client.post(
-        f"/api/lectures/{lecture_id}/process-slides",
-        data={"mode": "markdown"},
-        files={"file": ("deck.pdf", _build_sample_pdf(1), "application/pdf")},
-    )
-
-    assert response.status_code == 200
-    payload = response.json()
-    notes_path = payload.get("notes_path")
-    assert notes_path and notes_path.endswith("-ocr.md")
-    notes_asset = temp_config.storage_root / notes_path
-    assert notes_asset.exists()
-    content = notes_asset.read_text(encoding="utf-8")
-    assert "Slide 1" in content
-    assert "Sample page 1" in content
-    assert "_No text detected._" not in content
-
-
-def test_process_slides_generates_markdown_without_cls(monkeypatch, temp_config):
-    repository, lecture_id, _module_id = _create_sample_data(temp_config)
-
-    class DummyOCREngine:
-        def __init__(self):
-            self.calls = []
-
-        def ocr(self, image, **kwargs):  # noqa: ARG002
-            self.calls.append(kwargs)
-            if kwargs:
-                raise TypeError("predict() got an unexpected keyword argument 'cls'")
-
-            return [
-                (
-                    [(0, 0), (10, 0), (10, 10), (0, 10)],
-                    ("Section Title", 0.99),
-                ),
-            ]
-
-    engine = DummyOCREngine()
-
-    app = create_app(repository, config=temp_config)
-    app.state.slide_markdown_engine_factory = lambda: engine
-
-    client = TestClient(app)
-
-    response = client.post(
-        f"/api/lectures/{lecture_id}/process-slides",
-        data={"mode": "markdown"},
-        files={"file": ("deck.pdf", _build_sample_pdf(1), "application/pdf")},
-    )
-
-    assert response.status_code == 200
-    payload = response.json()
-    notes_path = payload.get("notes_path")
-    assert notes_path and notes_path.endswith("-ocr.md")
-    notes_asset = temp_config.storage_root / notes_path
-    assert notes_asset.exists()
-    content = notes_asset.read_text(encoding="utf-8")
-    assert "Slide 1" in content
-    assert "Section Title" in content
-    assert engine.calls == [{}]
-
-
-def test_slide_markdown_factory_error_includes_reason(monkeypatch, temp_config):
-    repository, _lecture_id, _module_id = _create_sample_data(temp_config)
-    app = create_app(repository, config=temp_config)
-
-    def failing_factory():
-        raise RuntimeError("You must provide the 'source_filter' parameter for every msearch call.")
-
-    app.state.slide_markdown_engine_factory = failing_factory
-
-    with pytest.raises(RuntimeError) as excinfo:
-        app.state.get_slide_markdown_engine()
-
-    message = str(excinfo.value)
-    assert "Slide Markdown engine factory failed" in message
-    assert "source_filter" in message
-
-
-def test_slide_markdown_default_engine_error_includes_reason(monkeypatch, temp_config):
-    repository, _lecture_id, _module_id = _create_sample_data(temp_config)
-    app = create_app(repository, config=temp_config)
-
-    class DummyPaddleOCR:
-        def __init__(self, *args, **kwargs):  # noqa: D401, ANN001, ANN002 - mimic PaddleOCR signature
-            raise RuntimeError(
-                "You must provide the 'source_filter' parameter for every msearch call."
-            )
-
-    dummy_module = types.SimpleNamespace(PaddleOCR=DummyPaddleOCR)
-    monkeypatch.setitem(sys.modules, "paddleocr", dummy_module)
-    app.state.slide_markdown_engine_factory = None
-    app.state.__dict__.pop("slide_markdown_engine", None)
-
-    with pytest.raises(RuntimeError) as excinfo:
-        app.state.get_slide_markdown_engine()
-
-    message = str(excinfo.value)
-    assert "Failed to initialise PaddleOCR" in message
-    assert "source_filter" in message
 
 
 def test_slide_preview_lifecycle(temp_config):
@@ -1436,15 +1343,19 @@ def test_process_slides_with_preview_token(monkeypatch, temp_config):
         def convert(
             self,
             slide_path,
-            output_dir,
+            bundle_dir,
+            notes_dir,
             *,
             page_range=None,
             progress_callback=None,
         ):
-            output_dir.mkdir(parents=True, exist_ok=True)
-            archive = output_dir / "slides.zip"
+            bundle_dir.mkdir(parents=True, exist_ok=True)
+            notes_dir.mkdir(parents=True, exist_ok=True)
+            archive = bundle_dir / "slides.zip"
             archive.write_bytes(b"zip")
-            return [archive]
+            markdown = notes_dir / "slides-ocr.md"
+            markdown.write_text("# Notes", encoding="utf-8")
+            return SlideConversionResult(bundle_path=archive, markdown_path=markdown)
 
     monkeypatch.setattr(web_server, "PyMuPDFSlideConverter", lambda: DummyConverter())
 
@@ -1467,6 +1378,7 @@ def test_process_slides_with_preview_token(monkeypatch, temp_config):
     assert response.status_code == 200
     payload = response.json()
     assert payload["slide_image_dir"].endswith("slides.zip")
+    assert payload["notes_path"].endswith(".md")
 
     slide_path = temp_config.storage_root / payload["slide_path"]
     assert slide_path.exists()
@@ -1489,7 +1401,8 @@ def test_process_slides_gracefully_handles_missing_converter(monkeypatch, temp_c
         def convert(
             self,
             slide_path,
-            output_dir,
+            bundle_dir,
+            notes_dir,
             *,
             page_range=None,
             progress_callback=None,
@@ -1529,16 +1442,22 @@ def test_process_slides_tasks_are_queued(monkeypatch, temp_config):
         start_time = time.perf_counter()
         call_events.append(("start", start_time))
         time.sleep(0.1)
-        target = lecture_paths.slide_dir / "slides.zip"
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(b"zip")
+        bundle_target = lecture_paths.slide_dir / "slides.zip"
+        notes_target = lecture_paths.notes_dir / "slides-ocr.md"
+        bundle_target.parent.mkdir(parents=True, exist_ok=True)
+        notes_target.parent.mkdir(parents=True, exist_ok=True)
+        bundle_target.write_bytes(b"zip")
+        notes_target.write_text("# Notes", encoding="utf-8")
         if progress_callback is not None:
             progress_callback(1, 1)
         end_time = time.perf_counter()
         call_events.append(("end", end_time))
-        return target.relative_to(temp_config.storage_root).as_posix()
+        return (
+            bundle_target.relative_to(temp_config.storage_root).as_posix(),
+            notes_target.relative_to(temp_config.storage_root).as_posix(),
+        )
 
-    monkeypatch.setattr(web_server, "_generate_slide_archive", fake_generate)
+    monkeypatch.setattr(web_server, "_generate_slide_bundle", fake_generate)
 
     pdf_payload = _build_sample_pdf(1)
 

@@ -140,6 +140,8 @@ stateDiagram-v2
     Published --> Archived: Instructor retracts or supersedes
 ```
 
+When the **Slides** state transitions to **ReadyForReview**, the system stores a Markdown document containing the OCR results along with rendered slide images. The web experience offers a single ZIP download bundling both assets for students and instructors.
+
 Every transition updates the unified progress tracker so that instructors immediately see where a lecture stands and what recovery options exist.
 
 ## 4. Learner Journey
