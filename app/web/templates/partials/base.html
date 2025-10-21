@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title data-i18n="document.title">Lecture Tools</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    {% if asset_urls.styles %}
+    <link rel="stylesheet" href="{{ asset_urls.styles }}" />
+    {% endif %}
+  </head>
+  <body
+    data-root-path="{{ root_path }}"
+    data-pdfjs-script="{{ pdfjs.script }}"
+    data-pdfjs-worker="{{ pdfjs.worker }}"
+    data-pdfjs-module="{{ pdfjs.module }}"
+    data-pdfjs-worker-module="{{ pdfjs.worker_module }}"
+  >
+    <div id="status-bar" class="status-bar" role="status">
+      <div id="status-bar-message" class="status-message"></div>
+      <div id="status-bar-progress" class="status-progress" hidden>
+        <div class="status-progress-track">
+          <div id="status-bar-progress-fill" class="status-progress-fill"></div>
+        </div>
+        <span id="status-bar-progress-text" class="status-progress-text"></span>
+      </div>
+    </div>
+    <main class="layout">
+      {% block layout %}{% endblock %}
+    </main>
+    {% block dialogs %}{% endblock %}
+    {% block debug %}{% endblock %}
+    {% if asset_urls.scripts %}
+    <script type="module" src="{{ asset_urls.scripts }}"></script>
+    {% endif %}
+  </body>
+</html>

@@ -6,3 +6,5 @@ assets/*
 !assets/.gitkeep
 *.log
 *.db
+node_modules/
+app/web/static/dist/
