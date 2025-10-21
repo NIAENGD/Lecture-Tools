@@ -1,5 +1,6 @@
 // @ts-nocheck
 import '../styles/main.scss';
+import { createI18n } from './i18n';
 
 declare global {
   interface Window {
@@ -28,1955 +29,6 @@ function bootstrapEnvironmentFromDataset(): void {
 bootstrapEnvironmentFromDataset();
 
 (async function () {
-        const translations = {
-          en: {
-            document: {
-              title: 'Lecture Tools',
-            },
-            sidebar: {
-              heading: 'Lecture Tools',
-              tagline: 'Review, organise, and process lecture resources quickly.',
-              overview: 'Overview',
-              syllabusTitle: 'Course syllabus',
-              searchLabel: 'Search the syllabus',
-              searchPlaceholder: 'Search by name',
-              loading: 'Loading…',
-            },
-            topBar: {
-              details: 'Details',
-              enableEdit: 'Enable edit mode',
-              exitEdit: 'Exit edit mode',
-              progress: 'Progress',
-              create: 'Create',
-              storage: 'Storage',
-              settings: 'Settings',
-            },
-            details: {
-              title: 'Lecture details',
-              deleteLecture: 'Delete lecture',
-              editModeBanner:
-                'Edit mode is enabled. Update lecture information or remove items while it is active.',
-              summaryPlaceholder: 'Select a lecture from the curriculum.',
-              edit: {
-                titleLabel: 'Title',
-                moduleLabel: 'Module',
-                descriptionLabel: 'Description',
-                save: 'Save changes',
-              },
-              noDescription: 'No description recorded yet.',
-            },
-            assets: {
-              title: 'Assets',
-              transcribe: 'Transcribe audio',
-              modelLabel: 'Model',
-              model: {
-                tiny: 'tiny',
-                base: 'base',
-                small: 'small',
-                medium: 'medium',
-                large: 'large',
-                gpu: 'GPU (hardware accelerated)',
-              },
-              labels: {
-                audio: 'Audio (.wav, .mp3, .m4a, .aac, .flac, .ogg, .opus)',
-                masteredAudio: 'Mastered audio',
-                slides: 'Slides (PDF)',
-                transcript: 'Transcript',
-                notes: 'Notes',
-                slideBundle: 'Slide bundle (Markdown + ZIP)',
-              },
-              status: {
-                notLinked: 'Not linked',
-                slidesHint: 'Upload a PDF, then process it to generate the Markdown bundle.',
-                noSlideImages: 'No slide bundle yet. Use “Process slides” after uploading a PDF.',
-                linked: 'Linked: {{name}}',
-                slidesUploaded: 'Slides uploaded: {{name}}',
-                archiveCreated: 'Bundle created: {{name}}',
-                mastered: 'Mastered: {{name}}',
-              },
-              actions: {
-                upload: 'Upload',
-                processSlides: 'Process slides',
-                download: 'Download',
-                remove: 'Remove',
-              },
-            },
-            progress: {
-              title: 'Processing queue',
-              description: 'Track conversions, mastering, and transcriptions as they run.',
-              empty: 'No active tasks.',
-              refresh: 'Refresh',
-              retry: 'Retry',
-              dismiss: 'Dismiss',
-              openLecture: 'Open lecture',
-              status: {
-                running: 'In progress',
-                finished: 'Completed',
-                error: 'Needs attention',
-              },
-              labels: {
-                transcription: 'Transcription',
-                slideBundle: 'Slide bundle generation',
-                audioMastering: 'Audio mastering',
-                processing: 'Processing task',
-                untitled: 'Untitled lecture',
-              },
-              retryUnavailable: 'Retry is not available for this task.',
-            },
-            create: {
-              title: 'Create lecture',
-              moduleLabel: 'Module',
-              titleLabel: 'Title',
-              descriptionLabel: 'Description',
-              submit: 'Add lecture',
-            },
-            settings: {
-              title: 'Settings',
-              appearance: {
-                legend: 'Appearance',
-                themeLabel: 'Theme',
-                theme: {
-                  system: 'Follow system',
-                  light: 'Light',
-                  dark: 'Dark',
-                },
-              },
-              language: {
-                label: 'Language',
-                choices: {
-                  en: 'English',
-                  zh: '中文 (Chinese)',
-                  es: 'Español (Spanish)',
-                  fr: 'Français (French)',
-                },
-              },
-              debug: {
-                legend: 'Debugging',
-                enable: 'Enable debug mode',
-                description:
-                  'Show a live console on the right that streams detailed program output.',
-              },
-              whisper: {
-                legend: 'Whisper transcription',
-                modelLabel: 'Default model',
-                model: {
-                  tiny: 'Tiny (fastest)',
-                  base: 'Base (balanced)',
-                  small: 'Small (accurate)',
-                  medium: 'Medium (detailed)',
-                  large: 'Large (maximum accuracy)',
-                  gpu: 'GPU (hardware accelerated)',
-                },
-                computeLabel: 'Compute type',
-                beamLabel: 'Beam size',
-                gpu: {
-                  label: 'GPU support',
-                  status: 'GPU acceleration not tested.',
-                  test: 'Test support',
-                  retry: 'Re-run test',
-                },
-              },
-              audio: {
-                legend: 'Audio',
-                masteringLabel: 'Enable mastered audio',
-                masteringDescription: 'Automatically enhance uploaded audio for clarity.',
-              },
-              slides: {
-                legend: 'Slides',
-                dpiLabel: 'Rendering DPI',
-                dpi: {
-                  150: '150 dpi (fastest)',
-                  200: '200 dpi (balanced)',
-                  300: '300 dpi (detailed)',
-                  400: '400 dpi (high detail)',
-                  600: '600 dpi (maximum)',
-                },
-              },
-              update: {
-                legend: 'System updates',
-                description: 'Update Lecture Tools without leaving the browser.',
-                run: 'Run update',
-                refresh: 'Refresh status',
-                status: {
-                  idle: 'No update in progress.',
-                  running: 'Update running. Keep this window open until it completes.',
-                  success: 'The most recent update completed successfully.',
-                  failure: 'The most recent update encountered an error.',
-                },
-                startedAt: 'Started {{time}}.',
-                finishedAt: 'Finished {{time}}.',
-                exitCode: 'Exit code {{code}}.',
-                logLabel: 'Activity log',
-                logEmpty: 'No update activity yet.',
-              },
-              archive: {
-                legend: 'Archive',
-                description:
-                  'Export your lectures and assets or import an archive from another machine.',
-                export: 'Export archive',
-                import: 'Import archive',
-                modeLabel: 'Import mode',
-                modes: {
-                  merge: 'Import and add to existing content',
-                  replace: 'Clear existing content and overwrite',
-                },
-                hint: 'Exported archives are stored temporarily and cleared when the app starts.',
-              },
-              save: 'Save settings',
-              exit: 'Exit application',
-            },
-            storage: {
-              title: 'Storage manager',
-              subtitle: 'Review stored assets by class hierarchy.',
-              loading: 'Loading…',
-              empty: 'No stored classes found.',
-              usage: {
-                used: 'Used',
-                available: 'Available',
-                total: 'Total',
-              },
-              actions: {
-                refresh: 'Refresh',
-                downloadSelected: 'Download selected',
-                purge: 'Remove processed audio',
-              },
-              browser: {
-                root: 'Root',
-                up: 'Up',
-                loading: 'Loading…',
-                empty: 'No files or folders found.',
-                select: 'Select',
-                name: 'Name',
-                type: 'Type',
-                size: 'Size',
-                modified: 'Modified',
-                actions: 'Actions',
-                directory: 'Folder',
-                file: 'File',
-                unnamed: 'Unnamed item',
-                selectAction: 'Select {{name}}',
-              },
-              purge: {
-                none: 'No processed audio to remove.',
-                available: '{{count}} {{lectureWord}} ready for cleanup.',
-                working: 'Removing audio…',
-                readyCount: '{{count}} {{lectureWord}} ready for cleanup',
-              },
-              classes: {
-                summary: '{{moduleCount}} {{moduleWord}} • {{lectureCount}} {{lectureWord}}',
-                empty: 'No modules stored for this class yet.',
-                masteredCount: '{{count}} {{lectureWord}} with mastered audio',
-              },
-              modules: {
-                summary: '{{lectureCount}} {{lectureWord}}',
-                empty: 'No lectures stored for this module yet.',
-                masteredCount: '{{count}} {{lectureWord}} with mastered audio',
-              },
-              lecture: {
-                audio: 'Audio',
-                processedAudio: 'Mastered audio',
-                transcript: 'Transcript',
-                notes: 'Notes',
-                slides: 'Slides',
-                empty: 'No linked assets.',
-                eligible: 'Audio ready for removal',
-                processedBadge: 'Mastered audio',
-              },
-              dialogs: {
-                purgeTitle: 'Remove processed audio',
-                purgeMessage:
-                  'Delete audio files for {{count}} {{lectureWord}} that already have transcripts? This cannot be undone.',
-                deleteTitle: 'Delete storage item',
-                deleteMessage: 'Delete “{{name}}” from storage? This cannot be undone.',
-                deleteConfirm: 'Delete',
-              },
-              unnamedClass: 'Untitled class',
-              unnamedModule: 'Untitled module',
-              unnamedLecture: 'Untitled lecture',
-            },
-            debug: {
-              title: 'Debug console',
-              live: 'Live',
-              empty: 'Enable debug mode to inspect program activity in real time.',
-              error: 'Unable to load debug output.',
-              stream: {
-                title: 'Server activity',
-                empty: 'Waiting for server activity…',
-              },
-            },
-            dialog: {
-              cancel: 'Cancel',
-              confirm: 'Confirm',
-            },
-            stats: {
-              classes: 'Classes',
-              modules: 'Modules',
-              lectures: 'Lectures',
-              transcripts: 'Transcripts',
-              slideDecks: 'Slide decks',
-              audio: 'Audio files',
-              processedAudio: 'Mastered audio',
-              notes: 'Notes',
-              slideArchives: 'Slide bundles',
-            },
-            dialogs: {
-              createClass: {
-                title: 'Create class',
-                message: 'Enter a class name.',
-                placeholder: 'Introduction to Astronomy',
-              },
-              createModule: {
-                title: 'Create module',
-                message: 'Module name for {{className}}',
-                placeholder: 'Foundations',
-              },
-              createLecture: {
-                title: 'Create lecture',
-                message: 'Lecture title for {{context}}',
-                placeholder: 'Lecture title',
-              },
-              lectureDescription: {
-                title: 'Lecture description',
-                placeholder: 'Add a short outline…',
-              },
-              deleteClass: {
-                title: 'Delete class',
-                message: 'Delete class "{{className}}"?',
-                cancel: 'Keep class',
-                summary: 'This will remove {{moduleCount}} {{moduleWord}} and {{lectureCount}} {{lectureWord}}.',
-              },
-              deleteModule: {
-                title: 'Delete module',
-                message: 'Delete module "{{moduleName}}"{{classContext}}?',
-                cancel: 'Keep module',
-                summary: 'This will remove {{lectureCount}} {{lectureWord}}.',
-                classContext: ' from "{{className}}"',
-              },
-              deleteLecture: {
-                title: 'Delete lecture',
-                message: 'Delete lecture "{{context}}" and all linked assets?',
-                cancel: 'Keep lecture',
-              },
-              removeAsset: {
-                title: 'Remove {{asset}}',
-                message: 'Remove the current {{asset}} from this lecture? This cannot be undone.',
-                confirm: 'Remove asset',
-              },
-              confirmDeletion: {
-                title: 'Confirm deletion',
-                message: 'This action cannot be undone. Do you want to permanently remove it?',
-                confirm: 'Yes, delete it',
-              },
-              gpuWhisper: {
-                title: 'GPU Whisper',
-              },
-              exitApp: {
-                title: 'Exit application',
-                message: 'Stop the Lecture Tools server and close this tab?',
-              },
-              slideRange: {
-                title: 'Select pages to process',
-                description:
-                  'Review the slide thumbnails and choose which pages to convert into images.',
-                loading: 'Loading preview…',
-                error:
-                  'Slide previews are shown below. Adjust the range manually if needed.',
-                startLabel: 'Start page',
-                endLabel: 'End page',
-                rangeHint: 'Use the inputs or page previews to adjust the selection.',
-                zoomLabel: 'Preview zoom',
-                zoomValue: '{{value}}% view',
-                fallbackMessage:
-                  'Open the PDF below in a new tab if you need to inspect it directly.',
-                fallbackLink: 'Open PDF in new tab',
-                fallbackFrameTitle: 'Fallback PDF preview',
-                summary: 'Processing pages {{start}}–{{end}} of {{total}}.',
-                summarySingle: 'Processing page {{start}} of {{total}}.',
-                summaryUnknown: 'Processing pages {{start}}–{{end}}.',
-                summarySingleUnknown: 'Processing page {{start}}.',
-                allPages: 'Processing all pages in the document.',
-                pageLabel: 'Page {{page}}',
-                selectAll: 'Select all',
-                confirm: 'Confirm & Continue',
-              },
-              upload: {
-                title: 'Upload file',
-                description: 'Drag a file here or browse to select one from your computer.',
-                prompt: 'Drag and drop a file',
-                help: 'You can also click to choose a file.',
-                browse: 'Select file',
-                clear: 'Remove',
-                waiting: 'Select a file to continue.',
-                preparing: 'Preparing file…',
-                uploading: 'Uploading…',
-                processing: 'Processing upload…',
-                processingAction: 'Processing…',
-                processingAudio: 'Processing audio…',
-                processingSlides: 'Processing slides…',
-                backgroundProcessing:
-                  'Audio mastering will continue in the background. You can close this dialog while it finishes.',
-                backgroundProcessingSlides:
-                  'Slide conversion will continue in the background. You can close this dialog while it finishes.',
-                success: 'Upload completed.',
-                failure: 'Upload failed. Please try again.',
-                progress: 'Upload progress',
-                action: 'Upload',
-                assetTitle: 'Upload {{asset}}',
-                assetDescription: 'Choose a new file to attach to this resource.',
-                archiveTitle: 'Import archive',
-                archiveDescription: 'Select a Lecture Tools export (.zip) to import.',
-              },
-              descriptionOptional: 'Description (optional)',
-              descriptionPlaceholder: 'Add a short summary…',
-            },
-            dropdowns: {
-              selectModule: 'Select module…',
-              noModules: 'No modules available',
-            },
-            placeholders: {
-              noLectures: 'No lectures',
-              noLecturesFilter: 'No lectures match the current filter.',
-              noClasses: 'No classes available yet.',
-              noModules: 'No modules yet.',
-            },
-            curriculum: {
-              addClass: 'Add class',
-              addModule: 'Add module',
-              manageHeading: 'Manage syllabus',
-              classMeta: '{{moduleCount}} {{moduleWord}} • {{lectureCount}} {{lectureWord}}',
-              moduleMeta: '{{lectureCount}} {{lectureWord}}',
-            },
-            common: {
-              actions: {
-                create: 'Create',
-                save: 'Save',
-                skip: 'Skip',
-                delete: 'Delete',
-                open: 'Open',
-                upload: 'Upload',
-                exit: 'Exit',
-                close: 'Close',
-                ok: 'OK',
-              },
-            },
-            status: {
-              requireEdit: 'Enable edit mode to manage the curriculum.',
-              requireEditLecture: 'Enable edit mode to update lecture details.',
-              classCreated: 'Class created.',
-              classRemoved: 'Class removed.',
-              moduleCreated: 'Module created.',
-              moduleRemoved: 'Module removed.',
-              lectureCreated: 'Lecture created.',
-              lectureRemoved: 'Lecture removed.',
-              lectureUpdated: 'Lecture updated.',
-              lectureTitleRequired: 'Lecture title is required.',
-              createLectureRequirements: 'Select a module and enter a title.',
-              slidesProcessed: 'Slides processed into a Markdown bundle with images.',
-              slidesUploaded: 'Slides uploaded. Process them to generate the Markdown bundle.',
-              slidesUploadRequired: 'Upload a PDF before processing slides.',
-              slidePreviewFailed: 'Unable to prepare the slide preview. Try re-uploading the PDF.',
-              processingSlides: 'Processing slides…',
-              audioProcessingQueued: 'Audio uploaded. Mastering will continue in the background.',
-              assetUploaded: 'Asset uploaded successfully.',
-              assetRemoved: 'Asset removed.',
-              transcriptionPreparing: '====> Preparing transcription…',
-              transcriptionCompleted: 'Transcription completed.',
-              processing: 'Processing…',
-              storageLoadFailed: 'Unable to load storage contents.',
-              storageUsageFailed: 'Unable to load storage usage.',
-              storagePurged: 'Removed processed audio files.',
-              storagePurgeFailed: 'Unable to remove processed audio files.',
-              storageDeleted: 'Storage item deleted.',
-              storageDeleteFailed: 'Unable to delete storage item.',
-              storageDownloadReady: 'Download ready.',
-              storageDownloadFailed: 'Unable to prepare download.',
-              storageDownloadNone: 'Select at least one item to download.',
-              gpuChecking: '====> Checking GPU Whisper support…',
-              gpuConfirmed: 'GPU Whisper support confirmed.',
-              gpuUnavailable: 'GPU acceleration is unavailable on this platform.',
-              gpuUnsupported: 'GPU Whisper is not supported on this platform.',
-              gpuNotAvailable: 'GPU acceleration is not available on this platform.',
-              updateStarted: 'Update started.',
-              updateRunning: 'Update in progress. Keep this window open.',
-              updateCompleted: 'Update completed successfully.',
-              updateFailed: 'Update failed. Review the log for details.',
-              updateConflict: 'An update is already running.',
-              shuttingDown: 'Shutting down application…',
-              settingsSaved: 'Settings saved.',
-              gpuFallback: 'Falling back to {{model}} model.',
-              lectureReordered: 'Lecture order updated.',
-              exporting: 'Preparing archive…',
-              exportReady: 'Archive ready to download.',
-              exportFailed: 'Unable to create archive.',
-              importing: 'Importing archive…',
-              importSuccess: 'Imported {{count}} lectures.',
-              importNoChanges: 'Archive imported (no new lectures).',
-            },
-            counts: {
-              module: { one: 'module', other: 'modules' },
-              lecture: { one: 'lecture', other: 'lectures' },
-            },
-          },
-          zh: {
-            document: {
-              title: '课堂助手',
-            },
-            sidebar: {
-              heading: '课堂助手',
-              tagline: '快速审阅、整理并处理课程资源。',
-              overview: '概览',
-              syllabusTitle: '课程大纲',
-              searchLabel: '搜索课程大纲',
-              searchPlaceholder: '按名称搜索',
-              loading: '正在加载…',
-            },
-            topBar: {
-              details: '详情',
-              enableEdit: '开启编辑模式',
-              exitEdit: '退出编辑模式',
-              progress: '进度',
-              create: '新建',
-              storage: '存储',
-              settings: '设置',
-            },
-            details: {
-              title: '讲座详情',
-              deleteLecture: '删除讲座',
-              editModeBanner: '编辑模式已开启，可更新讲座信息或移除项目。',
-              summaryPlaceholder: '从课程表中选择一个讲座。',
-              edit: {
-                titleLabel: '标题',
-                moduleLabel: '模块',
-                descriptionLabel: '描述',
-                save: '保存更改',
-              },
-              noDescription: '尚未记录描述。',
-            },
-            assets: {
-              title: '资源',
-              transcribe: '转录音频',
-              modelLabel: '模型',
-              model: {
-                tiny: 'tiny',
-                base: 'base',
-                small: 'small',
-                medium: 'medium',
-                large: 'large',
-                gpu: 'GPU（硬件加速）',
-              },
-              labels: {
-                audio: '音频（.wav、.mp3、.m4a、.aac、.flac、.ogg、.opus）',
-                masteredAudio: '优化音频',
-                slides: '课件（PDF）',
-                transcript: '逐字稿',
-                notes: '笔记',
-                slideBundle: '课件资源包（Markdown + ZIP）',
-              },
-              status: {
-                notLinked: '未关联',
-                slidesHint: '先上传 PDF，然后使用“处理课件”生成 Markdown 资源包。',
-                noSlideImages: '尚未生成课件资源包。上传 PDF 后点击“处理课件”。',
-                linked: '已关联：{{name}}',
-                slidesUploaded: '已上传课件：{{name}}',
-                archiveCreated: '已生成资源包：{{name}}',
-                mastered: '已优化：{{name}}',
-              },
-              actions: {
-                upload: '上传',
-                processSlides: '处理课件',
-                download: '下载',
-                remove: '移除',
-              },
-            },
-            progress: {
-              title: '处理队列',
-              description: '实时跟踪转换、音频优化和转录进度。',
-              empty: '当前没有任务。',
-              refresh: '刷新',
-              retry: '重试',
-              dismiss: '忽略',
-              openLecture: '打开课次',
-              status: {
-                running: '处理中',
-                finished: '已完成',
-                error: '需要关注',
-              },
-              labels: {
-                transcription: '音频转录',
-                slideBundle: '课件资源打包',
-                audioMastering: '音频优化',
-                processing: '处理任务',
-                untitled: '未命名讲座',
-              },
-              retryUnavailable: '此任务无法重试。',
-            },
-            create: {
-              title: '创建讲座',
-              moduleLabel: '模块',
-              titleLabel: '标题',
-              descriptionLabel: '描述',
-              submit: '添加讲座',
-            },
-            settings: {
-              title: '设置',
-              appearance: {
-                legend: '外观',
-                themeLabel: '主题',
-                theme: {
-                  system: '跟随系统',
-                  light: '浅色',
-                  dark: '深色',
-                },
-              },
-              language: {
-                label: '语言',
-                choices: {
-                  en: 'English（英语）',
-                  zh: '中文（简体）',
-                  es: 'Español（西班牙语）',
-                  fr: 'Français（法语）',
-                },
-              },
-              debug: {
-                legend: '调试',
-                enable: '启用调试模式',
-                description: '在右侧显示实时程序输出的控制台。',
-              },
-              whisper: {
-                legend: 'Whisper 转录',
-                modelLabel: '默认模型',
-                model: {
-                  tiny: 'Tiny（最快）',
-                  base: 'Base（均衡）',
-                  small: 'Small（更准）',
-                  medium: 'Medium（细致）',
-                  large: 'Large（最高准确度）',
-                  gpu: 'GPU（硬件加速）',
-                },
-                computeLabel: '计算类型',
-                beamLabel: '束搜索宽度',
-                gpu: {
-                  label: 'GPU 支持',
-                  status: '尚未测试 GPU 加速。',
-                  test: '测试支持',
-                  retry: '重新测试',
-                },
-              },
-              audio: {
-                legend: '音频',
-                masteringLabel: '启用音频优化',
-                masteringDescription: '自动增强上传的音频以提高清晰度。',
-              },
-              slides: {
-                legend: '课件',
-                dpiLabel: '渲染 DPI',
-                dpi: {
-                  150: '150 dpi（最快）',
-                  200: '200 dpi（均衡）',
-                  300: '300 dpi（更细致）',
-                  400: '400 dpi（高细节）',
-                  600: '600 dpi（最高）',
-                },
-              },
-              update: {
-                legend: '系统更新',
-                description: '在浏览器内更新 Lecture Tools。',
-                run: '运行更新',
-                refresh: '刷新状态',
-                status: {
-                  idle: '当前没有更新任务。',
-                  running: '正在更新。请保持此窗口打开直到完成。',
-                  success: '最近一次更新已成功完成。',
-                  failure: '最近一次更新时发生错误。',
-                },
-                startedAt: '开始于 {{time}}。',
-                finishedAt: '结束于 {{time}}。',
-                exitCode: '退出代码 {{code}}。',
-                logLabel: '活动日志',
-                logEmpty: '暂时没有更新活动。',
-              },
-              archive: {
-                legend: '归档',
-                description: '导出讲座及资源，或从其他设备导入归档文件。',
-                export: '导出归档',
-                import: '导入归档',
-                modeLabel: '导入模式',
-                modes: {
-                  merge: '追加到现有内容',
-                  replace: '清空现有内容并覆盖',
-                },
-                hint: '导出的归档会临时保存，并在应用启动时清理。',
-              },
-              save: '保存设置',
-              exit: '退出应用',
-            },
-            storage: {
-              title: '存储管理器',
-              subtitle: '按课堂结构查看存储的资源。',
-              loading: '正在加载…',
-              empty: '没有检测到存储的班级。',
-              usage: {
-                used: '已用',
-                available: '可用',
-                total: '总计',
-              },
-              actions: {
-                refresh: '刷新',
-                downloadSelected: '下载所选项',
-                purge: '移除已处理的音频',
-              },
-              browser: {
-                root: '根目录',
-                up: '上一级',
-                loading: '正在加载…',
-                empty: '此位置没有文件或文件夹。',
-                select: '选择',
-                name: '名称',
-                type: '类型',
-                size: '大小',
-                modified: '修改时间',
-                actions: '操作',
-                directory: '文件夹',
-                file: '文件',
-                unnamed: '未命名项目',
-                selectAction: '选择{{name}}',
-              },
-              purge: {
-                none: '没有可移除的音频。',
-                available: '有 {{count}} 个{{lectureWord}}可清理。',
-                working: '正在移除音频…',
-                readyCount: '{{count}} 个{{lectureWord}}可清理',
-              },
-              classes: {
-                summary: '{{moduleCount}} 个{{moduleWord}} • {{lectureCount}} 个{{lectureWord}}',
-                empty: '该班级暂无存储的模块。',
-                masteredCount: '{{count}} 个{{lectureWord}}含优化音频',
-              },
-              modules: {
-                summary: '{{lectureCount}} 个{{lectureWord}}',
-                empty: '该模块暂无存储的讲座。',
-                masteredCount: '{{count}} 个{{lectureWord}}含优化音频',
-              },
-              lecture: {
-                audio: '音频',
-                processedAudio: '优化音频',
-                transcript: '逐字稿',
-                notes: '笔记',
-                slides: '课件',
-                empty: '尚未关联资源。',
-                eligible: '音频可安全移除',
-                processedBadge: '已生成优化音频',
-              },
-              dialogs: {
-                purgeTitle: '移除已处理的音频',
-                purgeMessage: '确认删除 {{count}} 个已生成逐字稿的{{lectureWord}}音频文件？此操作无法撤销。',
-                deleteTitle: '删除存储项目',
-                deleteMessage: '确定要删除“{{name}}”吗？此操作无法撤销。',
-                deleteConfirm: '删除',
-              },
-              unnamedClass: '未命名班级',
-              unnamedModule: '未命名模块',
-              unnamedLecture: '未命名讲座',
-            },
-            debug: {
-              title: '调试控制台',
-              live: '实时',
-              empty: '启用调试模式以实时查看程序活动。',
-              error: '无法加载调试输出。',
-              stream: {
-                title: '服务器活动',
-                empty: '等待服务器活动…',
-              },
-            },
-            dialog: {
-              cancel: '取消',
-              confirm: '确认',
-            },
-            stats: {
-              classes: '课程',
-              modules: '模块',
-              lectures: '讲座',
-              transcripts: '逐字稿',
-              slideDecks: '课件',
-              audio: '音频文件',
-              processedAudio: '优化音频',
-              notes: '笔记',
-              slideArchives: '课件资源包',
-            },
-            dialogs: {
-              createClass: {
-                title: '创建课程',
-                message: '输入课程名称。',
-                placeholder: '天文学导论',
-              },
-              createModule: {
-                title: '创建模块',
-                message: '为 {{className}} 输入模块名称',
-                placeholder: '基础内容',
-              },
-              createLecture: {
-                title: '创建讲座',
-                message: '为 {{context}} 输入讲座标题',
-                placeholder: '讲座标题',
-              },
-              lectureDescription: {
-                title: '讲座描述',
-                placeholder: '添加简短大纲…',
-              },
-              deleteClass: {
-                title: '删除课程',
-                message: '删除课程“{{className}}”？',
-                cancel: '保留课程',
-                summary: '此操作将移除 {{moduleCount}} 个{{moduleWord}}和 {{lectureCount}} 个{{lectureWord}}。',
-              },
-              deleteModule: {
-                title: '删除模块',
-                message: '删除模块“{{moduleName}}”{{classContext}}？',
-                cancel: '保留模块',
-                summary: '此操作将移除 {{lectureCount}} 个{{lectureWord}}。',
-                classContext: '（来自课程“{{className}}”）',
-              },
-              deleteLecture: {
-                title: '删除讲座',
-                message: '删除讲座“{{context}}”及其所有关联资源？',
-                cancel: '保留讲座',
-              },
-              removeAsset: {
-                title: '移除 {{asset}}',
-                message: '要从此讲座中移除当前{{asset}}吗？此操作无法撤销。',
-                confirm: '移除资源',
-              },
-              confirmDeletion: {
-                title: '确认删除',
-                message: '该操作无法撤销，确定要永久删除吗？',
-                confirm: '是，删除',
-              },
-              gpuWhisper: {
-                title: 'GPU Whisper',
-              },
-              exitApp: {
-                title: '退出应用',
-                message: '停止 Lecture Tools 服务器并关闭此标签页？',
-              },
-              slideRange: {
-                title: '选择要处理的页面',
-                description: '浏览下方的课件缩略图，选择要转换为图像的页面范围。',
-                loading: '正在加载预览…',
-                error: '下方显示的是服务器生成的课件预览，可按需手动调整页码范围。',
-                startLabel: '起始页',
-                endLabel: '结束页',
-                rangeHint: '可通过输入框或页面预览调整选择范围。',
-                zoomLabel: '预览缩放',
-                zoomValue: '{{value}}% 视图',
-                fallbackMessage: '如需直接查看 PDF，可在下方打开新标签页。',
-                fallbackLink: '在新标签页打开 PDF',
-                fallbackFrameTitle: '备用 PDF 预览',
-                summary: '将处理第 {{start}}–{{end}} 页，共 {{total}} 页。',
-                summarySingle: '将处理第 {{start}} 页，共 {{total}} 页。',
-                summaryUnknown: '正在处理第 {{start}}–{{end}} 页。',
-                summarySingleUnknown: '正在处理第 {{start}} 页。',
-                allPages: '将处理文档中的全部页面。',
-                pageLabel: '第 {{page}} 页',
-                selectAll: '选择全部',
-                confirm: '确认并继续',
-              },
-              upload: {
-                title: '上传文件',
-                description: '将文件拖到此处或浏览电脑进行选择。',
-                prompt: '拖放文件',
-                help: '也可以点击选择文件。',
-                browse: '选择文件',
-                clear: '移除',
-                waiting: '请选择一个文件。',
-                preparing: '准备文件…',
-                uploading: '正在上传…',
-                processing: '正在处理上传…',
-                processingAction: '正在处理…',
-                processingAudio: '正在处理音频…',
-                processingSlides: '正在处理课件…',
-                backgroundProcessing: '音频母带处理会在后台继续进行。您可以放心关闭此对话框。',
-                backgroundProcessingSlides: '课件转换将在后台继续进行。您可以放心关闭此对话框。',
-                success: '上传完成。',
-                failure: '上传失败，请重试。',
-                progress: '上传进度',
-                action: '上传',
-                assetTitle: '上传 {{asset}}',
-                assetDescription: '为此资源选择一个新文件。',
-                archiveTitle: '导入归档',
-                archiveDescription: '选择一个 Lecture Tools 导出的压缩包（.zip）。',
-              },
-              descriptionOptional: '描述（可选）',
-              descriptionPlaceholder: '添加简短摘要…',
-            },
-            dropdowns: {
-              selectModule: '选择模块…',
-              noModules: '暂无可用模块',
-            },
-            placeholders: {
-              noLectures: '暂无讲座',
-              noLecturesFilter: '没有符合当前筛选条件的讲座。',
-              noClasses: '尚未有课程。',
-              noModules: '暂无模块。',
-            },
-            curriculum: {
-              addClass: '添加课程',
-              addModule: '添加模块',
-              manageHeading: '管理课程大纲',
-              classMeta: '{{moduleCount}} 个{{moduleWord}} • {{lectureCount}} 个{{lectureWord}}',
-              moduleMeta: '{{lectureCount}} 个{{lectureWord}}',
-            },
-            common: {
-              actions: {
-                create: '创建',
-                save: '保存',
-                skip: '跳过',
-                delete: '删除',
-                open: '打开',
-                upload: '上传',
-                exit: '退出',
-                close: '关闭',
-                ok: '好的',
-              },
-            },
-            status: {
-              requireEdit: '开启编辑模式以管理课程表。',
-              requireEditLecture: '开启编辑模式以更新讲座详情。',
-              classCreated: '课程已创建。',
-              classRemoved: '课程已删除。',
-              moduleCreated: '模块已创建。',
-              moduleRemoved: '模块已删除。',
-              lectureCreated: '讲座已创建。',
-              lectureRemoved: '讲座已删除。',
-              lectureUpdated: '讲座已更新。',
-              lectureTitleRequired: '需要填写讲座标题。',
-              createLectureRequirements: '请选择模块并输入标题。',
-              slidesProcessed: '课件已转换为包含 Markdown 的资源包。',
-              slidesUploaded: '课件已上传。处理后可生成 Markdown 资源包。',
-              slidesUploadRequired: '请先上传 PDF 再处理课件。',
-              slidePreviewFailed: '无法准备课件预览，请尝试重新上传 PDF。',
-              processingSlides: '正在处理课件…',
-              audioProcessingQueued: '音频已上传，母带处理将在后台继续进行。',
-              assetUploaded: '资源上传成功。',
-              assetRemoved: '资源已移除。',
-              transcriptionPreparing: '====> 正在准备转录…',
-              transcriptionCompleted: '转录完成。',
-              processing: '处理中…',
-              storageLoadFailed: '无法加载存储内容。',
-              storageUsageFailed: '无法加载存储用量。',
-              storagePurged: '已移除处理完成的音频。',
-              storagePurgeFailed: '无法移除已处理的音频。',
-              storageDeleted: '已删除存储项目。',
-              storageDeleteFailed: '无法删除存储项目。',
-              storageDownloadReady: '已准备好下载。',
-              storageDownloadFailed: '无法准备下载。',
-              storageDownloadNone: '请选择至少一个项目。',
-              gpuChecking: '====> 正在检查 GPU Whisper 支持…',
-              gpuConfirmed: 'GPU Whisper 支持已确认。',
-              gpuUnavailable: '此平台不支持 GPU 加速。',
-              gpuUnsupported: '此平台不支持 GPU Whisper。',
-              gpuNotAvailable: '此平台无法使用 GPU 加速。',
-              updateStarted: '已开始更新。',
-              updateRunning: '正在更新，请保持此窗口打开。',
-              updateCompleted: '更新已成功完成。',
-              updateFailed: '更新失败。请查看日志了解详情。',
-              updateConflict: '已有更新任务正在运行。',
-              shuttingDown: '正在关闭应用…',
-              settingsSaved: '设置已保存。',
-              gpuFallback: '将回退到 {{model}} 模型。',
-              lectureReordered: '课程顺序已更新。',
-              exporting: '正在准备归档…',
-              exportReady: '归档已生成，可供下载。',
-              exportFailed: '无法创建归档。',
-              importing: '正在导入归档…',
-              importSuccess: '已导入 {{count}} 个讲座。',
-              importNoChanges: '归档导入完成（没有新讲座）。',
-            },
-            counts: {
-              module: { one: '模块', other: '模块' },
-              lecture: { one: '讲座', other: '讲座' },
-            },
-          },
-          es: {
-            document: {
-              title: 'Herramientas de clases',
-            },
-            sidebar: {
-              heading: 'Herramientas de clases',
-              tagline: 'Revisa, organiza y procesa recursos de clases rápidamente.',
-              overview: 'Resumen',
-              syllabusTitle: 'Programa del curso',
-              searchLabel: 'Buscar en el programa',
-              searchPlaceholder: 'Buscar por nombre',
-              loading: 'Cargando…',
-            },
-            topBar: {
-              details: 'Detalles',
-              enableEdit: 'Activar modo edición',
-              exitEdit: 'Salir del modo edición',
-              progress: 'Progreso',
-              create: 'Crear',
-              storage: 'Almacenamiento',
-              settings: 'Configuración',
-            },
-            details: {
-              title: 'Detalles de la clase',
-              deleteLecture: 'Eliminar clase',
-              editModeBanner: 'El modo edición está activo. Actualiza o elimina elementos mientras esté activo.',
-              summaryPlaceholder: 'Selecciona una clase del plan de estudios.',
-              edit: {
-                titleLabel: 'Título',
-                moduleLabel: 'Módulo',
-                descriptionLabel: 'Descripción',
-                save: 'Guardar cambios',
-              },
-              noDescription: 'Sin descripción registrada todavía.',
-            },
-            assets: {
-              title: 'Recursos',
-              transcribe: 'Transcribir audio',
-              modelLabel: 'Modelo',
-              model: {
-                tiny: 'tiny',
-                base: 'base',
-                small: 'small',
-                medium: 'medium',
-                large: 'large',
-                gpu: 'GPU (acelerado por hardware)',
-              },
-              labels: {
-                audio: 'Audio (.wav, .mp3, .m4a, .aac, .flac, .ogg, .opus)',
-                masteredAudio: 'Audio masterizado',
-                slides: 'Diapositivas (PDF)',
-                transcript: 'Transcripción',
-                notes: 'Notas',
-                slideBundle: 'Paquete de diapositivas (Markdown + ZIP)',
-              },
-              status: {
-                notLinked: 'Sin vincular',
-                slidesHint: 'Carga un PDF y luego procésalo para generar el paquete Markdown.',
-                noSlideImages: 'Aún no hay paquete de diapositivas. Usa “Procesar diapositivas” después de subir un PDF.',
-                linked: 'Vinculado: {{name}}',
-                slidesUploaded: 'Diapositivas subidas: {{name}}',
-                archiveCreated: 'Paquete creado: {{name}}',
-                mastered: 'Masterizado: {{name}}',
-              },
-              actions: {
-                upload: 'Subir',
-                processSlides: 'Procesar diapositivas',
-                download: 'Descargar',
-                remove: 'Eliminar',
-              },
-            },
-            progress: {
-              title: 'Cola de procesamiento',
-              description: 'Supervisa las conversiones, masterizaciones y transcripciones en ejecución.',
-              empty: 'No hay tareas activas.',
-              refresh: 'Actualizar',
-              retry: 'Reintentar',
-              dismiss: 'Descartar',
-              openLecture: 'Abrir clase',
-              status: {
-                running: 'En progreso',
-                finished: 'Completado',
-                error: 'Requiere atención',
-              },
-              labels: {
-                transcription: 'Transcripción',
-                slideBundle: 'Paquete de diapositivas',
-                audioMastering: 'Masterización de audio',
-                processing: 'Tarea de procesamiento',
-                untitled: 'Clase sin título',
-              },
-              retryUnavailable: 'No es posible reintentar esta tarea.',
-            },
-            create: {
-              title: 'Crear clase',
-              moduleLabel: 'Módulo',
-              titleLabel: 'Título',
-              descriptionLabel: 'Descripción',
-              submit: 'Agregar clase',
-            },
-            settings: {
-              title: 'Configuración',
-              appearance: {
-                legend: 'Apariencia',
-                themeLabel: 'Tema',
-                theme: {
-                  system: 'Seguir sistema',
-                  light: 'Claro',
-                  dark: 'Oscuro',
-                },
-              },
-              language: {
-                label: 'Idioma',
-                choices: {
-                  en: 'English (Inglés)',
-                  zh: '中文 (Chino)',
-                  es: 'Español',
-                  fr: 'Français (Francés)',
-                },
-              },
-              debug: {
-                legend: 'Depuración',
-                enable: 'Activar modo de depuración',
-                description:
-                  'Muestra en la derecha una consola en vivo con la salida detallada del programa.',
-              },
-              whisper: {
-                legend: 'Transcripción Whisper',
-                modelLabel: 'Modelo predeterminado',
-                model: {
-                  tiny: 'Tiny (más rápido)',
-                  base: 'Base (equilibrado)',
-                  small: 'Small (preciso)',
-                  medium: 'Medium (detallado)',
-                  large: 'Large (máxima precisión)',
-                  gpu: 'GPU (acelerado por hardware)',
-                },
-                computeLabel: 'Tipo de cómputo',
-                beamLabel: 'Tamaño de haz',
-                gpu: {
-                  label: 'Compatibilidad con GPU',
-                  status: 'Aceleración GPU no probada.',
-                  test: 'Probar compatibilidad',
-                  retry: 'Volver a probar',
-                },
-              },
-              audio: {
-                legend: 'Audio',
-                masteringLabel: 'Habilitar audio masterizado',
-                masteringDescription: 'Mejora automáticamente el audio subido para mayor claridad.',
-              },
-              slides: {
-                legend: 'Diapositivas',
-                dpiLabel: 'DPI de renderizado',
-                dpi: {
-                  150: '150 dpi (más rápido)',
-                  200: '200 dpi (equilibrado)',
-                  300: '300 dpi (detallado)',
-                  400: '400 dpi (alto detalle)',
-                  600: '600 dpi (máximo)',
-                },
-              },
-              update: {
-                legend: 'Actualizaciones del sistema',
-                description: 'Actualiza Lecture Tools sin salir del navegador.',
-                run: 'Ejecutar actualización',
-                refresh: 'Actualizar estado',
-                status: {
-                  idle: 'No hay ninguna actualización en curso.',
-                  running: 'Actualización en curso. Mantén esta ventana abierta hasta que termine.',
-                  success: 'La actualización más reciente se completó correctamente.',
-                  failure: 'La actualización más reciente tuvo un error.',
-                },
-                startedAt: 'Inició {{time}}.',
-                finishedAt: 'Finalizó {{time}}.',
-                exitCode: 'Código de salida {{code}}.',
-                logLabel: 'Registro de actividad',
-                logEmpty: 'Aún no hay actividad de actualización.',
-              },
-              archive: {
-                legend: 'Archivo',
-                description:
-                  'Exporta tus clases y recursos o importa un archivo desde otro equipo.',
-                export: 'Exportar archivo',
-                import: 'Importar archivo',
-                modeLabel: 'Modo de importación',
-                modes: {
-                  merge: 'Agregar al contenido existente',
-                  replace: 'Borrar el contenido actual y sobrescribir',
-                },
-                hint: 'Los archivos exportados se guardan temporalmente y se eliminan al iniciar la aplicación.',
-              },
-              save: 'Guardar configuración',
-              exit: 'Salir de la aplicación',
-            },
-            storage: {
-              title: 'Administrador de almacenamiento',
-              subtitle: 'Revisa los recursos almacenados según la estructura de clases.',
-              loading: 'Cargando…',
-              empty: 'No se encontraron clases con almacenamiento.',
-              usage: {
-                used: 'En uso',
-                available: 'Disponible',
-                total: 'Total',
-              },
-              actions: {
-                refresh: 'Actualizar',
-                downloadSelected: 'Descargar seleccionados',
-                purge: 'Quitar audio procesado',
-              },
-              browser: {
-                root: 'Raíz',
-                up: 'Subir',
-                loading: 'Cargando…',
-                empty: 'No hay archivos ni carpetas en esta ubicación.',
-                select: 'Seleccionar',
-                name: 'Nombre',
-                type: 'Tipo',
-                size: 'Tamaño',
-                modified: 'Modificado',
-                actions: 'Acciones',
-                directory: 'Carpeta',
-                file: 'Archivo',
-                unnamed: 'Elemento sin nombre',
-                selectAction: 'Seleccionar {{name}}',
-              },
-              purge: {
-                none: 'No hay audio procesado para eliminar.',
-                available: '{{count}} {{lectureWord}} listos para limpiar.',
-                working: 'Eliminando audio…',
-                readyCount: '{{count}} {{lectureWord}} listos para limpiar',
-              },
-              classes: {
-                summary: '{{moduleCount}} {{moduleWord}} • {{lectureCount}} {{lectureWord}}',
-                empty: 'Esta clase no tiene módulos almacenados.',
-                masteredCount: '{{count}} {{lectureWord}} con audio masterizado',
-              },
-              modules: {
-                summary: '{{lectureCount}} {{lectureWord}}',
-                empty: 'Este módulo no tiene clases almacenadas.',
-                masteredCount: '{{count}} {{lectureWord}} con audio masterizado',
-              },
-              lecture: {
-                audio: 'Audio',
-                processedAudio: 'Audio masterizado',
-                transcript: 'Transcripción',
-                notes: 'Notas',
-                slides: 'Diapositivas',
-                empty: 'Sin recursos vinculados.',
-                eligible: 'Audio listo para eliminarse',
-                processedBadge: 'Audio masterizado',
-              },
-              dialogs: {
-                purgeTitle: 'Quitar audio procesado',
-                purgeMessage:
-                  '¿Eliminar los archivos de audio de {{count}} {{lectureWord}} que ya tienen transcripción? Esta acción no se puede deshacer.',
-                deleteTitle: 'Eliminar elemento de almacenamiento',
-                deleteMessage: '¿Eliminar “{{name}}”? Esta acción no se puede deshacer.',
-                deleteConfirm: 'Eliminar',
-              },
-              unnamedClass: 'Clase sin nombre',
-              unnamedModule: 'Módulo sin nombre',
-              unnamedLecture: 'Sesión sin nombre',
-            },
-            debug: {
-              title: 'Consola de depuración',
-              live: 'En vivo',
-              empty:
-                'Activa el modo de depuración para ver la actividad del programa en tiempo real.',
-              error: 'No se pudo cargar la salida de depuración.',
-              stream: {
-                title: 'Actividad del servidor',
-                empty: 'Esperando actividad del servidor…',
-              },
-            },
-            dialog: {
-              cancel: 'Cancelar',
-              confirm: 'Confirmar',
-            },
-            stats: {
-              classes: 'Cursos',
-              modules: 'Módulos',
-              lectures: 'Clases',
-              transcripts: 'Transcripciones',
-              slideDecks: 'Presentaciones',
-              audio: 'Archivos de audio',
-              processedAudio: 'Audio masterizado',
-              notes: 'Notas',
-              slideArchives: 'Paquetes de diapositivas',
-            },
-            dialogs: {
-              createClass: {
-                title: 'Crear curso',
-                message: 'Ingresa un nombre de curso.',
-                placeholder: 'Introducción a la astronomía',
-              },
-              createModule: {
-                title: 'Crear módulo',
-                message: 'Nombre del módulo para {{className}}',
-                placeholder: 'Fundamentos',
-              },
-              createLecture: {
-                title: 'Crear clase',
-                message: 'Título de la clase para {{context}}',
-                placeholder: 'Título de la clase',
-              },
-              lectureDescription: {
-                title: 'Descripción de la clase',
-                placeholder: 'Agrega un esquema breve…',
-              },
-              deleteClass: {
-                title: 'Eliminar curso',
-                message: '¿Eliminar el curso "{{className}}"?',
-                cancel: 'Conservar curso',
-                summary: 'Esto eliminará {{moduleCount}} {{moduleWord}} y {{lectureCount}} {{lectureWord}}.',
-              },
-              deleteModule: {
-                title: 'Eliminar módulo',
-                message: '¿Eliminar el módulo "{{moduleName}}"{{classContext}}?',
-                cancel: 'Conservar módulo',
-                summary: 'Esto eliminará {{lectureCount}} {{lectureWord}}.',
-                classContext: ' del curso "{{className}}"',
-              },
-              deleteLecture: {
-                title: 'Eliminar clase',
-                message: '¿Eliminar la clase "{{context}}" y todos los recursos vinculados?',
-                cancel: 'Conservar clase',
-              },
-              removeAsset: {
-                title: 'Eliminar {{asset}}',
-                message: '¿Quieres eliminar el {{asset}} actual de esta clase? Esta acción no se puede deshacer.',
-                confirm: 'Eliminar recurso',
-              },
-              confirmDeletion: {
-                title: 'Confirmar eliminación',
-                message: 'Esta acción no se puede deshacer. ¿Deseas eliminarla permanentemente?',
-                confirm: 'Sí, eliminar',
-              },
-              gpuWhisper: {
-                title: 'GPU Whisper',
-              },
-              exitApp: {
-                title: 'Salir de la aplicación',
-                message: '¿Detener el servidor de Lecture Tools y cerrar esta pestaña?',
-              },
-              slideRange: {
-                title: 'Seleccionar páginas a procesar',
-                description:
-                  'Revisa las miniaturas de las diapositivas y elige qué páginas convertir.',
-                loading: 'Cargando vista previa…',
-                error:
-                  'Se muestran abajo las previsualizaciones generadas en el servidor; ajusta el rango manualmente si es necesario.',
-                startLabel: 'Página inicial',
-                endLabel: 'Página final',
-                rangeHint:
-                  'Usa los campos o la vista previa para ajustar la selección.',
-                zoomLabel: 'Zoom de la vista previa',
-                zoomValue: 'Vista al {{value}}%',
-                fallbackMessage:
-                  'Abre el PDF de abajo en una pestaña nueva si necesitas revisarlo directamente.',
-                fallbackLink: 'Abrir PDF en una pestaña nueva',
-                fallbackFrameTitle: 'Vista previa de PDF alternativa',
-                summary: 'Se procesarán las páginas {{start}}–{{end}} de {{total}}.',
-                summarySingle: 'Se procesará la página {{start}} de {{total}}.',
-                summaryUnknown: 'Procesando las páginas {{start}}–{{end}}.',
-                summarySingleUnknown: 'Procesando la página {{start}}.',
-                allPages: 'Se procesarán todas las páginas del documento.',
-                pageLabel: 'Página {{page}}',
-                selectAll: 'Seleccionar todo',
-                confirm: 'Confirmar y continuar',
-              },
-              upload: {
-                title: 'Subir archivo',
-                description: 'Arrastra un archivo aquí o examina tu equipo para seleccionarlo.',
-                prompt: 'Arrastra y suelta un archivo',
-                help: 'También puedes hacer clic para elegir un archivo.',
-                browse: 'Seleccionar archivo',
-                clear: 'Quitar',
-                waiting: 'Selecciona un archivo para continuar.',
-                preparing: 'Preparando archivo…',
-                uploading: 'Subiendo…',
-                processing: 'Procesando carga…',
-                processingAction: 'Procesando…',
-                processingAudio: 'Procesando audio…',
-                processingSlides: 'Procesando diapositivas…',
-                backgroundProcessing:
-                  'El procesamiento de audio continuará en segundo plano. Puedes cerrar este cuadro de diálogo con seguridad.',
-                backgroundProcessingSlides:
-                  'La conversión de diapositivas continuará en segundo plano. Puedes cerrar este cuadro de diálogo mientras finaliza.',
-                success: 'Subida completada.',
-                failure: 'La subida falló. Vuelve a intentarlo.',
-                progress: 'Progreso de subida',
-                action: 'Subir',
-                assetTitle: 'Subir {{asset}}',
-                assetDescription: 'Elige un archivo nuevo para este recurso.',
-                archiveTitle: 'Importar archivo comprimido',
-                archiveDescription: 'Selecciona un archivo exportado de Lecture Tools (.zip).',
-              },
-              descriptionOptional: 'Descripción (opcional)',
-              descriptionPlaceholder: 'Agrega un breve resumen…',
-            },
-            dropdowns: {
-              selectModule: 'Seleccionar módulo…',
-              noModules: 'No hay módulos disponibles',
-            },
-            placeholders: {
-              noLectures: 'Sin clases',
-              noLecturesFilter: 'Ninguna clase coincide con el filtro actual.',
-              noClasses: 'Aún no hay cursos disponibles.',
-              noModules: 'Sin módulos por ahora.',
-            },
-            curriculum: {
-              addClass: 'Agregar curso',
-              addModule: 'Agregar módulo',
-              manageHeading: 'Administrar programa',
-              classMeta: '{{moduleCount}} {{moduleWord}} • {{lectureCount}} {{lectureWord}}',
-              moduleMeta: '{{lectureCount}} {{lectureWord}}',
-            },
-            common: {
-              actions: {
-                create: 'Crear',
-                save: 'Guardar',
-                skip: 'Omitir',
-                delete: 'Eliminar',
-                open: 'Abrir',
-                upload: 'Subir',
-                exit: 'Salir',
-                close: 'Cerrar',
-                ok: 'Aceptar',
-              },
-            },
-            status: {
-              requireEdit: 'Activa el modo edición para gestionar el plan de estudios.',
-              requireEditLecture: 'Activa el modo edición para actualizar los detalles.',
-              classCreated: 'Curso creado.',
-              classRemoved: 'Curso eliminado.',
-              moduleCreated: 'Módulo creado.',
-              moduleRemoved: 'Módulo eliminado.',
-              lectureCreated: 'Clase creada.',
-              lectureRemoved: 'Clase eliminada.',
-              lectureUpdated: 'Clase actualizada.',
-              lectureTitleRequired: 'El título de la clase es obligatorio.',
-              createLectureRequirements: 'Selecciona un módulo e ingresa un título.',
-              slidesProcessed: 'Diapositivas convertidas en un paquete Markdown con imágenes.',
-              slidesUploaded: 'Diapositivas subidas. Procésalas para generar el paquete Markdown.',
-              slidesUploadRequired: 'Sube un PDF antes de procesar las diapositivas.',
-              slidePreviewFailed: 'No se pudo preparar la vista previa de las diapositivas. Intenta subir el PDF nuevamente.',
-              processingSlides: 'Procesando diapositivas…',
-              audioProcessingQueued: 'Audio subido. La masterización continuará en segundo plano.',
-              assetUploaded: 'Recurso subido correctamente.',
-              assetRemoved: 'Recurso eliminado.',
-              transcriptionPreparing: '====> Preparando transcripción…',
-              transcriptionCompleted: 'Transcripción completada.',
-              processing: 'Procesando…',
-              storageLoadFailed: 'No se pudieron cargar los contenidos del almacenamiento.',
-              storageUsageFailed: 'No se pudo cargar el uso del almacenamiento.',
-              storagePurged: 'Audio procesado eliminado.',
-              storagePurgeFailed: 'No se pudo eliminar el audio procesado.',
-              storageDeleted: 'Elemento de almacenamiento eliminado.',
-              storageDeleteFailed: 'No se pudo eliminar el elemento de almacenamiento.',
-              storageDownloadReady: 'Descarga preparada.',
-              storageDownloadFailed: 'No se pudo preparar la descarga.',
-              storageDownloadNone: 'Selecciona al menos un elemento.',
-              gpuChecking: '====> Comprobando compatibilidad con GPU Whisper…',
-              gpuConfirmed: 'Compatibilidad con GPU Whisper confirmada.',
-              gpuUnavailable: 'GPU no disponible en esta plataforma.',
-              gpuUnsupported: 'GPU Whisper no es compatible con esta plataforma.',
-              gpuNotAvailable: 'La aceleración GPU no está disponible en esta plataforma.',
-              updateStarted: 'Actualización iniciada.',
-              updateRunning: 'Actualización en curso. Mantén esta ventana abierta.',
-              updateCompleted: 'Actualización completada correctamente.',
-              updateFailed: 'La actualización falló. Revisa el registro para más detalles.',
-              updateConflict: 'Ya hay una actualización en curso.',
-              shuttingDown: 'Cerrando la aplicación…',
-              settingsSaved: 'Configuración guardada.',
-              gpuFallback: 'Se usará el modelo {{model}}.',
-              lectureReordered: 'El orden de las clases se actualizó.',
-              exporting: 'Preparando archivo…',
-              exportReady: 'Archivo listo para descargar.',
-              exportFailed: 'No se pudo crear el archivo.',
-              importing: 'Importando archivo…',
-              importSuccess: 'Se importaron {{count}} clases.',
-              importNoChanges: 'Archivo importado (sin clases nuevas).',
-            },
-            counts: {
-              module: { one: 'módulo', other: 'módulos' },
-              lecture: { one: 'clase', other: 'clases' },
-            },
-          },
-          fr: {
-            document: {
-              title: 'Outils de cours',
-            },
-            sidebar: {
-              heading: 'Outils de cours',
-              tagline: 'Passez en revue, organisez et traitez rapidement les ressources de cours.',
-              overview: 'Vue d’ensemble',
-              syllabusTitle: 'Plan de cours',
-              searchLabel: 'Rechercher dans le plan',
-              searchPlaceholder: 'Rechercher par nom',
-              loading: 'Chargement…',
-            },
-            topBar: {
-              details: 'Détails',
-              enableEdit: 'Activer le mode édition',
-              exitEdit: 'Quitter le mode édition',
-              progress: 'Progression',
-              create: 'Créer',
-              storage: 'Stockage',
-              settings: 'Paramètres',
-            },
-            details: {
-              title: 'Détails du cours',
-              deleteLecture: 'Supprimer le cours',
-              editModeBanner:
-                'Le mode édition est activé. Mettez à jour les informations ou supprimez des éléments pendant qu’il est actif.',
-              summaryPlaceholder: 'Sélectionnez un cours dans le programme.',
-              edit: {
-                titleLabel: 'Titre',
-                moduleLabel: 'Module',
-                descriptionLabel: 'Description',
-                save: 'Enregistrer les modifications',
-              },
-              noDescription: 'Aucune description enregistrée pour le moment.',
-            },
-            assets: {
-              title: 'Ressources',
-              transcribe: 'Transcrire l’audio',
-              modelLabel: 'Modèle',
-              model: {
-                tiny: 'tiny',
-                base: 'base',
-                small: 'small',
-                medium: 'medium',
-                large: 'large',
-                gpu: 'GPU (accélération matérielle)',
-              },
-              labels: {
-                audio: 'Audio (.wav, .mp3, .m4a, .aac, .flac, .ogg, .opus)',
-                masteredAudio: 'Audio masterisé',
-                slides: 'Diapositives (PDF)',
-                transcript: 'Transcription',
-                notes: 'Notes',
-                slideBundle: 'Archive de diapositives (Markdown + ZIP)',
-              },
-              status: {
-                notLinked: 'Non lié',
-                slidesHint: 'Importez un PDF puis traitez-le pour générer l’archive Markdown.',
-                noSlideImages: 'Aucune archive de diapositives. Utilisez « Traiter les diapositives » après avoir importé un PDF.',
-                linked: 'Lié : {{name}}',
-                slidesUploaded: 'Diapositives importées : {{name}}',
-                archiveCreated: 'Archive créée : {{name}}',
-                mastered: 'Masterisé : {{name}}',
-              },
-              actions: {
-                upload: 'Importer',
-                processSlides: 'Traiter les diapositives',
-                download: 'Télécharger',
-                remove: 'Supprimer',
-              },
-            },
-            progress: {
-              title: 'File de traitement',
-              description: 'Suivez les conversions, la masterisation et les transcriptions en cours.',
-              empty: 'Aucune tâche en cours.',
-              refresh: 'Actualiser',
-              retry: 'Réessayer',
-              dismiss: 'Ignorer',
-              openLecture: 'Ouvrir la leçon',
-              status: {
-                running: 'En cours',
-                finished: 'Terminé',
-                error: 'Nécessite une attention',
-              },
-              labels: {
-                transcription: 'Transcription',
-                slideBundle: 'Archive de diapositives',
-                audioMastering: 'Masterisation audio',
-                processing: 'Tâche de traitement',
-                untitled: 'Leçon sans titre',
-              },
-              retryUnavailable: 'Impossible de relancer cette tâche.',
-            },
-            create: {
-              title: 'Créer un cours',
-              moduleLabel: 'Module',
-              titleLabel: 'Titre',
-              descriptionLabel: 'Description',
-              submit: 'Ajouter le cours',
-            },
-            settings: {
-              title: 'Paramètres',
-              appearance: {
-                legend: 'Apparence',
-                themeLabel: 'Thème',
-                theme: {
-                  system: 'Suivre le système',
-                  light: 'Clair',
-                  dark: 'Sombre',
-                },
-              },
-              language: {
-                label: 'Langue',
-                choices: {
-                  en: 'English (Anglais)',
-                  zh: '中文 (Chinois)',
-                  es: 'Español (Espagnol)',
-                  fr: 'Français',
-                },
-              },
-              debug: {
-                legend: 'Débogage',
-                enable: 'Activer le mode débogage',
-                description:
-                  'Affiche sur la droite une console en direct avec la sortie détaillée du programme.',
-              },
-              whisper: {
-                legend: 'Transcription Whisper',
-                modelLabel: 'Modèle par défaut',
-                model: {
-                  tiny: 'Tiny (plus rapide)',
-                  base: 'Base (équilibré)',
-                  small: 'Small (précis)',
-                  medium: 'Medium (détaillé)',
-                  large: 'Large (précision maximale)',
-                  gpu: 'GPU (accélération matérielle)',
-                },
-                computeLabel: 'Type de calcul',
-                beamLabel: 'Taille du faisceau',
-                gpu: {
-                  label: 'Prise en charge GPU',
-                  status: 'Accélération GPU non testée.',
-                  test: 'Tester la prise en charge',
-                  retry: 'Relancer le test',
-                },
-              },
-              audio: {
-                legend: 'Audio',
-                masteringLabel: 'Activer l’audio optimisé',
-                masteringDescription: 'Améliore automatiquement l’audio importé pour une meilleure clarté.',
-              },
-              slides: {
-                legend: 'Diapositives',
-                dpiLabel: 'DPI de rendu',
-                dpi: {
-                  150: '150 dpi (plus rapide)',
-                  200: '200 dpi (équilibré)',
-                  300: '300 dpi (détaillé)',
-                  400: '400 dpi (très détaillé)',
-                  600: '600 dpi (maximum)',
-                },
-              },
-              update: {
-                legend: 'Mises à jour du système',
-                description: 'Mettez Lecture Tools à jour sans quitter le navigateur.',
-                run: 'Lancer la mise à jour',
-                refresh: 'Actualiser l’état',
-                status: {
-                  idle: 'Aucune mise à jour en cours.',
-                  running: 'Mise à jour en cours. Laissez cette fenêtre ouverte jusqu’à la fin.',
-                  success: 'La dernière mise à jour s’est terminée avec succès.',
-                  failure: 'La dernière mise à jour a rencontré une erreur.',
-                },
-                startedAt: 'Démarrée {{time}}.',
-                finishedAt: 'Terminée {{time}}.',
-                exitCode: 'Code de sortie {{code}}.',
-                logLabel: 'Journal d’activité',
-                logEmpty: 'Aucune activité de mise à jour pour le moment.',
-              },
-              archive: {
-                legend: 'Archive',
-                description:
-                  'Exportez vos cours et ressources ou importez une archive depuis une autre machine.',
-                export: 'Exporter l’archive',
-                import: 'Importer une archive',
-                modeLabel: 'Mode d’importation',
-                modes: {
-                  merge: 'Ajouter au contenu existant',
-                  replace: 'Effacer le contenu actuel puis écraser',
-                },
-                hint: 'Les archives exportées sont conservées temporairement et supprimées au démarrage de l’application.',
-              },
-              save: 'Enregistrer les paramètres',
-              exit: 'Quitter l’application',
-            },
-            storage: {
-              title: 'Gestionnaire de stockage',
-              subtitle: 'Consultez les ressources stockées selon la structure des cours.',
-              loading: 'Chargement…',
-              empty: 'Aucune classe stockée trouvée.',
-              usage: {
-                used: 'Utilisé',
-                available: 'Disponible',
-                total: 'Total',
-              },
-              actions: {
-                refresh: 'Actualiser',
-                downloadSelected: 'Télécharger la sélection',
-                purge: 'Supprimer l’audio traité',
-              },
-              browser: {
-                root: 'Racine',
-                up: 'Dossier parent',
-                loading: 'Chargement…',
-                empty: 'Aucun fichier ou dossier à cet emplacement.',
-                select: 'Sélectionner',
-                name: 'Nom',
-                type: 'Type',
-                size: 'Taille',
-                modified: 'Modifié',
-                actions: 'Actions',
-                directory: 'Dossier',
-                file: 'Fichier',
-                unnamed: 'Élément sans nom',
-                selectAction: 'Sélectionner {{name}}',
-              },
-              purge: {
-                none: 'Aucun audio traité à supprimer.',
-                available: '{{count}} {{lectureWord}} prêts à nettoyer.',
-                working: 'Suppression des audios…',
-                readyCount: '{{count}} {{lectureWord}} prêts à nettoyer',
-              },
-              classes: {
-                summary: '{{moduleCount}} {{moduleWord}} • {{lectureCount}} {{lectureWord}}',
-                empty: 'Ce cours n’a pas encore de modules stockés.',
-                masteredCount: '{{count}} {{lectureWord}} avec audio masterisé',
-              },
-              modules: {
-                summary: '{{lectureCount}} {{lectureWord}}',
-                empty: 'Ce module n’a pas encore de séances stockées.',
-                masteredCount: '{{count}} {{lectureWord}} avec audio masterisé',
-              },
-              lecture: {
-                audio: 'Audio',
-                processedAudio: 'Audio masterisé',
-                transcript: 'Transcription',
-                notes: 'Notes',
-                slides: 'Diapositives',
-                empty: 'Aucune ressource liée.',
-                eligible: 'Audio prêt à être supprimé',
-                processedBadge: 'Audio masterisé',
-              },
-              dialogs: {
-                purgeTitle: 'Supprimer l’audio traité',
-                purgeMessage:
-                  'Supprimer les fichiers audio de {{count}} {{lectureWord}} déjà transcrites ? Cette action est irréversible.',
-                deleteTitle: 'Supprimer l’élément de stockage',
-                deleteMessage: 'Supprimer « {{name}} » ? Cette action est irréversible.',
-                deleteConfirm: 'Supprimer',
-              },
-              unnamedClass: 'Cours sans nom',
-              unnamedModule: 'Module sans nom',
-              unnamedLecture: 'Séance sans nom',
-            },
-            debug: {
-              title: 'Console de débogage',
-              live: 'En direct',
-              empty:
-                "Activez le mode débogage pour suivre l’activité du programme en temps réel.",
-              error: 'Impossible de charger la sortie de débogage.',
-              stream: {
-                title: 'Activité du serveur',
-                empty: 'En attente d’activité du serveur…',
-              },
-            },
-            dialog: {
-              cancel: 'Annuler',
-              confirm: 'Confirmer',
-            },
-            stats: {
-              classes: 'Cours',
-              modules: 'Modules',
-              lectures: 'Leçons',
-              transcripts: 'Transcriptions',
-              slideDecks: 'Présentations',
-              audio: 'Fichiers audio',
-              processedAudio: 'Audio masterisé',
-              notes: 'Notes',
-              slideArchives: 'Paquets de diapositives',
-            },
-            dialogs: {
-              createClass: {
-                title: 'Créer un cours',
-                message: 'Saisissez le nom du cours.',
-                placeholder: 'Introduction à l’astronomie',
-              },
-              createModule: {
-                title: 'Créer un module',
-                message: 'Nom du module pour {{className}}',
-                placeholder: 'Fondements',
-              },
-              createLecture: {
-                title: 'Créer une leçon',
-                message: 'Titre de la leçon pour {{context}}',
-                placeholder: 'Titre de la leçon',
-              },
-              lectureDescription: {
-                title: 'Description de la leçon',
-                placeholder: 'Ajoutez un court aperçu…',
-              },
-              deleteClass: {
-                title: 'Supprimer le cours',
-                message: 'Supprimer le cours « {{className}} » ?',
-                cancel: 'Conserver le cours',
-                summary: 'Cette action supprimera {{moduleCount}} {{moduleWord}} et {{lectureCount}} {{lectureWord}}.',
-              },
-              deleteModule: {
-                title: 'Supprimer le module',
-                message: 'Supprimer le module « {{moduleName}} »{{classContext}} ?',
-                cancel: 'Conserver le module',
-                summary: 'Cette action supprimera {{lectureCount}} {{lectureWord}}.',
-                classContext: ' du cours « {{className}} »',
-              },
-              deleteLecture: {
-                title: 'Supprimer la leçon',
-                message: 'Supprimer la leçon « {{context}} » et toutes les ressources associées ?',
-                cancel: 'Conserver la leçon',
-              },
-              removeAsset: {
-                title: 'Supprimer {{asset}}',
-                message: 'Supprimer la ressource {{asset}} de cette leçon ? Cette action est irréversible.',
-                confirm: 'Supprimer la ressource',
-              },
-              confirmDeletion: {
-                title: 'Confirmer la suppression',
-                message: 'Cette action est irréversible. Souhaitez-vous la supprimer définitivement ?',
-                confirm: 'Oui, supprimer',
-              },
-              gpuWhisper: {
-                title: 'GPU Whisper',
-              },
-              exitApp: {
-                title: 'Quitter l’application',
-                message: 'Arrêter le serveur Lecture Tools et fermer cet onglet ?',
-              },
-              slideRange: {
-                title: 'Sélectionner les pages à traiter',
-                description:
-                  'Parcourez les miniatures des diapositives ci-dessous et choisissez les pages à convertir en images.',
-                loading: 'Chargement de l’aperçu…',
-                error:
-                  'Les aperçus générés par le serveur sont affichés ci-dessous ; ajustez la plage manuellement si nécessaire.',
-                startLabel: 'Page de début',
-                endLabel: 'Page de fin',
-                rangeHint: 'Utilisez les champs ou l’aperçu pour ajuster la sélection.',
-                zoomLabel: 'Zoom de l’aperçu',
-                zoomValue: 'Vue à {{value}} %',
-                fallbackMessage:
-                  'Ouvrez le PDF ci-dessous dans un nouvel onglet si vous devez l’examiner directement.',
-                fallbackLink: 'Ouvrir le PDF dans un nouvel onglet',
-                fallbackFrameTitle: 'Aperçu PDF de secours',
-                summary: 'Traitement des pages {{start}} à {{end}} sur {{total}}.',
-                summarySingle: 'Traitement de la page {{start}} sur {{total}}.',
-                summaryUnknown: 'Traitement des pages {{start}} à {{end}}.',
-                summarySingleUnknown: 'Traitement de la page {{start}}.',
-                allPages: 'Traitement de toutes les pages du document.',
-                pageLabel: 'Page {{page}}',
-                selectAll: 'Tout sélectionner',
-                confirm: 'Confirmer et continuer',
-              },
-              upload: {
-                title: 'Téléverser un fichier',
-                description:
-                  'Glissez un fichier ici ou parcourez votre ordinateur pour le sélectionner.',
-                prompt: 'Glissez-déposez un fichier',
-                help: 'Vous pouvez aussi cliquer pour choisir un fichier.',
-                browse: 'Sélectionner un fichier',
-                clear: 'Retirer',
-                waiting: 'Sélectionnez un fichier pour continuer.',
-                preparing: 'Préparation du fichier…',
-                uploading: 'Téléversement…',
-                processing: 'Traitement du téléversement…',
-                processingAction: 'Traitement…',
-                processingAudio: 'Traitement de l’audio…',
-                processingSlides: 'Traitement des diapositives…',
-                backgroundProcessing:
-                  'Le traitement audio se poursuit en arrière-plan. Vous pouvez fermer cette boîte de dialogue en toute sécurité.',
-                backgroundProcessingSlides:
-                  'La conversion des diapositives se poursuit en arrière-plan. Vous pouvez fermer cette boîte de dialogue pendant le traitement.',
-                success: 'Téléversement terminé.',
-                failure: 'Le téléversement a échoué. Réessayez.',
-                progress: 'Progression du téléversement',
-                action: 'Téléverser',
-                assetTitle: 'Téléverser {{asset}}',
-                assetDescription: 'Choisissez un nouveau fichier à associer à cette ressource.',
-                archiveTitle: 'Importer une archive',
-                archiveDescription: 'Sélectionnez une archive Lecture Tools exportée (.zip).',
-              },
-              descriptionOptional: 'Description (optionnel)',
-              descriptionPlaceholder: 'Ajoutez un court résumé…',
-            },
-            dropdowns: {
-              selectModule: 'Sélectionner un module…',
-              noModules: 'Aucun module disponible',
-            },
-            placeholders: {
-              noLectures: 'Aucune leçon',
-              noLecturesFilter: 'Aucune leçon ne correspond au filtre actuel.',
-              noClasses: 'Aucun cours disponible pour le moment.',
-              noModules: 'Aucun module pour le moment.',
-            },
-            curriculum: {
-              addClass: 'Ajouter un cours',
-              addModule: 'Ajouter un module',
-              manageHeading: 'Gérer le plan de cours',
-              classMeta: '{{moduleCount}} {{moduleWord}} • {{lectureCount}} {{lectureWord}}',
-              moduleMeta: '{{lectureCount}} {{lectureWord}}',
-            },
-            common: {
-              actions: {
-                create: 'Créer',
-                save: 'Enregistrer',
-                skip: 'Ignorer',
-                delete: 'Supprimer',
-                open: 'Ouvrir',
-                upload: 'Importer',
-                exit: 'Quitter',
-                close: 'Fermer',
-                ok: 'OK',
-              },
-            },
-            status: {
-              requireEdit: 'Activez le mode édition pour gérer le programme.',
-              requireEditLecture: 'Activez le mode édition pour mettre à jour les détails.',
-              classCreated: 'Cours créé.',
-              classRemoved: 'Cours supprimé.',
-              moduleCreated: 'Module créé.',
-              moduleRemoved: 'Module supprimé.',
-              lectureCreated: 'Leçon créée.',
-              lectureRemoved: 'Leçon supprimée.',
-              lectureUpdated: 'Leçon mise à jour.',
-              lectureTitleRequired: 'Le titre de la leçon est requis.',
-              createLectureRequirements: 'Sélectionnez un module et saisissez un titre.',
-              slidesProcessed: 'Diapositives converties en archive Markdown avec images.',
-              slidesUploaded: 'Diapositives importées. Traitez-les pour générer l’archive Markdown.',
-              slidesUploadRequired: 'Importez un PDF avant de traiter les diapositives.',
-              slidePreviewFailed: 'Impossible de préparer l’aperçu des diapositives. Réessayez en important le PDF à nouveau.',
-              processingSlides: 'Traitement des diapositives…',
-              audioProcessingQueued: 'Audio téléversé. Le mastering se poursuit en arrière-plan.',
-              assetUploaded: 'Ressource importée avec succès.',
-              assetRemoved: 'Ressource supprimée.',
-              transcriptionPreparing: '====> Préparation de la transcription…',
-              transcriptionCompleted: 'Transcription terminée.',
-              processing: 'Traitement…',
-              storageLoadFailed: 'Impossible de charger le contenu du stockage.',
-              storageUsageFailed: 'Impossible de charger l’utilisation du stockage.',
-              storagePurged: 'Audios traités supprimés.',
-              storagePurgeFailed: 'Impossible de supprimer les audios traités.',
-              storageDeleted: 'Élément de stockage supprimé.',
-              storageDeleteFailed: 'Impossible de supprimer l’élément de stockage.',
-              storageDownloadReady: 'Téléchargement prêt.',
-              storageDownloadFailed: 'Impossible de préparer le téléchargement.',
-              storageDownloadNone: 'Sélectionnez au moins un élément.',
-              gpuChecking: '====> Vérification de la compatibilité GPU Whisper…',
-              gpuConfirmed: 'Compatibilité GPU Whisper confirmée.',
-              gpuUnavailable: 'GPU indisponible sur cette plateforme.',
-              gpuUnsupported: 'GPU Whisper n’est pas pris en charge sur cette plateforme.',
-              gpuNotAvailable: 'L’accélération GPU n’est pas disponible sur cette plateforme.',
-              updateStarted: 'Mise à jour lancée.',
-              updateRunning: 'Mise à jour en cours. Laissez cette fenêtre ouverte.',
-              updateCompleted: 'Mise à jour terminée avec succès.',
-              updateFailed: 'Échec de la mise à jour. Consultez le journal pour plus de détails.',
-              updateConflict: 'Une mise à jour est déjà en cours.',
-              shuttingDown: 'Fermeture de l’application…',
-              settingsSaved: 'Paramètres enregistrés.',
-              gpuFallback: 'Bascule vers le modèle {{model}}.',
-              lectureReordered: 'L’ordre des cours a été mis à jour.',
-              exporting: 'Préparation de l’archive…',
-              exportReady: 'Archive prête au téléchargement.',
-              exportFailed: 'Impossible de créer l’archive.',
-              importing: 'Importation de l’archive…',
-              importSuccess: '{{count}} cours importés.',
-              importNoChanges: 'Archive importée (aucun nouveau cours).',
-            },
-            counts: {
-              module: { one: 'module', other: 'modules' },
-              lecture: { one: 'leçon', other: 'leçons' },
-            },
-          },
-        };
-
         const DEFAULT_LANGUAGE = 'en';
 
         function normalizeServerPath(value) {
@@ -2037,118 +89,56 @@ bootstrapEnvironmentFromDataset();
           return `${BASE_PATH}${normalized}`;
         }
 
-        function resolveTranslation(locale, key) {
-          if (!locale || !key) {
-            return undefined;
-          }
-          const segments = key.split('.');
-          let value = locale;
-          for (const segment of segments) {
-            if (value && Object.prototype.hasOwnProperty.call(value, segment)) {
-              value = value[segment];
-            } else {
-              return undefined;
-            }
-          }
-          return typeof value === 'string' || (typeof value === 'object' && value !== null)
-            ? value
-            : undefined;
-        }
+        const i18n = createI18n({
+          defaultLanguage: DEFAULT_LANGUAGE,
+          initialLanguage: DEFAULT_LANGUAGE,
+          resolveUrl: resolveAppUrl,
+        });
 
-        function formatTemplate(template, params) {
-          if (!params) {
-            return template;
-          }
-          return template.replace(/\{\{(.*?)\}\}/g, (match, name) => {
-            const key = String(name).trim();
-            return Object.prototype.hasOwnProperty.call(params, key)
-              ? String(params[key])
-              : match;
-          });
-        }
-
-        function getLocale(language) {
-          return translations[language] ?? translations[DEFAULT_LANGUAGE];
-        }
-
-        let currentLanguage = DEFAULT_LANGUAGE;
+        let currentLanguage = await i18n.init();
 
         function t(key, params = undefined) {
           if (!key) {
             return '';
           }
-          const locale = getLocale(currentLanguage);
-          const fallback = translations[DEFAULT_LANGUAGE];
-          const template =
-            resolveTranslation(locale, key) ?? resolveTranslation(fallback, key) ?? key;
-          return formatTemplate(template, params);
+          return i18n.translate(key, params);
         }
 
-        const pluralRules = {
-          en: new Intl.PluralRules('en'),
-          zh: new Intl.PluralRules('zh'),
-          es: new Intl.PluralRules('es'),
-          fr: new Intl.PluralRules('fr'),
-        };
-
         function pluralize(language, key, count) {
-          const locale = getLocale(language);
-          const fallback = translations[DEFAULT_LANGUAGE];
-          const rule = (pluralRules[language] ?? pluralRules[DEFAULT_LANGUAGE]).select(
-            Number(count),
-          );
-          const target = resolveTranslation(locale, key);
-          const fallbackTarget = resolveTranslation(fallback, key);
-          if (target && typeof target === 'string') {
-            return target;
-          }
-          if (target && typeof target === 'object' && target !== null) {
-            return target[rule] ?? target.other ?? target.one ?? String(count);
-          }
-          if (fallbackTarget && typeof fallbackTarget === 'object' && fallbackTarget !== null) {
-            return (
-              fallbackTarget[rule] ??
-              fallbackTarget.other ??
-              fallbackTarget.one ??
-              String(count)
-            );
-          }
-          return String(count);
+          return i18n.pluralize(key, Number(count), language);
         }
 
         let activeSlideRangeDialog = null;
 
-        function applyTranslations(language) {
-          currentLanguage = language && translations[language] ? language : DEFAULT_LANGUAGE;
-          const locale = getLocale(currentLanguage);
-          const fallback = translations[DEFAULT_LANGUAGE];
-          document.documentElement.lang = currentLanguage;
+        async function applyTranslations(language) {
+          const { language: applied } = await i18n.setLanguage(language ?? currentLanguage);
+          currentLanguage = applied;
+          document.documentElement.lang = applied;
 
           document.querySelectorAll('[data-i18n]').forEach((element) => {
             const key = element.getAttribute('data-i18n');
             if (!key) {
               return;
             }
-            const attr = element.getAttribute('data-i18n-attr');
-            const template = resolveTranslation(locale, key) ?? resolveTranslation(fallback, key);
-            if (typeof template !== 'string') {
+            const translation = i18n.format(key, undefined, applied);
+            if (typeof translation !== 'string') {
               return;
             }
+            const attr = element.getAttribute('data-i18n-attr');
             if (attr) {
               attr.split(',').forEach((attributeName) => {
                 const name = attributeName.trim();
                 if (name) {
-                  element.setAttribute(name, formatTemplate(template, {}));
+                  element.setAttribute(name, translation);
                 }
               });
             } else {
-              element.textContent = formatTemplate(template, {});
+              element.textContent = translation;
             }
           });
 
-          const titleTranslation = resolveTranslation(locale, 'document.title') ??
-            resolveTranslation(fallback, 'document.title');
-          if (typeof titleTranslation === 'string') {
+          const titleTranslation = i18n.format('document.title', undefined, applied);
+          if (titleTranslation) {
             document.title = titleTranslation;
           }
 
@@ -2163,6 +153,415 @@ bootstrapEnvironmentFromDataset();
             renderAssets(state.selectedLectureDetail.lecture);
           }
         }
+
+        function createStorageStore() {
+          const browser = {
+            path: '',
+            parent: null,
+            entries: [],
+            loading: false,
+            initialized: false,
+            deleting: new Set(),
+            selected: new Set(),
+            error: null,
+          };
+          const listeners = new Set();
+          let active = false;
+
+          function bind(target, type, handler, options) {
+            if (!target || typeof target.addEventListener !== 'function') {
+              return;
+            }
+            target.addEventListener(type, handler, options);
+            listeners.add(() => {
+              target.removeEventListener(type, handler, options);
+            });
+          }
+
+          function detachListeners() {
+            listeners.forEach((remove) => {
+              try {
+                remove();
+              } catch (error) {
+                console.warn('Failed to detach storage listener', error);
+              }
+            });
+            listeners.clear();
+          }
+
+          function ensureSets() {
+            if (!(browser.deleting instanceof Set)) {
+              browser.deleting = new Set(
+                Array.isArray(browser.deleting) ? browser.deleting : [],
+              );
+            }
+            if (!(browser.selected instanceof Set)) {
+              browser.selected = new Set(
+                Array.isArray(browser.selected) ? browser.selected : [],
+              );
+            }
+          }
+
+          function clearTransient() {
+            ensureSets();
+            browser.deleting.clear();
+            browser.selected.clear();
+          }
+
+          const store = {
+            usage: null,
+            loading: false,
+            overview: null,
+            purging: false,
+            initialized: false,
+            active: false,
+            browser,
+            activate() {
+              if (active) {
+                return;
+              }
+              active = true;
+              this.active = true;
+              detachListeners();
+              if (!dom.storage) {
+                return;
+              }
+              bind(dom.storage.refresh, 'click', handleRefreshClick);
+              const browserDom = dom.storage.browser || {};
+              bind(browserDom.navRoot, 'click', handleNavRootClick);
+              bind(browserDom.navUp, 'click', handleNavUpClick);
+              bind(browserDom.tableBody, 'click', handleBrowserClick);
+              bind(browserDom.tableBody, 'change', handleBrowserChange);
+              bind(browserDom.selectAll, 'change', handleSelectAllChange);
+              bind(dom.storage.downloadSelected, 'click', handleDownloadClick);
+              bind(dom.storage.purge, 'click', handlePurgeClick);
+            },
+            deactivate() {
+              if (!active) {
+                return;
+              }
+              active = false;
+              this.active = false;
+              detachListeners();
+              clearTransient();
+              this.initialized = false;
+              this.loading = false;
+              this.overview = null;
+              this.usage = null;
+              this.purging = false;
+              browser.entries = [];
+              browser.initialized = false;
+              browser.loading = false;
+              browser.error = null;
+            },
+            dispose() {
+              this.deactivate();
+              this.usage = null;
+              this.overview = null;
+              this.loading = false;
+              this.purging = false;
+              this.initialized = false;
+              browser.path = '';
+              browser.parent = null;
+              browser.entries = [];
+              browser.loading = false;
+              browser.initialized = false;
+              browser.error = null;
+            },
+            getBrowserState() {
+              ensureSets();
+              return browser;
+            },
+          };
+
+          function handleRefreshClick(event) {
+            event?.preventDefault?.();
+            void refreshStorage({ includeOverview: true, force: true });
+          }
+
+          function handleNavRootClick(event) {
+            event?.preventDefault?.();
+            void refreshStorage({ includeOverview: false, path: '', force: true });
+          }
+
+          function handleNavUpClick(event) {
+            event?.preventDefault?.();
+            const current = store.getBrowserState();
+            if (current.parent === null) {
+              return;
+            }
+            const parentPath = current.parent || '';
+            void refreshStorage({ includeOverview: false, path: parentPath, force: true });
+          }
+
+          function handleBrowserClick(event) {
+            void handleStorageBrowserAction(event);
+          }
+
+          function handleBrowserChange(event) {
+            handleStorageSelectionChange(event);
+          }
+
+          function handleSelectAllChange(event) {
+            handleStorageSelectAll(event);
+          }
+
+          function handleDownloadClick(event) {
+            event?.preventDefault?.();
+            void handleStorageDownloadSelected();
+          }
+
+          function handlePurgeClick(event) {
+            event?.preventDefault?.();
+            void handlePurgeProcessedAudio();
+          }
+
+          return store;
+        }
+
+        function createProgressStore() {
+          const listeners = new Set();
+
+          function bind(target, type, handler, options) {
+            if (!target || typeof target.addEventListener !== 'function') {
+              return;
+            }
+            target.addEventListener(type, handler, options);
+            listeners.add(() => {
+              target.removeEventListener(type, handler, options);
+            });
+          }
+
+          function detachListeners() {
+            listeners.forEach((remove) => {
+              try {
+                remove();
+              } catch (error) {
+                console.warn('Failed to detach progress listener', error);
+              }
+            });
+            listeners.clear();
+          }
+
+          const store = {
+            entries: [],
+            loading: false,
+            timer: null,
+            polling: false,
+            active: false,
+            activate() {
+              if (this.active) {
+                return;
+              }
+              this.active = true;
+              detachListeners();
+              if (dom.progress) {
+                bind(dom.progress.refresh, 'click', handleRefreshClick);
+                bind(dom.progress.list, 'click', handleListClick);
+              }
+            },
+            deactivate() {
+              if (!this.active) {
+                return;
+              }
+              this.active = false;
+              detachListeners();
+              stopProgressPolling();
+              this.loading = false;
+              this.entries = [];
+              renderProgressQueue();
+            },
+            dispose() {
+              this.deactivate();
+            },
+          };
+
+          function handleRefreshClick(event) {
+            event?.preventDefault?.();
+            void refreshProgressQueue({ force: true });
+          }
+
+          function handleListClick(event) {
+            void handleProgressAction(event);
+          }
+
+          return store;
+        }
+
+        function createDebugStore() {
+          const listeners = new Set();
+          let active = false;
+          let queryTimer = null;
+
+          function bind(target, type, handler, options) {
+            if (!target || typeof target.addEventListener !== 'function') {
+              return;
+            }
+            target.addEventListener(type, handler, options);
+            listeners.add(() => {
+              target.removeEventListener(type, handler, options);
+            });
+          }
+
+          function detachListeners() {
+            listeners.forEach((remove) => {
+              try {
+                remove();
+              } catch (error) {
+                console.warn('Failed to detach debug listener', error);
+              }
+            });
+            listeners.clear();
+            if (queryTimer !== null) {
+              window.clearTimeout(queryTimer);
+              queryTimer = null;
+            }
+          }
+
+          const store = {
+            enabled: false,
+            timer: null,
+            lastId: 0,
+            pending: false,
+            autoScroll: true,
+            serverEntries: [],
+            tasks: [],
+            entries: [],
+            filters: {
+              severity: 'all',
+              category: 'all',
+              correlationId: '',
+              taskId: '',
+              query: '',
+            },
+            active: false,
+            activate() {
+              if (active) {
+                return;
+              }
+              active = true;
+              this.active = true;
+              attachListeners();
+            },
+            deactivate() {
+              if (!active) {
+                return;
+              }
+              active = false;
+              this.active = false;
+              detachListeners();
+              stopDebugPolling();
+              this.enabled = false;
+              this.timer = null;
+              this.lastId = 0;
+              this.pending = false;
+              this.autoScroll = true;
+              this.serverEntries = [];
+              this.tasks = [];
+              this.entries = [];
+            },
+            dispose() {
+              this.deactivate();
+            },
+          };
+
+          function attachListeners() {
+            detachListeners();
+            if (dom.debugLog) {
+              bind(dom.debugLog, 'scroll', handleLogScroll);
+            }
+            if (dom.debugFilterSeverity) {
+              bind(dom.debugFilterSeverity, 'change', handleSeverityChange);
+            }
+            if (dom.debugFilterCategory) {
+              bind(dom.debugFilterCategory, 'change', handleCategoryChange);
+            }
+            if (dom.debugFilterCorrelation) {
+              bind(dom.debugFilterCorrelation, 'input', handleCorrelationChange);
+            }
+            if (dom.debugFilterTask) {
+              bind(dom.debugFilterTask, 'input', handleTaskChange);
+            }
+            if (dom.debugFilterQuery) {
+              bind(dom.debugFilterQuery, 'input', handleQueryChange);
+            }
+            if (dom.debugFilterClear) {
+              bind(dom.debugFilterClear, 'click', handleFilterClear);
+            }
+          }
+
+          function handleLogScroll() {
+            if (!dom.debugLog) {
+              return;
+            }
+            const element = dom.debugLog;
+            const remaining = element.scrollHeight - element.scrollTop - element.clientHeight;
+            store.autoScroll = remaining <= 40;
+          }
+
+          function handleSeverityChange(event) {
+            const value = event?.target?.value || 'all';
+            setDebugFilter('severity', value);
+          }
+
+          function handleCategoryChange(event) {
+            const value = event?.target?.value || 'all';
+            setDebugFilter('category', value);
+          }
+
+          function handleCorrelationChange(event) {
+            const value = event?.target?.value || '';
+            setDebugFilter('correlationId', value);
+          }
+
+          function handleTaskChange(event) {
+            const value = event?.target?.value || '';
+            setDebugFilter('taskId', value);
+          }
+
+          function handleQueryChange(event) {
+            const value = event?.target?.value || '';
+            if (queryTimer !== null) {
+              window.clearTimeout(queryTimer);
+            }
+            queryTimer = window.setTimeout(() => {
+              setDebugFilter('query', value);
+            }, 120);
+          }
+
+          function handleFilterClear(event) {
+            event?.preventDefault?.();
+            store.filters = {
+              severity: 'all',
+              category: 'all',
+              correlationId: '',
+              taskId: '',
+              query: '',
+            };
+            if (dom.debugFilterSeverity) {
+              dom.debugFilterSeverity.value = 'all';
+            }
+            if (dom.debugFilterCategory) {
+              dom.debugFilterCategory.value = 'all';
+            }
+            if (dom.debugFilterCorrelation) {
+              dom.debugFilterCorrelation.value = '';
+            }
+            if (dom.debugFilterTask) {
+              dom.debugFilterTask.value = '';
+            }
+            if (dom.debugFilterQuery) {
+              dom.debugFilterQuery.value = '';
+            }
+            renderDebugLogs();
+          }
+
+          return store;
+        }
+
+        const storageStore = createStorageStore();
+        const progressStore = createProgressStore();
+        const debugStore = createDebugStore();
 
         const WHISPER_MODEL_CHOICES = new Set([
           'tiny',
@@ -2241,28 +640,8 @@ bootstrapEnvironmentFromDataset();
           lastProgressMessage: '',
           lastProgressRatio: null,
           statusHideTimer: null,
-          storage: {
-            usage: null,
-            loading: false,
-            overview: null,
-            purging: false,
-            initialized: false,
-            browser: {
-              path: '',
-              parent: null,
-              entries: [],
-              loading: false,
-              initialized: false,
-              deleting: new Set(),
-              error: null,
-              selected: new Set(),
-            },
-          },
-          progress: {
-            entries: [],
-            loading: false,
-            timer: null,
-          },
+          storage: storageStore,
+          progress: progressStore,
           systemUpdate: {
             running: false,
             startedAt: null,
@@ -2278,23 +657,7 @@ bootstrapEnvironmentFromDataset();
             model: null,
             gpuOption: null,
           },
-          debug: {
-            enabled: false,
-            timer: null,
-            lastId: 0,
-            pending: false,
-            autoScroll: true,
-            serverEntries: [],
-            tasks: [],
-            entries: [],
-            filters: {
-              severity: 'all',
-              category: 'all',
-              correlationId: '',
-              taskId: '',
-              query: '',
-            },
-          },
+          debug: debugStore,
         };
 
         function getTranscribeButton() {
@@ -2541,80 +904,6 @@ bootstrapEnvironmentFromDataset();
           ? dom.debugEmpty.textContent || ''
           : '';
         const FILTERED_DEBUG_EMPTY_TEXT = 'No log entries match the current filters.';
-
-        if (dom.debugLog) {
-          dom.debugLog.addEventListener('scroll', () => {
-            const element = dom.debugLog;
-            const remaining = element.scrollHeight - element.scrollTop - element.clientHeight;
-            state.debug.autoScroll = remaining <= 40;
-          });
-        }
-
-        if (dom.debugFilterSeverity) {
-          dom.debugFilterSeverity.addEventListener('change', (event) => {
-            const value = event.target.value || 'all';
-            setDebugFilter('severity', value);
-          });
-        }
-
-        if (dom.debugFilterCategory) {
-          dom.debugFilterCategory.addEventListener('change', (event) => {
-            const value = event.target.value || 'all';
-            setDebugFilter('category', value);
-          });
-        }
-
-        if (dom.debugFilterCorrelation) {
-          dom.debugFilterCorrelation.addEventListener('input', (event) => {
-            setDebugFilter('correlationId', event.target.value || '');
-          });
-        }
-
-        if (dom.debugFilterTask) {
-          dom.debugFilterTask.addEventListener('input', (event) => {
-            setDebugFilter('taskId', event.target.value || '');
-          });
-        }
-
-        if (dom.debugFilterQuery) {
-          let queryTimer = null;
-          dom.debugFilterQuery.addEventListener('input', (event) => {
-            window.clearTimeout(queryTimer);
-            const value = event.target.value || '';
-            queryTimer = window.setTimeout(() => {
-              setDebugFilter('query', value);
-            }, 120);
-          });
-        }
-
-        if (dom.debugFilterClear) {
-          dom.debugFilterClear.addEventListener('click', () => {
-            state.debug.filters = {
-              severity: 'all',
-              category: 'all',
-              correlationId: '',
-              taskId: '',
-              query: '',
-            };
-            if (dom.debugFilterSeverity) {
-              dom.debugFilterSeverity.value = 'all';
-            }
-            if (dom.debugFilterCategory) {
-              dom.debugFilterCategory.value = 'all';
-            }
-            if (dom.debugFilterCorrelation) {
-              dom.debugFilterCorrelation.value = '';
-            }
-            if (dom.debugFilterTask) {
-              dom.debugFilterTask.value = '';
-            }
-            if (dom.debugFilterQuery) {
-              dom.debugFilterQuery.value = '';
-            }
-            renderDebugLogs();
-          });
-        }
-
 
         function renderStorageUsage() {
           if (!dom.storage) {
@@ -2902,54 +1191,7 @@ bootstrapEnvironmentFromDataset();
         }
 
         function getStorageBrowserState() {
-          const storageState = state.storage;
-          if (!storageState || typeof storageState !== 'object') {
-            return {
-              path: '',
-              parent: null,
-              entries: [],
-              loading: false,
-              initialized: false,
-              deleting: new Set(),
-              error: null,
-            };
-          }
-          if (!storageState.browser || typeof storageState.browser !== 'object') {
-            storageState.browser = {
-              path: '',
-              parent: null,
-              entries: [],
-              loading: false,
-              initialized: false,
-              deleting: new Set(),
-              error: null,
-            };
-          }
-          const browserState = storageState.browser;
-          if (!(browserState.deleting instanceof Set)) {
-            const existing = browserState.deleting;
-            browserState.deleting = new Set(
-              Array.isArray(existing)
-                ? existing
-                : existing && typeof existing === 'string'
-                ? [existing]
-                : [],
-            );
-          }
-          if (!(browserState.selected instanceof Set)) {
-            const existingSelected = browserState.selected;
-            browserState.selected = new Set(
-              Array.isArray(existingSelected)
-                ? existingSelected
-                : existingSelected && typeof existingSelected === 'string'
-                ? [existingSelected]
-                : [],
-            );
-          }
-          if (browserState.error !== null && typeof browserState.error !== 'string') {
-            browserState.error = null;
-          }
-          return browserState;
+          return storageStore.getBrowserState();
         }
 
         function renderStorageBrowser() {
@@ -3161,8 +1403,8 @@ bootstrapEnvironmentFromDataset();
             return '';
           }
           try {
-            const locale = getLocale(currentLanguage);
-            return new Intl.DateTimeFormat(locale, {
+            const languageTag = currentLanguage || DEFAULT_LANGUAGE;
+            return new Intl.DateTimeFormat(languageTag, {
               dateStyle: 'medium',
               timeStyle: 'medium',
             }).format(date);
@@ -3775,10 +2017,11 @@ bootstrapEnvironmentFromDataset();
         }
 
         function stopProgressPolling() {
-          if (state.progress.timer !== null) {
-            window.clearInterval(state.progress.timer);
+          if (progressStore.timer !== null) {
+            window.clearInterval(progressStore.timer);
           }
-          state.progress.timer = null;
+          progressStore.timer = null;
+          progressStore.polling = false;
         }
 
         function startProgressPolling() {
@@ -3786,20 +2029,19 @@ bootstrapEnvironmentFromDataset();
           if (!dom.progress || !dom.progress.container) {
             return;
           }
-          let polling = false;
           const poll = async () => {
-            if (polling) {
+            if (progressStore.polling) {
               return;
             }
-            polling = true;
+            progressStore.polling = true;
             try {
               await refreshProgressQueue({ silent: true });
             } finally {
-              polling = false;
+              progressStore.polling = false;
             }
           };
           void poll();
-          state.progress.timer = window.setInterval(() => {
+          progressStore.timer = window.setInterval(() => {
             void poll();
           }, 2500);
         }
@@ -3940,7 +2182,7 @@ bootstrapEnvironmentFromDataset();
           }
         }
 
-        applyTranslations(DEFAULT_LANGUAGE);
+        await applyTranslations(DEFAULT_LANGUAGE);
         renderStorage();
         renderSystemUpdate();
         renderProgressQueue();
@@ -5469,7 +3711,10 @@ bootstrapEnvironmentFromDataset();
               dom.debugPane.hidden = !active;
             }
             if (active && state.debug.timer === null) {
+              debugStore.activate();
               startDebugPolling();
+            } else if (!active) {
+              debugStore.deactivate();
             }
             return;
           }
@@ -5481,6 +3726,7 @@ bootstrapEnvironmentFromDataset();
           }
 
           if (active) {
+            debugStore.activate();
             state.debug.lastId = 0;
             state.debug.autoScroll = true;
             state.debug.pending = false;
@@ -5488,7 +3734,7 @@ bootstrapEnvironmentFromDataset();
             updateDebugStatus('');
             startDebugPolling();
           } else {
-            stopDebugPolling();
+            debugStore.deactivate();
             updateDebugStatus('');
             updateServerStream([], [], { reset: true });
             state.debug.entries = [];
@@ -5676,7 +3922,7 @@ bootstrapEnvironmentFromDataset();
         }
 
 
-        function syncSettingsForm(settings) {
+        async function syncSettingsForm(settings) {
           const themeValue = settings?.theme ?? 'system';
           const languageValue = normalizeLanguage(settings?.language);
           const requestedModel = normalizeWhisperModel(settings?.whisper_model);
@@ -5724,7 +3970,7 @@ bootstrapEnvironmentFromDataset();
 
           applyTheme(themeValue);
           updateGpuWhisperUI({ ...state.gpuWhisper });
-          applyTranslations(languageValue);
+          await applyTranslations(languageValue);
           renderStorage();
           updateEditModeUI();
           setDebugMode(debugEnabled);
@@ -7973,6 +6219,15 @@ bootstrapEnvironmentFromDataset();
           if (!dom.views[view]) {
             return;
           }
+          const previousView = state.activeView;
+          if (previousView !== view) {
+            if (previousView === 'storage') {
+              storageStore.deactivate();
+            }
+            if (previousView === 'progress') {
+              progressStore.deactivate();
+            }
+          }
           state.activeView = view;
           dom.viewButtons.forEach((button) => {
             const isActive = button.dataset.view === view;
@@ -7991,21 +6246,25 @@ bootstrapEnvironmentFromDataset();
             element.hidden = !isActive;
           });
           if (view === 'storage') {
+            storageStore.activate();
             const browserState = getStorageBrowserState();
             if (
-              (!state.storage.initialized && !state.storage.loading) ||
+              (!storageStore.initialized && !storageStore.loading) ||
               (!browserState.initialized && !browserState.loading)
             ) {
               void refreshStorage({ includeOverview: true, force: true });
             } else {
               renderStorage();
             }
-            stopProgressPolling();
+            progressStore.deactivate();
           } else if (view === 'progress') {
+            storageStore.deactivate();
+            progressStore.activate();
             void refreshProgressQueue({ force: true });
             startProgressPolling();
           } else {
-            stopProgressPolling();
+            storageStore.deactivate();
+            progressStore.deactivate();
           }
         }
 
@@ -9010,7 +7269,7 @@ bootstrapEnvironmentFromDataset();
             if (!settings) {
               return;
             }
-            syncSettingsForm(settings);
+            await syncSettingsForm(settings);
           } catch (error) {
             showStatus(error.message, 'error');
           }
@@ -9505,68 +7764,6 @@ bootstrapEnvironmentFromDataset();
           }
         }
 
-        if (dom.storage && dom.storage.refresh) {
-          dom.storage.refresh.addEventListener('click', () => {
-            void refreshStorage({ includeOverview: true, force: true });
-          });
-        }
-
-        if (dom.storage && dom.storage.browser && dom.storage.browser.navRoot) {
-          dom.storage.browser.navRoot.addEventListener('click', () => {
-            void refreshStorage({ includeOverview: false, path: '', force: true });
-          });
-        }
-
-        if (dom.storage && dom.storage.browser && dom.storage.browser.navUp) {
-          dom.storage.browser.navUp.addEventListener('click', () => {
-            const browserState = getStorageBrowserState();
-            if (browserState.parent === null) {
-              return;
-            }
-            const parentPath = browserState.parent || '';
-            void refreshStorage({ includeOverview: false, path: parentPath, force: true });
-          });
-        }
-
-        if (dom.storage && dom.storage.browser && dom.storage.browser.tableBody) {
-          dom.storage.browser.tableBody.addEventListener('click', (event) => {
-            void handleStorageBrowserAction(event);
-          });
-          dom.storage.browser.tableBody.addEventListener('change', (event) => {
-            handleStorageSelectionChange(event);
-          });
-        }
-
-        if (dom.storage && dom.storage.browser && dom.storage.browser.selectAll) {
-          dom.storage.browser.selectAll.addEventListener('change', (event) => {
-            handleStorageSelectAll(event);
-          });
-        }
-
-        if (dom.storage && dom.storage.downloadSelected) {
-          dom.storage.downloadSelected.addEventListener('click', () => {
-            void handleStorageDownloadSelected();
-          });
-        }
-
-        if (dom.storage && dom.storage.purge) {
-          dom.storage.purge.addEventListener('click', () => {
-            handlePurgeProcessedAudio();
-          });
-        }
-
-        if (dom.progress && dom.progress.refresh) {
-          dom.progress.refresh.addEventListener('click', () => {
-            void refreshProgressQueue({ force: true });
-          });
-        }
-
-        if (dom.progress && dom.progress.list) {
-          dom.progress.list.addEventListener('click', (event) => {
-            void handleProgressAction(event);
-          });
-        }
-
         dom.viewButtons.forEach((button) => {
           button.addEventListener('click', () => {
             const view = button.dataset.view;
@@ -9963,9 +8160,9 @@ bootstrapEnvironmentFromDataset();
         }
 
         if (dom.settingsLanguage) {
-          dom.settingsLanguage.addEventListener('change', (event) => {
+          dom.settingsLanguage.addEventListener('change', async (event) => {
             const value = normalizeLanguage(event.target.value);
-            applyTranslations(value);
+            await applyTranslations(value);
             renderStorage();
             updateEditModeUI();
           });
@@ -10015,7 +8212,7 @@ bootstrapEnvironmentFromDataset();
                 audio_mastering_enabled: masteringEnabled,
                 debug_enabled: debugEnabled,
               };
-              syncSettingsForm(updatedSettings);
+              await syncSettingsForm(updatedSettings);
               if (modelValue === GPU_MODEL) {
                 await loadGpuWhisperStatus();
               }
@@ -10026,7 +8223,7 @@ bootstrapEnvironmentFromDataset();
           });
         }
         window.addEventListener('beforeunload', () => {
-          stopDebugPolling();
+          debugStore.deactivate();
         });
         setActiveView(state.activeView);
         updateEditModeUI();
