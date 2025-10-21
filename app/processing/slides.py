@@ -305,13 +305,12 @@ class PyMuPDFSlideConverter(SlideConverter):
                     break
 
                 page = document.load_page(page_number)
-                pix = page.get_pixmap(matrix=matrix, alpha=False)
-                image = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-                image_name = f"slide-{page_number + 1:03d}.png"
-                image_path = asset_dir / image_name
-                image.save(image_path, format="PNG")
+                page_images = page.get_images(full=True) or []
+                page_drawings = page.get_drawings() or []
+                full_pix = page.get_pixmap(matrix=matrix, alpha=False)
+                full_image = Image.frombytes("RGB", [full_pix.width, full_pix.height], full_pix.samples)
 
-                array = np.asarray(image)
+                array = np.asarray(full_image)
                 try:
                     recognition = engine.ocr(array)
                 except Exception as error:  # noqa: BLE001 - OCR may raise arbitrary errors
@@ -369,14 +368,53 @@ class PyMuPDFSlideConverter(SlideConverter):
                         if line:
                             entries.append(f"- {line}")
 
-                image_reference = Path(asset_dir.name) / image_name
+                has_textual_entries = any(line.startswith("- ") for line in entries)
+                has_text_content = bool(fallback_lines) or has_textual_entries
+                visual_regions = self._detect_visual_regions(page)
+                include_image = bool(visual_regions) or self._should_include_image(
+                    has_text=has_text_content,
+                    has_raster_images=bool(page_images),
+                    has_vector_drawings=bool(page_drawings),
+                )
+
                 section_lines = [
                     f"## Slide {page_number + 1}",
                     "",
-                    f"![Slide {page_number + 1}]({image_reference.as_posix()})",
-                    "",
-                    *entries,
                 ]
+
+                if include_image:
+                    image_name = f"slide-{page_number + 1:03d}.png"
+                    image_path = asset_dir / image_name
+                    target_image = full_image
+                    if visual_regions:
+                        clip_box = self._union_rectangles(visual_regions)
+                        if clip_box is not None:
+                            try:
+                                clip_rect = fitz.Rect(*clip_box)
+                            except Exception:
+                                clip_rect = None
+                            else:
+                                clip_pix = page.get_pixmap(
+                                    matrix=matrix,
+                                    alpha=False,
+                                    clip=clip_rect,
+                                )
+                                target_image = Image.frombytes(
+                                    "RGB",
+                                    [clip_pix.width, clip_pix.height],
+                                    clip_pix.samples,
+                                )
+
+                    target_image.save(image_path, format="PNG")
+                    image_reference = Path(asset_dir.name) / image_name
+                    section_lines.extend(
+                        [
+                            f"![Slide {page_number + 1}]({image_reference.as_posix()})",
+                            "",
+                        ]
+                    )
+
+                section_lines.extend(entries)
                 page_sections.append("\n".join(section_lines))
 
                 processed_pages = len(page_sections)
@@ -444,6 +482,154 @@ class PyMuPDFSlideConverter(SlideConverter):
             counter += 1
         LOGGER.debug("Resolved unique slide archive name: %s", candidate)
         return candidate
+
+    @staticmethod
+    def _should_include_image(
+        *, has_text: bool, has_raster_images: bool, has_vector_drawings: bool
+    ) -> bool:
+        """Determine whether a slide preview image should be included."""
+
+        if has_raster_images or has_vector_drawings:
+            return True
+        return not has_text
+
+    @staticmethod
+    def _detect_visual_regions(
+        page: Any,
+        *,
+        min_size: float = 12.0,
+        merge_margin: float = 6.0,
+    ) -> List[Tuple[float, float, float, float]]:
+        """Return bounding boxes of non-text visual regions on a slide."""
+
+        rectangles: List[Tuple[float, float, float, float]] = []
+        try:
+            raw_dict = page.get_text("rawdict")
+        except Exception:  # pragma: no cover - defensive fallback
+            raw_dict = None
+
+        blocks: Iterable[Mapping[str, Any]]
+        if isinstance(raw_dict, Mapping):
+            blocks = raw_dict.get("blocks") or []
+        else:  # pragma: no cover - defensive fallback
+            blocks = []
+
+        for block in blocks:
+            if not isinstance(block, Mapping):
+                continue
+            if block.get("type") != 1:
+                continue
+            bbox = block.get("bbox")
+            if not bbox or len(bbox) != 4:
+                continue
+            try:
+                x0, y0, x1, y1 = (float(bbox[0]), float(bbox[1]), float(bbox[2]), float(bbox[3]))
+            except Exception:  # pragma: no cover - defensive fallback
+                continue
+            if x1 <= x0 or y1 <= y0:
+                continue
+            if (x1 - x0) < min_size or (y1 - y0) < min_size:
+                continue
+            rectangles.append((x0, y0, x1, y1))
+
+        try:
+            drawings = page.get_drawings()
+        except Exception:  # pragma: no cover - defensive fallback
+            drawings = []
+
+        for drawing in drawings or []:
+            if not isinstance(drawing, Mapping):
+                continue
+            rect = drawing.get("rect")
+            if rect is None:
+                continue
+            try:
+                if hasattr(rect, "x0"):
+                    x0 = float(rect.x0)
+                    y0 = float(rect.y0)
+                    x1 = float(rect.x1)
+                    y1 = float(rect.y1)
+                else:
+                    x0 = float(rect[0])
+                    y0 = float(rect[1])
+                    x1 = float(rect[2])
+                    y1 = float(rect[3])
+            except Exception:  # pragma: no cover - defensive fallback
+                continue
+            if x1 <= x0 or y1 <= y0:
+                continue
+            if (x1 - x0) < min_size or (y1 - y0) < min_size:
+                continue
+            rectangles.append((x0, y0, x1, y1))
+
+        if not rectangles:
+            return []
+
+        merged = PyMuPDFSlideConverter._merge_rectangles(rectangles, margin=merge_margin)
+        merged.sort(key=lambda item: (item[1], item[0]))
+        return merged
+
+    @staticmethod
+    def _merge_rectangles(
+        rectangles: Iterable[Tuple[float, float, float, float]],
+        *,
+        margin: float,
+    ) -> List[Tuple[float, float, float, float]]:
+        """Merge overlapping rectangles while applying an outward margin."""
+
+        merged: List[Tuple[float, float, float, float]] = []
+        for rect in rectangles:
+            x0, y0, x1, y1 = rect
+            expanded = (
+                min(x0, x1) - margin,
+                min(y0, y1) - margin,
+                max(x0, x1) + margin,
+                max(y0, y1) + margin,
+            )
+            new_rect = expanded
+            overlaps: List[int] = []
+            for index, existing in enumerate(merged):
+                if PyMuPDFSlideConverter._rectangles_overlap(existing, new_rect):
+                    new_rect = (
+                        min(new_rect[0], existing[0]),
+                        min(new_rect[1], existing[1]),
+                        max(new_rect[2], existing[2]),
+                        max(new_rect[3], existing[3]),
+                    )
+                    overlaps.append(index)
+            for index in reversed(overlaps):
+                merged.pop(index)
+            merged.append(new_rect)
+        return merged
+
+    @staticmethod
+    def _rectangles_overlap(
+        a: Tuple[float, float, float, float],
+        b: Tuple[float, float, float, float],
+    ) -> bool:
+        """Return True when two rectangles overlap or touch."""
+
+        return not (a[2] < b[0] or a[0] > b[2] or a[3] < b[1] or a[1] > b[3])
+
+    @staticmethod
+    def _union_rectangles(
+        rectangles: Iterable[Tuple[float, float, float, float]]
+    ) -> Optional[Tuple[float, float, float, float]]:
+        """Return the union bounding box for a list of rectangles."""
+
+        iterator = iter(rectangles)
+        try:
+            first = next(iterator)
+        except StopIteration:
+            return None
+
+        x0, y0, x1, y1 = first
+        for rect in iterator:
+            x0 = min(x0, rect[0])
+            y0 = min(y0, rect[1])
+            x1 = max(x1, rect[2])
+            y1 = max(y1, rect[3])
+        return (x0, y0, x1, y1)
 
 
 __all__ = [
