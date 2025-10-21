@@ -1,0 +1,485 @@
+{
+  "document": {
+    "title": "Herramientas de clases"
+  },
+  "sidebar": {
+    "heading": "Herramientas de clases",
+    "tagline": "Revisa, organiza y procesa recursos de clases rápidamente.",
+    "overview": "Resumen",
+    "syllabusTitle": "Programa del curso",
+    "searchLabel": "Buscar en el programa",
+    "searchPlaceholder": "Buscar por nombre",
+    "loading": "Cargando…"
+  },
+  "topBar": {
+    "details": "Detalles",
+    "enableEdit": "Activar modo edición",
+    "exitEdit": "Salir del modo edición",
+    "progress": "Progreso",
+    "create": "Crear",
+    "storage": "Almacenamiento",
+    "settings": "Configuración"
+  },
+  "details": {
+    "title": "Detalles de la clase",
+    "deleteLecture": "Eliminar clase",
+    "editModeBanner": "El modo edición está activo. Actualiza o elimina elementos mientras esté activo.",
+    "summaryPlaceholder": "Selecciona una clase del plan de estudios.",
+    "edit": {
+      "titleLabel": "Título",
+      "moduleLabel": "Módulo",
+      "descriptionLabel": "Descripción",
+      "save": "Guardar cambios"
+    },
+    "noDescription": "Sin descripción registrada todavía."
+  },
+  "assets": {
+    "title": "Recursos",
+    "transcribe": "Transcribir audio",
+    "modelLabel": "Modelo",
+    "model": {
+      "tiny": "tiny",
+      "base": "base",
+      "small": "small",
+      "medium": "medium",
+      "large": "large",
+      "gpu": "GPU (acelerado por hardware)"
+    },
+    "labels": {
+      "audio": "Audio (.wav, .mp3, .m4a, .aac, .flac, .ogg, .opus)",
+      "masteredAudio": "Audio masterizado",
+      "slides": "Diapositivas (PDF)",
+      "transcript": "Transcripción",
+      "notes": "Notas",
+      "slideBundle": "Paquete de diapositivas (Markdown + ZIP)"
+    },
+    "status": {
+      "notLinked": "Sin vincular",
+      "slidesHint": "Carga un PDF y luego procésalo para generar el paquete Markdown.",
+      "noSlideImages": "Aún no hay paquete de diapositivas. Usa “Procesar diapositivas” después de subir un PDF.",
+      "linked": "Vinculado: {{name}}",
+      "slidesUploaded": "Diapositivas subidas: {{name}}",
+      "archiveCreated": "Paquete creado: {{name}}",
+      "mastered": "Masterizado: {{name}}"
+    },
+    "actions": {
+      "upload": "Subir",
+      "processSlides": "Procesar diapositivas",
+      "download": "Descargar",
+      "remove": "Eliminar"
+    }
+  },
+  "progress": {
+    "title": "Cola de procesamiento",
+    "description": "Supervisa las conversiones, masterizaciones y transcripciones en ejecución.",
+    "empty": "No hay tareas activas.",
+    "refresh": "Actualizar",
+    "retry": "Reintentar",
+    "dismiss": "Descartar",
+    "openLecture": "Abrir clase",
+    "status": {
+      "running": "En progreso",
+      "finished": "Completado",
+      "error": "Requiere atención"
+    },
+    "labels": {
+      "transcription": "Transcripción",
+      "slideBundle": "Paquete de diapositivas",
+      "audioMastering": "Masterización de audio",
+      "processing": "Tarea de procesamiento",
+      "untitled": "Clase sin título"
+    },
+    "retryUnavailable": "No es posible reintentar esta tarea."
+  },
+  "create": {
+    "title": "Crear clase",
+    "moduleLabel": "Módulo",
+    "titleLabel": "Título",
+    "descriptionLabel": "Descripción",
+    "submit": "Agregar clase"
+  },
+  "settings": {
+    "title": "Configuración",
+    "appearance": {
+      "legend": "Apariencia",
+      "themeLabel": "Tema",
+      "theme": {
+        "system": "Seguir sistema",
+        "light": "Claro",
+        "dark": "Oscuro"
+      }
+    },
+    "language": {
+      "label": "Idioma",
+      "choices": {
+        "en": "English (Inglés)",
+        "zh": "中文 (Chino)",
+        "es": "Español",
+        "fr": "Français (Francés)"
+      }
+    },
+    "debug": {
+      "legend": "Depuración",
+      "enable": "Activar modo de depuración",
+      "description": "Muestra en la derecha una consola en vivo con la salida detallada del programa."
+    },
+    "whisper": {
+      "legend": "Transcripción Whisper",
+      "modelLabel": "Modelo predeterminado",
+      "model": {
+        "tiny": "Tiny (más rápido)",
+        "base": "Base (equilibrado)",
+        "small": "Small (preciso)",
+        "medium": "Medium (detallado)",
+        "large": "Large (máxima precisión)",
+        "gpu": "GPU (acelerado por hardware)"
+      },
+      "computeLabel": "Tipo de cómputo",
+      "beamLabel": "Tamaño de haz",
+      "gpu": {
+        "label": "Compatibilidad con GPU",
+        "status": "Aceleración GPU no probada.",
+        "test": "Probar compatibilidad",
+        "retry": "Volver a probar"
+      }
+    },
+    "audio": {
+      "legend": "Audio",
+      "masteringLabel": "Habilitar audio masterizado",
+      "masteringDescription": "Mejora automáticamente el audio subido para mayor claridad."
+    },
+    "slides": {
+      "legend": "Diapositivas",
+      "dpiLabel": "DPI de renderizado",
+      "dpi": {
+        "150": "150 dpi (más rápido)",
+        "200": "200 dpi (equilibrado)",
+        "300": "300 dpi (detallado)",
+        "400": "400 dpi (alto detalle)",
+        "600": "600 dpi (máximo)"
+      }
+    },
+    "update": {
+      "legend": "Actualizaciones del sistema",
+      "description": "Actualiza Lecture Tools sin salir del navegador.",
+      "run": "Ejecutar actualización",
+      "refresh": "Actualizar estado",
+      "status": {
+        "idle": "No hay ninguna actualización en curso.",
+        "running": "Actualización en curso. Mantén esta ventana abierta hasta que termine.",
+        "success": "La actualización más reciente se completó correctamente.",
+        "failure": "La actualización más reciente tuvo un error."
+      },
+      "startedAt": "Inició {{time}}.",
+      "finishedAt": "Finalizó {{time}}.",
+      "exitCode": "Código de salida {{code}}.",
+      "logLabel": "Registro de actividad",
+      "logEmpty": "Aún no hay actividad de actualización."
+    },
+    "archive": {
+      "legend": "Archivo",
+      "description": "Exporta tus clases y recursos o importa un archivo desde otro equipo.",
+      "export": "Exportar archivo",
+      "import": "Importar archivo",
+      "modeLabel": "Modo de importación",
+      "modes": {
+        "merge": "Agregar al contenido existente",
+        "replace": "Borrar el contenido actual y sobrescribir"
+      },
+      "hint": "Los archivos exportados se guardan temporalmente y se eliminan al iniciar la aplicación."
+    },
+    "save": "Guardar configuración",
+    "exit": "Salir de la aplicación"
+  },
+  "storage": {
+    "title": "Administrador de almacenamiento",
+    "subtitle": "Revisa los recursos almacenados según la estructura de clases.",
+    "loading": "Cargando…",
+    "empty": "No se encontraron clases con almacenamiento.",
+    "usage": {
+      "used": "En uso",
+      "available": "Disponible",
+      "total": "Total"
+    },
+    "actions": {
+      "refresh": "Actualizar",
+      "downloadSelected": "Descargar seleccionados",
+      "purge": "Quitar audio procesado"
+    },
+    "browser": {
+      "root": "Raíz",
+      "up": "Subir",
+      "loading": "Cargando…",
+      "empty": "No hay archivos ni carpetas en esta ubicación.",
+      "select": "Seleccionar",
+      "name": "Nombre",
+      "type": "Tipo",
+      "size": "Tamaño",
+      "modified": "Modificado",
+      "actions": "Acciones",
+      "directory": "Carpeta",
+      "file": "Archivo",
+      "unnamed": "Elemento sin nombre",
+      "selectAction": "Seleccionar {{name}}"
+    },
+    "purge": {
+      "none": "No hay audio procesado para eliminar.",
+      "available": "{{count}} {{lectureWord}} listos para limpiar.",
+      "working": "Eliminando audio…",
+      "readyCount": "{{count}} {{lectureWord}} listos para limpiar"
+    },
+    "classes": {
+      "summary": "{{moduleCount}} {{moduleWord}} • {{lectureCount}} {{lectureWord}}",
+      "empty": "Esta clase no tiene módulos almacenados.",
+      "masteredCount": "{{count}} {{lectureWord}} con audio masterizado"
+    },
+    "modules": {
+      "summary": "{{lectureCount}} {{lectureWord}}",
+      "empty": "Este módulo no tiene clases almacenadas.",
+      "masteredCount": "{{count}} {{lectureWord}} con audio masterizado"
+    },
+    "lecture": {
+      "audio": "Audio",
+      "processedAudio": "Audio masterizado",
+      "transcript": "Transcripción",
+      "notes": "Notas",
+      "slides": "Diapositivas",
+      "empty": "Sin recursos vinculados.",
+      "eligible": "Audio listo para eliminarse",
+      "processedBadge": "Audio masterizado"
+    },
+    "dialogs": {
+      "purgeTitle": "Quitar audio procesado",
+      "purgeMessage": "¿Eliminar los archivos de audio de {{count}} {{lectureWord}} que ya tienen transcripción? Esta acción no se puede deshacer.",
+      "deleteTitle": "Eliminar elemento de almacenamiento",
+      "deleteMessage": "¿Eliminar “{{name}}”? Esta acción no se puede deshacer.",
+      "deleteConfirm": "Eliminar"
+    },
+    "unnamedClass": "Clase sin nombre",
+    "unnamedModule": "Módulo sin nombre",
+    "unnamedLecture": "Sesión sin nombre"
+  },
+  "debug": {
+    "title": "Consola de depuración",
+    "live": "En vivo",
+    "empty": "Activa el modo de depuración para ver la actividad del programa en tiempo real.",
+    "error": "No se pudo cargar la salida de depuración.",
+    "stream": {
+      "title": "Actividad del servidor",
+      "empty": "Esperando actividad del servidor…"
+    }
+  },
+  "dialog": {
+    "cancel": "Cancelar",
+    "confirm": "Confirmar"
+  },
+  "stats": {
+    "classes": "Cursos",
+    "modules": "Módulos",
+    "lectures": "Clases",
+    "transcripts": "Transcripciones",
+    "slideDecks": "Presentaciones",
+    "audio": "Archivos de audio",
+    "processedAudio": "Audio masterizado",
+    "notes": "Notas",
+    "slideArchives": "Paquetes de diapositivas"
+  },
+  "dialogs": {
+    "createClass": {
+      "title": "Crear curso",
+      "message": "Ingresa un nombre de curso.",
+      "placeholder": "Introducción a la astronomía"
+    },
+    "createModule": {
+      "title": "Crear módulo",
+      "message": "Nombre del módulo para {{className}}",
+      "placeholder": "Fundamentos"
+    },
+    "createLecture": {
+      "title": "Crear clase",
+      "message": "Título de la clase para {{context}}",
+      "placeholder": "Título de la clase"
+    },
+    "lectureDescription": {
+      "title": "Descripción de la clase",
+      "placeholder": "Agrega un esquema breve…"
+    },
+    "deleteClass": {
+      "title": "Eliminar curso",
+      "message": "¿Eliminar el curso \"{{className}}\"?",
+      "cancel": "Conservar curso",
+      "summary": "Esto eliminará {{moduleCount}} {{moduleWord}} y {{lectureCount}} {{lectureWord}}."
+    },
+    "deleteModule": {
+      "title": "Eliminar módulo",
+      "message": "¿Eliminar el módulo \"{{moduleName}}\"{{classContext}}?",
+      "cancel": "Conservar módulo",
+      "summary": "Esto eliminará {{lectureCount}} {{lectureWord}}.",
+      "classContext": " del curso \"{{className}}\""
+    },
+    "deleteLecture": {
+      "title": "Eliminar clase",
+      "message": "¿Eliminar la clase \"{{context}}\" y todos los recursos vinculados?",
+      "cancel": "Conservar clase"
+    },
+    "removeAsset": {
+      "title": "Eliminar {{asset}}",
+      "message": "¿Quieres eliminar el {{asset}} actual de esta clase? Esta acción no se puede deshacer.",
+      "confirm": "Eliminar recurso"
+    },
+    "confirmDeletion": {
+      "title": "Confirmar eliminación",
+      "message": "Esta acción no se puede deshacer. ¿Deseas eliminarla permanentemente?",
+      "confirm": "Sí, eliminar"
+    },
+    "gpuWhisper": {
+      "title": "GPU Whisper"
+    },
+    "exitApp": {
+      "title": "Salir de la aplicación",
+      "message": "¿Detener el servidor de Lecture Tools y cerrar esta pestaña?"
+    },
+    "slideRange": {
+      "title": "Seleccionar páginas a procesar",
+      "description": "Revisa las miniaturas de las diapositivas y elige qué páginas convertir.",
+      "loading": "Cargando vista previa…",
+      "error": "Se muestran abajo las previsualizaciones generadas en el servidor; ajusta el rango manualmente si es necesario.",
+      "startLabel": "Página inicial",
+      "endLabel": "Página final",
+      "rangeHint": "Usa los campos o la vista previa para ajustar la selección.",
+      "zoomLabel": "Zoom de la vista previa",
+      "zoomValue": "Vista al {{value}}%",
+      "fallbackMessage": "Abre el PDF de abajo en una pestaña nueva si necesitas revisarlo directamente.",
+      "fallbackLink": "Abrir PDF en una pestaña nueva",
+      "fallbackFrameTitle": "Vista previa de PDF alternativa",
+      "summary": "Se procesarán las páginas {{start}}–{{end}} de {{total}}.",
+      "summarySingle": "Se procesará la página {{start}} de {{total}}.",
+      "summaryUnknown": "Procesando las páginas {{start}}–{{end}}.",
+      "summarySingleUnknown": "Procesando la página {{start}}.",
+      "allPages": "Se procesarán todas las páginas del documento.",
+      "pageLabel": "Página {{page}}",
+      "selectAll": "Seleccionar todo",
+      "confirm": "Confirmar y continuar"
+    },
+    "upload": {
+      "title": "Subir archivo",
+      "description": "Arrastra un archivo aquí o examina tu equipo para seleccionarlo.",
+      "prompt": "Arrastra y suelta un archivo",
+      "help": "También puedes hacer clic para elegir un archivo.",
+      "browse": "Seleccionar archivo",
+      "clear": "Quitar",
+      "waiting": "Selecciona un archivo para continuar.",
+      "preparing": "Preparando archivo…",
+      "uploading": "Subiendo…",
+      "processing": "Procesando carga…",
+      "processingAction": "Procesando…",
+      "processingAudio": "Procesando audio…",
+      "processingSlides": "Procesando diapositivas…",
+      "backgroundProcessing": "El procesamiento de audio continuará en segundo plano. Puedes cerrar este cuadro de diálogo con seguridad.",
+      "backgroundProcessingSlides": "La conversión de diapositivas continuará en segundo plano. Puedes cerrar este cuadro de diálogo mientras finaliza.",
+      "success": "Subida completada.",
+      "failure": "La subida falló. Vuelve a intentarlo.",
+      "progress": "Progreso de subida",
+      "action": "Subir",
+      "assetTitle": "Subir {{asset}}",
+      "assetDescription": "Elige un archivo nuevo para este recurso.",
+      "archiveTitle": "Importar archivo comprimido",
+      "archiveDescription": "Selecciona un archivo exportado de Lecture Tools (.zip)."
+    },
+    "descriptionOptional": "Descripción (opcional)",
+    "descriptionPlaceholder": "Agrega un breve resumen…"
+  },
+  "dropdowns": {
+    "selectModule": "Seleccionar módulo…",
+    "noModules": "No hay módulos disponibles"
+  },
+  "placeholders": {
+    "noLectures": "Sin clases",
+    "noLecturesFilter": "Ninguna clase coincide con el filtro actual.",
+    "noClasses": "Aún no hay cursos disponibles.",
+    "noModules": "Sin módulos por ahora."
+  },
+  "curriculum": {
+    "addClass": "Agregar curso",
+    "addModule": "Agregar módulo",
+    "manageHeading": "Administrar programa",
+    "classMeta": "{{moduleCount}} {{moduleWord}} • {{lectureCount}} {{lectureWord}}",
+    "moduleMeta": "{{lectureCount}} {{lectureWord}}"
+  },
+  "common": {
+    "actions": {
+      "create": "Crear",
+      "save": "Guardar",
+      "skip": "Omitir",
+      "delete": "Eliminar",
+      "open": "Abrir",
+      "upload": "Subir",
+      "exit": "Salir",
+      "close": "Cerrar",
+      "ok": "Aceptar"
+    }
+  },
+  "status": {
+    "requireEdit": "Activa el modo edición para gestionar el plan de estudios.",
+    "requireEditLecture": "Activa el modo edición para actualizar los detalles.",
+    "classCreated": "Curso creado.",
+    "classRemoved": "Curso eliminado.",
+    "moduleCreated": "Módulo creado.",
+    "moduleRemoved": "Módulo eliminado.",
+    "lectureCreated": "Clase creada.",
+    "lectureRemoved": "Clase eliminada.",
+    "lectureUpdated": "Clase actualizada.",
+    "lectureTitleRequired": "El título de la clase es obligatorio.",
+    "createLectureRequirements": "Selecciona un módulo e ingresa un título.",
+    "slidesProcessed": "Diapositivas convertidas en un paquete Markdown con imágenes.",
+    "slidesUploaded": "Diapositivas subidas. Procésalas para generar el paquete Markdown.",
+    "slidesUploadRequired": "Sube un PDF antes de procesar las diapositivas.",
+    "slidePreviewFailed": "No se pudo preparar la vista previa de las diapositivas. Intenta subir el PDF nuevamente.",
+    "processingSlides": "Procesando diapositivas…",
+    "audioProcessingQueued": "Audio subido. La masterización continuará en segundo plano.",
+    "assetUploaded": "Recurso subido correctamente.",
+    "assetRemoved": "Recurso eliminado.",
+    "transcriptionPreparing": "====> Preparando transcripción…",
+    "transcriptionCompleted": "Transcripción completada.",
+    "processing": "Procesando…",
+    "storageLoadFailed": "No se pudieron cargar los contenidos del almacenamiento.",
+    "storageUsageFailed": "No se pudo cargar el uso del almacenamiento.",
+    "storagePurged": "Audio procesado eliminado.",
+    "storagePurgeFailed": "No se pudo eliminar el audio procesado.",
+    "storageDeleted": "Elemento de almacenamiento eliminado.",
+    "storageDeleteFailed": "No se pudo eliminar el elemento de almacenamiento.",
+    "storageDownloadReady": "Descarga preparada.",
+    "storageDownloadFailed": "No se pudo preparar la descarga.",
+    "storageDownloadNone": "Selecciona al menos un elemento.",
+    "gpuChecking": "====> Comprobando compatibilidad con GPU Whisper…",
+    "gpuConfirmed": "Compatibilidad con GPU Whisper confirmada.",
+    "gpuUnavailable": "GPU no disponible en esta plataforma.",
+    "gpuUnsupported": "GPU Whisper no es compatible con esta plataforma.",
+    "gpuNotAvailable": "La aceleración GPU no está disponible en esta plataforma.",
+    "updateStarted": "Actualización iniciada.",
+    "updateRunning": "Actualización en curso. Mantén esta ventana abierta.",
+    "updateCompleted": "Actualización completada correctamente.",
+    "updateFailed": "La actualización falló. Revisa el registro para más detalles.",
+    "updateConflict": "Ya hay una actualización en curso.",
+    "shuttingDown": "Cerrando la aplicación…",
+    "settingsSaved": "Configuración guardada.",
+    "gpuFallback": "Se usará el modelo {{model}}.",
+    "lectureReordered": "El orden de las clases se actualizó.",
+    "exporting": "Preparando archivo…",
+    "exportReady": "Archivo listo para descargar.",
+    "exportFailed": "No se pudo crear el archivo.",
+    "importing": "Importando archivo…",
+    "importSuccess": "Se importaron {{count}} clases.",
+    "importNoChanges": "Archivo importado (sin clases nuevas)."
+  },
+  "counts": {
+    "module": {
+      "one": "módulo",
+      "other": "módulos"
+    },
+    "lecture": {
+      "one": "clase",
+      "other": "clases"
+    }
+  }
+}
