@@ -15,6 +15,7 @@ def test_should_include_image_when_text_only():
             has_text=True,
             has_raster_images=False,
             has_vector_drawings=False,
+            has_visual_regions=False,
         )
         is False
     )
@@ -28,8 +29,9 @@ def test_should_include_image_when_no_text():
             has_text=False,
             has_raster_images=False,
             has_vector_drawings=False,
+            has_visual_regions=False,
         )
-        is True
+        is False
     )
 
 
@@ -41,6 +43,7 @@ def test_should_include_image_with_drawings_or_images():
             has_text=True,
             has_raster_images=True,
             has_vector_drawings=False,
+            has_visual_regions=False,
         )
         is True
     )
@@ -50,6 +53,21 @@ def test_should_include_image_with_drawings_or_images():
             has_text=True,
             has_raster_images=False,
             has_vector_drawings=True,
+            has_visual_regions=False,
+        )
+        is True
+    )
+
+
+def test_should_include_image_with_visual_regions():
+    converter = PyMuPDFSlideConverter(dpi=72)
+
+    assert (
+        converter._should_include_image(
+            has_text=True,
+            has_raster_images=False,
+            has_vector_drawings=False,
+            has_visual_regions=True,
         )
         is True
     )

@@ -371,10 +371,11 @@ class PyMuPDFSlideConverter(SlideConverter):
                 has_textual_entries = any(line.startswith("- ") for line in entries)
                 has_text_content = bool(fallback_lines) or has_textual_entries
                 visual_regions = self._detect_visual_regions(page)
-                include_image = bool(visual_regions) or self._should_include_image(
+                include_image = self._should_include_image(
                     has_text=has_text_content,
                     has_raster_images=bool(page_images),
                     has_vector_drawings=bool(page_drawings),
+                    has_visual_regions=bool(visual_regions),
                 )
 
                 section_lines = [
@@ -485,13 +486,19 @@ class PyMuPDFSlideConverter(SlideConverter):
 
     @staticmethod
     def _should_include_image(
-        *, has_text: bool, has_raster_images: bool, has_vector_drawings: bool
+        *,
+        has_text: bool,
+        has_raster_images: bool,
+        has_vector_drawings: bool,
+        has_visual_regions: bool,
     ) -> bool:
         """Determine whether a slide preview image should be included."""
 
+        if has_visual_regions:
+            return True
         if has_raster_images or has_vector_drawings:
             return True
-        return not has_text
+        return False
 
     @staticmethod
     def _detect_visual_regions(
