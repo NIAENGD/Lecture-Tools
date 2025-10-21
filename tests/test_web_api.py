@@ -117,7 +117,7 @@ def test_index_injects_configured_root_path(temp_config):
     response = client.get("/lecture/")
     assert response.status_code == 200
     assert "__LECTURE_TOOLS_ROOT_PATH__" not in response.text
-    assert 'window.__LECTURE_TOOLS_SERVER_ROOT_PATH__ = "/lecture";' in response.text
+    assert 'data-root-path="/lecture"' in response.text
 
 
 def test_index_injects_empty_root_path(temp_config):
@@ -127,10 +127,7 @@ def test_index_injects_empty_root_path(temp_config):
 
     response = client.get("/")
     assert response.status_code == 200
-    assert (
-        'window.__LECTURE_TOOLS_SERVER_ROOT_PATH__ = "__LECTURE_TOOLS_ROOT_PATH__";'
-        in response.text
-    )
+    assert 'data-root-path=""' in response.text
 
 
 def test_api_honors_forwarded_prefix_header(temp_config):

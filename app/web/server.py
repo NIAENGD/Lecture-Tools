@@ -52,6 +52,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.formparsers import MultiPartParser
 from starlette.types import ASGIApp, Receive, Scope, Send
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from .. import config as config_module
 from ..config import AppConfig
@@ -100,7 +101,12 @@ except Exception:  # noqa: BLE001 - optional dependency may be absent
     check_gpu_whisper_availability = None  # type: ignore[assignment]
 
 _STATIC_ROOT = Path(__file__).parent / "static"
-_TEMPLATE_PATH = Path(__file__).parent / "templates" / "index.html"
+_TEMPLATE_DIR = Path(__file__).parent / "templates"
+_JINJA_ENV = Environment(
+    loader=FileSystemLoader(str(_TEMPLATE_DIR)),
+    autoescape=select_autoescape(["html", "xml"]),
+)
+_INDEX_TEMPLATE = _JINJA_ENV.get_template("index.html")
 _PREVIEW_LIMIT = 1200
 _WHISPER_MODEL_OPTIONS: Tuple[str, ...] = ("tiny", "base", "small", "medium", "large", "gpu")
 _WHISPER_MODEL_SET = set(_WHISPER_MODEL_OPTIONS)
@@ -1740,8 +1746,6 @@ def create_app(
         name="assets",
     )
 
-    index_html = _TEMPLATE_PATH.read_text(encoding="utf-8")
-
     _STORAGE_HEALTH_CACHE_SECONDS = 5.0
     storage_health_state: Dict[str, Any] = {
         "checked_at": 0.0,
@@ -1801,6 +1805,48 @@ def create_app(
                 LOGGER.info("Storage directory '%s' is available again", root_path)
             return root_path
 
+    def _resolve_asset_urls(static_base: str) -> Dict[str, str]:
+        manifest_path = _STATIC_ROOT / "dist" / "manifest.json"
+        scripts_rel = Path("dist") / "assets" / "main.js"
+        styles_rel = Path("dist") / "assets" / "main.css"
+        if manifest_path.exists():
+            try:
+                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            except Exception as error:  # pragma: no cover - defensive logging
+                LOGGER.warning("Failed to load asset manifest: %s", error)
+            else:
+                entry = None
+                for candidate in ("js/index.ts", "index.ts", "main"):
+                    entry = manifest.get(candidate)
+                    if entry:
+                        break
+                if entry is None:
+                    entry = next(
+                        (details for details in manifest.values() if details.get("isEntry")),
+                        None,
+                    )
+                if entry:
+                    scripts_rel = Path("dist") / entry.get("file", "assets/main.js")
+                    css_files = entry.get("css")
+                    if css_files:
+                        styles_rel = Path("dist") / css_files[0]
+
+        scripts_path = _STATIC_ROOT / scripts_rel
+        styles_path = _STATIC_ROOT / styles_rel
+        if not scripts_path.exists():
+            LOGGER.warning(
+                "Frontend bundle '%s' is missing; run 'npm run build' to generate assets.",
+                scripts_path,
+            )
+        if not styles_path.exists():
+            LOGGER.warning(
+                "Frontend styles '%s' are missing; run 'npm run build' to generate assets.",
+                styles_path,
+            )
+        scripts = f"{static_base}/{scripts_rel.as_posix()}"
+        styles = f"{static_base}/{styles_rel.as_posix()}"
+        return {"scripts": scripts, "styles": styles}
+
     def _render_index_html(request: Request | None = None) -> str:
         candidates: List[str] = []
         if request is not None:
@@ -1817,25 +1863,20 @@ def create_app(
                 resolved = normalized
                 break
         static_base = f"{resolved}/static" if resolved else "/static"
-        rendered = index_html.replace(
-            "__LECTURE_TOOLS_PDFJS_SCRIPT__",
-            f"{static_base}/pdfjs/pdf.min.js",
-        ).replace(
-            "__LECTURE_TOOLS_PDFJS_WORKER__",
-            f"{static_base}/pdfjs/pdf.worker.min.js",
-        ).replace(
-            "__LECTURE_TOOLS_PDFJS_MODULE__",
-            f"{static_base}/pdfjs/pdf.min.mjs",
-        ).replace(
-            "__LECTURE_TOOLS_PDFJS_WORKER_MODULE__",
-            f"{static_base}/pdfjs/pdf.worker.min.mjs",
-        )
+        asset_urls = _resolve_asset_urls(static_base)
+        pdfjs_urls = {
+            "script": f"{static_base}/pdfjs/pdf.min.js",
+            "worker": f"{static_base}/pdfjs/pdf.worker.min.js",
+            "module": f"{static_base}/pdfjs/pdf.min.mjs",
+            "worker_module": f"{static_base}/pdfjs/pdf.worker.min.mjs",
+        }
 
-        if not resolved:
-            return rendered
-
-        safe_value = json.dumps(resolved)[1:-1]
-        return rendered.replace("__LECTURE_TOOLS_ROOT_PATH__", safe_value)
+        context = {
+            "root_path": resolved,
+            "asset_urls": asset_urls,
+            "pdfjs": pdfjs_urls,
+        }
+        return _INDEX_TEMPLATE.render(context)
 
     def _summarize_lecture(lecture_id: int) -> Optional[Dict[str, Any]]:
         lecture_record = repository.get_lecture(lecture_id)

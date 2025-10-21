@@ -27,7 +27,7 @@
 
 ## ✨ Key Features
 
-- **Seamless setup** – No build steps or cross-platform workarounds required. Start the project with a single command on any major OS.
+- **Modern asset pipeline** – TypeScript + Vite bundling keeps the interface modular; regenerate assets with `npm run build` for deterministic deploys.
 - **Dashboard navigation** – Move from classes to modules to lectures with a unified interface that keeps relevant actions and statistics close at hand.
 - **Managed media pipeline** – Lecture audio, transcripts, and slides are automatically organized and maintained in a structured storage layout.
 - **Flexible transcription** – Run CPU-optimized [faster-whisper](https://github.com/SYSTRAN/faster-whisper) locally or enable GPU acceleration when available.
@@ -55,7 +55,13 @@
    ```bash
    pip install -r requirements-dev.txt
    ```
-4. **Enter the immersive web suite**
+4. **Install the frontend toolchain & bundle assets**
+   ```bash
+   npm install
+   npm run build
+   ```
+   Use `npm run dev` for a hot module reload experience while developing the UI, and `npm run lint` to type-check the frontend code.
+5. **Enter the immersive web suite**
    ```bash
    python run.py  # or customise: python run.py serve --host 0.0.0.0 --port 9000
    ```
@@ -66,7 +72,7 @@
        python run.py serve --root-path /lecture
        ```
      or set `LECTURE_TOOLS_ROOT_PATH=/lecture` in the environment.
-5. **Classic terminal vibes still included**
+6. **Classic terminal vibes still included**
  ```bash
   python run.py overview --style modern
   python run.py overview --style console
@@ -239,8 +245,10 @@ Progress mirrors the web upload flow, reporting each step (analysis, noise reduc
 
 ```bash
 pytest
+npm run lint
+npm run build
 ```
-The test harness relies on lightweight doubles, so it runs swiftly without needing to download ML models.
+The test harness relies on lightweight doubles, while the frontend commands type-check the UI bundle and ensure the Vite build succeeds.
 
 ---
 
