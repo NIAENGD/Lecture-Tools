@@ -429,7 +429,7 @@ def ingest(
     if lecture.transcript_path:
         typer.echo(f"  Transcript: {lecture.transcript_path}")
     if lecture.slide_image_dir:
-        typer.echo(f"  Slide images: {lecture.slide_image_dir}")
+        typer.echo(f"  Slide bundle: {lecture.slide_image_dir}")
 
 
 @cli.command()

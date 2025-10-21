@@ -1871,7 +1871,7 @@ def create_app(
                 ):
                     retryable = True
         elif kind == "processing":
-            retryable = operation == "slide_conversion"
+            retryable = operation == "slide_bundle"
 
         descriptor = {
             "task_id": state.get("task_id"),
@@ -2293,382 +2293,72 @@ def create_app(
         with contextlib.suppress(OSError):
             preview_dir.rmdir()
 
-    class SlideMarkdownError(RuntimeError):
-        """Raised when slide Markdown extraction fails."""
+    # Legacy PaddleOCR helpers removed in favour of bundled slide conversion.
 
-    class SlideMarkdownDependencyError(SlideMarkdownError):
-        """Raised when PaddleOCR or its dependencies are unavailable."""
+    # Bundled slide extraction replaces legacy archive-only conversion.
 
-    def _get_slide_markdown_engine():
-        engine = getattr(app.state, "slide_markdown_engine", None)
-        if engine is not None:
-            return engine
-
-        factory = getattr(app.state, "slide_markdown_engine_factory", None)
-        if factory is not None:
-            try:
-                engine = factory()
-            except Exception as error:  # noqa: BLE001 - factory may raise
-                message = f"Slide Markdown engine factory failed: {error}"
-                LOGGER.exception(message)
-                raise SlideMarkdownError(message) from error
-        else:
-            try:
-                from paddleocr import PaddleOCR  # type: ignore
-            except ImportError as exc:  # pragma: no cover - runtime dependency check
-                raise SlideMarkdownDependencyError("PaddleOCR is not installed") from exc
-
-            try:
-                engine = PaddleOCR(
-                    use_angle_cls=True,
-                    lang="en",
-                )
-            except Exception as error:  # noqa: BLE001 - PaddleOCR may raise
-                message = f"Failed to initialise PaddleOCR: {error}"
-                LOGGER.exception(message)
-                raise SlideMarkdownError(message) from error
-
-        setattr(app.state, "slide_markdown_engine", engine)
-        return engine
-
-    setattr(app.state, "get_slide_markdown_engine", _get_slide_markdown_engine)
-
-    def _generate_slide_archive(
+    def _generate_slide_bundle(
         pdf_path: Path,
         lecture_paths: LecturePaths,
         converter: PyMuPDFSlideConverter,
         *,
         page_range: Optional[Tuple[int, int]] = None,
         progress_callback: Optional[Callable[[int, Optional[int]], None]] = None,
-    ) -> Optional[str]:
+    ) -> Tuple[Optional[str], Optional[str]]:
         root_path = _require_storage_root()
-        existing_items: List[Path] = []
+        existing_bundle: Optional[Path] = None
+        existing_markdown: Optional[Path] = None
+
         if lecture_paths.slide_dir.exists():
-            existing_items = list(lecture_paths.slide_dir.iterdir())
+            bundles = sorted(lecture_paths.slide_dir.glob("*.zip"))
+            if bundles:
+                existing_bundle = bundles[0]
+
+        if lecture_paths.notes_dir.exists():
+            notes = sorted(lecture_paths.notes_dir.glob("*.md"))
+            if notes:
+                existing_markdown = notes[0]
 
         try:
-            generated = list(
-                converter.convert(
-                    pdf_path,
-                    lecture_paths.slide_dir,
-                    page_range=page_range,
-                    progress_callback=progress_callback,
-                )
-            )
-        except TypeError:
-            generated = list(
-                converter.convert(
-                    pdf_path,
-                    lecture_paths.slide_dir,
-                    page_range=page_range,
-                )
+            result = converter.convert(
+                pdf_path,
+                lecture_paths.slide_dir,
+                lecture_paths.notes_dir,
+                page_range=page_range,
+                progress_callback=progress_callback,
             )
         except SlideConversionDependencyError as error:
             LOGGER.warning("Slide conversion unavailable: %s", error)
-            return _reuse_existing_slide_archive(existing_items)
-        except Exception as error:  # noqa: BLE001 - propagate conversion errors
+            bundle_relative = (
+                existing_bundle.relative_to(root_path).as_posix()
+                if existing_bundle
+                else None
+            )
+            markdown_relative = (
+                existing_markdown.relative_to(root_path).as_posix()
+                if existing_markdown
+                else None
+            )
+            return bundle_relative, markdown_relative
+        except SlideConversionError as error:
+            LOGGER.exception("Slide conversion failed: %s", error)
+            raise HTTPException(status_code=500, detail=str(error)) from error
+        except Exception as error:  # noqa: BLE001 - converter may raise arbitrary errors
+            LOGGER.exception("Slide conversion failed unexpectedly: %s", error)
             raise HTTPException(status_code=500, detail=str(error)) from error
 
-        slide_image_relative = None
-        if generated:
-            archive_path = generated[0]
-            slide_image_relative = archive_path.relative_to(root_path).as_posix()
-            for leftover in existing_items:
-                if leftover.resolve() == archive_path.resolve():
-                    continue
-                try:
-                    if leftover.is_dir():
-                        shutil.rmtree(leftover)
-                    else:
-                        leftover.unlink()
-                except OSError:
-                    continue
-
-        return slide_image_relative
-
-    def _generate_slide_markdown(
-        pdf_path: Path,
-        lecture_paths: LecturePaths,
-        *,
-        page_range: Optional[Tuple[int, int]] = None,
-        progress_callback: Optional[Callable[[int, Optional[int]], None]] = None,
-    ) -> Optional[str]:
-        try:
-            import fitz  # type: ignore
-        except ImportError as exc:  # pragma: no cover - runtime dependency check
-            raise SlideMarkdownDependencyError("PyMuPDF (fitz) is not installed") from exc
-
-        try:
-            import numpy as np
-        except ImportError as exc:  # pragma: no cover - runtime dependency check
-            raise SlideMarkdownDependencyError("NumPy is required for slide text extraction") from exc
-
-        try:
-            from PIL import Image
-        except ImportError as exc:  # pragma: no cover - runtime dependency check
-            raise SlideMarkdownDependencyError("Pillow is required for slide text extraction") from exc
-
-        engine = _get_slide_markdown_engine()
-        engine_class = type(engine)
-        engine_module = getattr(engine_class, "__module__", "")
-        engine_name = getattr(engine_class, "__name__", engine_class.__qualname__)
-        if engine_module and engine_module not in {"__main__", "builtins"}:
-            engine_label = f"{engine_module}.{engine_name}"
-        else:
-            engine_label = engine_name
-
-        root_path = _require_storage_root()
-        ocr_dir = lecture_paths.notes_dir / "ocr"
-        ocr_dir.mkdir(parents=True, exist_ok=True)
-        existing_items: List[Path] = list(ocr_dir.iterdir())
-
-        matrix = fitz.Matrix(200 / 72, 200 / 72)
-        render_dpi = 200
-        generated_at = datetime.now(timezone.utc).isoformat()
-        page_sections: List[str] = []
-        processed_pages = 0
-        total_pages: Optional[int] = None
-        actual_start_page: Optional[int] = None
-        actual_end_page: Optional[int] = None
-        document_page_count: Optional[int] = None
-
-        def _format_page_markdown(
-            page_number: int,
-            recognition: Any,
-            fallback_lines: Optional[List[str]] = None,
-        ) -> str:
-            entries: List[str] = []
-
-            def _normalise_dict(candidate: Mapping[str, Any]) -> Mapping[str, Any]:
-                line = candidate.get("line")
-                if isinstance(line, Mapping):
-                    return line
-                return candidate
-
-            def _extract_entry(raw: Any) -> Optional[Tuple[List[Any], str, float]]:
-                box: List[Any] = []
-                text = ""
-                confidence = 1.0
-
-                candidate = raw
-                if isinstance(candidate, Mapping):
-                    candidate = _normalise_dict(candidate)
-                    box = list(candidate.get("points") or candidate.get("box") or candidate.get("bbox") or [])
-                    text_value = candidate.get("text") or candidate.get("transcription") or candidate.get("label")
-                    if isinstance(text_value, str):
-                        text = text_value.strip()
-                    confidence_value = None
-                    for key in ("score", "confidence", "probability", "prob", "certainty"):
-                        if key in candidate:
-                            confidence_value = candidate[key]
-                            break
-                    if confidence_value is not None:
-                        try:
-                            confidence = float(confidence_value)
-                        except (TypeError, ValueError):
-                            confidence = 1.0
-                elif isinstance(candidate, (list, tuple)):
-                    if candidate and isinstance(candidate[0], (list, tuple)):
-                        box = list(candidate[0])
-                    if len(candidate) > 1:
-                        text_info = candidate[1]
-                        if isinstance(text_info, Mapping):
-                            text = str(
-                                text_info.get("text")
-                                or text_info.get("transcription")
-                                or text_info.get("label")
-                                or ""
-                            ).strip()
-                            confidence_value = None
-                            for key in ("score", "confidence", "probability", "prob", "certainty"):
-                                if key in text_info:
-                                    confidence_value = text_info[key]
-                                    break
-                            if confidence_value is not None:
-                                try:
-                                    confidence = float(confidence_value)
-                                except (TypeError, ValueError):
-                                    confidence = 1.0
-                        elif isinstance(text_info, (list, tuple)) and text_info:
-                            text = str(text_info[0]).strip()
-                            if len(text_info) > 1:
-                                try:
-                                    confidence = float(text_info[1])
-                                except (TypeError, ValueError):
-                                    confidence = 1.0
-                        elif isinstance(text_info, str):
-                            text = text_info.strip()
-                else:
-                    return None
-
-                if not text:
-                    return None
-                return (box, text, confidence)
-
-            def _sort_key(box: Iterable[Any]) -> Tuple[float, float]:
-                points = list(box) if isinstance(box, Iterable) else []
-                if not points:
-                    return (float(page_number), float(page_number))
-                try:
-                    y_values = [float(point[1]) for point in points]
-                    x_values = [float(point[0]) for point in points]
-                except Exception:  # pragma: no cover - defensive fallback
-                    return (float(page_number), float(page_number))
-                avg_y = sum(y_values) / len(y_values)
-                avg_x = sum(x_values) / len(x_values)
-                return (avg_y, avg_x)
-
-            groups: List[Tuple[float, List[str]]] = []
-            threshold = 24.0
-            parsed_entries: List[Tuple[List[Any], str, float]] = []
-            for raw in recognition or []:
-                entry = _extract_entry(raw)
-                if entry is not None:
-                    parsed_entries.append(entry)
-
-            for box, text, confidence in sorted(parsed_entries, key=lambda item: _sort_key(item[0])):
-                if not text or confidence < 0.3:
-                    continue
-                try:
-                    center_y = sum(float(point[1]) for point in box) / len(box) if box else float(page_number)
-                except Exception:  # pragma: no cover - defensive fallback
-                    center_y = float(page_number)
-                sanitized = " ".join(part for part in text.splitlines()).strip()
-                if not sanitized:
-                    continue
-                if not groups:
-                    groups.append((center_y, [sanitized]))
-                else:
-                    last_y, last_parts = groups[-1]
-                    if abs(center_y - last_y) <= threshold:
-                        last_parts.append(sanitized)
-                    else:
-                        groups.append((center_y, [sanitized]))
-
-            if not groups:
-                if fallback_lines:
-                    for fallback in fallback_lines:
-                        sanitized_fallback = fallback.strip()
-                        if sanitized_fallback:
-                            entries.append(f"- {sanitized_fallback}")
-                else:
-                    entries.append("_No text detected._")
-            else:
-                for _center, parts in groups:
-                    line = " ".join(parts).strip()
-                    if line:
-                        entries.append(f"- {line}")
-
-            page_header = f"## Slide {page_number}"
-            return "\n".join([page_header, "", *entries])
-
-        try:
-            with fitz.open(pdf_path) as document:
-                page_count = document.page_count
-                document_page_count = page_count
-                if page_range is None:
-                    start_index = 0
-                    end_index = page_count - 1
-                else:
-                    start, end = page_range
-                    start_index = max(0, min(page_count - 1, start - 1))
-                    end_index = max(start_index, min(page_count - 1, end - 1))
-
-                if page_count == 0 or start_index > end_index:
-                    return None
-
-                total_pages = end_index - start_index + 1
-                actual_start_page = start_index + 1
-                actual_end_page = end_index + 1
-                if progress_callback is not None:
-                    try:
-                        progress_callback(0, total_pages)
-                    except Exception:  # pragma: no cover - defensive against callback errors
-                        LOGGER.exception("Slide Markdown progress callback failed at start")
-
-                for processed_index, page_number in enumerate(
-                    range(start_index, end_index + 1),
-                    start=1,
-                ):
-                    page = document.load_page(page_number)
-                    pix = page.get_pixmap(matrix=matrix, alpha=False)
-                    image = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-                    array = np.asarray(image)
-                    try:
-                        recognition = engine.ocr(array)
-                    except Exception as error:  # noqa: BLE001 - OCR may raise
-                        message = f"Slide text extraction failed: {error}"
-                        LOGGER.exception(message)
-                        raise SlideMarkdownError(message) from error
-                    page_text = page.get_text("text") or ""
-                    fallback_lines = [
-                        line.strip()
-                        for line in page_text.splitlines()
-                        if line.strip()
-                    ]
-                    page_sections.append(
-                        _format_page_markdown(
-                            page_number + 1, recognition, fallback_lines or None
-                        )
-                    )
-                    if progress_callback is not None:
-                        try:
-                            progress_callback(processed_index, total_pages)
-                        except Exception:  # pragma: no cover - defensive against callback errors
-                            LOGGER.exception("Slide Markdown progress callback failed mid-run")
-                processed_pages = len(page_sections)
-        except SlideMarkdownError:
-            raise
-        except Exception as error:  # noqa: BLE001 - propagate unexpected errors
-            message = f"Slide text extraction failed: {error}"
-            LOGGER.exception(message)
-            raise SlideMarkdownError(message) from error
-
-        stem = pdf_path.stem or "slides"
-        target = ocr_dir / f"{stem}-ocr.md"
-        if actual_start_page is not None and actual_end_page is not None:
-            if (
-                document_page_count is not None
-                and actual_start_page == 1
-                and actual_end_page == document_page_count
-            ):
-                page_range_label = "all"
-            else:
-                page_range_label = f"{actual_start_page}-{actual_end_page}"
-        else:
-            page_range_label = "unknown"
-
-        metadata_lines = [
-            "---",
-            "generator: Lecture Tools Slide OCR",
-            f"generated_at: {generated_at}",
-            f"ocr_engine: {engine_label}",
-            f"render_dpi: {render_dpi}",
-            f"source_pdf: {pdf_path.name}",
-            f"page_range: {page_range_label}",
-            f"pages_processed: {processed_pages}",
-        ]
-        if document_page_count is not None:
-            metadata_lines.append(f"document_pages: {document_page_count}")
-        metadata_lines.append("---")
-        metadata_section = "\n".join(metadata_lines)
-
-        sections: List[str] = [metadata_section, "# Slide Notes", *page_sections]
-        content = "\n\n".join(section for section in sections if section)
-        target.write_text(content, encoding="utf-8")
-
-        for leftover in existing_items:
-            if leftover.resolve() == target.resolve():
+        for leftover in lecture_paths.notes_dir.glob("*.md"):
+            if leftover.resolve() == result.markdown_path.resolve():
                 continue
             try:
-                if leftover.is_dir():
-                    shutil.rmtree(leftover)
-                else:
-                    leftover.unlink()
+                leftover.unlink()
             except OSError:
                 continue
 
-        return target.relative_to(root_path).as_posix()
+        bundle_relative = result.bundle_path.relative_to(root_path).as_posix()
+        markdown_relative = result.markdown_path.relative_to(root_path).as_posix()
+        return bundle_relative, markdown_relative
+
 
     @app.get("/", response_class=HTMLResponse)
     async def index(request: Request) -> HTMLResponse:
@@ -4202,7 +3892,6 @@ def create_app(
         page_start: Optional[int] = Form(None),
         page_end: Optional[int] = Form(None),
         preview_token: Optional[str] = Form(None),
-        mode: Optional[str] = Form(None),
         use_existing: Optional[str] = Form(None),
     ) -> Dict[str, Any]:
         _log_event(
@@ -4297,30 +3986,11 @@ def create_app(
             selected_range = (start, end)
 
         assert slide_destination is not None and slide_relative is not None
-        mode_value = (mode or "image").strip().lower() if mode else "image"
-        if mode_value not in {"image", "markdown"}:
-            raise HTTPException(status_code=400, detail="Unsupported slide processing mode")
-
-        is_markdown = mode_value == "markdown"
-        operation_label = "slide_markdown" if is_markdown else "slide_conversion"
-        start_message = (
-            "====> Preparing slide text extraction…"
-            if is_markdown
-            else "====> Preparing slide conversion…"
-        )
-        progress_label = (
-            "====> Extracting slide text…"
-            if is_markdown
-            else "====> Rendering slide images…"
-        )
-        completion_label = (
-            "====> Slide text extraction completed."
-            if is_markdown
-            else "====> Slide conversion completed."
-        )
-        context_label = (
-            "slide markdown extraction" if is_markdown else "slide conversion"
-        )
+        operation_label = "slide_bundle"
+        start_message = "====> Preparing slide bundle…"
+        progress_label = "====> Extracting slide images and text…"
+        completion_label = "====> Slide bundle completed."
+        context_label = "slide bundle"
 
         job_id = _new_correlation_id()
         job_token = _JOB_ID_VAR.set(job_id)
@@ -4330,7 +4000,6 @@ def create_app(
                 start_message,
                 context={
                     "operation": operation_label,
-                    "mode": mode_value,
                     "preview_token": preview_token,
                     "page_range": {
                         "start": selected_range[0],
@@ -4362,39 +4031,24 @@ def create_app(
                 else:
                     processing_tracker.note(lecture_id, progress_label)
     
-            slide_image_relative: Optional[str] = None
+            slide_bundle_relative: Optional[str] = None
             notes_relative: Optional[str] = None
-    
+
             try:
-                if is_markdown:
-                    notes_relative = await _run_serialized_background_task(
-                        lambda: _generate_slide_markdown(
-                            slide_destination,
-                            lecture_paths,
-                            page_range=selected_range,
-                            progress_callback=_handle_slide_progress,
-                        ),
-                        context_label=context_label,
-                        queued_callback=lambda: processing_tracker.note(
-                            lecture_id, "====> Waiting for other tasks to finish…"
-                        ),
-                        job_id=job_id,
-                    )
-                else:
-                    slide_image_relative = await _run_serialized_background_task(
-                        lambda: _generate_slide_archive(
-                            slide_destination,
-                            lecture_paths,
-                            _make_slide_converter(),
-                            page_range=selected_range,
-                            progress_callback=_handle_slide_progress,
-                        ),
-                        context_label=context_label,
-                        queued_callback=lambda: processing_tracker.note(
-                            lecture_id, "====> Waiting for other tasks to finish…"
-                        ),
-                        job_id=job_id,
-                    )
+                slide_bundle_relative, notes_relative = await _run_serialized_background_task(
+                    lambda: _generate_slide_bundle(
+                        slide_destination,
+                        lecture_paths,
+                        _make_slide_converter(),
+                        page_range=selected_range,
+                        progress_callback=_handle_slide_progress,
+                    ),
+                    context_label=context_label,
+                    queued_callback=lambda: processing_tracker.note(
+                        lecture_id, "====> Waiting for other tasks to finish…"
+                    ),
+                    job_id=job_id,
+                )
             except HTTPException as error:
                 detail = getattr(error, "detail", str(error))
                 processing_tracker.fail(
@@ -4403,20 +4057,6 @@ def create_app(
                     exception=error,
                 )
                 raise
-            except SlideMarkdownDependencyError as error:
-                processing_tracker.fail(
-                    lecture_id,
-                    f"====> {error}",
-                    exception=error,
-                )
-                raise HTTPException(status_code=503, detail=str(error)) from error
-            except SlideMarkdownError as error:
-                processing_tracker.fail(
-                    lecture_id,
-                    f"====> {error}",
-                    exception=error,
-                )
-                raise HTTPException(status_code=500, detail=str(error)) from error
             except SlideConversionDependencyError as error:
                 LOGGER.warning("Slide conversion unavailable: %s", error)
                 processing_tracker.fail(
@@ -4425,6 +4065,13 @@ def create_app(
                     exception=error,
                 )
                 raise HTTPException(status_code=503, detail=str(error)) from error
+            except SlideConversionError as error:
+                processing_tracker.fail(
+                    lecture_id,
+                    f"====> {error}",
+                    exception=error,
+                )
+                raise HTTPException(status_code=500, detail=str(error)) from error
             except Exception as error:  # noqa: BLE001 - conversion may raise arbitrary errors
                 processing_tracker.fail(
                     lecture_id,
@@ -4444,8 +4091,8 @@ def create_app(
                 processing_tracker.finish(lecture_id, completion_message)
     
             update_kwargs: Dict[str, Optional[str]] = {"slide_path": slide_relative}
-            if slide_image_relative is not None:
-                update_kwargs["slide_image_dir"] = slide_image_relative
+            if slide_bundle_relative is not None:
+                update_kwargs["slide_image_dir"] = slide_bundle_relative
             if notes_relative is not None:
                 update_kwargs["notes_path"] = notes_relative
     
@@ -4462,16 +4109,15 @@ def create_app(
                 "Slides processed",
                 lecture_id=lecture_id,
                 slide_path=slide_relative,
-                slide_image_dir=slide_image_relative,
+                slide_image_dir=slide_bundle_relative,
                 notes_path=notes_relative,
-                mode=mode_value,
             )
         finally:
             _JOB_ID_VAR.reset(job_token)
         return {
             "lecture": _serialize_lecture(updated),
             "slide_path": slide_relative,
-            "slide_image_dir": slide_image_relative,
+            "slide_image_dir": slide_bundle_relative,
             "notes_path": notes_relative,
         }
 

@@ -198,6 +198,8 @@ python run.py ingest \
 ```
 The CLI stores originals under `storage/<class>/<module>/<lecture>/raw` while transcripts and slides enter the `processed/` suites. Metadata is tracked in SQLite for instant retrieval by the UI.
 
+Slide processing now produces a Markdown document with inline image references plus the rendered slide images. The Markdown file lives in `processed/notes/` and the web UI exposes a single ZIP bundle containing the Markdown and its assets from `processed/slides/`.
+
 ### GPU-accelerated Whisper (optional indulgence)
 1. Create `assets/models/` if absent.
 2. Download `ggml-medium.en.bin` from [ggerganov/whisper.cpp](https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.en.bin).

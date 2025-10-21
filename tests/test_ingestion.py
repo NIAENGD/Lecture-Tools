@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from io import BytesIO
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Optional
 import zipfile
 
 import pytest
@@ -12,6 +12,7 @@ from app.config import AppConfig
 from app.services.ingestion import (
     IngestionError,
     LectureIngestor,
+    SlideConversionResult,
     SlideConverter,
     TranscriptResult,
     TranscriptionEngine,
@@ -33,19 +34,28 @@ class DummySlideConverter(SlideConverter):
     def convert(
         self,
         slide_path: Path,
-        output_dir: Path,
+        bundle_dir: Path,
+        notes_dir: Path,
         *,
         page_range: Optional[tuple[int, int]] = None,
-    ) -> Iterable[Path]:
-        output_dir.mkdir(parents=True, exist_ok=True)
-        archive_path = output_dir / "slides.zip"
+        progress_callback=None,
+    ) -> SlideConversionResult:
+        bundle_dir.mkdir(parents=True, exist_ok=True)
+        notes_dir.mkdir(parents=True, exist_ok=True)
+
+        markdown_path = notes_dir / "slides.md"
+        markdown_path.write_text("# Dummy slides\n", encoding="utf-8")
+
+        archive_path = bundle_dir / "slides.zip"
         image = Image.new("RGB", (100, 200), color=(255, 255, 255))
         buffer = BytesIO()
         image.save(buffer, format="PNG")
         buffer.seek(0)
         with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+            archive.writestr("slides.md", markdown_path.read_text(encoding="utf-8"))
             archive.writestr("page_001.png", buffer.read())
-        return [archive_path]
+
+        return SlideConversionResult(bundle_path=archive_path, markdown_path=markdown_path)
 
 
 def test_ingestion_pipeline(temp_config: AppConfig, tmp_path: Path) -> None:
@@ -73,16 +83,21 @@ def test_ingestion_pipeline(temp_config: AppConfig, tmp_path: Path) -> None:
     assert lecture.audio_path is not None
     assert lecture.transcript_path is not None
     assert lecture.slide_image_dir is not None
+    assert lecture.notes_path is not None
 
     audio_file = temp_config.storage_root / lecture.audio_path
     transcript_file = temp_config.storage_root / lecture.transcript_path
     slide_asset = temp_config.storage_root / lecture.slide_image_dir
+    notes_asset = temp_config.storage_root / lecture.notes_path
 
     assert audio_file.exists()
     assert transcript_file.exists()
     assert slide_asset.exists()
+    assert notes_asset.exists()
     with zipfile.ZipFile(slide_asset, "r") as archive:
-        assert "page_001.png" in archive.namelist()
+        names = archive.namelist()
+        assert any(name.endswith('.md') for name in names)
+        assert any(name.lower().endswith('.png') for name in names)
 
 
 def test_ingestion_requires_assets(temp_config: AppConfig) -> None:

@@ -7,7 +7,7 @@ import shutil
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Iterable, Optional, Protocol
+from typing import Callable, Optional, Protocol
 
 from .. import config as config_module
 from ..config import AppConfig
@@ -44,18 +44,27 @@ class TranscriptionEngine(Protocol):
         """Generate a transcript for *audio_path* into *output_dir*."""
 
 
+@dataclass
+class SlideConversionResult:
+    """Represents the output of a slide conversion run."""
+
+    bundle_path: Path
+    markdown_path: Path
+
+
 class SlideConverter(Protocol):
     """Protocol describing a slide conversion backend."""
 
     def convert(
         self,
         slide_path: Path,
-        output_dir: Path,
+        bundle_dir: Path,
+        notes_dir: Path,
         *,
         page_range: Optional[tuple[int, int]] = None,
         progress_callback: Optional[Callable[[int, Optional[int]], None]] = None,
-    ) -> Iterable[Path]:
-        """Convert *slide_path* into processed artefacts stored in *output_dir*."""
+    ) -> SlideConversionResult:
+        """Convert *slide_path* into a Markdown+image bundle."""
 
 
 @dataclass
@@ -220,7 +229,8 @@ class LectureIngestor:
         audio_relative = None
         slide_relative = None
         transcript_relative = None
-        slide_image_relative = None
+        slide_bundle_relative = None
+        notes_relative = None
 
         if audio_file is not None:
             audio_stem = build_asset_stem(class_name, module_name, lecture_name, "audio")
@@ -256,20 +266,23 @@ class LectureIngestor:
                 self._slide_converter.__class__.__name__,
                 lecture_paths.raw_dir / slide_relative,
             )
-            generated = list(
-                self._slide_converter.convert(
-                    lecture_paths.raw_dir / slide_relative,
-                    lecture_paths.slide_dir,
-                )
+            conversion = self._slide_converter.convert(
+                lecture_paths.raw_dir / slide_relative,
+                lecture_paths.slide_dir,
+                lecture_paths.notes_dir,
             )
-            if generated:
-                first_asset = generated[0]
-                slide_image_relative = first_asset.relative_to(self._config.storage_root).as_posix()
-                LOGGER.debug(
-                    "Slide conversion produced %d artefacts; preview stored at %s",
-                    len(generated),
-                    slide_image_relative,
-                )
+            slide_bundle_relative = (
+                conversion.bundle_path.relative_to(self._config.storage_root).as_posix()
+            )
+            transcript_candidate = conversion.markdown_path.relative_to(
+                self._config.storage_root
+            ).as_posix()
+            LOGGER.debug(
+                "Slide conversion produced bundle at %s with notes %s",
+                slide_bundle_relative,
+                transcript_candidate,
+            )
+            notes_relative = transcript_candidate
             slide_relative = (lecture_paths.raw_dir / slide_relative).relative_to(self._config.storage_root).as_posix()
             LOGGER.debug("Slide source stored at %s", slide_relative)
 
@@ -278,15 +291,17 @@ class LectureIngestor:
             audio_path=audio_relative,
             slide_path=slide_relative,
             transcript_path=transcript_relative,
-            slide_image_dir=slide_image_relative,
+            slide_image_dir=slide_bundle_relative,
+            notes_path=notes_relative,
         )
         LOGGER.debug(
-            "Lecture %s assets updated (audio=%s, slides=%s, transcript=%s, preview=%s)",
+            "Lecture %s assets updated (audio=%s, slides=%s, transcript=%s, bundle=%s, notes=%s)",
             lecture_record.id,
             audio_relative,
             slide_relative,
             transcript_relative,
-            slide_image_relative,
+            slide_bundle_relative,
+            notes_relative,
         )
 
         refreshed = self._repository.get_lecture(lecture_record.id) or lecture_record
@@ -385,6 +400,7 @@ __all__ = [
     "IngestionError",
     "LectureIngestor",
     "LecturePaths",
+    "SlideConversionResult",
     "SlideConverter",
     "TranscriptResult",
     "TranscriptionEngine",
