@@ -2409,6 +2409,13 @@ def create_app(
             raise SlideMarkdownDependencyError("Pillow is required for slide text extraction") from exc
 
         engine = _get_slide_markdown_engine()
+        engine_class = type(engine)
+        engine_module = getattr(engine_class, "__module__", "")
+        engine_name = getattr(engine_class, "__name__", engine_class.__qualname__)
+        if engine_module and engine_module not in {"__main__", "builtins"}:
+            engine_label = f"{engine_module}.{engine_name}"
+        else:
+            engine_label = engine_name
 
         root_path = _require_storage_root()
         ocr_dir = lecture_paths.notes_dir / "ocr"
@@ -2416,6 +2423,14 @@ def create_app(
         existing_items: List[Path] = list(ocr_dir.iterdir())
 
         matrix = fitz.Matrix(200 / 72, 200 / 72)
+        render_dpi = 200
+        generated_at = datetime.now(timezone.utc).isoformat()
+        page_sections: List[str] = []
+        processed_pages = 0
+        total_pages: Optional[int] = None
+        actual_start_page: Optional[int] = None
+        actual_end_page: Optional[int] = None
+        document_page_count: Optional[int] = None
 
         def _format_page_markdown(
             page_number: int,
@@ -2547,11 +2562,10 @@ def create_app(
             page_header = f"## Slide {page_number}"
             return "\n".join([page_header, "", *entries])
 
-        sections: List[str] = ["# Slide Notes"]
-
         try:
             with fitz.open(pdf_path) as document:
                 page_count = document.page_count
+                document_page_count = page_count
                 if page_range is None:
                     start_index = 0
                     end_index = page_count - 1
@@ -2564,6 +2578,8 @@ def create_app(
                     return None
 
                 total_pages = end_index - start_index + 1
+                actual_start_page = start_index + 1
+                actual_end_page = end_index + 1
                 if progress_callback is not None:
                     try:
                         progress_callback(0, total_pages)
@@ -2590,7 +2606,7 @@ def create_app(
                         for line in page_text.splitlines()
                         if line.strip()
                     ]
-                    sections.append(
+                    page_sections.append(
                         _format_page_markdown(
                             page_number + 1, recognition, fallback_lines or None
                         )
@@ -2600,6 +2616,7 @@ def create_app(
                             progress_callback(processed_index, total_pages)
                         except Exception:  # pragma: no cover - defensive against callback errors
                             LOGGER.exception("Slide Markdown progress callback failed mid-run")
+                processed_pages = len(page_sections)
         except SlideMarkdownError:
             raise
         except Exception as error:  # noqa: BLE001 - propagate unexpected errors
@@ -2609,6 +2626,34 @@ def create_app(
 
         stem = pdf_path.stem or "slides"
         target = ocr_dir / f"{stem}-ocr.md"
+        if actual_start_page is not None and actual_end_page is not None:
+            if (
+                document_page_count is not None
+                and actual_start_page == 1
+                and actual_end_page == document_page_count
+            ):
+                page_range_label = "all"
+            else:
+                page_range_label = f"{actual_start_page}-{actual_end_page}"
+        else:
+            page_range_label = "unknown"
+
+        metadata_lines = [
+            "---",
+            "generator: Lecture Tools Slide OCR",
+            f"generated_at: {generated_at}",
+            f"ocr_engine: {engine_label}",
+            f"render_dpi: {render_dpi}",
+            f"source_pdf: {pdf_path.name}",
+            f"page_range: {page_range_label}",
+            f"pages_processed: {processed_pages}",
+        ]
+        if document_page_count is not None:
+            metadata_lines.append(f"document_pages: {document_page_count}")
+        metadata_lines.append("---")
+        metadata_section = "\n".join(metadata_lines)
+
+        sections: List[str] = [metadata_section, "# Slide Notes", *page_sections]
         content = "\n\n".join(section for section in sections if section)
         target.write_text(content, encoding="utf-8")
 
