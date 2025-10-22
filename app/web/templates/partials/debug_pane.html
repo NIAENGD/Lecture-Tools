@@ -8,7 +8,18 @@
 >
   <div class="debug-pane-header">
     <h2 class="debug-pane-title" data-i18n="debug.title">Debug console</h2>
-    <span class="debug-indicator" data-i18n="debug.live">Live</span>
+    <div class="debug-pane-actions">
+      <span class="debug-indicator" data-i18n="debug.live">Live</span>
+      <span class="debug-retention" data-i18n="debug.retention">Last 5 minutes</span>
+      <button
+        id="debug-export"
+        class="debug-export"
+        type="button"
+        data-i18n="debug.export"
+      >
+        Export logs
+      </button>
+    </div>
   </div>
   <div id="debug-heartbeat" class="debug-heartbeat" data-state="idle">
     <div class="debug-heartbeat-track" aria-hidden="true"></div>

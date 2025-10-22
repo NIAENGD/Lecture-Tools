@@ -262,11 +262,19 @@
   "debug": {
     "title": "调试控制台",
     "live": "实时",
+    "retention": "最近 5 分钟",
+    "export": "导出日志",
+    "exportSuccess": "日志已下载。",
+    "exportError": "无法导出日志：{{message}}",
     "empty": "启用调试模式以实时查看程序活动。",
     "error": "无法加载调试输出。",
     "stream": {
       "title": "服务器活动",
-      "empty": "等待服务器活动…"
+      "empty": "等待服务器活动…",
+      "connecting": "正在连接调试流…",
+      "disconnected": "连接已断开，正在重试…",
+      "unsupported": "此浏览器不支持实时流，将改用轮询。",
+      "retention": "最近活动（最近 5 分钟）"
     }
   },
   "dialog": {

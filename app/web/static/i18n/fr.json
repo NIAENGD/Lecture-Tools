@@ -262,11 +262,19 @@
   "debug": {
     "title": "Console de débogage",
     "live": "En direct",
+    "retention": "5 dernières minutes",
+    "export": "Exporter les journaux",
+    "exportSuccess": "Journaux téléchargés.",
+    "exportError": "Impossible d'exporter les journaux : {{message}}",
     "empty": "Activez le mode débogage pour suivre l’activité du programme en temps réel.",
     "error": "Impossible de charger la sortie de débogage.",
     "stream": {
       "title": "Activité du serveur",
-      "empty": "En attente d’activité du serveur…"
+      "empty": "En attente d’activité du serveur…",
+      "connecting": "Connexion au flux de débogage…",
+      "disconnected": "Connexion perdue. Nouvelle tentative…",
+      "unsupported": "Flux en direct indisponible dans ce navigateur. Utilisation du sondage.",
+      "retention": "Activité récente (5 dernières minutes)"
     }
   },
   "dialog": {
