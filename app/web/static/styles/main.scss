@@ -146,6 +146,12 @@ body.debug-enabled .debug-pane {
   align-items: center;
 }
 
+.debug-pane-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .debug-pane-title {
   margin: 0;
   font-size: 1rem;
@@ -157,6 +163,30 @@ body.debug-enabled .debug-pane {
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: #22d3ee;
+}
+
+.debug-retention {
+  font-size: 0.75rem;
+  color: rgba(148, 163, 184, 0.75);
+}
+
+.debug-export {
+  padding: 6px 10px;
+  border: 1px solid rgba(94, 117, 148, 0.6);
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(226, 232, 240, 0.9);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.debug-export:hover,
+.debug-export:focus {
+  background: rgba(59, 130, 246, 0.18);
+  color: #f8fafc;
 }
 
 .debug-pane-controls {

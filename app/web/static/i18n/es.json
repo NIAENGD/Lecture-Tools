@@ -262,11 +262,19 @@
   "debug": {
     "title": "Consola de depuración",
     "live": "En vivo",
+    "retention": "Últimos 5 minutos",
+    "export": "Exportar registros",
+    "exportSuccess": "Registros descargados.",
+    "exportError": "No se pudo exportar los registros: {{message}}",
     "empty": "Activa el modo de depuración para ver la actividad del programa en tiempo real.",
     "error": "No se pudo cargar la salida de depuración.",
     "stream": {
       "title": "Actividad del servidor",
-      "empty": "Esperando actividad del servidor…"
+      "empty": "Esperando actividad del servidor…",
+      "connecting": "Conectando con el flujo de depuración…",
+      "disconnected": "Conexión perdida. Reintentando…",
+      "unsupported": "La transmisión en vivo no está disponible en este navegador. Se usarán sondeos.",
+      "retention": "Actividad reciente (últimos 5 minutos)"
     }
   },
   "dialog": {

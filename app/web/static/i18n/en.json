@@ -262,11 +262,19 @@
   "debug": {
     "title": "Debug console",
     "live": "Live",
+    "retention": "Last 5 minutes",
+    "export": "Export logs",
+    "exportSuccess": "Downloaded debug logs.",
+    "exportError": "Unable to export logs: {{message}}",
     "empty": "Enable debug mode to inspect program activity in real time.",
     "error": "Unable to load debug output.",
     "stream": {
       "title": "Server activity",
-      "empty": "Waiting for server activity…"
+      "empty": "Waiting for server activity…",
+      "connecting": "Connecting to debug stream…",
+      "disconnected": "Connection lost. Reconnecting…",
+      "unsupported": "Live stream unavailable in this browser. Falling back to polling.",
+      "retention": "Recent activity (last 5 minutes)"
     }
   },
   "dialog": {

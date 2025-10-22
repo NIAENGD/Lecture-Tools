@@ -421,12 +421,18 @@ bootstrapEnvironmentFromDataset();
           const store = {
             enabled: false,
             timer: null,
+            streamSource: null,
+            streamRetryTimer: null,
+            ackTimer: null,
             lastId: 0,
             pending: false,
             autoScroll: true,
             serverEntries: [],
             tasks: [],
             entries: [],
+            pendingAck: 0,
+            retentionMs: DEBUG_RETENTION_MS,
+            connecting: false,
             filters: {
               severity: 'all',
               category: 'all',
@@ -453,12 +459,17 @@ bootstrapEnvironmentFromDataset();
               stopDebugPolling();
               this.enabled = false;
               this.timer = null;
+              this.streamSource = null;
+              this.streamRetryTimer = null;
+              this.ackTimer = null;
               this.lastId = 0;
               this.pending = false;
               this.autoScroll = true;
               this.serverEntries = [];
               this.tasks = [];
               this.entries = [];
+              this.pendingAck = 0;
+              this.connecting = false;
             },
             dispose() {
               this.deactivate();
@@ -487,6 +498,9 @@ bootstrapEnvironmentFromDataset();
             }
             if (dom.debugFilterClear) {
               bind(dom.debugFilterClear, 'click', handleFilterClear);
+            }
+            if (dom.debugExport) {
+              bind(dom.debugExport, 'click', handleExportClick);
             }
           }
 
@@ -576,9 +590,10 @@ bootstrapEnvironmentFromDataset();
         const SLIDE_DPI_CHOICES = new Set(['150', '200', '300', '400', '600']);
         const DEFAULT_SLIDE_DPI = '200';
         const LANGUAGE_CHOICES = new Set(['en', 'zh', 'es', 'fr']);
-        const DEBUG_POLL_INTERVAL_MS = 2000;
-        const MAX_DEBUG_LOG_ENTRIES = 500;
-        const MAX_SERVER_STREAM_ENTRIES = 20;
+        const LEGACY_DEBUG_POLL_INTERVAL_MS = 2000;
+        const DEBUG_STREAM_RETRY_DELAY_MS = 3000;
+        const DEBUG_RETENTION_MS = 5 * 60 * 1000;
+        const DEBUG_ACK_DEBOUNCE_MS = 500;
         const SERVER_LOG_CATEGORY = 'server';
         const UPDATE_POLL_INTERVAL_MS = 3000;
 
@@ -805,6 +820,7 @@ bootstrapEnvironmentFromDataset();
           settingsUpdateLogEmpty: document.getElementById('settings-update-log-empty'),
           gpuModelOptions: new Set(Array.from(document.querySelectorAll('option.gpu-only'))),
           debugPane: document.getElementById('debug-pane'),
+          debugExport: document.getElementById('debug-export'),
           debugLog: document.getElementById('debug-log-window'),
           debugEmpty: document.getElementById('debug-log-empty'),
           debugStatus: document.getElementById('debug-log-status'),
@@ -3357,8 +3373,9 @@ bootstrapEnvironmentFromDataset();
         }
         ensureDebugPlaceholder();
         const entries = Array.isArray(state.debug.entries)
-          ? state.debug.entries.slice(-MAX_DEBUG_LOG_ENTRIES)
+          ? filterRecentDebugEntries(state.debug.entries)
           : [];
+        state.debug.entries = entries;
         const filtered = applyDebugFilters(entries);
         const firstFailureIndex = filtered.findIndex((entry) => isEntryFailure(entry));
         renderDebugHeartbeat(filtered, firstFailureIndex);
@@ -3548,93 +3565,153 @@ bootstrapEnvironmentFromDataset();
         return normalized;
       }
 
+      function getDebugEntryTimestamp(entry) {
+        if (!entry || typeof entry !== 'object') {
+          return null;
+        }
+        const sources = [
+          entry.updatedAt,
+          entry.timestamp,
+          entry.last_seen,
+          entry.first_seen,
+          entry.time,
+          entry.created_at,
+        ];
+        for (let index = 0; index < sources.length; index += 1) {
+          const value = sources[index];
+          if (typeof value === 'number' && Number.isFinite(value)) {
+            return value;
+          }
+          if (typeof value === 'string' && value) {
+            const parsed = Date.parse(value);
+            if (!Number.isNaN(parsed)) {
+              return parsed;
+            }
+          }
+        }
+        return null;
+      }
+
+      function filterRecentDebugEntries(entries) {
+        const retention = Math.max(0, state.debug.retentionMs || DEBUG_RETENTION_MS);
+        if (!Array.isArray(entries)) {
+          return [];
+        }
+        if (retention <= 0) {
+          return entries.slice();
+        }
+        const cutoff = Date.now() - retention;
+        return entries.filter((entry) => {
+          const timestamp = getDebugEntryTimestamp(entry);
+          return timestamp === null || timestamp >= cutoff;
+        });
+      }
+
+      function mergeDebugEntries(existing, incoming) {
+        const merged = new Map();
+        const append = (collection) => {
+          if (!Array.isArray(collection)) {
+            return;
+          }
+          collection.forEach((entry) => {
+            if (!entry || typeof entry !== 'object') {
+              return;
+            }
+            const key = entry.id != null ? String(entry.id) : `anon-${merged.size}`;
+            merged.set(key, entry);
+          });
+        };
+        append(existing);
+        append(incoming);
+        return Array.from(merged.values());
+      }
+
+      function sortDebugEntries(entries) {
+        if (!Array.isArray(entries)) {
+          return [];
+        }
+        return entries
+          .slice()
+          .sort((a, b) => {
+            const timeA = getDebugEntryTimestamp(a);
+            const timeB = getDebugEntryTimestamp(b);
+            if (timeA !== null && timeB !== null && timeA !== timeB) {
+              return timeA - timeB;
+            }
+            const idA = a && a.id != null ? String(a.id) : '';
+            const idB = b && b.id != null ? String(b.id) : '';
+            return idA.localeCompare(idB);
+          });
+      }
+
       function updateDebugStatus(message) {
         if (!dom.debugStatus) {
           return;
         }
         if (message) {
-            dom.debugStatus.hidden = false;
-            dom.debugStatus.textContent = message;
-          } else {
-            dom.debugStatus.hidden = true;
-            dom.debugStatus.textContent = '';
-          }
+          dom.debugStatus.hidden = false;
+          dom.debugStatus.textContent = message;
+        } else {
+          dom.debugStatus.hidden = true;
+          dom.debugStatus.textContent = '';
+        }
+      }
+
+      function updateServerStream(serverEntries, taskEntries, { reset = false } = {}) {
+        const normalizedServerEntries = Array.isArray(serverEntries)
+          ? serverEntries.map((entry) => normalizeServerEntry(entry)).filter(Boolean)
+          : [];
+        const normalizedTaskEntries = Array.isArray(taskEntries)
+          ? taskEntries.map((entry) => normalizeTaskEntry(entry)).filter(Boolean)
+          : [];
+
+        const existingServerEntries = !reset && Array.isArray(state.debug.serverEntries)
+          ? state.debug.serverEntries
+          : [];
+        const existingTasks = !reset && Array.isArray(state.debug.tasks)
+          ? state.debug.tasks
+          : [];
+
+        const mergedServerEntries = mergeDebugEntries(
+          existingServerEntries,
+          normalizedServerEntries,
+        );
+        const mergedTaskEntries = mergeDebugEntries(existingTasks, normalizedTaskEntries);
+
+        state.debug.serverEntries = sortDebugEntries(
+          filterRecentDebugEntries(mergedServerEntries),
+        );
+        state.debug.tasks = sortDebugEntries(filterRecentDebugEntries(mergedTaskEntries));
+
+        if (!dom.debugStreamEntries) {
+          return;
         }
 
-        function updateServerStream(serverEntries, taskEntries, { reset = false } = {}) {
-          if (reset || !Array.isArray(state.debug.serverEntries)) {
-            state.debug.serverEntries = [];
-          }
-          if (reset || !Array.isArray(state.debug.tasks)) {
-            state.debug.tasks = [];
-          }
+        const hasTasks = state.debug.tasks.length > 0;
+        const hasServerMessages = state.debug.serverEntries.length > 0;
 
-          const normalizedServerEntries = Array.isArray(serverEntries)
-            ? serverEntries.map((entry) => normalizeServerEntry(entry)).filter(Boolean)
-            : [];
-          const existingServerEntries = Array.isArray(state.debug.serverEntries)
-            ? state.debug.serverEntries.map((entry) => normalizeServerEntry(entry)).filter(Boolean)
-            : [];
-          state.debug.serverEntries = existingServerEntries
-            .concat(normalizedServerEntries)
-            .slice(-MAX_SERVER_STREAM_ENTRIES);
-
-          const normalizedTaskEntries = Array.isArray(taskEntries)
-            ? taskEntries.map((entry) => normalizeTaskEntry(entry)).filter(Boolean)
-            : [];
-          const existingTasks = Array.isArray(state.debug.tasks)
-            ? state.debug.tasks.map((task) => normalizeTaskEntry(task)).filter(Boolean)
-            : [];
-          if (normalizedTaskEntries.length) {
-            const existing = new Map();
-            existingTasks.forEach((task) => {
-              if (task && task.taskId) {
-                existing.set(task.taskId, task);
-              }
-            });
-            normalizedTaskEntries.forEach((task) => {
-              existing.set(task.taskId, task);
-            });
-            state.debug.tasks = Array.from(existing.values())
-              .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
-              .slice(0, MAX_SERVER_STREAM_ENTRIES);
-          } else {
-            state.debug.tasks = existingTasks.slice(0, MAX_SERVER_STREAM_ENTRIES);
-          }
-
-          if (!dom.debugStreamEntries) {
-            return;
-          }
-
-          dom.debugStreamEntries.innerHTML = '';
-          const hasTasks = Array.isArray(state.debug.tasks) && state.debug.tasks.length > 0;
-          const hasServerMessages =
-            Array.isArray(state.debug.serverEntries) && state.debug.serverEntries.length > 0;
-          if (!hasTasks && !hasServerMessages) {
-            if (dom.debugStreamEmpty) {
-              dom.debugStreamEmpty.hidden = false;
-              dom.debugStreamEntries.appendChild(dom.debugStreamEmpty);
-            }
-            return;
-          }
-
+        dom.debugStreamEntries.innerHTML = '';
+        if (!hasTasks && !hasServerMessages) {
           if (dom.debugStreamEmpty) {
-            dom.debugStreamEmpty.hidden = true;
+            dom.debugStreamEmpty.hidden = false;
+            dom.debugStreamEntries.appendChild(dom.debugStreamEmpty);
           }
-
-          const fragment = document.createDocumentFragment();
-          if (hasTasks) {
-            state.debug.tasks.forEach((task) => {
-              fragment.appendChild(buildDebugStreamEntry(task));
-            });
-          }
-          if (hasServerMessages) {
-            state.debug.serverEntries.forEach((entry) => {
-              fragment.appendChild(buildDebugStreamEntry(entry));
-            });
-          }
-          dom.debugStreamEntries.appendChild(fragment);
+          return;
         }
+
+        if (dom.debugStreamEmpty) {
+          dom.debugStreamEmpty.hidden = true;
+        }
+
+        const fragment = document.createDocumentFragment();
+        state.debug.tasks.forEach((task) => {
+          fragment.appendChild(buildDebugStreamEntry(task));
+        });
+        state.debug.serverEntries.forEach((entry) => {
+          fragment.appendChild(buildDebugStreamEntry(entry));
+        });
+        dom.debugStreamEntries.appendChild(fragment);
+      }
 
         function appendDebugLogs(entries, { reset = false } = {}) {
           if (!dom.debugLog) {
@@ -3643,33 +3720,205 @@ bootstrapEnvironmentFromDataset();
           const list = Array.isArray(entries) ? entries : [];
           const serverLogs = [];
           const taskLogs = [];
-          const regularLogs = [];
-          list.forEach((entry) => {
-            if (!entry || typeof entry !== 'object') {
-              return;
-            }
-            if (entry.category === SERVER_LOG_CATEGORY) {
-              serverLogs.push(entry);
-              return;
-            }
-            if (entry.category === 'task') {
-              taskLogs.push(entry);
-              return;
-            }
-            regularLogs.push(entry);
-          });
+        const regularLogs = [];
+        list.forEach((entry) => {
+          if (!entry || typeof entry !== 'object') {
+            return;
+          }
+          if (entry.category === SERVER_LOG_CATEGORY) {
+            serverLogs.push(entry);
+            return;
+          }
+          if (entry.category === 'task') {
+            taskLogs.push(entry);
+            return;
+          }
+          regularLogs.push(entry);
+        });
 
-          updateServerStream(serverLogs, taskLogs, { reset });
-          if (reset || !Array.isArray(state.debug.entries)) {
-            state.debug.entries = [];
-          }
-          if (regularLogs.length) {
-            state.debug.entries = state.debug.entries
-              .concat(regularLogs)
-              .slice(-MAX_DEBUG_LOG_ENTRIES);
-          }
-          renderDebugLogs();
+        updateServerStream(serverLogs, taskLogs, { reset });
+        const baseEntries =
+          !reset && Array.isArray(state.debug.entries) ? state.debug.entries : [];
+        const mergedEntries = mergeDebugEntries(baseEntries, regularLogs);
+        state.debug.entries = sortDebugEntries(filterRecentDebugEntries(mergedEntries));
+
+        renderDebugLogs();
+      }
+
+      function scheduleDebugAck(latestId) {
+        const target = Number(latestId);
+        if (!state.debug.enabled || !Number.isFinite(target) || target <= 0) {
+          return;
         }
+        state.debug.pendingAck = Math.max(state.debug.pendingAck || 0, target);
+        if (state.debug.ackTimer !== null) {
+          return;
+        }
+        state.debug.ackTimer = window.setTimeout(() => {
+          void flushDebugAck();
+        }, DEBUG_ACK_DEBOUNCE_MS);
+      }
+
+      async function flushDebugAck() {
+        if (state.debug.ackTimer !== null) {
+          window.clearTimeout(state.debug.ackTimer);
+          state.debug.ackTimer = null;
+        }
+        const lastId = Number(state.debug.pendingAck);
+        if (!state.debug.enabled || !Number.isFinite(lastId) || lastId <= 0) {
+          return;
+        }
+        try {
+          await request('/api/debug/logs/ack', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ last_id: lastId }),
+          });
+          state.debug.pendingAck = 0;
+        } catch (error) {
+          console.warn('Failed to acknowledge debug logs', error);
+          scheduleDebugAck(lastId);
+        }
+      }
+
+      function disconnectDebugStream() {
+        const source = state.debug.streamSource;
+        if (!source) {
+          return;
+        }
+        try {
+          source.removeEventListener('open', handleDebugStreamOpen);
+          source.removeEventListener('error', handleDebugStreamError);
+          source.removeEventListener('message', handleDebugStreamMessage);
+          source.close();
+        } catch (error) {
+          // Ignore close errors.
+        }
+        state.debug.streamSource = null;
+      }
+
+      function handleDebugStreamOpen() {
+        state.debug.connecting = false;
+        if (state.debug.streamRetryTimer !== null) {
+          window.clearTimeout(state.debug.streamRetryTimer);
+          state.debug.streamRetryTimer = null;
+        }
+        updateDebugStatus('');
+      }
+
+      function handleDebugStreamMessage(event) {
+        if (!event || typeof event.data !== 'string') {
+          return;
+        }
+        let payload;
+        try {
+          payload = JSON.parse(event.data);
+        } catch (error) {
+          console.warn('Failed to parse debug stream payload', error);
+          return;
+        }
+
+        const reset = Boolean(payload?.reset);
+        const logs = Array.isArray(payload?.logs) ? payload.logs : [];
+        appendDebugLogs(logs, { reset });
+
+        if (typeof payload?.enabled === 'boolean') {
+          state.debug.enabled = payload.enabled;
+        }
+
+        const nextId = Number(payload?.next || 0);
+        if (Number.isFinite(nextId) && nextId > 0) {
+          state.debug.lastId = nextId;
+          scheduleDebugAck(nextId);
+        }
+
+        state.debug.connecting = false;
+        updateDebugStatus('');
+      }
+
+      function handleDebugStreamError() {
+        if (!state.debug.enabled) {
+          return;
+        }
+        disconnectDebugStream();
+        updateDebugStatus(t('debug.stream.disconnected'));
+        if (state.debug.streamRetryTimer !== null) {
+          return;
+        }
+        state.debug.streamRetryTimer = window.setTimeout(() => {
+          state.debug.streamRetryTimer = null;
+          connectDebugStream({ after: state.debug.lastId || 0 });
+        }, DEBUG_STREAM_RETRY_DELAY_MS);
+      }
+
+      function connectDebugStream({ after = 0 } = {}) {
+        if (!state.debug.enabled) {
+          return;
+        }
+        disconnectDebugStream();
+        state.debug.connecting = true;
+        updateDebugStatus(t('debug.stream.connecting'));
+        try {
+          const baseUrl = resolveAppUrl('/api/debug/logs/stream');
+          const url = new URL(baseUrl, window.location.origin);
+          if (after > 0) {
+            url.searchParams.set('after', String(after));
+          }
+          const source = new EventSource(url.toString());
+          state.debug.streamSource = source;
+          source.addEventListener('open', handleDebugStreamOpen);
+          source.addEventListener('error', handleDebugStreamError);
+          source.addEventListener('message', handleDebugStreamMessage);
+        } catch (error) {
+          console.warn('Failed to start debug stream', error);
+          updateDebugStatus(t('debug.error'));
+        }
+      }
+
+      function startLegacyDebugPolling() {
+        fetchDebugLogs(state.debug.lastId === 0);
+        state.debug.timer = window.setInterval(() => {
+          fetchDebugLogs(false);
+        }, LEGACY_DEBUG_POLL_INTERVAL_MS);
+      }
+
+      async function handleExportClick(event) {
+        event?.preventDefault?.();
+        if (!dom.debugExport) {
+          return;
+        }
+        const button = dom.debugExport;
+        if (button.disabled) {
+          return;
+        }
+        button.disabled = true;
+        try {
+          const response = await fetch(resolveAppUrl('/api/debug/logs/export'));
+          if (!response.ok) {
+            const detail = await response.text();
+            throw new Error(detail || t('debug.error'));
+          }
+          const blob = await response.blob();
+          const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+          const filename = `lecture-tools-debug-${timestamp}.json`;
+          const url = URL.createObjectURL(blob);
+          const anchor = document.createElement('a');
+          anchor.href = url;
+          anchor.download = filename;
+          document.body.appendChild(anchor);
+          anchor.click();
+          anchor.remove();
+          window.setTimeout(() => {
+            URL.revokeObjectURL(url);
+          }, 2000);
+          updateDebugStatus(t('debug.exportSuccess'));
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error || '');
+          updateDebugStatus(t('debug.exportError', { message }));
+        } finally {
+          button.disabled = false;
+        }
+      }
 
         async function fetchDebugLogs(reset = false) {
           if (!state.debug.enabled || state.debug.pending) {
@@ -3692,7 +3941,10 @@ bootstrapEnvironmentFromDataset();
                 state.debug.lastId = lastEntry.id;
               }
             }
-            updateDebugStatus('');
+            scheduleDebugAck(state.debug.lastId);
+            if (typeof window.EventSource !== 'undefined') {
+              updateDebugStatus('');
+            }
           } catch (error) {
             const base = t('debug.error');
             const detail = error instanceof Error ? error.message : String(error || '');
@@ -3707,10 +3959,12 @@ bootstrapEnvironmentFromDataset();
           if (!state.debug.enabled) {
             return;
           }
-          fetchDebugLogs(state.debug.lastId === 0);
-          state.debug.timer = window.setInterval(() => {
-            fetchDebugLogs(false);
-          }, DEBUG_POLL_INTERVAL_MS);
+          if (typeof window.EventSource === 'undefined') {
+            updateDebugStatus(t('debug.stream.unsupported'));
+            startLegacyDebugPolling();
+            return;
+          }
+          connectDebugStream({ after: state.debug.lastId || 0 });
         }
 
         function stopDebugPolling() {
@@ -3718,6 +3972,18 @@ bootstrapEnvironmentFromDataset();
             window.clearInterval(state.debug.timer);
             state.debug.timer = null;
           }
+          if (state.debug.streamRetryTimer !== null) {
+            window.clearTimeout(state.debug.streamRetryTimer);
+            state.debug.streamRetryTimer = null;
+          }
+          if (state.debug.ackTimer !== null) {
+            window.clearTimeout(state.debug.ackTimer);
+            state.debug.ackTimer = null;
+          }
+          state.debug.pendingAck = 0;
+          state.debug.pending = false;
+          state.debug.connecting = false;
+          disconnectDebugStream();
         }
 
         function setDebugMode(enabled) {
@@ -3727,7 +3993,11 @@ bootstrapEnvironmentFromDataset();
             if (dom.debugPane) {
               dom.debugPane.hidden = !active;
             }
-            if (active && state.debug.timer === null) {
+            if (
+              active &&
+              state.debug.timer === null &&
+              state.debug.streamSource === null
+            ) {
               debugStore.activate();
               startDebugPolling();
             } else if (!active) {
@@ -3747,10 +4017,16 @@ bootstrapEnvironmentFromDataset();
             state.debug.lastId = 0;
             state.debug.autoScroll = true;
             state.debug.pending = false;
+            state.debug.pendingAck = 0;
+            state.debug.streamRetryTimer = null;
+            state.debug.ackTimer = null;
+            state.debug.timer = null;
+            disconnectDebugStream();
             appendDebugLogs([], { reset: true });
-            updateDebugStatus('');
+            updateDebugStatus(t('debug.stream.connecting'));
             startDebugPolling();
           } else {
+            stopDebugPolling();
             debugStore.deactivate();
             updateDebugStatus('');
             updateServerStream([], [], { reset: true });
@@ -6195,6 +6471,59 @@ bootstrapEnvironmentFromDataset();
           }, 900);
         }
 
+        async function ensureLectureProgressPolling(lectureId) {
+          const normalizedId = Number(lectureId);
+          if (!Number.isFinite(normalizedId) || normalizedId <= 0) {
+            return;
+          }
+
+          const [transcriptionResult, processingResult] = await Promise.allSettled([
+            fetchTranscriptionProgress(normalizedId),
+            fetchProcessingProgress(normalizedId),
+          ]);
+
+          const transcription =
+            transcriptionResult.status === 'fulfilled' ? transcriptionResult.value : null;
+          const processing =
+            processingResult.status === 'fulfilled' ? processingResult.value : null;
+
+          if (transcription) {
+            const active = Boolean(transcription.active) && !transcription.finished;
+            if (active) {
+              if (
+                state.transcriptionProgressLectureId !== normalizedId ||
+                state.transcriptionProgressTimer === null
+              ) {
+                startTranscriptionProgress(normalizedId);
+              }
+            } else if (state.transcriptionProgressLectureId === normalizedId) {
+              stopTranscriptionProgress({ preserveMessage: true });
+            }
+            await handleProgressUpdate(transcription, {
+              source: 'transcription',
+              lectureId: normalizedId,
+            });
+          }
+
+          if (processing) {
+            const active = Boolean(processing.active) && !processing.finished;
+            if (active) {
+              if (
+                state.processingProgressLectureId !== normalizedId ||
+                state.processingProgressTimer === null
+              ) {
+                startProcessingProgress(normalizedId);
+              }
+            } else if (state.processingProgressLectureId === normalizedId) {
+              stopProcessingProgress({ preserveMessage: true });
+            }
+            await handleProgressUpdate(processing, {
+              source: 'processing',
+              lectureId: normalizedId,
+            });
+          }
+        }
+
         function clearDetailPanel() {
           dom.summary.textContent = t('details.summaryPlaceholder');
           dom.summary.classList.add('placeholder');
@@ -6205,6 +6534,8 @@ bootstrapEnvironmentFromDataset();
           dom.assetList.innerHTML = '';
           setTranscribeControls(null, null, null);
           setTranscribeButtonDisabled(true);
+          stopTranscriptionProgress({ preserveMessage: true });
+          stopProcessingProgress({ preserveMessage: true });
           state.selectedLectureDetail = null;
           updateEditControlsAvailability();
         }
@@ -6282,6 +6613,9 @@ bootstrapEnvironmentFromDataset();
           } else {
             storageStore.deactivate();
             progressStore.deactivate();
+            if (view === 'details' && state.selectedLectureId) {
+              void ensureLectureProgressPolling(state.selectedLectureId);
+            }
           }
         }
 
@@ -8216,6 +8550,7 @@ bootstrapEnvironmentFromDataset();
               return;
             }
             state.selectedLectureDetail = detail;
+            await ensureLectureProgressPolling(lectureId);
             renderSummary(detail);
             dom.assetSection.hidden = false;
 
@@ -8934,6 +9269,8 @@ bootstrapEnvironmentFromDataset();
         }
         window.addEventListener('beforeunload', () => {
           debugStore.deactivate();
+          stopTranscriptionProgress();
+          stopProcessingProgress();
         });
         setActiveView(state.activeView);
         updateEditModeUI();

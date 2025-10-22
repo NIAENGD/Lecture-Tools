@@ -29,7 +29,21 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any, Callable, Deque, Dict, Iterable, List, Literal, Optional, Set, Tuple, TypeVar
+from typing import (
+    Any,
+    AsyncIterator,
+    Callable,
+    Deque,
+    Dict,
+    Iterable,
+    List,
+    Literal,
+    Optional,
+    Set,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
 from concurrent.futures import Future, ThreadPoolExecutor
 
@@ -47,7 +61,7 @@ from fastapi import (
 )
 from fastapi import status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.formparsers import MultiPartParser
@@ -131,6 +145,10 @@ except ValueError:
     _MAX_UPLOAD_BYTES = _DEFAULT_MAX_UPLOAD_BYTES
 
 _DEFAULT_UPLOAD_CHUNK_SIZE = 1024 * 1024
+_DEBUG_RETENTION_SECONDS = 300.0
+_DEBUG_STREAM_KEEPALIVE = 20.0
+_DEBUG_STREAM_RETRY_MS = 3000
+_DEBUG_STREAM_QUEUE_SIZE = 256
 
 def get_max_upload_bytes() -> int:
     """Return the configured maximum upload size in bytes."""
@@ -378,6 +396,25 @@ def _log_event(message: str, **context: Any) -> None:
     _emit_debug_event("APP_EVENT", message, context=context)
 
 
+def _format_sse(
+    payload: Dict[str, Any],
+    *,
+    event_id: Optional[Union[str, int]] = None,
+    retry: Optional[int] = None,
+) -> str:
+    """Return a formatted Server-Sent Event payload."""
+
+    data = json.dumps(payload, ensure_ascii=False)
+    lines: List[str] = []
+    if event_id is not None:
+        lines.append(f"id: {event_id}")
+    if retry is not None:
+        lines.append(f"retry: {retry}")
+    for chunk in data.splitlines():
+        lines.append(f"data: {chunk}")
+    return "\n".join(lines) + "\n\n"
+
+
 # Ensure PDF.js module assets are served with the correct MIME type for dynamic import.
 mimetypes.add_type("text/javascript", ".mjs")
 mimetypes.add_type("application/javascript", ".mjs")
@@ -411,11 +448,13 @@ class DebugLogHandler(logging.Handler):
     }
     _SEVERITY_PRIORITY: Dict[str, int] = {"error": 3, "warning": 2, "info": 1}
 
-    def __init__(self, capacity: int = 500) -> None:
+    def __init__(self, capacity: int = 500, *, retention_seconds: float = 300.0) -> None:
         super().__init__(level=logging.DEBUG)
         self._capacity = max(1, capacity)
+        self._retention_seconds = max(0.0, float(retention_seconds))
         self._entries: Deque[Dict[str, Any]] = deque()
         self._entry_index: Dict[Tuple[Any, ...], Dict[str, Any]] = {}
+        self._subscribers: List[Tuple[asyncio.AbstractEventLoop, asyncio.Queue]] = []
         self._lock = threading.Lock()
         self._last_id = 0
         self.setFormatter(logging.Formatter(DEFAULT_LOG_FORMAT))
@@ -565,10 +604,100 @@ class DebugLogHandler(logging.Handler):
         return (event_type, message, context_items, payload_items, correlation_items)
 
     def _serialize_entry(self, entry: Dict[str, Any]) -> Dict[str, Any]:
-        exported = {key: value for key, value in entry.items() if key != "_key"}
+        exported = {
+            key: value
+            for key, value in entry.items()
+            if key not in {"_key", "_timestamp"}
+        }
         if "last_seen" in exported and "timestamp" not in exported:
             exported["timestamp"] = exported["last_seen"]
         return exported
+
+    def _collect_locked(self, after: Optional[int] = None) -> List[Dict[str, Any]]:
+        if after is None or after <= 0:
+            data = list(self._entries)
+        else:
+            data = [entry for entry in self._entries if entry.get("id", 0) > after]
+        return [self._serialize_entry(entry) for entry in data]
+
+    def _prune_locked(self) -> None:
+        if self._retention_seconds <= 0:
+            return
+        cutoff = time.time() - self._retention_seconds
+        while self._entries:
+            oldest = self._entries[0]
+            timestamp = oldest.get("_timestamp")
+            if timestamp is None or timestamp >= cutoff:
+                break
+            removed = self._entries.popleft()
+            key = removed.pop("_key", None)
+            removed.pop("_timestamp", None)
+            if key is not None:
+                self._entry_index.pop(key, None)
+
+    def register_listener(
+        self,
+        loop: asyncio.AbstractEventLoop,
+        after: Optional[int] = None,
+    ) -> Tuple[asyncio.Queue, List[Dict[str, Any]], int, bool]:
+        queue: asyncio.Queue = asyncio.Queue(maxsize=_DEBUG_STREAM_QUEUE_SIZE)
+        with self._lock:
+            self._prune_locked()
+            backlog = self._collect_locked(after)
+            next_marker = self._last_id
+            self._subscribers.append((loop, queue))
+        reset = after is None or after <= 0
+        return queue, backlog, next_marker, reset
+
+    def unregister_listener(self, queue: asyncio.Queue) -> None:
+        with self._lock:
+            self._subscribers = [
+                (loop, registered)
+                for loop, registered in self._subscribers
+                if registered is not queue
+            ]
+
+    def _deliver_to_subscribers(
+        self,
+        payload: Dict[str, Any],
+        subscribers: List[Tuple[asyncio.AbstractEventLoop, asyncio.Queue]],
+    ) -> None:
+        if not payload or not subscribers:
+            return
+
+        for loop, queue in subscribers:
+            def _enqueue(target: asyncio.Queue = queue, item: Dict[str, Any] = payload) -> None:
+                try:
+                    target.put_nowait(dict(item))
+                except asyncio.QueueFull:
+                    try:
+                        target.get_nowait()
+                    except asyncio.QueueEmpty:
+                        pass
+                    try:
+                        target.put_nowait(dict(item))
+                    except asyncio.QueueFull:
+                        pass
+
+            try:
+                loop.call_soon_threadsafe(_enqueue)
+            except RuntimeError:
+                self.unregister_listener(queue)
+
+    def acknowledge(self, up_to: Optional[int]) -> int:
+        if up_to is None or up_to <= 0:
+            return 0
+        removed = 0
+        with self._lock:
+            while self._entries and self._entries[0].get("id", 0) <= up_to:
+                entry = self._entries.popleft()
+                removed += 1
+                key = entry.pop("_key", None)
+                entry.pop("_timestamp", None)
+                if key is not None:
+                    self._entry_index.pop(key, None)
+            self._prune_locked()
+        return removed
 
     def emit(self, record: logging.LogRecord) -> None:  # noqa: D401 - inherited documentation
         rendered_message = record.getMessage()
@@ -606,6 +735,9 @@ class DebugLogHandler(logging.Handler):
             category = "task"
         key = self._build_key(event_type, base_message, context, payload, correlation)
 
+        broadcast: Optional[Dict[str, Any]] = None
+        subscribers: List[Tuple[asyncio.AbstractEventLoop, asyncio.Queue]] = []
+        next_marker = 0
         with self._lock:
             self._last_id += 1
             occurrence_id = self._last_id
@@ -653,7 +785,9 @@ class DebugLogHandler(logging.Handler):
                 if correlation:
                     existing.update(correlation)
                 existing["_key"] = key
+                existing["_timestamp"] = record.created
                 self._entries.append(existing)
+                broadcast = self._serialize_entry(existing)
             else:
                 entry: Dict[str, Any] = {
                     "id": occurrence_id,
@@ -683,24 +817,30 @@ class DebugLogHandler(logging.Handler):
                     entry["max_duration_ms"] = duration_ms
                 if correlation:
                     entry.update(correlation)
+                entry["_timestamp"] = record.created
                 self._entries.append(entry)
                 self._entry_index[key] = entry
                 while len(self._entries) > self._capacity:
                     oldest = self._entries.popleft()
                     old_key = oldest.pop("_key", None)
+                    oldest.pop("_timestamp", None)
                     if old_key is not None:
                         self._entry_index.pop(old_key, None)
+                broadcast = self._serialize_entry(entry)
+            self._prune_locked()
+            subscribers = list(self._subscribers)
+            next_marker = self._last_id
+        if broadcast:
+            payload = {"logs": [broadcast], "next": next_marker, "reset": False}
+            self._deliver_to_subscribers(payload, subscribers)
 
     def collect(self, after: Optional[int] = None, limit: int = 200) -> List[Dict[str, Any]]:
         with self._lock:
-            if after is None or after <= 0:
-                data = list(self._entries)
-            else:
-                data = [entry for entry in self._entries if entry.get("id", 0) > after]
+            self._prune_locked()
+            data = self._collect_locked(after)
         if not data:
             return []
-        sliced = data[-limit:]
-        return [self._serialize_entry(entry) for entry in sliced]
+        return data[-limit:]
 
     @property
     def last_id(self) -> int:
@@ -1480,6 +1620,10 @@ class SettingsPayload(BaseModel):
     debug_enabled: bool = False
 
 
+class DebugAckPayload(BaseModel):
+    last_id: int = Field(..., ge=0, alias="last_id")
+
+
 class ForwardedRootPathMiddleware:
     """Apply proxy-provided root path information to incoming requests."""
 
@@ -1678,8 +1822,10 @@ def create_app(
         None,
     )
     if debug_handler is None:
-        debug_handler = DebugLogHandler()
+        debug_handler = DebugLogHandler(retention_seconds=_DEBUG_RETENTION_SECONDS)
         root_logger.addHandler(debug_handler)
+    else:
+        debug_handler._retention_seconds = max(0.0, float(_DEBUG_RETENTION_SECONDS))
     app.state.debug_log_handler = debug_handler
     app.state.debug_enabled = False
     app.add_middleware(RequestContextMiddleware)
@@ -3022,6 +3168,88 @@ def create_app(
             debug_enabled=settings.debug_enabled,
         )
         return {"settings": asdict(settings)}
+
+    @app.get("/api/debug/logs/stream")
+    async def stream_debug_logs(request: Request, after: Optional[int] = None) -> StreamingResponse:
+        handler = getattr(app.state, "debug_log_handler", None)
+        if handler is None:
+            raise HTTPException(status_code=503, detail="Debug logging is not configured.")
+
+        loop = asyncio.get_running_loop()
+        queue, backlog, next_marker, reset = handler.register_listener(loop, after)
+
+        async def event_generator() -> AsyncIterator[str]:
+            try:
+                initial_payload: Dict[str, Any] = {
+                    "logs": backlog,
+                    "next": next_marker,
+                    "reset": reset,
+                    "enabled": bool(getattr(app.state, "debug_enabled", False)),
+                }
+                yield _format_sse(
+                    initial_payload,
+                    event_id=str(next_marker),
+                    retry=_DEBUG_STREAM_RETRY_MS,
+                )
+                while True:
+                    if await request.is_disconnected():
+                        break
+                    try:
+                        message = await asyncio.wait_for(
+                            queue.get(), timeout=_DEBUG_STREAM_KEEPALIVE
+                        )
+                    except asyncio.TimeoutError:
+                        yield ":keepalive\n\n"
+                        continue
+                    payload = dict(message)
+                    payload.setdefault(
+                        "enabled", bool(getattr(app.state, "debug_enabled", False))
+                    )
+                    event_id = payload.get("next")
+                    yield _format_sse(
+                        payload,
+                        event_id=str(event_id) if event_id is not None else None,
+                    )
+            except asyncio.CancelledError:
+                raise
+            finally:
+                handler.unregister_listener(queue)
+
+        headers = {
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
+        return StreamingResponse(event_generator(), media_type="text/event-stream", headers=headers)
+
+    @app.post("/api/debug/logs/ack")
+    async def acknowledge_debug_logs(payload: DebugAckPayload) -> Dict[str, Any]:
+        handler = getattr(app.state, "debug_log_handler", None)
+        if handler is None:
+            return {"dropped": 0, "next": 0}
+        removed = handler.acknowledge(payload.last_id)
+        return {"dropped": removed, "next": handler.last_id}
+
+    @app.get("/api/debug/logs/export")
+    async def export_debug_logs() -> Response:
+        handler = getattr(app.state, "debug_log_handler", None)
+        if handler is None:
+            raise HTTPException(status_code=503, detail="Debug logging is not configured.")
+        entries = handler.collect(None, limit=10_000)
+        snapshot = {
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "enabled": bool(getattr(app.state, "debug_enabled", False)),
+            "count": len(entries),
+            "entries": entries,
+        }
+        body = json.dumps(snapshot, ensure_ascii=False, indent=2)
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        filename = f"lecture-tools-debug-{timestamp}.json"
+        headers = {
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "no-store",
+        }
+        return Response(content=body, media_type="application/json", headers=headers)
 
     @app.get("/api/debug/logs")
     async def get_debug_logs(after: Optional[int] = None) -> Dict[str, Any]:
