@@ -1010,19 +1010,6 @@ def _normalize_language(value: Any) -> str:
     return candidate if candidate in _LANGUAGE_SET else _DEFAULT_UI_SETTINGS.language
 
 
-def _format_asset_counts(lectures: List[Dict[str, Any]]) -> Dict[str, int]:
-    """Return aggregated asset availability counts for a collection of lectures."""
-
-    return {
-        "transcripts": sum(1 for lecture in lectures if lecture["transcript_path"]),
-        "slides": sum(1 for lecture in lectures if lecture["slide_path"]),
-        "audio": sum(1 for lecture in lectures if lecture["audio_path"]),
-        "processed_audio": sum(1 for lecture in lectures if lecture["processed_audio_path"]),
-        "notes": sum(1 for lecture in lectures if lecture["notes_path"]),
-        "slide_images": sum(1 for lecture in lectures if lecture["slide_image_dir"]),
-    }
-
-
 def _serialize_lecture(lecture: LectureRecord) -> Dict[str, Any]:
     return {
         "id": lecture.id,
@@ -1039,11 +1026,41 @@ def _serialize_lecture(lecture: LectureRecord) -> Dict[str, Any]:
     }
 
 
-def _serialize_module(repository: LectureRepository, module: ModuleRecord) -> Dict[str, Any]:
-    lectures: List[Dict[str, Any]] = [
-        _serialize_lecture(lecture) for lecture in repository.iter_lectures(module.id)
-    ]
-    asset_counts = _format_asset_counts(lectures)
+def _build_pagination(offset: int, limit: int, total: int) -> Dict[str, Any]:
+    safe_offset = max(int(offset or 0), 0)
+    safe_limit = max(int(limit or 0), 0)
+    safe_total = max(int(total or 0), 0)
+    next_offset = (
+        safe_offset + safe_limit
+        if safe_limit > 0 and (safe_offset + safe_limit) < safe_total
+        else None
+    )
+    has_more = (safe_offset + safe_limit) < safe_total if safe_limit > 0 else safe_offset < safe_total
+    return {
+        "offset": safe_offset,
+        "limit": safe_limit,
+        "total": safe_total,
+        "has_more": has_more,
+        "next_offset": next_offset,
+    }
+
+
+def _serialize_module(
+    repository: LectureRepository,
+    module: ModuleRecord,
+    *,
+    lecture_offset: int = 0,
+    lecture_limit: Optional[int] = None,
+) -> Dict[str, Any]:
+    total_lectures = repository.count_lectures(module_id=module.id)
+    limit = lecture_limit if lecture_limit is not None and lecture_limit >= 0 else total_lectures
+    lectures: List[Dict[str, Any]] = []
+    if limit > 0:
+        lectures = [
+            _serialize_lecture(lecture)
+            for lecture in repository.list_lectures(module.id, lecture_offset, limit)
+        ]
+    asset_counts = repository.compute_asset_counts(module_id=module.id)
     return {
         "id": module.id,
         "class_id": module.class_id,
@@ -1051,29 +1068,61 @@ def _serialize_module(repository: LectureRepository, module: ModuleRecord) -> Di
         "description": module.description,
         "position": module.position,
         "lectures": lectures,
-        "lecture_count": len(lectures),
+        "lecture_count": total_lectures,
         "asset_counts": asset_counts,
+        "lectures_pagination": _build_pagination(lecture_offset, limit, total_lectures),
     }
 
 
-def _serialize_class(repository: LectureRepository, class_record: ClassRecord) -> Dict[str, Any]:
+def _serialize_class(
+    repository: LectureRepository,
+    class_record: ClassRecord,
+    *,
+    module_offset: int = 0,
+    module_limit: Optional[int] = None,
+    lecture_limit: Optional[int] = None,
+) -> Dict[str, Any]:
+    total_modules = repository.count_modules(class_record.id)
+    total_lectures = repository.count_lectures(class_id=class_record.id)
+    limit = module_limit if module_limit is not None and module_limit >= 0 else total_modules
+    module_records: List[ModuleRecord] = []
+    if limit > 0:
+        module_records = repository.list_modules(class_record.id, module_offset, limit)
     modules: List[Dict[str, Any]] = [
-        _serialize_module(repository, module) for module in repository.iter_modules(class_record.id)
+        _serialize_module(
+            repository,
+            module,
+            lecture_offset=0,
+            lecture_limit=lecture_limit,
+        )
+        for module in module_records
     ]
-    lecture_dicts: List[Dict[str, Any]] = [
-        lecture
-        for module in modules
-        for lecture in module["lectures"]
-    ]
-    asset_counts = _format_asset_counts(lecture_dicts)
+    asset_counts = repository.compute_asset_counts(class_id=class_record.id)
     return {
         "id": class_record.id,
         "name": class_record.name,
         "description": class_record.description,
         "position": class_record.position,
         "modules": modules,
-        "module_count": len(modules),
+        "module_count": total_modules,
+        "lecture_count": total_lectures,
         "asset_counts": asset_counts,
+        "modules_pagination": _build_pagination(module_offset, limit, total_modules),
+    }
+
+
+def _collect_global_stats(repository: LectureRepository) -> Dict[str, Any]:
+    asset_counts = repository.compute_asset_counts()
+    return {
+        "class_count": repository.count_classes(),
+        "module_count": repository.count_modules(),
+        "lecture_count": repository.count_lectures(),
+        "transcript_count": asset_counts["transcripts"],
+        "slide_count": asset_counts["slides"],
+        "audio_count": asset_counts["audio"],
+        "processed_audio_count": asset_counts["processed_audio"],
+        "notes_count": asset_counts["notes"],
+        "slide_image_count": asset_counts["slide_images"],
     }
 
 
@@ -2417,42 +2466,95 @@ def create_app(
         return FileResponse(target)
 
     @app.get("/api/classes")
-    async def list_classes() -> Dict[str, Any]:
-        _log_event("Listing classes")
-        classes = [_serialize_class(repository, record) for record in repository.iter_classes()]
-        total_modules = sum(item["module_count"] for item in classes)
-        total_lectures = sum(
-            module["lecture_count"] for item in classes for module in item["modules"]
+    async def list_classes(
+        offset: int = Query(0, ge=0),
+        limit: int = Query(20, ge=0, le=500),
+        module_limit: int = Query(5, ge=0, le=500),
+        lecture_limit: int = Query(20, ge=0, le=500),
+    ) -> Dict[str, Any]:
+        _log_event(
+            "Listing classes",
+            offset=offset,
+            limit=limit,
+            module_limit=module_limit,
+            lecture_limit=lecture_limit,
         )
-        total_asset_counts = {
-            "transcript_count": sum(
-                klass["asset_counts"]["transcripts"] for klass in classes
-            ),
-            "slide_count": sum(klass["asset_counts"]["slides"] for klass in classes),
-            "audio_count": sum(klass["asset_counts"]["audio"] for klass in classes),
-            "processed_audio_count": sum(
-                klass["asset_counts"].get("processed_audio", 0) for klass in classes
-            ),
-            "notes_count": sum(klass["asset_counts"]["notes"] for klass in classes),
-            "slide_image_count": sum(
-                klass["asset_counts"]["slide_images"] for klass in classes
-            ),
-        }
+        class_records = repository.list_classes(offset, limit) if limit >= 0 else []
+        classes = [
+            _serialize_class(
+                repository,
+                record,
+                module_offset=0,
+                module_limit=module_limit,
+                lecture_limit=lecture_limit,
+            )
+            for record in class_records
+        ]
+        stats = _collect_global_stats(repository)
+        pagination = _build_pagination(offset, limit, stats["class_count"])
         _log_event(
             "Summarised classes",
-            class_count=len(classes),
-            module_count=total_modules,
-            lecture_count=total_lectures,
+            class_count=stats["class_count"],
+            module_count=stats["module_count"],
+            lecture_count=stats["lecture_count"],
         )
         return {
             "classes": classes,
-            "stats": {
-                "class_count": len(classes),
-                "module_count": total_modules,
-            "lecture_count": total_lectures,
-            **total_asset_counts,
-        },
+            "stats": stats,
+            "pagination": pagination,
         }
+
+    @app.get("/api/classes/{class_id}/modules")
+    async def list_class_modules(
+        class_id: int,
+        offset: int = Query(0, ge=0),
+        limit: int = Query(10, ge=0, le=500),
+        lecture_limit: int = Query(20, ge=0, le=500),
+    ) -> Dict[str, Any]:
+        record = repository.get_class(class_id)
+        if record is None:
+            raise HTTPException(status_code=404, detail="Class not found")
+        module_records = repository.list_modules(class_id, offset, limit) if limit >= 0 else []
+        modules = [
+            _serialize_module(
+                repository,
+                module,
+                lecture_offset=0,
+                lecture_limit=lecture_limit,
+            )
+            for module in module_records
+        ]
+        total_modules = repository.count_modules(class_id)
+        pagination = _build_pagination(offset, limit, total_modules)
+        return {
+            "class": {
+                "id": record.id,
+                "name": record.name,
+                "description": record.description,
+                "position": record.position,
+                "module_count": total_modules,
+            },
+            "modules": modules,
+            "pagination": pagination,
+        }
+
+    @app.get("/api/classes/{class_id}/modules/{module_id}/lectures")
+    async def list_module_lectures(
+        class_id: int,
+        module_id: int,
+        offset: int = Query(0, ge=0),
+        limit: int = Query(20, ge=0, le=1000),
+    ) -> Dict[str, Any]:
+        module_record = repository.get_module(module_id)
+        if module_record is None or module_record.class_id != class_id:
+            raise HTTPException(status_code=404, detail="Module not found")
+        module_payload = _serialize_module(
+            repository,
+            module_record,
+            lecture_offset=offset,
+            lecture_limit=limit,
+        )
+        return {"module": module_payload}
 
     @app.post("/api/classes", status_code=status.HTTP_201_CREATED)
     async def create_class(payload: ClassCreatePayload) -> Dict[str, Any]:
