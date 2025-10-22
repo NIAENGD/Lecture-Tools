@@ -4,7 +4,6 @@
 
 <p align="center">
   <img alt="Python" src="https://img.shields.io/badge/Made%20with-Python%203.11-3776AB?style=for-the-badge&logo=python&logoColor=white" />
-  <img alt="FastAPI" src="https://img.shields.io/badge/API-FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" />
   <img alt="Pydantic" src="https://img.shields.io/badge/Validation-Pydantic-3666A0?style=for-the-badge" />
   <img alt="MIT License" src="https://img.shields.io/badge/License-MIT-black?style=for-the-badge" />
 </p>
@@ -28,7 +27,7 @@
 ## ✨ Key Features
 
 - **Seamless setup** – No build steps or cross-platform workarounds required. Start the project with a single command on any major OS.
-- **Dashboard navigation** – Move from classes to modules to lectures with a unified interface that keeps relevant actions and statistics close at hand.
+- **Dashboard navigation** – The legacy web dashboard has been retired while the next-generation interface is under construction.
 - **Managed media pipeline** – Lecture audio, transcripts, and slides are automatically organized and maintained in a structured storage layout.
 - **Flexible transcription** – Run CPU-optimized [faster-whisper](https://github.com/SYSTRAN/faster-whisper) locally or enable GPU acceleration when available.
 - **Multi-language support** – Switch between **English**, **中文**, **Español**, and **Français** directly from the settings menu.
@@ -55,93 +54,29 @@
    ```bash
    pip install -r requirements-dev.txt
    ```
-4. **Enter the immersive web suite**
+4. **Explore the CLI toolkit**
+   With the GUI overhaul underway, the Typer-powered CLI remains the primary experience:
    ```bash
-   python run.py  # or customise: python run.py serve --host 0.0.0.0 --port 9000
+   python run.py --help
+   python run.py overview --style modern
+   python run.py ingest --help
    ```
-   Visit **http://127.0.0.1:8000/** to enjoy the modern control centre.
-   - Deploying behind a reverse proxy? Provide the mount prefix so API, UI, and
-     static assets resolve correctly:
-       ```bash
-       python run.py serve --root-path /lecture
-       ```
-     or set `LECTURE_TOOLS_ROOT_PATH=/lecture` in the environment.
-5. **Classic terminal vibes still included**
- ```bash
-  python run.py overview --style modern
-  python run.py overview --style console
- ```
 
 ---
 
 ## 🤖 Automated Server Install (systemd)
 
-Need a headless deployment that boots automatically? The repository now ships a
-full bare-metal installer that provisions Lecture Tools as a native systemd
-service—no containers required.
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/NIAENGD/Lecture-Tools/main/scripts/install_server.sh | sudo bash
-```
-
-What the helper now does for you:
-
-- Validates that you are running on a Debian-based distribution and installs
-  any missing system dependency (Python 3.11, FFmpeg, PortAudio, build tools,
-  git) without re-downloading packages that are already present.
-- Detects previous Docker-based deployments, offers to tear them down (systemd
-  unit, Compose stack, legacy config), and reuses details from existing native
-  installs so re-running the script is idempotent.
-- Prompts for the Git repository, branch, installation directory (default
-  `/opt/lecture-tools`), HTTP port, optional root path (normalising entries such
-  as `lecturetools` to `/lecturetools`), public domain, and TLS
-  certificate/key locations—auto-detecting Let’s Encrypt assets when they
-  already exist so you can skip duplicate configuration.
-- Clones or updates the repository in-place, creates an isolated virtual
-  environment, and installs dependencies from `requirements-dev.txt` when
-  available (falling back to `requirements.txt`).
-- Writes/updates a dedicated systemd unit that runs `run.py serve --host
-  0.0.0.0` at boot, stops any previous instance before redeploying, and when
-  UFW is active, offers to open the chosen port.
-- Installs an expanded management CLI named `lecturetool` under
-  `/usr/local/bin` with subcommands such as `start`, `stop`, `restart`,
-  `reload`, `logs`/`tail`, `nginx`, `update`, `upgrade`, `info`, `config`,
-  `doctor`, `shell`, and `purge` (full uninstall) for quick troubleshooting and
-  lifecycle management.
-
-Example service management:
-
-```bash
-sudo lecturetool status      # Inspect service health
-sudo lecturetool doctor      # Run a health check (service, ports, TLS files)
-sudo lecturetool update      # Pull the latest git commit & reinstall deps
-sudo lecturetool shell       # Drop into a shell as the service account
-sudo lecturetool purge       # Remove service, config, files, and service user
-
-# Configure an Nginx reverse proxy (interactive wizard + manual modes)
-sudo lecturetool nginx            # Launch the guided setup (choose IP/HTTP/HTTPS with Let's Encrypt assistance)
-sudo lecturetool nginx https example.com \
-  /etc/letsencrypt/live/example.com/fullchain.pem \
-  /etc/letsencrypt/live/example.com/privkey.pem
-sudo lecturetool nginx http example.com 80  # Plain HTTP for a domain
-sudo lecturetool nginx ip 80                # Plain HTTP bound to the server IP
-```
-
-Ready to uninstall? Two cleanup helpers are available:
-
-- `scripts/remove_server.sh` disables the service, removes the helper CLI, and
-  leaves the code/data on disk.
-- `scripts/remove_server_full.sh` chains the above and interactively removes the
-  repository directory plus the dedicated system user.
-- `sudo lecturetool purge` provides a non-interactive option to stop the
-  service, remove the repository, configuration, systemd unit, helper CLI, and
-  dedicated service user in one step.
+> ⚠️ The legacy systemd installer is currently disabled while the new GUI is
+> being developed. A refreshed deployment story will return alongside the new
+> interface.
 
 ---
 
 ## 🧰 Manual Debian Server Install
 
-Need a reproducible bare-metal deployment? Follow the step-by-step [Debian manual installation guide](docs/debian-manual-install.md) to provision system packages, configure Python, and (optionally) wire Lecture Tools into systemd.
+Need a reproducible bare-metal deployment? While the legacy web server is
+offline, the manual guide remains available for reference. Expect major updates
+once the new interface lands.
 
 ---
 
@@ -149,7 +84,7 @@ Need a reproducible bare-metal deployment? Follow the step-by-step [Debian manua
 
 | Area | Description |
 | --- | --- |
-| `app/` | Application core – services, UI layers, background workers, and FastAPI server. |
+| `app/` | Application core – services, CLI-facing UI layers, and background workers. |
 | `assets/` | Whisper models and supporting binaries land here. |
 | `storage/` | Your curated lecture library lives here with raw uploads and processed exports. |
 | `cli/` | Cross-platform helpers, including the optional GPU-enabled Windows binary. |
@@ -159,12 +94,8 @@ Need a reproducible bare-metal deployment? Follow the step-by-step [Debian manua
 
 ## 🎛️ Interface Personalisation
 
-Visit **Settings → Appearance** in the web UI to tailor the ambience:
-
-- **Theme**: Follow your system palette or opt for Light/Dark.
-- **Language**: Choose English (`en`), 中文 (`zh`), Español (`es`), or Français (`fr`). Preferences persist in `storage/settings.json` and sync automatically across sessions.
-- **Whisper defaults**: Pre-select your transcription model, compute type, and beam size; GPU options unlock once verified.
-- **Slide rendering**: Dial in DPI quality from lightning-fast 150 to exquisite 600.
+The upcoming GUI refresh will reintroduce the detailed appearance controls from the legacy web interface, including theming,
+language selection, whisper defaults, and slide rendering preferences. Stay tuned!
 
 ---
 
@@ -198,7 +129,7 @@ python run.py ingest \
 ```
 The CLI stores originals under `storage/<class>/<module>/<lecture>/raw` while transcripts and slides enter the `processed/` suites. Metadata is tracked in SQLite for instant retrieval by the UI.
 
-Slide processing now produces a Markdown document with inline image references plus the rendered slide images. The Markdown file lives in `processed/notes/` and the web UI exposes a single ZIP bundle containing the Markdown and its assets from `processed/slides/`.
+Slide processing now produces a Markdown document with inline image references plus the rendered slide images. The Markdown file lives in `processed/notes/` and a consolidated ZIP bundle is stored in `processed/slides/` for future GUI integrations.
 
 ### GPU-accelerated Whisper (optional indulgence)
 1. Create `assets/models/` if absent.

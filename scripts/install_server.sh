@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+printf '[lecture-tools] The legacy web GUI has been removed while a new interface is developed.\n' >&2
+printf '[lecture-tools] The automated installer is temporarily disabled.\n' >&2
+exit 1
+
 if [[ ${EUID:-$(id -u)} -ne 0 ]]; then
   echo "[lecture-tools] error: This installer must be run as root (e.g. with sudo)." >&2
   exit 1
