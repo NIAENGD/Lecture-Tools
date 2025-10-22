@@ -6,6 +6,7 @@
 @use './components/tabs';
 @use './components/dialogs';
 @use './components/syllabus';
+@use './components/dashboard';
 
 @layer base {
   .sr-only {
