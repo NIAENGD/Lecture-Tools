@@ -51,8 +51,8 @@ fi
 echo
 if [ "$#" -eq 0 ]; then
   echo "Launching Lecture Tools CLI..."
-  echo "Hint: pass commands such as 'serve', 'overview' or 'ingest' after start.sh."
-  echo "Example: ./start.sh serve"
+  echo "Hint: pass commands such as 'overview' or 'ingest' after start.sh."
+  echo "Example: ./start.sh overview --style modern"
   echo "Example: ./start.sh ingest --help"
   echo
 fi
