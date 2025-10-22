@@ -1,0 +1,65 @@
+@use '../tokens';
+
+@layer components {
+  .dialog {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-lg);
+    z-index: 1000;
+  }
+
+  .dialog.hidden {
+    display: none !important;
+  }
+
+  .dialog-backdrop {
+    position: absolute;
+    inset: 0;
+    background: var(--color-overlay);
+    backdrop-filter: blur(2px);
+  }
+
+  .dialog-window {
+    position: relative;
+    z-index: 1;
+    background: var(--panel-bg);
+    border: var(--border-width-hairline) solid var(--panel-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    width: min(420px, 100%);
+    box-shadow: var(--shadow-dialog);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  .dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .dialog-title {
+    margin: 0;
+    font-size: var(--font-size-lg);
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .dialog-message {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-secondary);
+  }
+
+  .dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--space-xs);
+  }
+
+  .dialog-button {
+    gap: var(--space-2xs);
+  }
+}

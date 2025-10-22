@@ -2,11 +2,11 @@
   <section class="panel content-panel">
     {% include "partials/top_bar.html" %}
     <div id="view-details" class="view active" data-view="details">
-      <header style="display: flex; justify-content: space-between; align-items: center;">
+      <header class="view-header u-flex u-justify-between u-items-center">
         <h2 data-i18n="details.title">Lecture details</h2>
         <button
           id="delete-lecture"
-          class="danger"
+          class="button button--danger"
           type="button"
           hidden
           data-i18n="details.deleteLecture"
@@ -43,7 +43,7 @@
           ></textarea>
         </div>
         <div class="form-actions">
-          <button type="submit" data-i18n="details.edit.save">Save changes</button>
+          <button class="button button--primary" type="submit" data-i18n="details.edit.save">Save changes</button>
         </div>
       </form>
       <section id="asset-section" hidden>
@@ -55,7 +55,7 @@
       <section class="panel progress-panel">
         <div class="progress-header">
           <h2 data-i18n="progress.title">Processing queue</h2>
-          <button id="progress-refresh" type="button" class="ghost" data-i18n="progress.refresh">
+          <button id="progress-refresh" type="button" class="button button--ghost" data-i18n="progress.refresh">
             Refresh
           </button>
         </div>
@@ -84,7 +84,7 @@
           <textarea id="create-description" rows="4"></textarea>
         </div>
         <div class="form-actions">
-          <button id="create-submit" type="submit" data-i18n="create.submit">
+          <button id="create-submit" class="button button--primary" type="submit" data-i18n="create.submit">
             Add lecture
           </button>
         </div>
@@ -95,13 +95,13 @@
         <div class="storage-header">
           <h2 data-i18n="storage.title">Storage manager</h2>
           <div class="storage-actions">
-            <button id="storage-refresh" type="button" data-i18n="storage.actions.refresh">
+            <button id="storage-refresh" class="button button--ghost" type="button" data-i18n="storage.actions.refresh">
               Refresh
             </button>
             <button
               id="storage-download-selected"
               type="button"
-              class="secondary"
+              class="button button--secondary"
               data-i18n="storage.actions.downloadSelected"
               disabled
             >
@@ -110,7 +110,7 @@
             <button
               id="storage-purge"
               type="button"
-              class="danger"
+              class="button button--danger"
               data-i18n="storage.actions.purge"
             >
               Remove processed audio
@@ -120,16 +120,12 @@
         <section class="storage-browser" aria-live="polite">
           <div class="storage-browser-toolbar">
             <div class="storage-browser-nav">
-              <button
-                id="storage-nav-root"
-                type="button"
+              <button id="storage-nav-root" class="button button--ghost" type="button"
                 data-i18n="storage.browser.root"
               >
                 Root
               </button>
-              <button
-                id="storage-nav-up"
-                type="button"
+              <button id="storage-nav-up" class="button button--ghost" type="button"
                 data-i18n="storage.browser.up"
               >
                 Up
@@ -289,7 +285,7 @@
                 GPU acceleration not tested.
               </p>
             </div>
-            <button id="settings-whisper-gpu-test" type="button" class="secondary">
+            <button id="settings-whisper-gpu-test" type="button" class="button button--secondary">
               <span data-i18n="settings.whisper.gpu.test">Test support</span>
             </button>
           </div>
@@ -335,13 +331,13 @@
             Update Lecture Tools without leaving the browser.
           </p>
           <div class="field-inline">
-            <button id="settings-update-run" type="button" class="secondary" data-i18n="settings.update.run">
+            <button id="settings-update-run" type="button" class="button button--secondary" data-i18n="settings.update.run">
               Run update
             </button>
             <button
               id="settings-update-refresh"
               type="button"
-              class="ghost"
+              class="button button--ghost"
               data-i18n="settings.update.refresh"
             >
               Refresh status
@@ -380,13 +376,13 @@
             Export your lectures and assets or import an archive from another machine.
           </p>
           <div class="field-inline archive-controls">
-            <button id="settings-export" type="button" class="secondary" data-i18n="settings.archive.export">
+            <button id="settings-export" type="button" class="button button--secondary" data-i18n="settings.archive.export">
               Export archive
             </button>
             <button
               id="settings-import"
               type="button"
-              class="secondary"
+              class="button button--secondary"
               data-i18n="settings.archive.import"
             >
               Import archive
@@ -404,10 +400,10 @@
           </p>
         </fieldset>
         <div class="form-actions">
-          <button type="submit" data-i18n="settings.save">Save settings</button>
+          <button class="button button--primary" type="submit" data-i18n="settings.save">Save settings</button>
         </div>
         <div class="form-actions">
-          <button id="settings-exit-app" type="button" class="danger" data-i18n="settings.exit">
+          <button id="settings-exit-app" type="button" class="button button--danger" data-i18n="settings.exit">
             Exit application
           </button>
         </div>
