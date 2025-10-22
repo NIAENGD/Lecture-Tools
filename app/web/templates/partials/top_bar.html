@@ -1,8 +1,8 @@
-<div class="top-bar" role="tablist">
-  <div class="top-bar-left">
+<div class="top-bar tabs" role="tablist">
+  <div class="tabs__group">
     <button
       type="button"
-      class="active"
+      class="button button--tab active"
       data-view="details"
       aria-pressed="true"
       data-i18n="topBar.details"
@@ -12,17 +12,17 @@
     <button
       id="toggle-edit-mode"
       type="button"
-      class="ghost pill"
+      class="button button--ghost button--pill"
       aria-pressed="false"
       data-i18n="topBar.enableEdit"
     >
       Enable edit mode
     </button>
   </div>
-  <div class="top-bar-right">
+  <div class="tabs__group tabs__group--end">
     <button
       type="button"
-      class="ghost"
+      class="button button--tab"
       data-view="progress"
       aria-pressed="false"
       data-i18n="topBar.progress"
@@ -31,6 +31,7 @@
     </button>
     <button
       type="button"
+      class="button button--tab"
       data-view="create"
       aria-pressed="false"
       data-i18n="topBar.create"
@@ -39,7 +40,7 @@
     </button>
     <button
       type="button"
-      class="ghost"
+      class="button button--tab"
       data-view="storage"
       aria-pressed="false"
       data-i18n="topBar.storage"
@@ -48,6 +49,7 @@
     </button>
     <button
       type="button"
+      class="button button--tab"
       data-view="settings"
       aria-pressed="false"
       data-i18n="topBar.settings"
