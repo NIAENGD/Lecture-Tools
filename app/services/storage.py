@@ -472,6 +472,230 @@ class LectureRepository:
     # ------------------------------------------------------------------
     # Iteration helpers
     # ------------------------------------------------------------------
+    def count_classes(self) -> int:
+        with self._track_db_event("count_classes", table="classes"):
+            with self._connect() as connection:
+                cursor = self._execute(
+                    connection,
+                    "SELECT COUNT(*) FROM classes",
+                    action="classes.count",
+                    table="classes",
+                )
+                row = cursor.fetchone()
+                return int(row[0]) if row else 0
+
+    def count_modules(self, class_id: Optional[int] = None) -> int:
+        parameters: Tuple[Any, ...] | None = None
+        where = ""
+        if class_id is not None:
+            where = " WHERE class_id = ?"
+            parameters = (class_id,)
+        with self._track_db_event(
+            "count_modules", table="modules", class_id=class_id
+        ):
+            with self._connect() as connection:
+                cursor = self._execute(
+                    connection,
+                    f"SELECT COUNT(*) FROM modules{where}",
+                    parameters,
+                    action="modules.count",
+                    table="modules",
+                )
+                row = cursor.fetchone()
+                return int(row[0]) if row else 0
+
+    def count_lectures(
+        self,
+        *,
+        module_id: Optional[int] = None,
+        class_id: Optional[int] = None,
+    ) -> int:
+        join = ""
+        clauses: List[str] = []
+        parameters: List[Any] = []
+        if class_id is not None:
+            join = " JOIN modules ON modules.id = lectures.module_id"
+            clauses.append("modules.class_id = ?")
+            parameters.append(class_id)
+        if module_id is not None:
+            clauses.append("lectures.module_id = ?")
+            parameters.append(module_id)
+        where = f" WHERE {' AND '.join(clauses)}" if clauses else ""
+        with self._track_db_event(
+            "count_lectures",
+            table="lectures",
+            module_id=module_id,
+            class_id=class_id,
+        ):
+            with self._connect() as connection:
+                cursor = self._execute(
+                    connection,
+                    f"SELECT COUNT(*) FROM lectures{join}{where}",
+                    tuple(parameters) if parameters else None,
+                    action="lectures.count",
+                    table="lectures",
+                )
+                row = cursor.fetchone()
+                return int(row[0]) if row else 0
+
+    def _list_records(
+        self,
+        statement: str,
+        parameters: Sequence[Any] | Tuple[Any, ...] | None,
+        *,
+        action: str,
+        table: str,
+    ) -> Iterable[sqlite3.Row]:
+        with self._connect() as connection:
+            cursor = self._execute(
+                connection,
+                statement,
+                parameters,
+                action=action,
+                table=table,
+            )
+            return cursor.fetchall()
+
+    def list_classes(self, offset: int, limit: Optional[int] = None) -> List[ClassRecord]:
+        clauses = "ORDER BY position, id"
+        params: List[Any] = []
+        if limit is not None and limit >= 0:
+            clauses += " LIMIT ? OFFSET ?"
+            params.extend([int(limit), int(offset)])
+        rows = self._list_records(
+            f"SELECT id, name, description, position FROM classes {clauses}",
+            tuple(params) if params else None,
+            action="classes.list",
+            table="classes",
+        )
+        return [ClassRecord(**row) for row in rows]
+
+    def list_modules(
+        self,
+        class_id: int,
+        offset: int,
+        limit: Optional[int] = None,
+    ) -> List[ModuleRecord]:
+        clauses = "ORDER BY position, id"
+        params: List[Any] = [class_id]
+        if limit is not None and limit >= 0:
+            clauses += " LIMIT ? OFFSET ?"
+            params.extend([int(limit), int(offset)])
+        rows = self._list_records(
+            f"""
+            SELECT id, class_id, name, description, position
+            FROM modules
+            WHERE class_id = ?
+            {clauses}
+            """.strip(),
+            tuple(params),
+            action="modules.list",
+            table="modules",
+        )
+        return [ModuleRecord(**row) for row in rows]
+
+    def list_lectures(
+        self,
+        module_id: int,
+        offset: int,
+        limit: Optional[int] = None,
+    ) -> List[LectureRecord]:
+        clauses = "ORDER BY position, id"
+        params: List[Any] = [module_id]
+        if limit is not None and limit >= 0:
+            clauses += " LIMIT ? OFFSET ?"
+            params.extend([int(limit), int(offset)])
+        rows = self._list_records(
+            f"""
+            SELECT
+                id,
+                module_id,
+                name,
+                description,
+                position,
+                audio_path,
+                processed_audio_path,
+                slide_path,
+                transcript_path,
+                notes_path,
+                slide_image_dir
+            FROM lectures
+            WHERE module_id = ?
+            {clauses}
+            """.strip(),
+            tuple(params),
+            action="lectures.list",
+            table="lectures",
+        )
+        return [LectureRecord(**row) for row in rows]
+
+    def _count_asset_column(
+        self,
+        column: str,
+        *,
+        class_id: Optional[int] = None,
+        module_id: Optional[int] = None,
+    ) -> int:
+        join = ""
+        clauses: List[str] = []
+        params: List[Any] = []
+        if class_id is not None:
+            join = " JOIN modules ON modules.id = lectures.module_id"
+            clauses.append("modules.class_id = ?")
+            params.append(class_id)
+        if module_id is not None:
+            clauses.append("lectures.module_id = ?")
+            params.append(module_id)
+        predicate = f"{column} IS NOT NULL AND TRIM({column}) != ''"
+        if clauses:
+            where = " WHERE " + " AND ".join(clauses + [predicate])
+        else:
+            where = f" WHERE {predicate}"
+        with self._track_db_event(
+            "count_assets",
+            table="lectures",
+            column=column,
+            class_id=class_id,
+            module_id=module_id,
+        ):
+            with self._connect() as connection:
+                cursor = self._execute(
+                    connection,
+                    f"SELECT COUNT(*) FROM lectures{join}{where}",
+                    tuple(params) if params else None,
+                    action="lectures.count_assets",
+                    table="lectures",
+                )
+                row = cursor.fetchone()
+                return int(row[0]) if row else 0
+
+    def compute_asset_counts(
+        self,
+        *,
+        class_id: Optional[int] = None,
+        module_id: Optional[int] = None,
+    ) -> Dict[str, int]:
+        return {
+            "transcripts": self._count_asset_column(
+                "lectures.transcript_path", class_id=class_id, module_id=module_id
+            ),
+            "slides": self._count_asset_column(
+                "lectures.slide_path", class_id=class_id, module_id=module_id
+            ),
+            "audio": self._count_asset_column(
+                "lectures.audio_path", class_id=class_id, module_id=module_id
+            ),
+            "processed_audio": self._count_asset_column(
+                "lectures.processed_audio_path", class_id=class_id, module_id=module_id
+            ),
+            "notes": self._count_asset_column(
+                "lectures.notes_path", class_id=class_id, module_id=module_id
+            ),
+            "slide_images": self._count_asset_column(
+                "lectures.slide_image_dir", class_id=class_id, module_id=module_id
+            ),
+        }
+
     def iter_classes(self) -> Iterable[ClassRecord]:
         LOGGER.debug("Iterating over all classes")
         with self._track_db_event("iter_classes", table="classes") as event:

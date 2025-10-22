@@ -610,6 +610,10 @@ bootstrapEnvironmentFromDataset();
           return DEFAULT_LANGUAGE;
         }
 
+        const CURRICULUM_PAGE_SIZE = 20;
+        const MODULE_PAGE_SIZE = 8;
+        const LECTURE_PAGE_SIZE = 25;
+
         const state = {
           classes: [],
           stats: {},
@@ -625,6 +629,19 @@ bootstrapEnvironmentFromDataset();
           draggingLectureId: null,
           draggingSourceModuleId: null,
           draggedElement: null,
+          curriculumWindow: {
+            offset: 0,
+            limit: CURRICULUM_PAGE_SIZE,
+            total: 0,
+            nextOffset: null,
+            hasMore: false,
+            loading: false,
+          },
+          moduleWindows: new Map(),
+          lectureWindows: new Map(),
+          moduleIndex: new Map(),
+          curriculumRenderMetrics: [],
+          curriculumVirtualizer: null,
           gpuWhisper: {
             supported: false,
             checked: false,
@@ -6295,15 +6312,7 @@ bootstrapEnvironmentFromDataset();
         }
 
         function updateModuleOptions() {
-          const modules = [];
-          state.classes.forEach((klass) => {
-            (klass.modules || []).forEach((module) => {
-              modules.push({
-                id: module.id,
-                label: `${klass.name} • ${module.name}`,
-              });
-            });
-          });
+          const modules = Array.from(state.moduleIndex.values());
           modules.sort((a, b) => a.label.localeCompare(b.label));
 
           dom.createModule.innerHTML = '';
@@ -6332,6 +6341,73 @@ bootstrapEnvironmentFromDataset();
 
         function matchQuery(text, query) {
           return typeof text === 'string' && text.toLowerCase().includes(query);
+        }
+
+        function normalizePagination(window) {
+          const offset = Number(window?.offset) || 0;
+          const limit = Number(window?.limit) || 0;
+          const total = Number(window?.total) || 0;
+          const hasMore = Boolean(window?.has_more);
+          const nextOffset =
+            typeof window?.next_offset === 'number' ? Number(window.next_offset) : null;
+          return { offset, limit, total, hasMore, nextOffset };
+        }
+
+        function setCurriculumWindow(pagination) {
+          const normalized = normalizePagination(pagination || {});
+          const target = state.curriculumWindow;
+          target.offset = normalized.offset;
+          target.limit = normalized.limit || CURRICULUM_PAGE_SIZE;
+          target.total = normalized.total;
+          target.hasMore = normalized.hasMore;
+          target.nextOffset = normalized.nextOffset;
+        }
+
+        function setModuleWindow(classId, pagination) {
+          if (classId == null) {
+            return;
+          }
+          const key = String(classId);
+          const normalized = normalizePagination(pagination || {});
+          let target = state.moduleWindows.get(key);
+          if (!target) {
+            target = { loading: false };
+            state.moduleWindows.set(key, target);
+          }
+          target.offset = normalized.offset;
+          target.limit = normalized.limit || MODULE_PAGE_SIZE;
+          target.total = normalized.total;
+          target.hasMore = normalized.hasMore;
+          target.nextOffset = normalized.nextOffset;
+        }
+
+        function setLectureWindow(moduleId, pagination) {
+          if (moduleId == null) {
+            return;
+          }
+          const key = String(moduleId);
+          const normalized = normalizePagination(pagination || {});
+          let target = state.lectureWindows.get(key);
+          if (!target) {
+            target = { loading: false };
+            state.lectureWindows.set(key, target);
+          }
+          target.offset = normalized.offset;
+          target.limit = normalized.limit || LECTURE_PAGE_SIZE;
+          target.total = normalized.total;
+          target.hasMore = normalized.hasMore;
+          target.nextOffset = normalized.nextOffset;
+        }
+
+        function registerModuleIndexEntry(moduleRecord, classRecord) {
+          if (!moduleRecord || moduleRecord.id == null) {
+            return;
+          }
+          const moduleId = Number(moduleRecord.id);
+          const className = classRecord?.name || '';
+          const moduleName = moduleRecord.name || '';
+          const label = className ? `${className} • ${moduleName}` : moduleName;
+          state.moduleIndex.set(moduleId, { id: moduleId, label });
         }
 
         function computeFilteredClasses() {
@@ -6697,12 +6773,120 @@ bootstrapEnvironmentFromDataset();
           }
         }
 
-        function renderCurriculum() {
-          state.buttonMap.clear();
-          const filtered = computeFilteredClasses();
-          dom.curriculum.innerHTML = '';
+        class CurriculumVirtualizer {
+          constructor(root) {
+            this.root = root;
+            this.entryMap = new Map();
+            this.moduleMap = new Map();
+            this.classLoadTargets = new Map();
+            this.moduleLoadTargets = new Map();
+            this.lectureLoadTargets = new Map();
+            this.scrollRoot = this.findScrollRoot(root);
+            const observerOptions = { root: this.scrollRoot, threshold: 0.1 };
+            this.classObserver = new IntersectionObserver(
+              (entries) => this.handleClassIntersection(entries),
+              observerOptions,
+            );
+            this.moduleObserver = new IntersectionObserver(
+              (entries) => this.handleModuleIntersection(entries),
+              observerOptions,
+            );
+            const loadOptions = { root: this.scrollRoot, threshold: 0.25 };
+            this.loadMoreObserver = new IntersectionObserver(
+              (entries) => this.handleLoadMoreIntersection(entries),
+              loadOptions,
+            );
+            this.moduleLoadObserver = new IntersectionObserver(
+              (entries) => this.handleModuleLoadIntersection(entries),
+              loadOptions,
+            );
+            this.lectureLoadObserver = new IntersectionObserver(
+              (entries) => this.handleLectureLoadIntersection(entries),
+              loadOptions,
+            );
+          }
 
-          if (state.editMode) {
+          findScrollRoot(element) {
+            if (!element || typeof window === 'undefined') {
+              return null;
+            }
+            let node = element;
+            while (node && node !== document.body) {
+              const style = window.getComputedStyle(node);
+              const overflowY = style?.overflowY || '';
+              if (overflowY === 'auto' || overflowY === 'scroll') {
+                return node;
+              }
+              node = node.parentElement;
+            }
+            return null;
+          }
+
+          resetObservers() {
+            this.classObserver.disconnect();
+            this.moduleObserver.disconnect();
+            this.loadMoreObserver.disconnect();
+            this.moduleLoadObserver.disconnect();
+            this.lectureLoadObserver.disconnect();
+          }
+
+          render(entries, { editMode }) {
+            if (!this.root) {
+              return;
+            }
+            this.resetObservers();
+            this.entryMap.clear();
+            this.moduleMap.clear();
+            this.classLoadTargets.clear();
+            this.moduleLoadTargets.clear();
+            this.lectureLoadTargets.clear();
+            state.buttonMap.clear();
+            this.root.innerHTML = '';
+
+            const fragment = document.createDocumentFragment();
+
+            if (editMode) {
+              fragment.appendChild(this.buildToolbar());
+            }
+
+            if (!entries.length) {
+              fragment.appendChild(this.buildEmptyState());
+              this.root.appendChild(fragment);
+              highlightSelected();
+              return;
+            }
+
+            const syllabus = document.createElement('div');
+            syllabus.className = 'syllabus';
+
+            entries.forEach((entry) => {
+              const classRecord = entry?.class;
+              if (!classRecord || classRecord.id == null) {
+                return;
+              }
+              const classId = Number(classRecord.id);
+              this.entryMap.set(classId, entry);
+              const classNode = this.buildClassNode(entry, editMode);
+              syllabus.appendChild(classNode);
+              this.classObserver.observe(classNode);
+              if (classNode.open) {
+                this.renderModulesForClass(classNode);
+              }
+            });
+
+            if (state.curriculumWindow.hasMore) {
+              const sentinel = this.createSentinel();
+              this.classLoadTargets.set(sentinel, true);
+              this.loadMoreObserver.observe(sentinel);
+              syllabus.appendChild(sentinel);
+            }
+
+            fragment.appendChild(syllabus);
+            this.root.appendChild(fragment);
+            highlightSelected();
+          }
+
+          buildToolbar() {
             const toolbar = document.createElement('div');
             toolbar.className = 'curriculum-toolbar';
 
@@ -6721,45 +6905,38 @@ bootstrapEnvironmentFromDataset();
             actions.appendChild(addClassButton);
 
             toolbar.appendChild(actions);
-            dom.curriculum.appendChild(toolbar);
+            return toolbar;
           }
 
-          if (filtered.length === 0) {
+          buildEmptyState() {
             const message = document.createElement('div');
             message.className = 'placeholder';
             message.textContent = state.classes.length
               ? t('placeholders.noLecturesFilter')
               : t('placeholders.noClasses');
-            dom.curriculum.appendChild(message);
-            return;
+            return message;
           }
 
-          const syllabus = document.createElement('div');
-          syllabus.className = 'syllabus';
-
-          filtered.forEach((entry) => {
+          buildClassNode(entry, editMode) {
+            const classRecord = entry.class;
+            const classId = Number(classRecord.id);
             const classDetails = document.createElement('details');
             classDetails.className = 'syllabus-class';
-            const classId = entry.class?.id != null ? String(entry.class.id) : null;
+            classDetails.dataset.classId = String(classId);
+
             const hasSelection = entry.modules.some((moduleEntry) =>
               (moduleEntry.lectures || []).some(
                 (lecture) => lecture.id === state.selectedLectureId,
               ),
             );
-            let expandClass = Boolean(hasSelection);
-            if (classId) {
-              const storedValue = state.expandedClasses.get(classId);
-              if (typeof storedValue === 'boolean') {
-                expandClass = storedValue;
-              }
-              if (hasSelection) {
-                expandClass = true;
-                state.expandedClasses.set(classId, true);
-              }
-              classDetails.dataset.classId = classId;
-              classDetails.addEventListener('toggle', () => {
-                state.expandedClasses.set(classId, classDetails.open);
-              });
+            let expandClass = hasSelection;
+            const storedValue = state.expandedClasses.get(String(classId));
+            if (typeof storedValue === 'boolean') {
+              expandClass = storedValue;
+            }
+            if (hasSelection) {
+              expandClass = true;
+              state.expandedClasses.set(String(classId), true);
             }
             classDetails.open = expandClass;
 
@@ -6771,14 +6948,18 @@ bootstrapEnvironmentFromDataset();
 
             const title = document.createElement('span');
             title.className = 'syllabus-title';
-            title.textContent = entry.class.name;
+            title.textContent = classRecord.name;
             summaryText.appendChild(title);
 
-            const moduleCount = entry.modules.length;
-            const lectureCount = entry.modules.reduce(
-              (total, moduleEntry) => total + (moduleEntry.lectures?.length || 0),
-              0,
-            );
+            const moduleCount = Number(classRecord.module_count ?? entry.modules.length);
+            const lectureCount =
+              Number(classRecord.lecture_count) ||
+              entry.modules.reduce(
+                (total, moduleEntry) =>
+                  total +
+                  Number(moduleEntry.module?.lecture_count ?? moduleEntry.lectures.length),
+                0,
+              );
             const moduleWord = pluralize(currentLanguage, 'counts.module', moduleCount);
             const lectureWord = pluralize(currentLanguage, 'counts.lecture', lectureCount);
             const meta = document.createElement('span');
@@ -6793,7 +6974,14 @@ bootstrapEnvironmentFromDataset();
 
             summary.appendChild(summaryText);
 
-            if (state.editMode) {
+            if (classRecord.description) {
+              const description = document.createElement('p');
+              description.className = 'syllabus-description';
+              description.textContent = classRecord.description;
+              summary.appendChild(description);
+            }
+
+            if (editMode) {
               const actions = document.createElement('div');
               actions.className = 'syllabus-actions';
 
@@ -6801,7 +6989,7 @@ bootstrapEnvironmentFromDataset();
               addModuleButton.addEventListener('click', (event) => {
                 event.preventDefault();
                 event.stopPropagation();
-                handleAddModule(entry.class);
+                handleAddModule(classRecord);
               });
               actions.appendChild(addModuleButton);
 
@@ -6820,167 +7008,426 @@ bootstrapEnvironmentFromDataset();
 
             const content = document.createElement('div');
             content.className = 'syllabus-content';
+            const modulesContainer = document.createElement('div');
+            modulesContainer.className = 'syllabus-modules';
+            content.appendChild(modulesContainer);
+            classDetails.appendChild(content);
 
-            if (!entry.modules.length) {
-              const emptyModules = document.createElement('div');
-              emptyModules.className = 'placeholder';
-              emptyModules.textContent = t('placeholders.noModules');
-              content.appendChild(emptyModules);
+            classDetails.addEventListener('toggle', () => {
+              state.expandedClasses.set(String(classId), classDetails.open);
+              if (classDetails.open) {
+                this.renderModulesForClass(classDetails);
+              } else {
+                this.clearModulesForClass(classDetails);
+              }
+            });
+
+            return classDetails;
+          }
+
+          clearModulesForClass(classElement) {
+            const classId = Number(classElement.dataset.classId);
+            const modulesContainer = classElement.querySelector('.syllabus-modules');
+            if (modulesContainer) {
+              modulesContainer.querySelectorAll('.syllabus-module').forEach((moduleElement) => {
+                this.moduleObserver.unobserve(moduleElement);
+              });
+              modulesContainer.querySelectorAll('.virtual-scroll-sentinel').forEach((sentinel) => {
+                this.moduleLoadObserver.unobserve(sentinel);
+                this.moduleLoadTargets.delete(sentinel);
+              });
+              modulesContainer.innerHTML = '';
+            }
+            this.moduleMap.forEach((value, key) => {
+              if (value.classId === classId) {
+                this.moduleMap.delete(key);
+              }
+            });
+          }
+
+          renderModulesForClass(classElement) {
+            if (!classElement.open) {
+              return;
+            }
+            const classId = Number(classElement.dataset.classId);
+            const entry = this.entryMap.get(classId);
+            const modulesContainer = classElement.querySelector('.syllabus-modules');
+            if (!entry || !modulesContainer) {
+              return;
+            }
+
+            modulesContainer.querySelectorAll('.syllabus-module').forEach((moduleElement) => {
+              this.moduleObserver.unobserve(moduleElement);
+            });
+            modulesContainer.querySelectorAll('.virtual-scroll-sentinel').forEach((sentinel) => {
+              this.moduleLoadObserver.unobserve(sentinel);
+            });
+            modulesContainer.innerHTML = '';
+
+            const modules = Array.isArray(entry.modules) ? entry.modules : [];
+            if (!modules.length) {
+              const placeholder = document.createElement('div');
+              placeholder.className = 'placeholder';
+              placeholder.textContent = t('placeholders.noModules');
+              modulesContainer.appendChild(placeholder);
             } else {
-              const modulesContainer = document.createElement('div');
-              modulesContainer.className = 'syllabus-modules';
-
-              entry.modules.forEach((moduleEntry) => {
-                const moduleDetails = document.createElement('details');
-                moduleDetails.className = 'syllabus-module';
-                const moduleHasSelection = (moduleEntry.lectures || []).some(
-                  (lecture) => lecture.id === state.selectedLectureId,
-                );
-                const moduleId = moduleEntry.module?.id != null ? String(moduleEntry.module.id) : null;
-                let expandModule = Boolean(moduleHasSelection);
-                if (classId && moduleId) {
-                  const moduleKey = `${classId}:${moduleId}`;
-                  const storedModuleValue = state.expandedModules.get(moduleKey);
-                  if (typeof storedModuleValue === 'boolean') {
-                    expandModule = storedModuleValue;
-                  }
-                  if (moduleHasSelection) {
-                    expandModule = true;
-                    state.expandedModules.set(moduleKey, true);
-                  }
-                  moduleDetails.dataset.classId = classId;
-                  moduleDetails.dataset.moduleId = moduleId;
-                  moduleDetails.addEventListener('toggle', () => {
-                    state.expandedModules.set(moduleKey, moduleDetails.open);
-                  });
+              modules.forEach((moduleEntry) => {
+                const moduleElement = this.buildModuleNode(entry, moduleEntry, classId);
+                modulesContainer.appendChild(moduleElement);
+                this.moduleObserver.observe(moduleElement);
+                if (moduleElement.open) {
+                  this.renderLecturesForModule(moduleElement);
                 }
-                moduleDetails.open = expandModule;
+              });
+            }
 
-                const moduleSummary = document.createElement('summary');
-                moduleSummary.className = 'syllabus-summary';
+            const moduleWindow = state.moduleWindows.get(String(classId));
+            if (moduleWindow && moduleWindow.hasMore) {
+              const sentinel = this.createSentinel();
+              this.moduleLoadTargets.set(sentinel, { classId });
+              this.moduleLoadObserver.observe(sentinel);
+              modulesContainer.appendChild(sentinel);
+            }
+          }
 
-                const moduleSummaryText = document.createElement('div');
-                moduleSummaryText.className = 'syllabus-summary-text';
+          buildModuleNode(classEntry, moduleEntry, classId) {
+            const moduleRecord = moduleEntry.module;
+            const moduleId = Number(moduleRecord.id);
+            const moduleDetails = document.createElement('details');
+            moduleDetails.className = 'syllabus-module';
+            moduleDetails.dataset.classId = String(classId);
+            moduleDetails.dataset.moduleId = String(moduleId);
 
-                const moduleTitle = document.createElement('span');
-                moduleTitle.className = 'syllabus-title';
-                moduleTitle.textContent = moduleEntry.module.name;
-                moduleSummaryText.appendChild(moduleTitle);
+            const moduleHasSelection = (moduleEntry.lectures || []).some(
+              (lecture) => lecture.id === state.selectedLectureId,
+            );
+            const moduleKey = `${classId}:${moduleId}`;
+            let expandModule = moduleHasSelection;
+            const storedValue = state.expandedModules.get(moduleKey);
+            if (typeof storedValue === 'boolean') {
+              expandModule = storedValue;
+            }
+            if (moduleHasSelection) {
+              expandModule = true;
+              state.expandedModules.set(moduleKey, true);
+            }
+            moduleDetails.open = expandModule;
 
-                const moduleLectureCount = moduleEntry.lectures.length;
-                const moduleLectureWord = pluralize(
-                  currentLanguage,
-                  'counts.lecture',
-                  moduleLectureCount,
-                );
-                const moduleMeta = document.createElement('span');
-                moduleMeta.className = 'syllabus-meta';
-                moduleMeta.textContent = t('curriculum.moduleMeta', {
-                  lectureCount: moduleLectureCount,
-                  lectureWord: moduleLectureWord,
+            const summary = document.createElement('summary');
+            summary.className = 'syllabus-summary';
+
+            const summaryText = document.createElement('div');
+            summaryText.className = 'syllabus-summary-text';
+
+            const title = document.createElement('span');
+            title.className = 'syllabus-title';
+            title.textContent = moduleRecord.name;
+            summaryText.appendChild(title);
+
+            const lectureCount = Number(moduleRecord.lecture_count ?? moduleEntry.lectures.length);
+            const lectureWord = pluralize(currentLanguage, 'counts.lecture', lectureCount);
+            const meta = document.createElement('span');
+            meta.className = 'syllabus-meta';
+            meta.textContent = t('curriculum.moduleMeta', {
+              lectureCount,
+              lectureWord,
+            });
+            summaryText.appendChild(meta);
+
+            summary.appendChild(summaryText);
+
+            if (moduleRecord.description) {
+              const description = document.createElement('p');
+              description.className = 'syllabus-description';
+              description.textContent = moduleRecord.description;
+              summary.appendChild(description);
+            }
+
+            if (state.editMode) {
+              const actions = document.createElement('div');
+              actions.className = 'syllabus-actions';
+
+              const deleteModuleButton = createIconButton(
+                t('common.actions.delete'),
+                '×',
+                'danger',
+              );
+              deleteModuleButton.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                handleDeleteModule(moduleEntry, classEntry.class);
+              });
+              actions.appendChild(deleteModuleButton);
+
+              summary.appendChild(actions);
+            }
+
+            moduleDetails.appendChild(summary);
+
+            const moduleContent = document.createElement('div');
+            moduleContent.className = 'syllabus-content';
+
+            const lectureHost = document.createElement('div');
+            lectureHost.className = 'lecture-host';
+            moduleContent.appendChild(lectureHost);
+
+            moduleDetails.appendChild(moduleContent);
+
+            moduleDetails.addEventListener('toggle', () => {
+              state.expandedModules.set(moduleKey, moduleDetails.open);
+              if (moduleDetails.open) {
+                this.renderLecturesForModule(moduleDetails);
+              } else {
+                this.clearLecturesForModule(moduleDetails);
+              }
+            });
+
+            this.moduleMap.set(moduleId, { classId, entry: moduleEntry });
+            return moduleDetails;
+          }
+
+          clearLecturesForModule(moduleElement) {
+            const moduleId = Number(moduleElement.dataset.moduleId);
+            const host = moduleElement.querySelector('.lecture-host');
+            if (host) {
+              host.querySelectorAll('.virtual-scroll-sentinel').forEach((sentinel) => {
+                this.lectureLoadObserver.unobserve(sentinel);
+                this.lectureLoadTargets.delete(sentinel);
+              });
+              host.innerHTML = '';
+            }
+            const moduleInfo = this.moduleMap.get(moduleId);
+            if (moduleInfo?.entry?.lectures) {
+              moduleInfo.entry.lectures.forEach((lecture) => {
+                state.buttonMap.delete(lecture.id);
+              });
+            }
+          }
+
+          renderLecturesForModule(moduleElement) {
+            if (!moduleElement.open) {
+              return;
+            }
+            const moduleId = Number(moduleElement.dataset.moduleId);
+            const moduleInfo = this.moduleMap.get(moduleId);
+            if (!moduleInfo) {
+              return;
+            }
+            const classId = moduleInfo.classId;
+            const host = moduleElement.querySelector('.lecture-host');
+            if (!host) {
+              return;
+            }
+
+            host.querySelectorAll('.virtual-scroll-sentinel').forEach((sentinel) => {
+              this.lectureLoadObserver.unobserve(sentinel);
+            });
+            host.innerHTML = '';
+
+            const moduleEntry = moduleInfo.entry;
+            const lectures = Array.isArray(moduleEntry.lectures) ? moduleEntry.lectures : [];
+            const lectureList = document.createElement('ul');
+            lectureList.className = 'syllabus-lectures';
+            lectureList.dataset.moduleId = String(moduleId);
+
+            if (!lectures.length) {
+              lectureList.classList.add('empty');
+              const empty = document.createElement('li');
+              empty.className = 'placeholder';
+              empty.textContent = t('placeholders.noLectures');
+              empty.setAttribute('aria-hidden', 'true');
+              lectureList.appendChild(empty);
+            } else {
+              lectures.forEach((lecture) => {
+                const lectureItem = document.createElement('li');
+                lectureItem.className = 'syllabus-lecture';
+                lectureItem.dataset.lectureId = String(lecture.id);
+
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'lecture-button';
+                button.textContent = lecture.name;
+                button.addEventListener('click', (event) => {
+                  event.preventDefault();
+                  selectLecture(lecture.id);
                 });
-                moduleSummaryText.appendChild(moduleMeta);
-
-                moduleSummary.appendChild(moduleSummaryText);
+                lectureItem.appendChild(button);
+                state.buttonMap.set(lecture.id, button);
 
                 if (state.editMode) {
-                  const moduleActions = document.createElement('div');
-                  moduleActions.className = 'syllabus-actions';
+                  lectureItem.draggable = true;
+                  lectureItem.addEventListener('dragstart', (event) => {
+                    startLectureDrag(event, lecture, moduleEntry.module.id);
+                  });
+                  lectureItem.addEventListener('dragend', clearLectureDrag);
 
-                  const deleteModuleButton = createIconButton(
+                  const deleteLectureButton = createIconButton(
                     t('common.actions.delete'),
                     '×',
                     'danger',
                   );
-                  deleteModuleButton.addEventListener('click', (event) => {
+                  deleteLectureButton.addEventListener('click', (event) => {
                     event.preventDefault();
                     event.stopPropagation();
-                    handleDeleteModule(moduleEntry, entry.class);
+                    const classRecord = this.entryMap.get(classId)?.class;
+                    handleDeleteLecture(lecture, moduleEntry.module, classRecord);
                   });
-                  moduleActions.appendChild(deleteModuleButton);
-
-                  moduleSummary.appendChild(moduleActions);
+                  lectureItem.appendChild(deleteLectureButton);
                 }
 
-                moduleDetails.appendChild(moduleSummary);
-
-                const moduleContent = document.createElement('div');
-                moduleContent.className = 'syllabus-content';
-
-                const lectureList = document.createElement('ul');
-                lectureList.className = 'syllabus-lectures';
-                lectureList.dataset.moduleId = String(moduleEntry.module.id);
-
-                if (!moduleEntry.lectures.length) {
-                  lectureList.classList.add('empty');
-                  const emptyLectures = document.createElement('li');
-                  emptyLectures.className = 'placeholder';
-                  emptyLectures.textContent = t('placeholders.noLectures');
-                  emptyLectures.setAttribute('aria-hidden', 'true');
-                  lectureList.appendChild(emptyLectures);
-                } else {
-                  moduleEntry.lectures.forEach((lecture) => {
-                    const lectureItem = document.createElement('li');
-                    lectureItem.className = 'syllabus-lecture';
-                    lectureItem.dataset.lectureId = String(lecture.id);
-
-                    const button = document.createElement('button');
-                    button.type = 'button';
-                    button.className = 'lecture-button';
-                    button.textContent = lecture.name;
-                    button.addEventListener('click', (event) => {
-                      event.preventDefault();
-                      selectLecture(lecture.id);
-                    });
-                    lectureItem.appendChild(button);
-                    state.buttonMap.set(lecture.id, button);
-
-                    if (state.editMode) {
-                      lectureItem.draggable = true;
-                      lectureItem.addEventListener('dragstart', (event) => {
-                        startLectureDrag(event, lecture, moduleEntry.module.id);
-                      });
-                      lectureItem.addEventListener('dragend', clearLectureDrag);
-
-                      const deleteLectureButton = createIconButton(
-                        t('common.actions.delete'),
-                        '×',
-                        'danger',
-                      );
-                      deleteLectureButton.addEventListener('click', (event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        handleDeleteLecture(lecture, moduleEntry.module, entry.class);
-                      });
-                      lectureItem.appendChild(deleteLectureButton);
-                    }
-
-                    lectureList.appendChild(lectureItem);
-                  });
-                }
-
-                if (state.editMode) {
-                  const dropHandler = (event) => handleLectureDrop(event, moduleEntry.module.id);
-                  lectureList.addEventListener('dragover', handleLectureDragOver);
-                  lectureList.addEventListener('dragleave', handleLectureDragLeave);
-                  lectureList.addEventListener('drop', dropHandler);
-                }
-
-                moduleContent.appendChild(lectureList);
-
-                moduleDetails.appendChild(moduleContent);
-                modulesContainer.appendChild(moduleDetails);
+                lectureList.appendChild(lectureItem);
               });
-
-              content.appendChild(modulesContainer);
             }
 
-            classDetails.appendChild(content);
-            syllabus.appendChild(classDetails);
-          });
+            if (state.editMode) {
+              const dropHandler = (event) => handleLectureDrop(event, moduleEntry.module.id);
+              lectureList.addEventListener('dragover', handleLectureDragOver);
+              lectureList.addEventListener('dragleave', handleLectureDragLeave);
+              lectureList.addEventListener('drop', dropHandler);
+            }
 
-          dom.curriculum.appendChild(syllabus);
-          highlightSelected();
+            host.appendChild(lectureList);
+
+            const lectureWindow = state.lectureWindows.get(String(moduleId));
+            if (lectureWindow && lectureWindow.hasMore) {
+              const sentinel = this.createSentinel();
+              this.lectureLoadTargets.set(sentinel, { classId, moduleId });
+              this.lectureLoadObserver.observe(sentinel);
+              host.appendChild(sentinel);
+            }
+
+            highlightSelected();
+          }
+
+          createSentinel() {
+            const sentinel = document.createElement('div');
+            sentinel.className = 'virtual-scroll-sentinel';
+            sentinel.setAttribute('aria-hidden', 'true');
+            sentinel.style.height = '1px';
+            sentinel.style.width = '100%';
+            return sentinel;
+          }
+
+          handleClassIntersection(entries) {
+            entries.forEach((entry) => {
+              const target = entry.target;
+              if (!(target instanceof HTMLElement)) {
+                return;
+              }
+              if (entry.isIntersecting && target.open) {
+                this.renderModulesForClass(target);
+              } else if (!entry.isIntersecting) {
+                this.clearModulesForClass(target);
+              }
+            });
+          }
+
+          handleModuleIntersection(entries) {
+            entries.forEach((entry) => {
+              const target = entry.target;
+              if (!(target instanceof HTMLElement)) {
+                return;
+              }
+              if (entry.isIntersecting && target.open) {
+                this.renderLecturesForModule(target);
+              } else if (!entry.isIntersecting) {
+                this.clearLecturesForModule(target);
+              }
+            });
+          }
+
+          handleLoadMoreIntersection(entries) {
+            entries.forEach((entry) => {
+              if (!entry.isIntersecting) {
+                return;
+              }
+              if (this.classLoadTargets.has(entry.target)) {
+                loadMoreClasses();
+              }
+            });
+          }
+
+          handleModuleLoadIntersection(entries) {
+            entries.forEach((entry) => {
+              if (!entry.isIntersecting) {
+                return;
+              }
+              const info = this.moduleLoadTargets.get(entry.target);
+              if (info && info.classId != null) {
+                loadMoreModules(info.classId);
+              }
+            });
+          }
+
+          handleLectureLoadIntersection(entries) {
+            entries.forEach((entry) => {
+              if (!entry.isIntersecting) {
+                return;
+              }
+              const info = this.lectureLoadTargets.get(entry.target);
+              if (info && info.classId != null && info.moduleId != null) {
+                loadMoreLectures(info.classId, info.moduleId);
+              }
+            });
+          }
+        }
+
+        function getCurriculumVirtualizer() {
+          if (state.curriculumVirtualizer && state.curriculumVirtualizer.root !== dom.curriculum) {
+            state.curriculumVirtualizer = null;
+          }
+          if (!state.curriculumVirtualizer && dom.curriculum) {
+            state.curriculumVirtualizer = new CurriculumVirtualizer(dom.curriculum);
+          }
+          return state.curriculumVirtualizer;
+        }
+
+        function recordCurriculumRender(duration, count) {
+          state.curriculumRenderMetrics.push({
+            timestamp: Date.now(),
+            duration,
+            count,
+          });
+          if (state.curriculumRenderMetrics.length > 25) {
+            state.curriculumRenderMetrics.shift();
+          }
+          if (typeof console !== 'undefined' && console.debug) {
+            console.debug('[curriculum] render', `${duration.toFixed(2)}ms`, { count });
+          }
+        }
+
+        function renderCurriculum() {
+          if (!dom.curriculum) {
+            return;
+          }
+          const filtered = computeFilteredClasses();
+          const virtualizer = getCurriculumVirtualizer();
+          const hasPerformance =
+            typeof performance !== 'undefined' &&
+            typeof performance.now === 'function';
+          const now = hasPerformance ? () => performance.now() : () => Date.now();
+          const start = now();
+          const canMark = hasPerformance && typeof performance.mark === 'function';
+          if (canMark) {
+            performance.mark('curriculum-render-start');
+          }
+          virtualizer.render(filtered, { editMode: state.editMode });
+          let duration = now() - start;
+          const canMeasure =
+            canMark && typeof performance.measure === 'function' && typeof performance.clearMarks === 'function';
+          if (canMeasure && typeof performance.clearMeasures === 'function') {
+            performance.mark('curriculum-render-end');
+            const measure = performance.measure(
+              'curriculum-render',
+              'curriculum-render-start',
+              'curriculum-render-end',
+            );
+            duration = measure.duration;
+            performance.clearMarks('curriculum-render-start');
+            performance.clearMarks('curriculum-render-end');
+            performance.clearMeasures('curriculum-render');
+          }
+          recordCurriculumRender(duration, filtered.length);
         }
 
         function pruneExpansionState() {
@@ -7082,11 +7529,21 @@ bootstrapEnvironmentFromDataset();
           if (!requireEditMode()) {
             return;
           }
-          const moduleCount = classEntry.modules.length;
-          const lectureCount = classEntry.modules.reduce(
-            (total, moduleEntry) => total + (moduleEntry.lectures?.length || 0),
-            0,
-          );
+          const moduleCount =
+            classEntry?.class?.module_count != null
+              ? Number(classEntry.class.module_count)
+              : classEntry.modules.length;
+          const lectureCount =
+            classEntry?.class?.lecture_count != null
+              ? Number(classEntry.class.lecture_count)
+              : classEntry.modules.reduce(
+                  (total, moduleEntry) =>
+                    total +
+                    Number(
+                      moduleEntry.module?.lecture_count ?? moduleEntry.lectures?.length ?? 0,
+                    ),
+                  0,
+                );
           const moduleWord = pluralize(currentLanguage, 'counts.module', moduleCount);
           const lectureWord = pluralize(currentLanguage, 'counts.lecture', lectureCount);
           let message = t('dialogs.deleteClass.message', { className: classEntry.class.name });
@@ -7132,7 +7589,10 @@ bootstrapEnvironmentFromDataset();
           if (!requireEditMode()) {
             return;
           }
-          const lectureCount = moduleEntry.lectures.length;
+          const lectureCount =
+            moduleEntry?.module?.lecture_count != null
+              ? Number(moduleEntry.module.lecture_count)
+              : moduleEntry.lectures.length;
           const classContext = classRecord
             ? t('dialogs.deleteModule.classContext', { className: classRecord.name })
             : '';
@@ -7455,11 +7915,102 @@ bootstrapEnvironmentFromDataset();
           dom.summary.appendChild(description);
         }
 
+        function buildQueryString(params) {
+          const query = new URLSearchParams();
+          Object.entries(params || {}).forEach(([key, value]) => {
+            if (value == null) {
+              return;
+            }
+            query.set(key, String(value));
+          });
+          return query.toString();
+        }
+
+        async function fetchClassesPage({
+          offset = 0,
+          limit = CURRICULUM_PAGE_SIZE,
+          moduleLimit = MODULE_PAGE_SIZE,
+          lectureLimit = LECTURE_PAGE_SIZE,
+        } = {}) {
+          const query = buildQueryString({
+            offset,
+            limit,
+            module_limit: moduleLimit,
+            lecture_limit: lectureLimit,
+          });
+          return request(`/api/classes?${query}`);
+        }
+
+        async function fetchModulesPage(classId, {
+          offset = 0,
+          limit = MODULE_PAGE_SIZE,
+          lectureLimit = LECTURE_PAGE_SIZE,
+        } = {}) {
+          const query = buildQueryString({ offset, limit, lecture_limit: lectureLimit });
+          return request(`/api/classes/${classId}/modules?${query}`);
+        }
+
+        async function fetchLecturesPage(classId, moduleId, {
+          offset = 0,
+          limit = LECTURE_PAGE_SIZE,
+        } = {}) {
+          const query = buildQueryString({ offset, limit });
+          return request(`/api/classes/${classId}/modules/${moduleId}/lectures?${query}`);
+        }
+
+        function applyClassPayload(payload, { replace = false } = {}) {
+          const classes = Array.isArray(payload?.classes) ? payload.classes : [];
+          if (replace) {
+            state.classes = classes;
+            state.moduleWindows.clear();
+            state.lectureWindows.clear();
+            state.moduleIndex.clear();
+          } else if (classes.length) {
+            const byId = new Map(state.classes.map((klass) => [klass.id, klass]));
+            classes.forEach((klass) => {
+              if (!klass || klass.id == null) {
+                return;
+              }
+              if (byId.has(klass.id)) {
+                byId.set(klass.id, Object.assign(byId.get(klass.id), klass));
+              } else {
+                state.classes.push(klass);
+                byId.set(klass.id, klass);
+              }
+            });
+            state.classes = Array.from(byId.values()).sort((a, b) => {
+              const positionA = Number(a?.position) || 0;
+              const positionB = Number(b?.position) || 0;
+              if (positionA !== positionB) {
+                return positionA - positionB;
+              }
+              return Number(a?.id || 0) - Number(b?.id || 0);
+            });
+          }
+
+          setCurriculumWindow(payload?.pagination);
+          if (payload?.stats) {
+            state.stats = payload.stats;
+          }
+
+          state.classes.forEach((klass) => {
+            setModuleWindow(klass?.id, klass?.modules_pagination);
+            const modules = Array.isArray(klass?.modules) ? klass.modules : [];
+            modules.forEach((module) => {
+              setLectureWindow(module?.id, module?.lectures_pagination);
+              registerModuleIndexEntry(module, klass);
+              if (!Array.isArray(module.lectures)) {
+                module.lectures = [];
+              }
+            });
+          });
+        }
+
         async function refreshData() {
+          state.curriculumWindow.loading = true;
           try {
-            const payload = await request('/api/classes');
-            state.classes = payload?.classes || [];
-            state.stats = payload?.stats || {};
+            const payload = await fetchClassesPage({ offset: 0 });
+            applyClassPayload(payload, { replace: true });
             pruneExpansionState();
             state.storage.initialized = false;
             state.storage.overview = null;
@@ -7488,6 +8039,165 @@ bootstrapEnvironmentFromDataset();
             }
           } catch (error) {
             showStatus(error.message, 'error');
+          } finally {
+            state.curriculumWindow.loading = false;
+          }
+        }
+
+        async function loadMoreClasses() {
+          const window = state.curriculumWindow;
+          if (!window || window.loading || !window.hasMore) {
+            return;
+          }
+          const offset =
+            typeof window.nextOffset === 'number'
+              ? window.nextOffset
+              : window.offset + window.limit;
+          window.loading = true;
+          try {
+            const payload = await fetchClassesPage({ offset });
+            applyClassPayload(payload, { replace: false });
+            pruneExpansionState();
+            renderCurriculum();
+            updateModuleOptions();
+          } catch (error) {
+            showStatus(error.message, 'error');
+          } finally {
+            window.loading = false;
+          }
+        }
+
+        async function loadMoreModules(classId) {
+          if (classId == null) {
+            return;
+          }
+          const key = String(classId);
+          const window = state.moduleWindows.get(key);
+          if (!window || window.loading || !window.hasMore) {
+            return;
+          }
+          const offset =
+            typeof window.nextOffset === 'number'
+              ? window.nextOffset
+              : window.offset + window.limit;
+          window.loading = true;
+          try {
+            const payload = await fetchModulesPage(classId, { offset });
+            const modules = Array.isArray(payload?.modules) ? payload.modules : [];
+            const target = state.classes.find((klass) => Number(klass?.id) === Number(classId));
+            if (target) {
+              if (payload?.class?.module_count != null) {
+                target.module_count = Number(payload.class.module_count);
+              } else if (payload?.pagination?.total != null) {
+                target.module_count = Number(payload.pagination.total);
+              }
+              const existingById = new Map(
+                (target.modules || []).map((module) => [Number(module?.id), module]),
+              );
+              modules.forEach((module) => {
+                const moduleId = Number(module?.id);
+                if (existingById.has(moduleId)) {
+                  const merged = Object.assign(existingById.get(moduleId), module);
+                  existingById.set(moduleId, merged);
+                } else {
+                  if (!Array.isArray(target.modules)) {
+                    target.modules = [];
+                  }
+                  target.modules.push(module);
+                  existingById.set(moduleId, module);
+                }
+                setLectureWindow(module?.id, module?.lectures_pagination);
+                registerModuleIndexEntry(module, target);
+                if (!Array.isArray(module.lectures)) {
+                  module.lectures = [];
+                }
+              });
+              target.modules.sort((a, b) => {
+                const positionA = Number(a?.position) || 0;
+                const positionB = Number(b?.position) || 0;
+                if (positionA !== positionB) {
+                  return positionA - positionB;
+                }
+                return Number(a?.id || 0) - Number(b?.id || 0);
+              });
+            }
+            if (payload?.pagination) {
+              setModuleWindow(classId, payload.pagination);
+            }
+            renderCurriculum();
+            updateModuleOptions();
+          } catch (error) {
+            showStatus(error.message, 'error');
+          } finally {
+            window.loading = false;
+          }
+        }
+
+        async function loadMoreLectures(classId, moduleId) {
+          if (classId == null || moduleId == null) {
+            return;
+          }
+          const key = String(moduleId);
+          const window = state.lectureWindows.get(key);
+          if (!window || window.loading || !window.hasMore) {
+            return;
+          }
+          const offset =
+            typeof window.nextOffset === 'number'
+              ? window.nextOffset
+              : window.offset + window.limit;
+          window.loading = true;
+          try {
+            const payload = await fetchLecturesPage(classId, moduleId, { offset });
+            const modulePayload = payload?.module;
+            const lectures = Array.isArray(modulePayload?.lectures)
+              ? modulePayload.lectures
+              : [];
+            const targetClass = state.classes.find(
+              (klass) => Number(klass?.id) === Number(classId),
+            );
+            if (targetClass) {
+              const targetModule = (targetClass.modules || []).find(
+                (module) => Number(module?.id) === Number(moduleId),
+              );
+              if (targetModule) {
+                if (!Array.isArray(targetModule.lectures)) {
+                  targetModule.lectures = [];
+                }
+                const existingIds = new Set(
+                  targetModule.lectures.map((lecture) => Number(lecture?.id)),
+                );
+                lectures.forEach((lecture) => {
+                  const lectureId = Number(lecture?.id);
+                  if (!existingIds.has(lectureId)) {
+                    targetModule.lectures.push(lecture);
+                    existingIds.add(lectureId);
+                  }
+                });
+                targetModule.lecture_count = Number(
+                  modulePayload?.lecture_count ?? targetModule.lecture_count,
+                );
+                if (modulePayload?.asset_counts) {
+                  targetModule.asset_counts = modulePayload.asset_counts;
+                }
+                targetModule.lectures.sort((a, b) => {
+                  const positionA = Number(a?.position) || 0;
+                  const positionB = Number(b?.position) || 0;
+                  if (positionA !== positionB) {
+                    return positionA - positionB;
+                  }
+                  return Number(a?.id || 0) - Number(b?.id || 0);
+                });
+              }
+            }
+            if (modulePayload?.lectures_pagination) {
+              setLectureWindow(moduleId, modulePayload.lectures_pagination);
+            }
+            renderCurriculum();
+          } catch (error) {
+            showStatus(error.message, 'error');
+          } finally {
+            window.loading = false;
           }
         }
 
