@@ -29,21 +29,7 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import (
-    Any,
-    AsyncIterator,
-    Callable,
-    Deque,
-    Dict,
-    Iterable,
-    List,
-    Literal,
-    Optional,
-    Set,
-    Tuple,
-    TypeVar,
-    Union,
-)
+from typing import Any, Callable, Deque, Dict, Iterable, List, Literal, Optional, Set, Tuple, TypeVar
 
 from concurrent.futures import Future, ThreadPoolExecutor
 
@@ -61,12 +47,11 @@ from fastapi import (
 )
 from fastapi import status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.formparsers import MultiPartParser
 from starlette.types import ASGIApp, Receive, Scope, Send
-from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from .. import config as config_module
 from ..config import AppConfig
@@ -115,12 +100,7 @@ except Exception:  # noqa: BLE001 - optional dependency may be absent
     check_gpu_whisper_availability = None  # type: ignore[assignment]
 
 _STATIC_ROOT = Path(__file__).parent / "static"
-_TEMPLATE_DIR = Path(__file__).parent / "templates"
-_JINJA_ENV = Environment(
-    loader=FileSystemLoader(str(_TEMPLATE_DIR)),
-    autoescape=select_autoescape(["html", "xml"]),
-)
-_INDEX_TEMPLATE = _JINJA_ENV.get_template("index.html")
+_TEMPLATE_PATH = Path(__file__).parent / "templates" / "index.html"
 _PREVIEW_LIMIT = 1200
 _WHISPER_MODEL_OPTIONS: Tuple[str, ...] = ("tiny", "base", "small", "medium", "large", "gpu")
 _WHISPER_MODEL_SET = set(_WHISPER_MODEL_OPTIONS)
@@ -145,10 +125,6 @@ except ValueError:
     _MAX_UPLOAD_BYTES = _DEFAULT_MAX_UPLOAD_BYTES
 
 _DEFAULT_UPLOAD_CHUNK_SIZE = 1024 * 1024
-_DEBUG_RETENTION_SECONDS = 300.0
-_DEBUG_STREAM_KEEPALIVE = 20.0
-_DEBUG_STREAM_RETRY_MS = 3000
-_DEBUG_STREAM_QUEUE_SIZE = 256
 
 def get_max_upload_bytes() -> int:
     """Return the configured maximum upload size in bytes."""
@@ -396,25 +372,6 @@ def _log_event(message: str, **context: Any) -> None:
     _emit_debug_event("APP_EVENT", message, context=context)
 
 
-def _format_sse(
-    payload: Dict[str, Any],
-    *,
-    event_id: Optional[Union[str, int]] = None,
-    retry: Optional[int] = None,
-) -> str:
-    """Return a formatted Server-Sent Event payload."""
-
-    data = json.dumps(payload, ensure_ascii=False)
-    lines: List[str] = []
-    if event_id is not None:
-        lines.append(f"id: {event_id}")
-    if retry is not None:
-        lines.append(f"retry: {retry}")
-    for chunk in data.splitlines():
-        lines.append(f"data: {chunk}")
-    return "\n".join(lines) + "\n\n"
-
-
 # Ensure PDF.js module assets are served with the correct MIME type for dynamic import.
 mimetypes.add_type("text/javascript", ".mjs")
 mimetypes.add_type("application/javascript", ".mjs")
@@ -448,13 +405,11 @@ class DebugLogHandler(logging.Handler):
     }
     _SEVERITY_PRIORITY: Dict[str, int] = {"error": 3, "warning": 2, "info": 1}
 
-    def __init__(self, capacity: int = 500, *, retention_seconds: float = 300.0) -> None:
+    def __init__(self, capacity: int = 500) -> None:
         super().__init__(level=logging.DEBUG)
         self._capacity = max(1, capacity)
-        self._retention_seconds = max(0.0, float(retention_seconds))
         self._entries: Deque[Dict[str, Any]] = deque()
         self._entry_index: Dict[Tuple[Any, ...], Dict[str, Any]] = {}
-        self._subscribers: List[Tuple[asyncio.AbstractEventLoop, asyncio.Queue]] = []
         self._lock = threading.Lock()
         self._last_id = 0
         self.setFormatter(logging.Formatter(DEFAULT_LOG_FORMAT))
@@ -604,100 +559,10 @@ class DebugLogHandler(logging.Handler):
         return (event_type, message, context_items, payload_items, correlation_items)
 
     def _serialize_entry(self, entry: Dict[str, Any]) -> Dict[str, Any]:
-        exported = {
-            key: value
-            for key, value in entry.items()
-            if key not in {"_key", "_timestamp"}
-        }
+        exported = {key: value for key, value in entry.items() if key != "_key"}
         if "last_seen" in exported and "timestamp" not in exported:
             exported["timestamp"] = exported["last_seen"]
         return exported
-
-    def _collect_locked(self, after: Optional[int] = None) -> List[Dict[str, Any]]:
-        if after is None or after <= 0:
-            data = list(self._entries)
-        else:
-            data = [entry for entry in self._entries if entry.get("id", 0) > after]
-        return [self._serialize_entry(entry) for entry in data]
-
-    def _prune_locked(self) -> None:
-        if self._retention_seconds <= 0:
-            return
-        cutoff = time.time() - self._retention_seconds
-        while self._entries:
-            oldest = self._entries[0]
-            timestamp = oldest.get("_timestamp")
-            if timestamp is None or timestamp >= cutoff:
-                break
-            removed = self._entries.popleft()
-            key = removed.pop("_key", None)
-            removed.pop("_timestamp", None)
-            if key is not None:
-                self._entry_index.pop(key, None)
-
-    def register_listener(
-        self,
-        loop: asyncio.AbstractEventLoop,
-        after: Optional[int] = None,
-    ) -> Tuple[asyncio.Queue, List[Dict[str, Any]], int, bool]:
-        queue: asyncio.Queue = asyncio.Queue(maxsize=_DEBUG_STREAM_QUEUE_SIZE)
-        with self._lock:
-            self._prune_locked()
-            backlog = self._collect_locked(after)
-            next_marker = self._last_id
-            self._subscribers.append((loop, queue))
-        reset = after is None or after <= 0
-        return queue, backlog, next_marker, reset
-
-    def unregister_listener(self, queue: asyncio.Queue) -> None:
-        with self._lock:
-            self._subscribers = [
-                (loop, registered)
-                for loop, registered in self._subscribers
-                if registered is not queue
-            ]
-
-    def _deliver_to_subscribers(
-        self,
-        payload: Dict[str, Any],
-        subscribers: List[Tuple[asyncio.AbstractEventLoop, asyncio.Queue]],
-    ) -> None:
-        if not payload or not subscribers:
-            return
-
-        for loop, queue in subscribers:
-            def _enqueue(target: asyncio.Queue = queue, item: Dict[str, Any] = payload) -> None:
-                try:
-                    target.put_nowait(dict(item))
-                except asyncio.QueueFull:
-                    try:
-                        target.get_nowait()
-                    except asyncio.QueueEmpty:
-                        pass
-                    try:
-                        target.put_nowait(dict(item))
-                    except asyncio.QueueFull:
-                        pass
-
-            try:
-                loop.call_soon_threadsafe(_enqueue)
-            except RuntimeError:
-                self.unregister_listener(queue)
-
-    def acknowledge(self, up_to: Optional[int]) -> int:
-        if up_to is None or up_to <= 0:
-            return 0
-        removed = 0
-        with self._lock:
-            while self._entries and self._entries[0].get("id", 0) <= up_to:
-                entry = self._entries.popleft()
-                removed += 1
-                key = entry.pop("_key", None)
-                entry.pop("_timestamp", None)
-                if key is not None:
-                    self._entry_index.pop(key, None)
-            self._prune_locked()
-        return removed
 
     def emit(self, record: logging.LogRecord) -> None:  # noqa: D401 - inherited documentation
         rendered_message = record.getMessage()
@@ -735,9 +600,6 @@ class DebugLogHandler(logging.Handler):
             category = "task"
         key = self._build_key(event_type, base_message, context, payload, correlation)
 
-        broadcast: Optional[Dict[str, Any]] = None
-        subscribers: List[Tuple[asyncio.AbstractEventLoop, asyncio.Queue]] = []
-        next_marker = 0
         with self._lock:
             self._last_id += 1
             occurrence_id = self._last_id
@@ -785,9 +647,7 @@ class DebugLogHandler(logging.Handler):
                 if correlation:
                     existing.update(correlation)
                 existing["_key"] = key
-                existing["_timestamp"] = record.created
                 self._entries.append(existing)
-                broadcast = self._serialize_entry(existing)
             else:
                 entry: Dict[str, Any] = {
                     "id": occurrence_id,
@@ -817,30 +677,24 @@ class DebugLogHandler(logging.Handler):
                     entry["max_duration_ms"] = duration_ms
                 if correlation:
                     entry.update(correlation)
-                entry["_timestamp"] = record.created
                 self._entries.append(entry)
                 self._entry_index[key] = entry
                 while len(self._entries) > self._capacity:
                     oldest = self._entries.popleft()
                     old_key = oldest.pop("_key", None)
-                    oldest.pop("_timestamp", None)
                     if old_key is not None:
                         self._entry_index.pop(old_key, None)
-                broadcast = self._serialize_entry(entry)
-            self._prune_locked()
-            subscribers = list(self._subscribers)
-            next_marker = self._last_id
-        if broadcast:
-            payload = {"logs": [broadcast], "next": next_marker, "reset": False}
-            self._deliver_to_subscribers(payload, subscribers)
 
     def collect(self, after: Optional[int] = None, limit: int = 200) -> List[Dict[str, Any]]:
         with self._lock:
-            self._prune_locked()
-            data = self._collect_locked(after)
+            if after is None or after <= 0:
+                data = list(self._entries)
+            else:
+                data = [entry for entry in self._entries if entry.get("id", 0) > after]
         if not data:
             return []
-        return data[-limit:]
+        sliced = data[-limit:]
+        return [self._serialize_entry(entry) for entry in sliced]
 
     @property
     def last_id(self) -> int:
@@ -1150,6 +1004,19 @@ def _normalize_language(value: Any) -> str:
     return candidate if candidate in _LANGUAGE_SET else _DEFAULT_UI_SETTINGS.language
 
 
+def _format_asset_counts(lectures: List[Dict[str, Any]]) -> Dict[str, int]:
+    """Return aggregated asset availability counts for a collection of lectures."""
+
+    return {
+        "transcripts": sum(1 for lecture in lectures if lecture["transcript_path"]),
+        "slides": sum(1 for lecture in lectures if lecture["slide_path"]),
+        "audio": sum(1 for lecture in lectures if lecture["audio_path"]),
+        "processed_audio": sum(1 for lecture in lectures if lecture["processed_audio_path"]),
+        "notes": sum(1 for lecture in lectures if lecture["notes_path"]),
+        "slide_images": sum(1 for lecture in lectures if lecture["slide_image_dir"]),
+    }
+
+
 def _serialize_lecture(lecture: LectureRecord) -> Dict[str, Any]:
     return {
         "id": lecture.id,
@@ -1166,41 +1033,11 @@ def _serialize_lecture(lecture: LectureRecord) -> Dict[str, Any]:
     }
 
 
-def _build_pagination(offset: int, limit: int, total: int) -> Dict[str, Any]:
-    safe_offset = max(int(offset or 0), 0)
-    safe_limit = max(int(limit or 0), 0)
-    safe_total = max(int(total or 0), 0)
-    next_offset = (
-        safe_offset + safe_limit
-        if safe_limit > 0 and (safe_offset + safe_limit) < safe_total
-        else None
-    )
-    has_more = (safe_offset + safe_limit) < safe_total if safe_limit > 0 else safe_offset < safe_total
-    return {
-        "offset": safe_offset,
-        "limit": safe_limit,
-        "total": safe_total,
-        "has_more": has_more,
-        "next_offset": next_offset,
-    }
-
-
-def _serialize_module(
-    repository: LectureRepository,
-    module: ModuleRecord,
-    *,
-    lecture_offset: int = 0,
-    lecture_limit: Optional[int] = None,
-) -> Dict[str, Any]:
-    total_lectures = repository.count_lectures(module_id=module.id)
-    limit = lecture_limit if lecture_limit is not None and lecture_limit >= 0 else total_lectures
-    lectures: List[Dict[str, Any]] = []
-    if limit > 0:
-        lectures = [
-            _serialize_lecture(lecture)
-            for lecture in repository.list_lectures(module.id, lecture_offset, limit)
-        ]
-    asset_counts = repository.compute_asset_counts(module_id=module.id)
+def _serialize_module(repository: LectureRepository, module: ModuleRecord) -> Dict[str, Any]:
+    lectures: List[Dict[str, Any]] = [
+        _serialize_lecture(lecture) for lecture in repository.iter_lectures(module.id)
+    ]
+    asset_counts = _format_asset_counts(lectures)
     return {
         "id": module.id,
         "class_id": module.class_id,
@@ -1208,61 +1045,29 @@ def _serialize_module(
         "description": module.description,
         "position": module.position,
         "lectures": lectures,
-        "lecture_count": total_lectures,
+        "lecture_count": len(lectures),
         "asset_counts": asset_counts,
-        "lectures_pagination": _build_pagination(lecture_offset, limit, total_lectures),
     }
 
 
-def _serialize_class(
-    repository: LectureRepository,
-    class_record: ClassRecord,
-    *,
-    module_offset: int = 0,
-    module_limit: Optional[int] = None,
-    lecture_limit: Optional[int] = None,
-) -> Dict[str, Any]:
-    total_modules = repository.count_modules(class_record.id)
-    total_lectures = repository.count_lectures(class_id=class_record.id)
-    limit = module_limit if module_limit is not None and module_limit >= 0 else total_modules
-    module_records: List[ModuleRecord] = []
-    if limit > 0:
-        module_records = repository.list_modules(class_record.id, module_offset, limit)
+def _serialize_class(repository: LectureRepository, class_record: ClassRecord) -> Dict[str, Any]:
     modules: List[Dict[str, Any]] = [
-        _serialize_module(
-            repository,
-            module,
-            lecture_offset=0,
-            lecture_limit=lecture_limit,
-        )
-        for module in module_records
+        _serialize_module(repository, module) for module in repository.iter_modules(class_record.id)
     ]
-    asset_counts = repository.compute_asset_counts(class_id=class_record.id)
+    lecture_dicts: List[Dict[str, Any]] = [
+        lecture
+        for module in modules
+        for lecture in module["lectures"]
+    ]
+    asset_counts = _format_asset_counts(lecture_dicts)
     return {
         "id": class_record.id,
         "name": class_record.name,
         "description": class_record.description,
         "position": class_record.position,
         "modules": modules,
-        "module_count": total_modules,
-        "lecture_count": total_lectures,
+        "module_count": len(modules),
         "asset_counts": asset_counts,
-        "modules_pagination": _build_pagination(module_offset, limit, total_modules),
-    }
-
-
-def _collect_global_stats(repository: LectureRepository) -> Dict[str, Any]:
-    asset_counts = repository.compute_asset_counts()
-    return {
-        "class_count": repository.count_classes(),
-        "module_count": repository.count_modules(),
-        "lecture_count": repository.count_lectures(),
-        "transcript_count": asset_counts["transcripts"],
-        "slide_count": asset_counts["slides"],
-        "audio_count": asset_counts["audio"],
-        "processed_audio_count": asset_counts["processed_audio"],
-        "notes_count": asset_counts["notes"],
-        "slide_image_count": asset_counts["slide_images"],
     }
 
 
@@ -1620,10 +1425,6 @@ class SettingsPayload(BaseModel):
     debug_enabled: bool = False
 
 
-class DebugAckPayload(BaseModel):
-    last_id: int = Field(..., ge=0, alias="last_id")
-
-
 class ForwardedRootPathMiddleware:
     """Apply proxy-provided root path information to incoming requests."""
 
@@ -1822,10 +1623,8 @@ def create_app(
         None,
     )
     if debug_handler is None:
-        debug_handler = DebugLogHandler(retention_seconds=_DEBUG_RETENTION_SECONDS)
+        debug_handler = DebugLogHandler()
         root_logger.addHandler(debug_handler)
-    else:
-        debug_handler._retention_seconds = max(0.0, float(_DEBUG_RETENTION_SECONDS))
     app.state.debug_log_handler = debug_handler
     app.state.debug_enabled = False
     app.add_middleware(RequestContextMiddleware)
@@ -1941,6 +1740,8 @@ def create_app(
         name="assets",
     )
 
+    index_html = _TEMPLATE_PATH.read_text(encoding="utf-8")
+
     _STORAGE_HEALTH_CACHE_SECONDS = 5.0
     storage_health_state: Dict[str, Any] = {
         "checked_at": 0.0,
@@ -2000,48 +1801,6 @@ def create_app(
                 LOGGER.info("Storage directory '%s' is available again", root_path)
             return root_path
 
-    def _resolve_asset_urls(static_base: str) -> Dict[str, str]:
-        manifest_path = _STATIC_ROOT / "dist" / "manifest.json"
-        scripts_rel = Path("dist") / "assets" / "main.js"
-        styles_rel = Path("dist") / "assets" / "main.css"
-        if manifest_path.exists():
-            try:
-                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-            except Exception as error:  # pragma: no cover - defensive logging
-                LOGGER.warning("Failed to load asset manifest: %s", error)
-            else:
-                entry = None
-                for candidate in ("js/index.ts", "index.ts", "main"):
-                    entry = manifest.get(candidate)
-                    if entry:
-                        break
-                if entry is None:
-                    entry = next(
-                        (details for details in manifest.values() if details.get("isEntry")),
-                        None,
-                    )
-                if entry:
-                    scripts_rel = Path("dist") / entry.get("file", "assets/main.js")
-                    css_files = entry.get("css")
-                    if css_files:
-                        styles_rel = Path("dist") / css_files[0]
-
-        scripts_path = _STATIC_ROOT / scripts_rel
-        styles_path = _STATIC_ROOT / styles_rel
-        if not scripts_path.exists():
-            LOGGER.warning(
-                "Frontend bundle '%s' is missing; run 'npm run build' to generate assets.",
-                scripts_path,
-            )
-        if not styles_path.exists():
-            LOGGER.warning(
-                "Frontend styles '%s' are missing; run 'npm run build' to generate assets.",
-                styles_path,
-            )
-        scripts = f"{static_base}/{scripts_rel.as_posix()}"
-        styles = f"{static_base}/{styles_rel.as_posix()}"
-        return {"scripts": scripts, "styles": styles}
-
     def _render_index_html(request: Request | None = None) -> str:
         candidates: List[str] = []
         if request is not None:
@@ -2058,20 +1817,25 @@ def create_app(
                 resolved = normalized
                 break
         static_base = f"{resolved}/static" if resolved else "/static"
-        asset_urls = _resolve_asset_urls(static_base)
-        pdfjs_urls = {
-            "script": f"{static_base}/pdfjs/pdf.min.js",
-            "worker": f"{static_base}/pdfjs/pdf.worker.min.js",
-            "module": f"{static_base}/pdfjs/pdf.min.mjs",
-            "worker_module": f"{static_base}/pdfjs/pdf.worker.min.mjs",
-        }
+        rendered = index_html.replace(
+            "__LECTURE_TOOLS_PDFJS_SCRIPT__",
+            f"{static_base}/pdfjs/pdf.min.js",
+        ).replace(
+            "__LECTURE_TOOLS_PDFJS_WORKER__",
+            f"{static_base}/pdfjs/pdf.worker.min.js",
+        ).replace(
+            "__LECTURE_TOOLS_PDFJS_MODULE__",
+            f"{static_base}/pdfjs/pdf.min.mjs",
+        ).replace(
+            "__LECTURE_TOOLS_PDFJS_WORKER_MODULE__",
+            f"{static_base}/pdfjs/pdf.worker.min.mjs",
+        )
 
-        context = {
-            "root_path": resolved,
-            "asset_urls": asset_urls,
-            "pdfjs": pdfjs_urls,
-        }
-        return _INDEX_TEMPLATE.render(context)
+        if not resolved:
+            return rendered
+
+        safe_value = json.dumps(resolved)[1:-1]
+        return rendered.replace("__LECTURE_TOOLS_ROOT_PATH__", safe_value)
 
     def _summarize_lecture(lecture_id: int) -> Optional[Dict[str, Any]]:
         lecture_record = repository.get_lecture(lecture_id)
@@ -2612,95 +2376,42 @@ def create_app(
         return FileResponse(target)
 
     @app.get("/api/classes")
-    async def list_classes(
-        offset: int = Query(0, ge=0),
-        limit: int = Query(20, ge=0, le=500),
-        module_limit: int = Query(5, ge=0, le=500),
-        lecture_limit: int = Query(20, ge=0, le=500),
-    ) -> Dict[str, Any]:
-        _log_event(
-            "Listing classes",
-            offset=offset,
-            limit=limit,
-            module_limit=module_limit,
-            lecture_limit=lecture_limit,
+    async def list_classes() -> Dict[str, Any]:
+        _log_event("Listing classes")
+        classes = [_serialize_class(repository, record) for record in repository.iter_classes()]
+        total_modules = sum(item["module_count"] for item in classes)
+        total_lectures = sum(
+            module["lecture_count"] for item in classes for module in item["modules"]
         )
-        class_records = repository.list_classes(offset, limit) if limit >= 0 else []
-        classes = [
-            _serialize_class(
-                repository,
-                record,
-                module_offset=0,
-                module_limit=module_limit,
-                lecture_limit=lecture_limit,
-            )
-            for record in class_records
-        ]
-        stats = _collect_global_stats(repository)
-        pagination = _build_pagination(offset, limit, stats["class_count"])
+        total_asset_counts = {
+            "transcript_count": sum(
+                klass["asset_counts"]["transcripts"] for klass in classes
+            ),
+            "slide_count": sum(klass["asset_counts"]["slides"] for klass in classes),
+            "audio_count": sum(klass["asset_counts"]["audio"] for klass in classes),
+            "processed_audio_count": sum(
+                klass["asset_counts"].get("processed_audio", 0) for klass in classes
+            ),
+            "notes_count": sum(klass["asset_counts"]["notes"] for klass in classes),
+            "slide_image_count": sum(
+                klass["asset_counts"]["slide_images"] for klass in classes
+            ),
+        }
         _log_event(
             "Summarised classes",
-            class_count=stats["class_count"],
-            module_count=stats["module_count"],
-            lecture_count=stats["lecture_count"],
+            class_count=len(classes),
+            module_count=total_modules,
+            lecture_count=total_lectures,
         )
         return {
             "classes": classes,
-            "stats": stats,
-            "pagination": pagination,
-        }
-
-    @app.get("/api/classes/{class_id}/modules")
-    async def list_class_modules(
-        class_id: int,
-        offset: int = Query(0, ge=0),
-        limit: int = Query(10, ge=0, le=500),
-        lecture_limit: int = Query(20, ge=0, le=500),
-    ) -> Dict[str, Any]:
-        record = repository.get_class(class_id)
-        if record is None:
-            raise HTTPException(status_code=404, detail="Class not found")
-        module_records = repository.list_modules(class_id, offset, limit) if limit >= 0 else []
-        modules = [
-            _serialize_module(
-                repository,
-                module,
-                lecture_offset=0,
-                lecture_limit=lecture_limit,
-            )
-            for module in module_records
-        ]
-        total_modules = repository.count_modules(class_id)
-        pagination = _build_pagination(offset, limit, total_modules)
-        return {
-            "class": {
-                "id": record.id,
-                "name": record.name,
-                "description": record.description,
-                "position": record.position,
+            "stats": {
+                "class_count": len(classes),
                 "module_count": total_modules,
-            },
-            "modules": modules,
-            "pagination": pagination,
+            "lecture_count": total_lectures,
+            **total_asset_counts,
+        },
         }
-
-    @app.get("/api/classes/{class_id}/modules/{module_id}/lectures")
-    async def list_module_lectures(
-        class_id: int,
-        module_id: int,
-        offset: int = Query(0, ge=0),
-        limit: int = Query(20, ge=0, le=1000),
-    ) -> Dict[str, Any]:
-        module_record = repository.get_module(module_id)
-        if module_record is None or module_record.class_id != class_id:
-            raise HTTPException(status_code=404, detail="Module not found")
-        module_payload = _serialize_module(
-            repository,
-            module_record,
-            lecture_offset=offset,
-            lecture_limit=limit,
-        )
-        return {"module": module_payload}
 
     @app.post("/api/classes", status_code=status.HTTP_201_CREATED)
     async def create_class(payload: ClassCreatePayload) -> Dict[str, Any]:
@@ -3168,88 +2879,6 @@ def create_app(
             debug_enabled=settings.debug_enabled,
         )
         return {"settings": asdict(settings)}
-
-    @app.get("/api/debug/logs/stream")
-    async def stream_debug_logs(request: Request, after: Optional[int] = None) -> StreamingResponse:
-        handler = getattr(app.state, "debug_log_handler", None)
-        if handler is None:
-            raise HTTPException(status_code=503, detail="Debug logging is not configured.")
-
-        loop = asyncio.get_running_loop()
-        queue, backlog, next_marker, reset = handler.register_listener(loop, after)
-
-        async def event_generator() -> AsyncIterator[str]:
-            try:
-                initial_payload: Dict[str, Any] = {
-                    "logs": backlog,
-                    "next": next_marker,
-                    "reset": reset,
-                    "enabled": bool(getattr(app.state, "debug_enabled", False)),
-                }
-                yield _format_sse(
-                    initial_payload,
-                    event_id=str(next_marker),
-                    retry=_DEBUG_STREAM_RETRY_MS,
-                )
-                while True:
-                    if await request.is_disconnected():
-                        break
-                    try:
-                        message = await asyncio.wait_for(
-                            queue.get(), timeout=_DEBUG_STREAM_KEEPALIVE
-                        )
-                    except asyncio.TimeoutError:
-                        yield ":keepalive\n\n"
-                        continue
-                    payload = dict(message)
-                    payload.setdefault(
-                        "enabled", bool(getattr(app.state, "debug_enabled", False))
-                    )
-                    event_id = payload.get("next")
-                    yield _format_sse(
-                        payload,
-                        event_id=str(event_id) if event_id is not None else None,
-                    )
-            except asyncio.CancelledError:
-                raise
-            finally:
-                handler.unregister_listener(queue)
-
-        headers = {
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        }
-        return StreamingResponse(event_generator(), media_type="text/event-stream", headers=headers)
-
-    @app.post("/api/debug/logs/ack")
-    async def acknowledge_debug_logs(payload: DebugAckPayload) -> Dict[str, Any]:
-        handler = getattr(app.state, "debug_log_handler", None)
-        if handler is None:
-            return {"dropped": 0, "next": 0}
-        removed = handler.acknowledge(payload.last_id)
-        return {"dropped": removed, "next": handler.last_id}
-
-    @app.get("/api/debug/logs/export")
-    async def export_debug_logs() -> Response:
-        handler = getattr(app.state, "debug_log_handler", None)
-        if handler is None:
-            raise HTTPException(status_code=503, detail="Debug logging is not configured.")
-        entries = handler.collect(None, limit=10_000)
-        snapshot = {
-            "generated_at": datetime.now(timezone.utc).isoformat(),
-            "enabled": bool(getattr(app.state, "debug_enabled", False)),
-            "count": len(entries),
-            "entries": entries,
-        }
-        body = json.dumps(snapshot, ensure_ascii=False, indent=2)
-        timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-        filename = f"lecture-tools-debug-{timestamp}.json"
-        headers = {
-            "Content-Disposition": f'attachment; filename="{filename}"',
-            "Cache-Control": "no-store",
-        }
-        return Response(content=body, media_type="application/json", headers=headers)
 
     @app.get("/api/debug/logs")
     async def get_debug_logs(after: Optional[int] = None) -> Dict[str, Any]:
