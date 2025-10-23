@@ -12,6 +12,21 @@
       window.__LECTURE_TOOLS_PDFJS_WORKER_MODULE_URL__ =
         "__LECTURE_TOOLS_PDFJS_WORKER_MODULE__";
     </script>
+    <script>
+      (function () {
+        try {
+          if (
+            'deviceMemory' in navigator &&
+            Number(navigator.deviceMemory) > 0 &&
+            Number(navigator.deviceMemory) <= 4
+          ) {
+            document.documentElement.setAttribute('data-low-ram', 'true');
+          }
+        } catch (error) {
+          console.warn('Unable to detect device memory.');
+        }
+      })();
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -2574,20 +2589,940 @@
           max-height: 320px;
         }
       }
+
+      /* --- New World-Class Shell Overrides --- */
+      :root {
+        --app-bg: #f7f8fc;
+        --app-surface: #ffffff;
+        --app-surface-alt: #f0f2fa;
+        --app-border: rgba(64, 75, 105, 0.16);
+        --app-border-strong: rgba(64, 75, 105, 0.32);
+        --app-shadow-soft: 0 18px 42px rgba(23, 37, 84, 0.12);
+        --app-shadow-hard: 0 0 0 1px rgba(23, 37, 84, 0.04), 0 40px 72px rgba(12, 23, 52, 0.2);
+        --app-text: #132238;
+        --app-text-muted: rgba(19, 34, 56, 0.64);
+        --app-text-faint: rgba(19, 34, 56, 0.45);
+        --accent-primary: #4052ff;
+        --accent-gradient: linear-gradient(140deg, #eaf4ff 0%, #eee4ff 48%, #ffe8fa 100%);
+        --accent-solid: #c9afff;
+        --success-gradient: linear-gradient(135deg, #e8fff4 0%, #d4fffa 45%, #f0ffe8 100%);
+        --warning-gradient: linear-gradient(135deg, #fff1e4 0%, #ffe4ec 45%, #fffbe4 100%);
+        --danger-gradient: linear-gradient(135deg, #ffe9f0 0%, #ffc9d2 50%, #ffebe0 100%);
+        --cpu-pill-gradient: linear-gradient(135deg, #f0e8ff 0%, #ddefee 45%, #cffff9 100%);
+        --slides-pill-gradient: linear-gradient(135deg, #e4fffb 0%, #d2faff 45%, #eaf5ff 100%);
+        --transcript-pill-gradient: linear-gradient(135deg, #e4fff0 0%, #e9ffd8 45%, #fffdeb 100%);
+        --focus-ring: 0 0 0 3px rgba(64, 82, 255, 0.25);
+        --grid-unit: 8px;
+        --toolbar-height: 72px;
+        --mega-rail-width: 88px;
+        --action-dock-width: 92px;
+        --timeline-height: 68px;
+        --font-family-base: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+          sans-serif;
+        --font-family-mono: 'JetBrains Mono', 'SFMono-Regular', Menlo, Monaco, Consolas,
+          'Liberation Mono', 'Courier New', monospace;
+        --transition-snappy: 150ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        --transition-fade: 250ms ease;
+      }
+
+      [data-low-ram='true'] body {
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      }
+
+      body {
+        background: var(--app-bg);
+        color: var(--app-text);
+        font-family: var(--font-family-base);
+        font-size: 16px;
+        line-height: 1.5;
+      }
+
+      body[data-theme='dark'] {
+        --app-bg: #0c1729;
+        --app-surface: #111f33;
+        --app-surface-alt: #15263f;
+        --app-border: rgba(167, 197, 255, 0.14);
+        --app-border-strong: rgba(167, 197, 255, 0.35);
+        --app-shadow-soft: 0 24px 56px rgba(2, 6, 18, 0.52);
+        --app-shadow-hard: 0 0 0 1px rgba(112, 146, 218, 0.16), 0 40px 72px rgba(0, 6, 24, 0.4);
+        --app-text: #f5f8ff;
+        --app-text-muted: rgba(222, 233, 255, 0.7);
+        --app-text-faint: rgba(222, 233, 255, 0.45);
+        --accent-primary: #7d8bff;
+      }
+
+      body[data-theme='system'] {
+        background: var(--app-bg);
+      }
+
+      .app-shell {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .global-top-bar {
+        position: sticky;
+        top: 0;
+        z-index: 40;
+        display: grid;
+        grid-template-columns: minmax(220px, 420px) 1fr auto;
+        align-items: center;
+        gap: calc(var(--grid-unit) * 2);
+        padding: calc(var(--grid-unit) * 2) calc(var(--grid-unit) * 3);
+        background: var(--app-surface);
+        border-bottom: 1px solid var(--app-border);
+        box-shadow: 0 14px 34px rgba(17, 35, 64, 0.08);
+      }
+
+      .global-top-bar .global-search {
+        position: relative;
+        display: flex;
+        align-items: center;
+        background: var(--app-surface-alt);
+        border-radius: 999px;
+        border: 1px solid transparent;
+        padding: 0 calc(var(--grid-unit) * 2);
+        min-height: 48px;
+        transition: border-color var(--transition-snappy), box-shadow var(--transition-snappy);
+      }
+
+      .global-top-bar .global-search:focus-within {
+        border-color: var(--accent-primary);
+        box-shadow: var(--focus-ring);
+      }
+
+      .global-top-bar .global-search input {
+        flex: 1;
+        border: none;
+        background: transparent;
+        color: var(--app-text);
+        font-size: 0.95rem;
+        padding: calc(var(--grid-unit) * 1.5) 0;
+      }
+
+      .global-top-bar .global-search input::placeholder {
+        color: var(--app-text-faint);
+      }
+
+      .global-top-bar .status-badges {
+        display: flex;
+        gap: calc(var(--grid-unit) * 1.5);
+        align-items: center;
+        justify-content: flex-start;
+      }
+
+      .status-pill {
+        display: inline-flex;
+        flex-direction: column;
+        justify-content: center;
+        min-width: 132px;
+        padding: calc(var(--grid-unit) * 1.5) calc(var(--grid-unit) * 2);
+        border-radius: 18px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: var(--app-text);
+        background: var(--accent-gradient);
+        border: 1px solid rgba(64, 82, 255, 0.1);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45);
+      }
+
+      .status-pill[data-variant='cpu'] {
+        background: var(--cpu-pill-gradient);
+      }
+
+      .status-pill[data-variant='tasks'] {
+        background: var(--slides-pill-gradient);
+      }
+
+      .status-pill[data-variant='storage'] {
+        background: var(--transcript-pill-gradient);
+      }
+
+      .status-pill strong {
+        font-size: 0.95rem;
+        letter-spacing: 0.02em;
+      }
+
+      .global-top-bar .global-controls {
+        display: flex;
+        gap: calc(var(--grid-unit) * 1.5);
+        align-items: center;
+      }
+
+      .global-top-bar .global-controls select,
+      .global-top-bar .global-controls button {
+        border-radius: 999px;
+        border: 1px solid var(--app-border);
+        background: var(--app-surface-alt);
+        color: var(--app-text);
+        font-size: 0.85rem;
+        padding: calc(var(--grid-unit) * 1.25) calc(var(--grid-unit) * 2);
+        cursor: pointer;
+        min-width: 120px;
+        transition: border-color var(--transition-snappy), box-shadow var(--transition-snappy);
+      }
+
+      .global-top-bar .global-controls select:focus-visible,
+      .global-top-bar .global-controls button:focus-visible {
+        outline: none;
+        border-color: var(--accent-primary);
+        box-shadow: var(--focus-ring);
+      }
+
+      .app-main {
+        flex: 1;
+        display: grid;
+        grid-template-columns: var(--mega-rail-width) minmax(0, 1fr) var(--action-dock-width);
+        gap: calc(var(--grid-unit) * 3);
+        padding: calc(var(--grid-unit) * 3);
+      }
+
+      .mega-rail {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: calc(var(--grid-unit) * 2);
+        padding: calc(var(--grid-unit) * 2) calc(var(--grid-unit) * 1.5);
+        border-radius: 28px;
+        background: var(--app-surface);
+        border: 1px solid var(--app-border);
+        box-shadow: var(--app-shadow-soft);
+        position: sticky;
+        top: calc(var(--toolbar-height) + var(--grid-unit));
+        height: calc(100vh - var(--toolbar-height) - calc(var(--grid-unit) * 6));
+      }
+
+      .mega-rail button {
+        width: 100%;
+        min-height: 64px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: calc(var(--grid-unit) * 0.5);
+        border: none;
+        border-radius: 20px;
+        background: transparent;
+        color: var(--app-text-muted);
+        font-weight: 600;
+        font-size: 0.75rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition: transform var(--transition-snappy), box-shadow var(--transition-snappy),
+          color var(--transition-snappy), background var(--transition-snappy);
+      }
+
+      .mega-rail button .icon {
+        width: 28px;
+        height: 28px;
+        border-radius: 12px;
+        display: grid;
+        place-items: center;
+        font-size: 1.1rem;
+        background: var(--app-surface-alt);
+        border: 1px solid rgba(64, 82, 255, 0.18);
+      }
+
+      .mega-rail button.is-active {
+        color: var(--accent-primary);
+        background: rgba(64, 82, 255, 0.12);
+        box-shadow: inset 0 0 0 1px rgba(64, 82, 255, 0.22);
+        transform: translateY(-2px);
+      }
+
+      .mega-rail button:focus-visible {
+        outline: none;
+        box-shadow: var(--focus-ring);
+      }
+
+      .work-canvas {
+        display: grid;
+        grid-template-columns: 24% 46% 30%;
+        gap: calc(var(--grid-unit) * 3);
+        align-items: start;
+      }
+
+      .pane {
+        position: relative;
+        min-height: calc(100vh - var(--toolbar-height) - var(--timeline-height) -
+          calc(var(--grid-unit) * 8));
+        border-radius: 28px;
+        background: transparent;
+        overflow: hidden;
+      }
+
+      .pane-surface {
+        height: 100%;
+        background: var(--app-surface);
+        border: 1px solid var(--app-border);
+        border-radius: 24px;
+        padding: calc(var(--grid-unit) * 3);
+        display: flex;
+        flex-direction: column;
+        gap: calc(var(--grid-unit) * 2.5);
+        box-shadow: var(--app-shadow-soft);
+      }
+
+      .pane-scroll {
+        flex: 1;
+        overflow: auto;
+        padding-right: calc(var(--grid-unit) * 1.5);
+      }
+
+      .pane-tree .panel,
+      .pane-tree .panel + .panel {
+        margin: 0;
+      }
+
+      .pane-tree .panel {
+        background: var(--app-surface-alt);
+        border-radius: 18px;
+        padding: calc(var(--grid-unit) * 2.5);
+        border: 1px solid transparent;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45);
+      }
+
+      .pane-tree .panel h1 {
+        margin: 0 0 calc(var(--grid-unit) * 1);
+        font-size: 1.5rem;
+        font-weight: 700;
+      }
+
+      .pane-tree .panel p {
+        margin: 0;
+        color: var(--app-text-muted);
+        font-size: 0.9rem;
+      }
+
+      .pane-tree .search-field {
+        display: flex;
+        align-items: center;
+        background: var(--app-surface);
+        border-radius: 16px;
+        border: 1px solid var(--app-border);
+        padding: calc(var(--grid-unit) * 1.5) calc(var(--grid-unit) * 2);
+        margin-top: calc(var(--grid-unit) * 2);
+      }
+
+      .pane-tree .search-field input {
+        flex: 1;
+        border: none;
+        background: transparent;
+        font-size: 0.95rem;
+      }
+
+      .tree-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: calc(var(--grid-unit) * 1.5);
+        margin-bottom: calc(var(--grid-unit) * 1.5);
+      }
+
+      .tree-actions button {
+        border-radius: 14px;
+        border: 1px solid var(--app-border);
+        background: rgba(64, 82, 255, 0.06);
+        color: var(--accent-primary);
+        padding: calc(var(--grid-unit) * 1.25) calc(var(--grid-unit) * 2);
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .content-panel {
+        background: var(--app-surface);
+        border-radius: 24px;
+        border: 1px solid var(--app-border);
+        padding: calc(var(--grid-unit) * 3);
+        box-shadow: var(--app-shadow-soft);
+        display: flex;
+        flex-direction: column;
+        gap: calc(var(--grid-unit) * 2.5);
+      }
+
+      .top-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: calc(var(--grid-unit) * 2);
+      }
+
+      .top-bar-left,
+      .top-bar-right {
+        display: flex;
+        gap: calc(var(--grid-unit) * 1.5);
+        flex-wrap: wrap;
+      }
+
+      .top-bar [data-view] {
+        border: 1px solid var(--app-border);
+        border-radius: 14px;
+        padding: calc(var(--grid-unit) * 1.25) calc(var(--grid-unit) * 2.25);
+        background: var(--app-surface-alt);
+        color: var(--app-text-muted);
+        font-weight: 600;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: background var(--transition-snappy), color var(--transition-snappy);
+      }
+
+      .top-bar [data-view].active {
+        background: rgba(64, 82, 255, 0.16);
+        color: var(--accent-primary);
+      }
+
+      .action-dock {
+        display: flex;
+        flex-direction: column;
+        gap: calc(var(--grid-unit) * 1.5);
+        padding: calc(var(--grid-unit) * 2);
+        border-radius: 24px;
+        background: var(--app-surface);
+        border: 1px solid var(--app-border);
+        box-shadow: var(--app-shadow-soft);
+        position: sticky;
+        top: calc(var(--toolbar-height) + var(--grid-unit));
+        height: calc(100vh - var(--toolbar-height) - calc(var(--grid-unit) * 6));
+        align-items: stretch;
+      }
+
+      .action-dock button {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: calc(var(--grid-unit) * 0.75);
+        min-height: 72px;
+        border-radius: 18px;
+        border: 1px solid var(--app-border);
+        background: var(--app-surface-alt);
+        color: var(--app-text-muted);
+        font-size: 0.78rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform var(--transition-snappy), background var(--transition-snappy),
+          box-shadow var(--transition-snappy), color var(--transition-snappy);
+      }
+
+      .action-dock button:hover,
+      .action-dock button:focus-visible {
+        outline: none;
+        transform: translateY(-2px);
+        color: var(--accent-primary);
+        box-shadow: var(--focus-ring);
+      }
+
+      .action-dock button .icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 12px;
+        display: grid;
+        place-items: center;
+        background: rgba(64, 82, 255, 0.12);
+        color: var(--accent-primary);
+        font-size: 1.1rem;
+      }
+
+      .pane-assets .pane-surface {
+        gap: calc(var(--grid-unit) * 2);
+      }
+
+      #asset-section {
+        background: var(--app-surface-alt);
+        border-radius: 20px;
+        border: 1px solid transparent;
+        padding: calc(var(--grid-unit) * 2.5);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45);
+      }
+
+      #asset-section h3 {
+        margin-top: 0;
+        font-size: 1.2rem;
+      }
+
+      .asset-list {
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: calc(var(--grid-unit) * 2);
+      }
+
+      .asset-item {
+        background: var(--app-surface);
+        border-radius: 16px;
+        border: 1px solid var(--app-border);
+        padding: calc(var(--grid-unit) * 2);
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: calc(var(--grid-unit) * 2);
+      }
+
+      .asset-item .asset-header {
+        font-size: 0.9rem;
+        color: var(--app-text-muted);
+      }
+
+      .asset-item .asset-actions {
+        display: flex;
+        flex-direction: column;
+        gap: calc(var(--grid-unit) * 1);
+      }
+
+      .asset-item button {
+        border-radius: 12px;
+        border: 1px solid var(--app-border);
+        background: var(--app-surface-alt);
+        color: var(--app-text);
+        font-size: 0.8rem;
+        font-weight: 600;
+        padding: calc(var(--grid-unit) * 1.25) calc(var(--grid-unit) * 1.5);
+        cursor: pointer;
+        transition: background var(--transition-snappy), color var(--transition-snappy),
+          transform var(--transition-snappy);
+      }
+
+      .asset-item button:hover,
+      .asset-item button:focus-visible {
+        outline: none;
+        background: rgba(64, 82, 255, 0.14);
+        color: var(--accent-primary);
+        transform: translateY(-1px);
+      }
+
+      .task-cart-tray {
+        position: fixed;
+        right: calc(var(--grid-unit) * 3);
+        bottom: calc(var(--timeline-height) + var(--grid-unit) * 2);
+        width: min(420px, 90vw);
+        max-height: calc(80vh - var(--timeline-height));
+        border-radius: 24px 24px 0 0;
+        background: var(--app-surface);
+        border: 1px solid var(--app-border);
+        box-shadow: var(--app-shadow-hard);
+        transform: translateY(calc(100% + var(--grid-unit) * 4));
+        transition: transform var(--transition-fade);
+        display: flex;
+        flex-direction: column;
+        z-index: 60;
+      }
+
+      .task-cart-tray[data-open='true'] {
+        transform: translateY(0);
+      }
+
+      .task-cart-header {
+        padding: calc(var(--grid-unit) * 2.5) calc(var(--grid-unit) * 3);
+        border-bottom: 1px solid var(--app-border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: calc(var(--grid-unit) * 2);
+      }
+
+      .task-cart-header h2 {
+        margin: 0;
+        font-size: 1.1rem;
+      }
+
+      .task-cart-body {
+        padding: calc(var(--grid-unit) * 2.5) calc(var(--grid-unit) * 3);
+        display: flex;
+        flex-direction: column;
+        gap: calc(var(--grid-unit) * 2);
+        overflow: auto;
+      }
+
+      .task-cart-item {
+        border-radius: 18px;
+        border: 1px solid var(--app-border);
+        padding: calc(var(--grid-unit) * 2);
+        background: var(--app-surface-alt);
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: calc(var(--grid-unit) * 2);
+      }
+
+      .task-cart-info {
+        display: flex;
+        flex-direction: column;
+        gap: calc(var(--grid-unit) * 1);
+      }
+
+      .task-cart-item h3 {
+        margin: 0;
+        font-size: 0.95rem;
+      }
+
+      .task-cart-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: calc(var(--grid-unit) * 1);
+        color: var(--app-text-muted);
+        font-size: 0.8rem;
+      }
+
+      .task-cart-info .task-cart-meta {
+        margin: 0;
+      }
+
+      .task-cart-item-controls {
+        display: flex;
+        flex-direction: column;
+        gap: calc(var(--grid-unit) * 1);
+        align-items: flex-end;
+      }
+
+      .task-cart-controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: calc(var(--grid-unit) * 1.5);
+        padding: calc(var(--grid-unit) * 2.5) calc(var(--grid-unit) * 3);
+        border-top: 1px solid var(--app-border);
+        background: var(--app-surface-alt);
+      }
+
+      .task-cart-controls button,
+      .task-cart-controls select {
+        border-radius: 14px;
+        border: 1px solid var(--app-border);
+        background: var(--app-surface);
+        padding: calc(var(--grid-unit) * 1.25) calc(var(--grid-unit) * 2);
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .task-cart-item-controls button {
+        border-radius: 14px;
+        border: 1px solid var(--app-border);
+        background: var(--app-surface);
+        padding: calc(var(--grid-unit) * 1.25) calc(var(--grid-unit) * 2);
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        width: 100%;
+      }
+
+      @media (min-width: 960px) {
+        .task-cart-item-controls {
+          align-items: flex-start;
+        }
+
+        .task-cart-item-controls button {
+          width: auto;
+        }
+      }
+
+      .status-timeline {
+        position: sticky;
+        bottom: 0;
+        z-index: 50;
+        padding: calc(var(--grid-unit) * 1.5) calc(var(--grid-unit) * 3);
+        background: linear-gradient(180deg, rgba(247, 248, 252, 0) 0%, var(--app-bg) 100%);
+      }
+
+      .status-timeline-track {
+        display: flex;
+        align-items: center;
+        gap: calc(var(--grid-unit) * 1.5);
+        overflow-x: auto;
+        padding-bottom: calc(var(--grid-unit) * 0.5);
+      }
+
+      #status-bar {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: calc(var(--grid-unit) * 2);
+        min-width: 320px;
+        padding: calc(var(--grid-unit) * 1.5) calc(var(--grid-unit) * 2.5);
+        border-radius: 16px;
+        background: rgba(64, 82, 255, 0.12);
+        border: 1px solid rgba(64, 82, 255, 0.22);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45);
+      }
+
+      #status-bar[data-variant='success'] {
+        background: rgba(0, 170, 120, 0.14);
+        border-color: rgba(0, 170, 120, 0.2);
+      }
+
+      #status-bar[data-variant='error'] {
+        background: rgba(255, 120, 140, 0.16);
+        border-color: rgba(255, 120, 140, 0.28);
+      }
+
+      .timeline-event {
+        min-width: 220px;
+        border-radius: 16px;
+        padding: calc(var(--grid-unit) * 1.5) calc(var(--grid-unit) * 2);
+        border: 1px solid var(--app-border);
+        background: var(--app-surface);
+        box-shadow: var(--app-shadow-soft);
+      }
+
+      .timeline-event-title {
+        margin: 0 0 0.25rem;
+        font-weight: 600;
+      }
+
+      .timeline-event-meta {
+        font-size: 0.75rem;
+        color: var(--app-text-muted);
+      }
+
+      .timeline-event[data-variant='success'] {
+        border-color: rgba(0, 170, 120, 0.32);
+        background: rgba(0, 170, 120, 0.12);
+      }
+
+      .timeline-event[data-variant='error'] {
+        border-color: rgba(255, 120, 140, 0.38);
+        background: rgba(255, 120, 140, 0.18);
+      }
+
+      .timeline-event[data-variant='warning'] {
+        border-color: rgba(255, 210, 140, 0.4);
+        background: rgba(255, 210, 140, 0.2);
+      }
+
+      .timeline-events {
+        display: flex;
+        align-items: stretch;
+        gap: calc(var(--grid-unit) * 1.5);
+      }
+
+      .timeline-empty {
+        min-width: 220px;
+        border-radius: 16px;
+        padding: calc(var(--grid-unit) * 1.5) calc(var(--grid-unit) * 2);
+        border: 1px dashed var(--app-border);
+        color: var(--app-text-muted);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--app-surface-alt);
+        font-size: 0.85rem;
+        text-align: center;
+      }
+
+      .help-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(12, 23, 41, 0.72);
+        backdrop-filter: blur(6px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 70;
+        padding: calc(var(--grid-unit) * 4);
+      }
+
+      .help-overlay[data-open='true'] {
+        display: flex;
+      }
+
+      .help-overlay .help-grid {
+        max-width: 960px;
+        width: 100%;
+        background: var(--app-surface);
+        border-radius: 24px;
+        border: 1px solid var(--app-border);
+        box-shadow: var(--app-shadow-hard);
+        padding: calc(var(--grid-unit) * 4);
+        display: grid;
+        gap: calc(var(--grid-unit) * 3);
+      }
+
+      .help-overlay h2 {
+        margin: 0;
+      }
+
+      .help-overlay ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: calc(var(--grid-unit) * 2);
+      }
+
+      .help-overlay li {
+        display: grid;
+        gap: calc(var(--grid-unit) * 0.5);
+        background: var(--app-surface-alt);
+        border-radius: 16px;
+        border: 1px solid transparent;
+        padding: calc(var(--grid-unit) * 2);
+      }
+
+      .mobile-tab-bar {
+        display: none;
+      }
+
+      @media (max-width: 1280px) {
+        .app-main {
+          grid-template-columns: var(--mega-rail-width) minmax(0, 1fr);
+        }
+
+        .action-dock {
+          display: none;
+        }
+
+        .work-canvas {
+          grid-template-columns: 28% 72%;
+        }
+
+        .pane-assets {
+          display: none;
+        }
+      }
+
+      @media (max-width: 960px) {
+        .app-main {
+          display: block;
+          padding: calc(var(--grid-unit) * 2);
+        }
+
+        .mega-rail {
+          display: none;
+        }
+
+        .work-canvas {
+          display: block;
+        }
+
+        .pane,
+        .pane-surface {
+          border-radius: 20px;
+        }
+
+        .pane-tree {
+          margin-bottom: calc(var(--grid-unit) * 2);
+        }
+
+        .pane-assets {
+          display: block;
+          margin-top: calc(var(--grid-unit) * 2);
+        }
+
+        .task-cart-tray {
+          right: calc(var(--grid-unit) * 2);
+          width: calc(100vw - var(--grid-unit) * 4);
+        }
+
+        .mobile-tab-bar {
+          display: flex;
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          z-index: 80;
+          background: var(--app-surface);
+          border-top: 1px solid var(--app-border);
+          padding: calc(var(--grid-unit) * 1.5) calc(var(--grid-unit) * 2);
+          gap: calc(var(--grid-unit) * 2);
+          overflow-x: auto;
+        }
+
+        .mobile-tab-bar button {
+          flex: 1 0 auto;
+          min-width: 120px;
+          border-radius: 14px;
+          border: 1px solid var(--app-border);
+          background: var(--app-surface-alt);
+          font-size: 0.85rem;
+          font-weight: 600;
+          padding: calc(var(--grid-unit) * 1.25) calc(var(--grid-unit) * 2);
+        }
+      }
     </style>
   </head>
   <body>
-    <div id="status-bar" class="status-bar" role="status">
-      <div id="status-bar-message" class="status-message"></div>
-      <div id="status-bar-progress" class="status-progress" hidden>
-        <div class="status-progress-track">
-          <div id="status-bar-progress-fill" class="status-progress-fill"></div>
+    <div class="app-shell">
+      <header class="global-top-bar" role="banner">
+        <form class="global-search" role="search">
+          <label class="sr-only" for="global-search-input" data-i18n="global.searchLabel">
+            Search everything
+          </label>
+          <input
+            id="global-search-input"
+            type="search"
+            placeholder="Search lectures, tasks, storage"
+            data-i18n="global.searchPlaceholder"
+            data-i18n-attr="placeholder"
+            autocomplete="off"
+          />
+        </form>
+        <div class="status-badges" role="status" aria-live="polite">
+          <div class="status-pill" data-variant="cpu">
+            <span data-i18n="global.cpu">CPU Load</span>
+            <strong id="badge-cpu">—</strong>
+          </div>
+          <div class="status-pill" data-variant="tasks">
+            <span data-i18n="global.tasks">Tasks</span>
+            <strong id="badge-tasks">0</strong>
+          </div>
+          <div class="status-pill" data-variant="storage">
+            <span data-i18n="global.storage">Storage</span>
+            <strong id="badge-storage">—</strong>
+          </div>
         </div>
-        <span id="status-bar-progress-text" class="status-progress-text"></span>
-      </div>
-    </div>
-    <main class="layout">
-      <aside class="sidebar">
+        <div class="global-controls">
+          <label class="sr-only" for="global-language" data-i18n="global.languageLabel">
+            Language
+          </label>
+          <select id="global-language">
+            <option value="en">English</option>
+            <option value="zh">中文</option>
+            <option value="es">Español</option>
+            <option value="fr">Français</option>
+          </select>
+          <label class="sr-only" for="global-theme" data-i18n="global.themeLabel">Theme</label>
+          <select id="global-theme">
+            <option value="system" data-i18n="settings.appearance.theme.system">System</option>
+            <option value="light" data-i18n="settings.appearance.theme.light">Light</option>
+            <option value="dark" data-i18n="settings.appearance.theme.dark">Dark</option>
+          </select>
+          <button id="global-help" type="button" class="ghost" data-i18n="global.help">
+            Help
+          </button>
+        </div>
+      </header>
+      <main class="layout app-main">
+        <nav class="mega-rail" aria-label="Primary">
+          <button type="button" data-section="home" class="is-active">
+            <span class="icon" aria-hidden="true">🏠</span>
+            <span data-i18n="mega.home">Home</span>
+          </button>
+          <button type="button" data-section="catalog">
+            <span class="icon" aria-hidden="true">📚</span>
+            <span data-i18n="mega.catalog">Catalog</span>
+          </button>
+          <button type="button" data-section="tasks">
+            <span class="icon" aria-hidden="true">🗂️</span>
+            <span data-i18n="mega.tasks">Tasks</span>
+          </button>
+          <button type="button" data-section="storage">
+            <span class="icon" aria-hidden="true">💽</span>
+            <span data-i18n="mega.storage">Storage</span>
+          </button>
+          <button type="button" data-section="system">
+            <span class="icon" aria-hidden="true">⚙️</span>
+            <span data-i18n="mega.system">System</span>
+          </button>
+          <button type="button" data-section="import">
+            <span class="icon" aria-hidden="true">📥</span>
+            <span data-i18n="mega.import">Import/Export</span>
+          </button>
+          <button type="button" data-section="debug">
+            <span class="icon" aria-hidden="true">🧪</span>
+            <span data-i18n="mega.debug">Debug</span>
+          </button>
+        </nav>
+        <aside class="sidebar pane-tree">
         <section class="panel">
           <h1 data-i18n="sidebar.heading">Lecture Tools</h1>
           <p data-i18n="sidebar.tagline">Review, organise, and process lecture resources quickly.</p>
@@ -2620,8 +3555,8 @@
           </div>
         </section>
       </aside>
-      <section class="content">
-        <section class="panel content-panel">
+        <section class="content pane-details">
+          <section class="panel content-panel">
           <div class="top-bar" role="tablist">
             <div class="top-bar-left">
               <button
@@ -3094,7 +4029,136 @@
           </div>
         </section>
       </section>
+      <aside class="action-dock" aria-label="Quick actions">
+        <button type="button" data-action="create">
+          <span class="icon" aria-hidden="true">➕</span>
+          <span data-i18n="dock.create">Create</span>
+        </button>
+        <button type="button" data-action="bulk-upload">
+          <span class="icon" aria-hidden="true">⬆️</span>
+          <span data-i18n="dock.bulkUpload">Bulk Upload</span>
+        </button>
+        <button type="button" data-action="bulk-download">
+          <span class="icon" aria-hidden="true">⬇️</span>
+          <span data-i18n="dock.bulkDownload">Bulk Download</span>
+        </button>
+        <button type="button" data-action="add-to-cart">
+          <span class="icon" aria-hidden="true">🛒</span>
+          <span data-i18n="dock.addToCart">Add to Cart</span>
+        </button>
+        <button type="button" data-action="run-cart">
+          <span class="icon" aria-hidden="true">▶️</span>
+          <span data-i18n="dock.runCart">Run Cart</span>
+        </button>
+        <button type="button" data-action="export">
+          <span class="icon" aria-hidden="true">📤</span>
+          <span data-i18n="dock.export">Export</span>
+        </button>
+        <button type="button" data-action="import">
+          <span class="icon" aria-hidden="true">📥</span>
+          <span data-i18n="dock.import">Import</span>
+        </button>
+        <button type="button" data-action="purge">
+          <span class="icon" aria-hidden="true">🧹</span>
+          <span data-i18n="dock.purge">Purge</span>
+        </button>
+        <button type="button" data-action="system-update">
+          <span class="icon" aria-hidden="true">⬆︎</span>
+          <span data-i18n="dock.update">System Update</span>
+        </button>
+        <button type="button" data-action="debug-toggle">
+          <span class="icon" aria-hidden="true">🐞</span>
+          <span data-i18n="dock.debug">Debug On/Off</span>
+        </button>
+      </aside>
     </main>
+      <nav class="mobile-tab-bar" aria-label="Primary">
+        <button type="button" data-section="home" class="is-active" data-i18n="mega.home">
+          Home
+        </button>
+        <button type="button" data-section="catalog" data-i18n="mega.catalog">Catalog</button>
+        <button type="button" data-section="tasks" data-i18n="mega.tasks">Tasks</button>
+        <button type="button" data-section="storage" data-i18n="mega.storage">Storage</button>
+        <button type="button" data-section="system" data-i18n="mega.system">System</button>
+        <button type="button" data-section="import" data-i18n="mega.import">Import/Export</button>
+        <button type="button" data-section="debug" data-i18n="mega.debug">Debug</button>
+      </nav>
+      <footer class="status-timeline" role="region" aria-live="polite">
+        <div class="status-timeline-track">
+          <div id="status-bar" class="status-bar" role="status">
+            <div id="status-bar-message" class="status-message"></div>
+            <div id="status-bar-progress" class="status-progress" hidden>
+              <div class="status-progress-track">
+                <div id="status-bar-progress-fill" class="status-progress-fill"></div>
+              </div>
+              <span id="status-bar-progress-text" class="status-progress-text"></span>
+            </div>
+          </div>
+          <div id="status-timeline-events" class="timeline-events"></div>
+        </div>
+      </footer>
+    </div>
+    <div id="task-cart" class="task-cart-tray" data-open="false" aria-live="polite">
+      <div class="task-cart-header">
+        <h2 data-i18n="cart.title">Task Cart</h2>
+        <button id="task-cart-close" type="button" class="ghost" aria-label="Close cart">✕</button>
+      </div>
+      <div id="task-cart-body" class="task-cart-body">
+        <p id="task-cart-empty" class="placeholder" data-i18n="cart.empty">Cart is empty.</p>
+      </div>
+      <div class="task-cart-controls">
+        <button id="task-cart-run" type="button" data-i18n="cart.run">Run</button>
+        <button id="task-cart-pause" type="button" data-i18n="cart.pause">Pause</button>
+        <button id="task-cart-save" type="button" data-i18n="cart.savePreset">Save as Preset</button>
+        <button id="task-cart-dry-run" type="button" data-i18n="cart.dryRun">Dry Run</button>
+        <label for="task-cart-parallelism">
+          <span data-i18n="cart.parallelism">Parallelism</span>
+          <select id="task-cart-parallelism">
+            <option value="auto" data-i18n="cart.parallel.auto">Auto</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="4">4</option>
+          </select>
+        </label>
+        <label for="task-cart-on-complete">
+          <span data-i18n="cart.onComplete">On completion</span>
+          <select id="task-cart-on-complete">
+            <option value="notify" data-i18n="cart.complete.notify">Notify</option>
+            <option value="shutdown" data-i18n="cart.complete.shutdown">Shutdown</option>
+            <option value="nothing" data-i18n="cart.complete.nothing">Nothing</option>
+          </select>
+        </label>
+      </div>
+    </div>
+    <div id="help-overlay" class="help-overlay" aria-hidden="true" role="dialog">
+      <div class="help-grid">
+        <header>
+          <h2 data-i18n="help.title">Welcome to the new workspace</h2>
+          <p data-i18n="help.subtitle">Every control is visible—tap anything to learn more.</p>
+        </header>
+        <ul>
+          <li>
+            <strong data-i18n="help.tree">Curriculum Tree</strong>
+            <span data-i18n="help.treeHint">Browse, multi-select, and reorder lectures.</span>
+          </li>
+          <li>
+            <strong data-i18n="help.details">Details + Editor</strong>
+            <span data-i18n="help.detailsHint">Inspect and edit metadata inline.</span>
+          </li>
+          <li>
+            <strong data-i18n="help.assets">Assets & Actions</strong>
+            <span data-i18n="help.assetsHint">Upload, process, and cart assets confidently.</span>
+          </li>
+          <li>
+            <strong data-i18n="help.cart">Task Cart</strong>
+            <span data-i18n="help.cartHint">Queue, reorder, and automate complex batches.</span>
+          </li>
+        </ul>
+        <div class="form-actions">
+          <button id="help-overlay-close" type="button" data-i18n="help.close">Got it</button>
+        </div>
+      </div>
+    </div>
     <aside
       id="debug-pane"
       class="debug-pane"
@@ -3422,6 +4486,77 @@
               storage: 'Storage',
               settings: 'Settings',
             },
+            global: {
+              searchLabel: 'Search everything',
+              searchPlaceholder: 'Search lectures, tasks, storage',
+              cpu: 'CPU Load',
+              tasks: 'Tasks',
+              storage: 'Storage',
+              languageLabel: 'Language',
+              themeLabel: 'Theme',
+              help: 'Help',
+            },
+            mega: {
+              home: 'Home',
+              catalog: 'Catalog',
+              tasks: 'Tasks',
+              storage: 'Storage',
+              system: 'System',
+              import: 'Import/Export',
+              debug: 'Debug',
+            },
+            dock: {
+              create: 'Create',
+              bulkUpload: 'Bulk Upload',
+              bulkDownload: 'Bulk Download',
+              addToCart: 'Add to Cart',
+              runCart: 'Run Cart',
+              export: 'Export',
+              import: 'Import',
+              purge: 'Purge',
+              update: 'System Update',
+              debug: 'Debug On/Off',
+            },
+            cart: {
+              title: 'Task Cart',
+              empty: 'Cart is empty.',
+              run: 'Run',
+              pause: 'Pause',
+              resume: 'Resume',
+              savePreset: 'Save as Preset',
+              dryRun: 'Dry Run',
+              parallelism: 'Parallelism',
+              parallel: { auto: 'Auto' },
+              onComplete: 'On completion',
+              complete: {
+                notify: 'Notify',
+                shutdown: 'Shutdown',
+                nothing: 'Nothing',
+              },
+              added: 'Added “{{title}}” to Task Cart.',
+              pausedNotice: 'Task Cart paused. Tap Resume to continue.',
+              resumed: 'Task Cart resumed.',
+              runningStatus: 'Running Task Cart…',
+              completedStatus: 'Task Cart completed.',
+              unsupported: 'This task type is not supported yet.',
+              dryRunPending: 'Dry run will validate the queue soon.',
+              savePresetUnavailable: 'Preset saving will be available soon.',
+              parallelismChanged: 'Parallelism set to {{label}}.',
+              onCompleteChanged: 'Completion preference updated to {{label}}.',
+            },
+            help: {
+              title: 'Welcome to the new workspace',
+              subtitle: 'Every control is visible—tap anything to learn more.',
+              close: 'Got it',
+              tree: 'Curriculum Tree',
+              treeHint: 'Browse, multi-select, and reorder lectures.',
+              details: 'Details + Editor',
+              detailsHint: 'Inspect and edit metadata inline.',
+              assets: 'Assets & Actions',
+              assetsHint: 'Upload, process, and cart assets confidently.',
+              cart: 'Task Cart',
+              cartHint: 'Queue, reorder, and automate complex batches.',
+            },
             details: {
               title: 'Lecture details',
               deleteLecture: 'Delete lecture',
@@ -3493,6 +4628,9 @@
                 untitled: 'Untitled lecture',
               },
               retryUnavailable: 'Retry is not available for this task.',
+            },
+            timeline: {
+              empty: 'No updates yet.',
             },
             create: {
               title: 'Create lecture',
@@ -3796,6 +4934,17 @@
                 assetDescription: 'Choose a new file to attach to this resource.',
                 archiveTitle: 'Import archive',
                 archiveDescription: 'Select a Lecture Tools export (.zip) to import.',
+                bulkUpload: {
+                  title: 'Bulk upload',
+                  description: 'Upload a ZIP archive to distribute assets across lectures.',
+                  prompt: 'Drop a ZIP file or choose one from your device.',
+                  help: 'Archives are processed server-side and matched to lectures.',
+                  action: 'Upload archive',
+                  success: 'Bulk upload queued successfully.',
+                  failure: 'Bulk upload failed.',
+                  cancelled: 'Bulk upload cancelled.',
+                  invalid: 'Select a ZIP archive to continue.',
+                },
               },
               descriptionOptional: 'Description (optional)',
               descriptionPlaceholder: 'Add a short summary…',
@@ -3882,6 +5031,9 @@
               importing: 'Importing archive…',
               importSuccess: 'Imported {{count}} lectures.',
               importNoChanges: 'Archive imported (no new lectures).',
+              bulkUploading: 'Uploading archive…',
+              bulkUploadQueued: 'Bulk upload queued.',
+              bulkUploadFailed: 'Bulk upload failed.',
             },
             counts: {
               module: { one: 'module', other: 'modules' },
@@ -3909,6 +5061,77 @@
               create: '新建',
               storage: '存储',
               settings: '设置',
+            },
+            global: {
+              searchLabel: '全局搜索',
+              searchPlaceholder: '搜索课程、任务、存储',
+              cpu: 'CPU 负载',
+              tasks: '任务',
+              storage: '存储',
+              languageLabel: '语言',
+              themeLabel: '主题',
+              help: '帮助',
+            },
+            mega: {
+              home: '主页',
+              catalog: '目录',
+              tasks: '任务',
+              storage: '存储',
+              system: '系统',
+              import: '导入/导出',
+              debug: '调试',
+            },
+            dock: {
+              create: '新建',
+              bulkUpload: '批量上传',
+              bulkDownload: '批量下载',
+              addToCart: '加入任务车',
+              runCart: '运行任务车',
+              export: '导出',
+              import: '导入',
+              purge: '清理',
+              update: '系统更新',
+              debug: '调试开关',
+            },
+            cart: {
+              title: '任务车',
+              empty: '任务车为空。',
+              run: '运行',
+              pause: '暂停',
+              resume: '继续',
+              savePreset: '保存为预设',
+              dryRun: '试运行',
+              parallelism: '并行度',
+              parallel: { auto: '自动' },
+              onComplete: '完成后',
+              complete: {
+                notify: '通知',
+                shutdown: '关机',
+                nothing: '无操作',
+              },
+              added: '已将“{{title}}”加入任务车。',
+              pausedNotice: '任务车已暂停。点击“继续”恢复。',
+              resumed: '任务车已恢复。',
+              runningStatus: '任务车正在运行…',
+              completedStatus: '任务车已完成。',
+              unsupported: '该任务类型暂不支持。',
+              dryRunPending: '试运行功能即将提供。',
+              savePresetUnavailable: '预设保存功能即将推出。',
+              parallelismChanged: '并行度设置为 {{label}}。',
+              onCompleteChanged: '完成后操作已更新为 {{label}}。',
+            },
+            help: {
+              title: '欢迎使用全新工作台',
+              subtitle: '所有控件一目了然——点按即可了解用途。',
+              close: '知道了',
+              tree: '课程树',
+              treeHint: '浏览、批量选择并重新排序讲座。',
+              details: '详情与编辑',
+              detailsHint: '直接在右侧编辑元数据。',
+              assets: '资源与操作',
+              assetsHint: '放心上传、处理并加入任务车。',
+              cart: '任务车',
+              cartHint: '排队、重排并自动化批量操作。',
             },
             details: {
               title: '讲座详情',
@@ -3980,6 +5203,9 @@
                 untitled: '未命名讲座',
               },
               retryUnavailable: '此任务无法重试。',
+            },
+            timeline: {
+              empty: '暂无更新。',
             },
             create: {
               title: '创建讲座',
@@ -4275,6 +5501,17 @@
                 assetDescription: '为此资源选择一个新文件。',
                 archiveTitle: '导入归档',
                 archiveDescription: '选择一个 Lecture Tools 导出的压缩包（.zip）。',
+                bulkUpload: {
+                  title: '批量上传',
+                  description: '上传包含多个讲座资源的 ZIP 压缩包。',
+                  prompt: '拖入 ZIP 文件或从设备中选择。',
+                  help: '服务器会解析压缩包并匹配到相应讲座。',
+                  action: '上传压缩包',
+                  success: '批量上传已排队处理。',
+                  failure: '批量上传失败。',
+                  cancelled: '批量上传已取消。',
+                  invalid: '请选择 ZIP 压缩包。',
+                },
               },
               descriptionOptional: '描述（可选）',
               descriptionPlaceholder: '添加简短摘要…',
@@ -4361,6 +5598,9 @@
               importing: '正在导入归档…',
               importSuccess: '已导入 {{count}} 个讲座。',
               importNoChanges: '归档导入完成（没有新讲座）。',
+              bulkUploading: '正在上传压缩包…',
+              bulkUploadQueued: '批量上传已排队。',
+              bulkUploadFailed: '批量上传失败。',
             },
             counts: {
               module: { one: '模块', other: '模块' },
@@ -4388,6 +5628,77 @@
               create: 'Crear',
               storage: 'Almacenamiento',
               settings: 'Configuración',
+            },
+            global: {
+              searchLabel: 'Búsqueda global',
+              searchPlaceholder: 'Buscar clases, tareas o almacenamiento',
+              cpu: 'Carga CPU',
+              tasks: 'Tareas',
+              storage: 'Almacenamiento',
+              languageLabel: 'Idioma',
+              themeLabel: 'Tema',
+              help: 'Ayuda',
+            },
+            mega: {
+              home: 'Inicio',
+              catalog: 'Catálogo',
+              tasks: 'Tareas',
+              storage: 'Almacenamiento',
+              system: 'Sistema',
+              import: 'Importar/Exportar',
+              debug: 'Depuración',
+            },
+            dock: {
+              create: 'Crear',
+              bulkUpload: 'Subida masiva',
+              bulkDownload: 'Descarga masiva',
+              addToCart: 'Añadir al carro',
+              runCart: 'Ejecutar carro',
+              export: 'Exportar',
+              import: 'Importar',
+              purge: 'Purgar',
+              update: 'Actualizar sistema',
+              debug: 'Depurar On/Off',
+            },
+            cart: {
+              title: 'Carro de tareas',
+              empty: 'El carro está vacío.',
+              run: 'Ejecutar',
+              pause: 'Pausar',
+              resume: 'Reanudar',
+              savePreset: 'Guardar como preajuste',
+              dryRun: 'Simulación',
+              parallelism: 'Paralelismo',
+              parallel: { auto: 'Auto' },
+              onComplete: 'Al finalizar',
+              complete: {
+                notify: 'Notificar',
+                shutdown: 'Apagar',
+                nothing: 'Nada',
+              },
+              added: 'Se añadió “{{title}}” al carro de tareas.',
+              pausedNotice: 'El carro se pausó. Pulsa Reanudar para continuar.',
+              resumed: 'El carro se reanudó.',
+              runningStatus: 'Ejecutando el carro de tareas…',
+              completedStatus: 'El carro de tareas finalizó.',
+              unsupported: 'Este tipo de tarea aún no es compatible.',
+              dryRunPending: 'La simulación estará disponible próximamente.',
+              savePresetUnavailable: 'Guardar preajustes estará disponible pronto.',
+              parallelismChanged: 'Paralelismo ajustado a {{label}}.',
+              onCompleteChanged: 'Acción al finalizar actualizada a {{label}}.',
+            },
+            help: {
+              title: 'Bienvenido al nuevo espacio de trabajo',
+              subtitle: 'Todo es visible: toca cada área para conocer su función.',
+              close: 'Entendido',
+              tree: 'Árbol curricular',
+              treeHint: 'Explora, selecciona en lote y reordena clases.',
+              details: 'Detalles y edición',
+              detailsHint: 'Edita metadatos en línea sin modales.',
+              assets: 'Recursos y acciones',
+              assetsHint: 'Sube, procesa y añade al carro con confianza.',
+              cart: 'Carro de tareas',
+              cartHint: 'Programa, reordena y automatiza lotes completos.',
             },
             details: {
               title: 'Detalles de la clase',
@@ -4459,6 +5770,9 @@
                 untitled: 'Clase sin título',
               },
               retryUnavailable: 'No es posible reintentar esta tarea.',
+            },
+            timeline: {
+              empty: 'Sin actualizaciones todavía.',
             },
             create: {
               title: 'Crear clase',
@@ -4764,6 +6078,17 @@
                 assetDescription: 'Elige un archivo nuevo para este recurso.',
                 archiveTitle: 'Importar archivo comprimido',
                 archiveDescription: 'Selecciona un archivo exportado de Lecture Tools (.zip).',
+                bulkUpload: {
+                  title: 'Carga masiva',
+                  description: 'Sube un archivo ZIP con recursos para múltiples clases.',
+                  prompt: 'Suelta un archivo ZIP o selecciónalo desde tu dispositivo.',
+                  help: 'El servidor distribuirá el contenido del ZIP automáticamente.',
+                  action: 'Subir ZIP',
+                  success: 'Carga masiva en cola correctamente.',
+                  failure: 'La carga masiva falló.',
+                  cancelled: 'Carga masiva cancelada.',
+                  invalid: 'Selecciona un archivo ZIP para continuar.',
+                },
               },
               descriptionOptional: 'Descripción (opcional)',
               descriptionPlaceholder: 'Agrega un breve resumen…',
@@ -4850,6 +6175,9 @@
               importing: 'Importando archivo…',
               importSuccess: 'Se importaron {{count}} clases.',
               importNoChanges: 'Archivo importado (sin clases nuevas).',
+              bulkUploading: 'Subiendo archivo comprimido…',
+              bulkUploadQueued: 'Carga masiva en cola.',
+              bulkUploadFailed: 'La carga masiva falló.',
             },
             counts: {
               module: { one: 'módulo', other: 'módulos' },
@@ -4877,6 +6205,77 @@
               create: 'Créer',
               storage: 'Stockage',
               settings: 'Paramètres',
+            },
+            global: {
+              searchLabel: 'Recherche globale',
+              searchPlaceholder: 'Rechercher cours, tâches ou stockage',
+              cpu: 'Charge CPU',
+              tasks: 'Tâches',
+              storage: 'Stockage',
+              languageLabel: 'Langue',
+              themeLabel: 'Thème',
+              help: 'Aide',
+            },
+            mega: {
+              home: 'Accueil',
+              catalog: 'Catalogue',
+              tasks: 'Tâches',
+              storage: 'Stockage',
+              system: 'Système',
+              import: 'Importer/Exporter',
+              debug: 'Debug',
+            },
+            dock: {
+              create: 'Créer',
+              bulkUpload: 'Import massif',
+              bulkDownload: 'Export massif',
+              addToCart: 'Ajouter au panier',
+              runCart: 'Lancer le panier',
+              export: 'Exporter',
+              import: 'Importer',
+              purge: 'Purger',
+              update: 'Mise à jour système',
+              debug: 'Mode debug',
+            },
+            cart: {
+              title: 'Panier de tâches',
+              empty: 'Le panier est vide.',
+              run: 'Lancer',
+              pause: 'Pause',
+              resume: 'Reprendre',
+              savePreset: 'Enregistrer comme preset',
+              dryRun: 'Simulation',
+              parallelism: 'Parallélisme',
+              parallel: { auto: 'Auto' },
+              onComplete: 'À la fin',
+              complete: {
+                notify: 'Notifier',
+                shutdown: 'Éteindre',
+                nothing: 'Aucune action',
+              },
+              added: '« {{title}} » a été ajouté au panier de tâches.',
+              pausedNotice: 'Le panier est en pause. Appuyez sur Reprendre pour continuer.',
+              resumed: 'Le panier a repris.',
+              runningStatus: 'Panier de tâches en cours d’exécution…',
+              completedStatus: 'Panier de tâches terminé.',
+              unsupported: 'Ce type de tâche n’est pas encore pris en charge.',
+              dryRunPending: 'La simulation sera disponible prochainement.',
+              savePresetUnavailable: 'L’enregistrement de presets sera bientôt disponible.',
+              parallelismChanged: 'Parallélisme défini sur {{label}}.',
+              onCompleteChanged: 'Action de fin mise à jour : {{label}}.',
+            },
+            help: {
+              title: 'Bienvenue dans le nouvel espace de travail',
+              subtitle: 'Tout est visible : survolez chaque zone pour découvrir son rôle.',
+              close: 'Compris',
+              tree: 'Arbre des cours',
+              treeHint: 'Explorer, sélectionner en masse et réorganiser les cours.',
+              details: 'Détails et édition',
+              detailsHint: 'Modifier les métadonnées directement dans le panneau central.',
+              assets: 'Ressources et actions',
+              assetsHint: 'Téléversez, traitez et ajoutez au panier en toute confiance.',
+              cart: 'Panier de tâches',
+              cartHint: 'Planifier, réordonner et automatiser vos lots.',
             },
             details: {
               title: 'Détails du cours',
@@ -4949,6 +6348,9 @@
                 untitled: 'Leçon sans titre',
               },
               retryUnavailable: 'Impossible de relancer cette tâche.',
+            },
+            timeline: {
+              empty: 'Pas encore de mise à jour.',
             },
             create: {
               title: 'Créer un cours',
@@ -5254,6 +6656,17 @@
                 assetDescription: 'Choisissez un nouveau fichier à associer à cette ressource.',
                 archiveTitle: 'Importer une archive',
                 archiveDescription: 'Sélectionnez une archive Lecture Tools exportée (.zip).',
+                bulkUpload: {
+                  title: 'Import massif',
+                  description: 'Téléversez une archive ZIP contenant plusieurs ressources de cours.',
+                  prompt: 'Déposez une archive ZIP ou choisissez-en une sur votre appareil.',
+                  help: 'Le serveur répartira automatiquement le contenu de l’archive.',
+                  action: 'Téléverser l’archive',
+                  success: 'Import massif ajouté à la file.',
+                  failure: 'Échec de l’import massif.',
+                  cancelled: 'Import massif annulé.',
+                  invalid: 'Sélectionnez une archive ZIP pour continuer.',
+                },
               },
               descriptionOptional: 'Description (optionnel)',
               descriptionPlaceholder: 'Ajoutez un court résumé…',
@@ -5340,6 +6753,9 @@
               importing: 'Importation de l’archive…',
               importSuccess: '{{count}} cours importés.',
               importNoChanges: 'Archive importée (aucun nouveau cours).',
+              bulkUploading: 'Téléversement de l’archive…',
+              bulkUploadQueued: 'Import massif ajouté à la file.',
+              bulkUploadFailed: 'Échec de l’import massif.',
             },
             counts: {
               module: { one: 'module', other: 'modules' },
@@ -5593,6 +7009,7 @@
           expandedModules: new Map(),
           editMode: false,
           activeView: 'details',
+          primarySection: 'catalog',
           settings: null,
           draggingLectureId: null,
           draggingSourceModuleId: null,
@@ -5633,6 +7050,18 @@
             entries: [],
             loading: false,
             timer: null,
+          },
+          timeline: {
+            entries: [],
+          },
+          taskCart: {
+            open: false,
+            items: [],
+            presets: [],
+            parallelism: 'auto',
+            onComplete: 'notify',
+            running: false,
+            paused: false,
           },
           systemUpdate: {
             running: false,
@@ -5740,11 +7169,22 @@
         }
 
         const dom = {
+          appShell: document.querySelector('.app-shell'),
+          globalSearch: document.getElementById('global-search-input'),
+          globalLanguage: document.getElementById('global-language'),
+          globalTheme: document.getElementById('global-theme'),
+          globalHelp: document.getElementById('global-help'),
+          badgeCpu: document.getElementById('badge-cpu'),
+          badgeTasks: document.getElementById('badge-tasks'),
+          badgeStorage: document.getElementById('badge-storage'),
+          megaRailButtons: Array.from(document.querySelectorAll('.mega-rail button')),
+          mobileTabButtons: Array.from(document.querySelectorAll('.mobile-tab-bar button')),
           status: document.getElementById('status-bar'),
           statusMessage: document.getElementById('status-bar-message'),
           statusProgress: document.getElementById('status-bar-progress'),
           statusProgressFill: document.getElementById('status-bar-progress-fill'),
           statusProgressText: document.getElementById('status-bar-progress-text'),
+          statusTimelineEvents: document.getElementById('status-timeline-events'),
           stats: document.getElementById('stats'),
           curriculum: document.getElementById('curriculum'),
           search: document.getElementById('search-input'),
@@ -5795,6 +7235,8 @@
           settingsUpdateLog: document.getElementById('settings-update-log'),
           settingsUpdateLogEmpty: document.getElementById('settings-update-log-empty'),
           gpuModelOptions: new Set(Array.from(document.querySelectorAll('option.gpu-only'))),
+          actionDock: document.querySelector('.action-dock'),
+          actionDockButtons: Array.from(document.querySelectorAll('.action-dock button')),
           debugPane: document.getElementById('debug-pane'),
           debugLog: document.getElementById('debug-log-window'),
           debugEmpty: document.getElementById('debug-log-empty'),
@@ -5906,6 +7348,18 @@
             cancel: document.getElementById('upload-cancel'),
             confirm: document.getElementById('upload-confirm'),
           },
+          taskCart: document.getElementById('task-cart'),
+          taskCartBody: document.getElementById('task-cart-body'),
+          taskCartEmpty: document.getElementById('task-cart-empty'),
+          taskCartClose: document.getElementById('task-cart-close'),
+          taskCartRun: document.getElementById('task-cart-run'),
+          taskCartPause: document.getElementById('task-cart-pause'),
+          taskCartSave: document.getElementById('task-cart-save'),
+          taskCartDryRun: document.getElementById('task-cart-dry-run'),
+          taskCartParallelism: document.getElementById('task-cart-parallelism'),
+          taskCartOnComplete: document.getElementById('task-cart-on-complete'),
+          helpOverlay: document.getElementById('help-overlay'),
+          helpOverlayClose: document.getElementById('help-overlay-close'),
         };
 
         const DEFAULT_DEBUG_EMPTY_TEXT = dom.debugEmpty
@@ -6004,6 +7458,7 @@
             dom.storage.total.textContent =
               usage && typeof usage.total === 'number' ? formatBytes(usage.total) : '—';
           }
+          updateStatusBadges();
         }
 
         function renderStoragePurgeSummary() {
@@ -7001,6 +8456,7 @@
             if (dom.progress.empty) {
               dom.progress.empty.classList.remove('hidden');
             }
+            updateStatusBadges();
             return;
           }
           if (dom.progress.empty) {
@@ -7116,6 +8572,7 @@
 
             dom.progress.list.appendChild(listItem);
           });
+          updateStatusBadges();
         }
 
         async function refreshProgressQueue({ force = false, silent = false } = {}) {
@@ -7311,6 +8768,49 @@
           }
         }
 
+        async function openBulkUploadDialog() {
+          try {
+            const dialogResult = await showUploadDialog({
+              accept: '.zip,.tar,.tgz,.tar.gz',
+              title: t('dialogs.upload.bulkUpload.title'),
+              description: t('dialogs.upload.bulkUpload.description'),
+              prompt: t('dialogs.upload.bulkUpload.prompt'),
+              help: t('dialogs.upload.bulkUpload.help'),
+              uploadLabel: t('dialogs.upload.bulkUpload.action'),
+              onUpload: async (file, helpers) => {
+                if (!(file instanceof Blob)) {
+                  throw new Error(t('dialogs.upload.bulkUpload.invalid'));
+                }
+                const formData = new FormData();
+                formData.append('archive', file, file.name || 'bulk-upload.zip');
+                showStatus(t('status.bulkUploading'), 'info', { persist: true });
+                const response = await uploadWithProgress('/api/storage/bulk-upload', {
+                  method: 'POST',
+                  body: formData,
+                  onProgress: (ratio) => {
+                    helpers?.reportProgress?.(ratio);
+                  },
+                });
+                return response;
+              },
+            });
+
+            if (!dialogResult || !dialogResult.confirmed) {
+              return;
+            }
+
+            if (dialogResult.uploaded) {
+              showStatus(t('status.bulkUploadQueued'), 'success', { record: false });
+              addTimelineEntry(t('status.bulkUploadQueued'), 'success');
+              await refreshData();
+              await refreshStorage({ includeOverview: true, force: true });
+            }
+          } catch (error) {
+            const message = error instanceof Error ? error.message : t('status.bulkUploadFailed');
+            showStatus(message, 'error');
+          }
+        }
+
         applyTranslations(DEFAULT_LANGUAGE);
         renderStorage();
         renderSystemUpdate();
@@ -7318,6 +8818,7 @@
         void refreshProgressQueue({ silent: true });
 
         const STATUS_DEFAULT_TIMEOUT = 5000;
+        const TIMELINE_MAX_ENTRIES = 8;
 
         function resetStatusProgress() {
           if (dom.statusProgress) {
@@ -7347,6 +8848,400 @@
             dom.status.textContent = '';
           }
           resetStatusProgress();
+        }
+
+        function addTimelineEntry(message, variant) {
+          if (!message) {
+            return;
+          }
+          const resolvedVariant = variant || 'info';
+          const latest = state.timeline.entries[0];
+          if (latest && latest.message === message && latest.variant === resolvedVariant) {
+            latest.time = new Date().toISOString();
+            renderTimeline();
+            return;
+          }
+
+          const entry = {
+            id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+            message,
+            variant: resolvedVariant,
+            time: new Date().toISOString(),
+          };
+          state.timeline.entries.unshift(entry);
+          if (state.timeline.entries.length > TIMELINE_MAX_ENTRIES) {
+            state.timeline.entries.length = TIMELINE_MAX_ENTRIES;
+          }
+          renderTimeline();
+        }
+
+        function renderTimeline() {
+          if (!dom.statusTimelineEvents) {
+            return;
+          }
+          const container = dom.statusTimelineEvents;
+          container.innerHTML = '';
+          if (state.timeline.entries.length === 0) {
+            const placeholder = document.createElement('div');
+            placeholder.className = 'timeline-empty';
+            placeholder.textContent = t('timeline.empty');
+            container.appendChild(placeholder);
+            return;
+          }
+          state.timeline.entries.forEach((entry) => {
+            const item = document.createElement('div');
+            item.className = 'timeline-event';
+            item.dataset.variant = entry.variant || 'info';
+
+            const title = document.createElement('div');
+            title.className = 'timeline-event-title';
+            title.textContent = entry.message;
+            item.appendChild(title);
+
+            const meta = document.createElement('div');
+            meta.className = 'timeline-event-meta';
+            try {
+              const eventDate = new Date(entry.time);
+              meta.textContent = eventDate.toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              });
+            } catch (error) {
+              meta.textContent = '';
+            }
+            item.appendChild(meta);
+
+            container.appendChild(item);
+          });
+        }
+
+        function updateStatusBadges() {
+          const tasksBadge = dom.badgeTasks instanceof HTMLElement ? dom.badgeTasks : null;
+          if (tasksBadge) {
+            const running = state.progress.entries.filter(
+              (entry) => entry.status === 'running',
+            ).length;
+            const queued = state.taskCart.items.length;
+            tasksBadge.textContent = `${running} • ${queued}`;
+            tasksBadge.setAttribute(
+              'aria-label',
+              `${running} running, ${queued} queued`,
+            );
+          }
+
+          const storageBadge = dom.badgeStorage instanceof HTMLElement ? dom.badgeStorage : null;
+          if (storageBadge) {
+            const usage = state.storage.usage;
+            if (
+              usage &&
+              typeof usage.used === 'number' &&
+              typeof usage.total === 'number' &&
+              usage.total > 0
+            ) {
+              const percent = Math.round((usage.used / usage.total) * 100);
+              storageBadge.textContent = `${percent}%`;
+              storageBadge.setAttribute(
+                'aria-label',
+                `${formatBytes(usage.used)} / ${formatBytes(usage.total)}`,
+              );
+            } else {
+              storageBadge.textContent = '—';
+              storageBadge.setAttribute('aria-label', t('global.storage'));
+            }
+          }
+
+          const cpuBadge = dom.badgeCpu instanceof HTMLElement ? dom.badgeCpu : null;
+          if (cpuBadge) {
+            const running = state.progress.entries.filter(
+              (entry) => entry.status === 'running',
+            ).length;
+            cpuBadge.textContent = running > 0 ? `${running}x` : 'Idle';
+            cpuBadge.setAttribute('aria-label', `${running} active tasks`);
+          }
+        }
+
+        function openTaskCart() {
+          if (!dom.taskCart) {
+            return;
+          }
+          dom.taskCart.setAttribute('data-open', 'true');
+          state.taskCart.open = true;
+        }
+
+        function closeTaskCart() {
+          if (!dom.taskCart) {
+            return;
+          }
+          dom.taskCart.setAttribute('data-open', 'false');
+          state.taskCart.open = false;
+        }
+
+        function openHelpOverlay() {
+          if (!dom.helpOverlay) {
+            return;
+          }
+          dom.helpOverlay.setAttribute('data-open', 'true');
+          dom.helpOverlay.setAttribute('aria-hidden', 'false');
+        }
+
+        function closeHelpOverlay() {
+          if (!dom.helpOverlay) {
+            return;
+          }
+          dom.helpOverlay.setAttribute('data-open', 'false');
+          dom.helpOverlay.setAttribute('aria-hidden', 'true');
+        }
+
+        function updateTaskCartControls() {
+          const hasItems = state.taskCart.items.length > 0;
+          const running = Boolean(state.taskCart.running);
+          const paused = Boolean(state.taskCart.paused);
+
+          if (dom.taskCartRun instanceof HTMLButtonElement) {
+            dom.taskCartRun.disabled = !hasItems || running;
+            dom.taskCartRun.textContent = t('cart.run');
+          }
+
+          if (dom.taskCartPause instanceof HTMLButtonElement) {
+            dom.taskCartPause.disabled = !hasItems;
+            dom.taskCartPause.textContent = paused ? t('cart.resume') : t('cart.pause');
+            dom.taskCartPause.setAttribute('aria-pressed', paused ? 'true' : 'false');
+          }
+
+          if (dom.taskCartSave instanceof HTMLButtonElement) {
+            dom.taskCartSave.disabled = !hasItems;
+          }
+
+          if (dom.taskCartDryRun instanceof HTMLButtonElement) {
+            dom.taskCartDryRun.disabled = !hasItems;
+          }
+
+          if (dom.taskCartParallelism instanceof HTMLSelectElement) {
+            dom.taskCartParallelism.value = state.taskCart.parallelism;
+          }
+
+          if (dom.taskCartOnComplete instanceof HTMLSelectElement) {
+            dom.taskCartOnComplete.value = state.taskCart.onComplete;
+          }
+        }
+
+        function renderTaskCart() {
+          if (!dom.taskCartBody) {
+            return;
+          }
+
+          dom.taskCartBody.innerHTML = '';
+
+          if (!state.taskCart.items.length) {
+            if (dom.taskCartEmpty) {
+              dom.taskCartEmpty.classList.remove('hidden');
+              dom.taskCartBody.appendChild(dom.taskCartEmpty);
+            }
+            updateStatusBadges();
+            updateTaskCartControls();
+            return;
+          }
+
+          if (dom.taskCartEmpty) {
+            dom.taskCartEmpty.classList.add('hidden');
+          }
+
+          state.taskCart.items.forEach((item, index) => {
+            const entry = document.createElement('div');
+            entry.className = 'task-cart-item';
+            entry.dataset.type = item.type || 'custom';
+
+            const info = document.createElement('div');
+            info.className = 'task-cart-info';
+
+            const title = document.createElement('h3');
+            title.textContent = item.title || t('cart.title');
+            info.appendChild(title);
+
+            if (item.subtitle) {
+              const subtitle = document.createElement('p');
+              subtitle.className = 'task-cart-meta';
+              subtitle.textContent = item.subtitle;
+              info.appendChild(subtitle);
+            }
+
+            if (item.estimate) {
+              const estimate = document.createElement('p');
+              estimate.className = 'task-cart-meta';
+              estimate.textContent = item.estimate;
+              info.appendChild(estimate);
+            }
+
+            entry.appendChild(info);
+
+            const controls = document.createElement('div');
+            controls.className = 'task-cart-item-controls';
+
+            const runButton = document.createElement('button');
+            runButton.type = 'button';
+            runButton.textContent = t('cart.run');
+            runButton.addEventListener('click', async () => {
+              await executeCartItem(item);
+              state.taskCart.items = state.taskCart.items.filter((candidate) => candidate.id !== item.id);
+              renderTaskCart();
+            });
+            controls.appendChild(runButton);
+
+            const removeButton = document.createElement('button');
+            removeButton.type = 'button';
+            removeButton.className = 'danger';
+            removeButton.textContent = t('common.actions.delete');
+            removeButton.addEventListener('click', () => {
+              removeTaskCartItem(item.id);
+            });
+            controls.appendChild(removeButton);
+
+            entry.appendChild(controls);
+            dom.taskCartBody.appendChild(entry);
+          });
+
+          updateStatusBadges();
+          updateTaskCartControls();
+        }
+
+        function removeTaskCartItem(itemId) {
+          if (!itemId) {
+            return;
+          }
+          state.taskCart.items = state.taskCart.items.filter((item) => item.id !== itemId);
+          renderTaskCart();
+        }
+
+        function addTaskCartItem(item) {
+          if (!item) {
+            return;
+          }
+          const nextItem = {
+            id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+            type: item.type || 'custom',
+            title: item.title || t('cart.title'),
+            subtitle: item.subtitle || '',
+            lectureId: item.lectureId || null,
+            payload: item.payload || null,
+          };
+          state.taskCart.items.push(nextItem);
+          renderTaskCart();
+          openTaskCart();
+          addTimelineEntry(t('cart.added', { title: nextItem.title }), 'info');
+        }
+
+        function toggleTaskCartPause() {
+          if (!state.taskCart.items.length) {
+            showStatus(t('cart.empty'), 'info', { record: false });
+            return;
+          }
+
+          if (state.taskCart.paused) {
+            state.taskCart.paused = false;
+            showStatus(t('cart.resumed'), 'info', { record: false });
+            addTimelineEntry(t('cart.resumed'), 'info');
+            updateTaskCartControls();
+            void runTaskCart();
+            return;
+          }
+
+          state.taskCart.paused = true;
+          showStatus(t('cart.pausedNotice'), 'info', { record: false });
+          addTimelineEntry(t('cart.pausedNotice'), 'warning');
+          updateTaskCartControls();
+        }
+
+        async function performTaskCartDryRun() {
+          if (!state.taskCart.items.length) {
+            showStatus(t('cart.empty'), 'info', { record: false });
+            return;
+          }
+
+          showStatus(t('cart.dryRunPending'), 'info', { record: false });
+          addTimelineEntry(t('cart.dryRunPending'), 'info');
+        }
+
+        async function runTaskCart() {
+          if (!state.taskCart.items.length) {
+            showStatus(t('cart.empty'), 'info', { record: false });
+            return;
+          }
+
+          if (state.taskCart.running) {
+            state.taskCart.paused = false;
+            updateTaskCartControls();
+            return;
+          }
+
+          state.taskCart.paused = false;
+          state.taskCart.running = true;
+          openTaskCart();
+          updateTaskCartControls();
+          showStatus(t('cart.runningStatus'), 'info', { record: false });
+          addTimelineEntry(t('cart.runningStatus'), 'info');
+
+          const snapshot = [...state.taskCart.items];
+          for (const item of snapshot) {
+            if (state.taskCart.paused) {
+              break;
+            }
+            try {
+              await executeCartItem(item);
+              state.taskCart.items = state.taskCart.items.filter((candidate) => candidate.id !== item.id);
+              renderTaskCart();
+            } catch (error) {
+              state.taskCart.running = false;
+              const message = error instanceof Error ? error.message : String(error);
+              showStatus(message, 'error', { record: false });
+              addTimelineEntry(message, 'error');
+              updateTaskCartControls();
+              return;
+            }
+          }
+
+          const completed = !state.taskCart.paused && state.taskCart.items.length === 0;
+          state.taskCart.running = false;
+          updateTaskCartControls();
+          if (completed) {
+            showStatus(t('cart.completedStatus'), 'success', { record: false });
+            addTimelineEntry(t('cart.completedStatus'), 'success');
+          }
+        }
+
+        async function executeCartItem(item) {
+          if (!item || !item.type) {
+            return;
+          }
+          if (item.type === 'transcribe' && item.lectureId) {
+            const model = normalizeWhisperModel(item.payload?.model || getTranscribeModelValue());
+            startTranscriptionProgress(item.lectureId);
+            showStatus(t('status.transcriptionPreparing'), 'info', { persist: true });
+            try {
+              await request(`/api/lectures/${item.lectureId}/transcribe`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ model }),
+              });
+              stopTranscriptionProgress();
+              showStatus(t('status.transcriptionCompleted'), 'success');
+              await refreshData();
+              if (state.selectedLectureId === item.lectureId) {
+                await selectLecture(item.lectureId);
+              }
+            } catch (error) {
+              stopTranscriptionProgress();
+              throw error;
+            }
+            return;
+          }
+
+          if (item.type === 'custom' && typeof item.payload?.run === 'function') {
+            await item.payload.run();
+            return;
+          }
+
+          showStatus(t('cart.unsupported'), 'info', { record: false });
+          addTimelineEntry(t('cart.unsupported'), 'warning');
         }
 
         const assetDefinitions = [
@@ -7419,6 +9314,11 @@
             dom.statusMessage.textContent = message;
           } else {
             dom.status.textContent = message;
+          }
+
+          const shouldRecord = !(options && options.record === false);
+          if (shouldRecord) {
+            addTimelineEntry(message, variant);
           }
 
           if (clampedRatio !== null) {
@@ -11378,6 +13278,147 @@
           } else {
             stopProgressPolling();
           }
+          const sectionMap = {
+            details: 'catalog',
+            create: 'catalog',
+            progress: 'tasks',
+            storage: 'storage',
+            settings: state.primarySection === 'import' ? 'import' : 'system',
+          };
+          const fallbackSection = state.primarySection || 'catalog';
+          const nextSection = sectionMap[view] || fallbackSection;
+          setPrimaryNavigation(nextSection);
+        }
+
+        function setPrimaryNavigation(section) {
+          const target = section || 'catalog';
+          state.primarySection = target;
+          dom.megaRailButtons.forEach((button) => {
+            if (!(button instanceof HTMLElement)) {
+              return;
+            }
+            button.classList.toggle('is-active', button.dataset.section === target);
+          });
+          dom.mobileTabButtons.forEach((button) => {
+            if (!(button instanceof HTMLElement)) {
+              return;
+            }
+            button.classList.toggle('is-active', button.dataset.section === target);
+          });
+        }
+
+        function navigatePrimary(section) {
+          setPrimaryNavigation(section);
+          switch (section) {
+            case 'home':
+            case 'catalog':
+              setActiveView('details');
+              break;
+            case 'tasks':
+              setActiveView('progress');
+              break;
+            case 'storage':
+              setActiveView('storage');
+              break;
+            case 'system':
+              setActiveView('settings');
+              break;
+            case 'import':
+              setActiveView('settings');
+              if (dom.settingsImport) {
+                dom.settingsImport.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }
+              break;
+            case 'debug':
+              setDebugMode(!state.debug.enabled);
+              break;
+            default:
+              setActiveView('details');
+          }
+        }
+
+        function handleActionDock(action) {
+          switch (action) {
+            case 'create':
+              navigatePrimary('catalog');
+              setActiveView('create');
+              if (dom.createName) {
+                dom.createName.focus();
+              }
+              break;
+            case 'bulk-upload':
+              void openBulkUploadDialog();
+              break;
+            case 'bulk-download':
+              navigatePrimary('storage');
+              void handleStorageDownloadSelected();
+              break;
+            case 'add-to-cart':
+              if (state.selectedLectureDetail && state.selectedLectureId) {
+                const lectureName = state.selectedLectureDetail.lecture?.name || t('cart.title');
+                addTaskCartItem({
+                  type: 'transcribe',
+                  lectureId: state.selectedLectureId,
+                  title: lectureName,
+                  subtitle: t('assets.actions.transcribe'),
+                  payload: { model: getTranscribeModelValue() },
+                });
+              } else {
+                showStatus('Select a lecture to add tasks to the cart.', 'info', { record: false });
+              }
+              break;
+            case 'run-cart':
+              navigatePrimary('tasks');
+              openTaskCart();
+              void runTaskCart();
+              break;
+            case 'export':
+              navigatePrimary('import');
+              if (dom.settingsExport) {
+                dom.settingsExport.click();
+              } else {
+                showStatus('Export controls are available in System settings.', 'info', {
+                  record: false,
+                });
+              }
+              break;
+            case 'import':
+              navigatePrimary('import');
+              if (dom.settingsImport) {
+                dom.settingsImport.click();
+              } else {
+                showStatus('Import controls are available in System settings.', 'info', {
+                  record: false,
+                });
+              }
+              break;
+            case 'purge':
+              navigatePrimary('storage');
+              if (dom.storage && dom.storage.purge) {
+                void handlePurgeProcessedAudio();
+              } else {
+                showStatus('Storage purge tools live in the Storage pane.', 'info', {
+                  record: false,
+                });
+              }
+              break;
+            case 'system-update':
+              navigatePrimary('system');
+              if (dom.settingsUpdateRun) {
+                dom.settingsUpdateRun.click();
+              } else {
+                showStatus('System update controls are in System settings.', 'info', {
+                  record: false,
+                });
+              }
+              break;
+            case 'debug-toggle':
+              setDebugMode(!state.debug.enabled);
+              setPrimaryNavigation('debug');
+              break;
+            default:
+              break;
+          }
         }
 
         function updateStats() {
@@ -12964,9 +15005,106 @@
           });
         }
 
+        if (dom.globalSearch) {
+          dom.globalSearch.addEventListener('input', (event) => {
+            const value = event.target.value || '';
+            state.query = value;
+            if (dom.search && dom.search.value !== value) {
+              dom.search.value = value;
+            }
+            renderCurriculum();
+          });
+        }
+
+        if (dom.megaRailButtons.length > 0) {
+          dom.megaRailButtons.forEach((button) => {
+            button.addEventListener('click', () => {
+              navigatePrimary(button.dataset.section || 'catalog');
+            });
+          });
+        }
+
+        if (dom.mobileTabButtons.length > 0) {
+          dom.mobileTabButtons.forEach((button) => {
+            button.addEventListener('click', () => {
+              navigatePrimary(button.dataset.section || 'catalog');
+            });
+          });
+        }
+
+        if (dom.actionDockButtons.length > 0) {
+          dom.actionDockButtons.forEach((button) => {
+            if (!(button instanceof HTMLButtonElement)) {
+              return;
+            }
+            button.addEventListener('click', () => {
+              const dockAction = button.dataset.action || '';
+              if (dockAction) {
+                handleActionDock(dockAction);
+              }
+            });
+          });
+        }
+
+        if (dom.taskCartClose instanceof HTMLButtonElement) {
+          dom.taskCartClose.addEventListener('click', () => {
+            closeTaskCart();
+          });
+        }
+
+        if (dom.taskCartRun instanceof HTMLButtonElement) {
+          dom.taskCartRun.addEventListener('click', () => {
+            void runTaskCart();
+          });
+        }
+
+        if (dom.taskCartPause instanceof HTMLButtonElement) {
+          dom.taskCartPause.addEventListener('click', () => {
+            toggleTaskCartPause();
+          });
+        }
+
+        if (dom.taskCartSave instanceof HTMLButtonElement) {
+          dom.taskCartSave.addEventListener('click', () => {
+            showStatus(t('cart.savePresetUnavailable'), 'info', { record: false });
+            addTimelineEntry(t('cart.savePresetUnavailable'), 'info');
+          });
+        }
+
+        if (dom.taskCartDryRun instanceof HTMLButtonElement) {
+          dom.taskCartDryRun.addEventListener('click', () => {
+            void performTaskCartDryRun();
+          });
+        }
+
+        if (dom.taskCartParallelism instanceof HTMLSelectElement) {
+          dom.taskCartParallelism.addEventListener('change', (event) => {
+            const select = event.target instanceof HTMLSelectElement ? event.target : null;
+            const value = select ? select.value || 'auto' : 'auto';
+            state.taskCart.parallelism = value;
+            updateTaskCartControls();
+            const label = select?.selectedOptions?.[0]?.textContent?.trim() || value;
+            addTimelineEntry(t('cart.parallelismChanged', { label }), 'info');
+          });
+        }
+
+        if (dom.taskCartOnComplete instanceof HTMLSelectElement) {
+          dom.taskCartOnComplete.addEventListener('change', (event) => {
+            const select = event.target instanceof HTMLSelectElement ? event.target : null;
+            const value = select ? select.value || 'notify' : 'notify';
+            state.taskCart.onComplete = value;
+            updateTaskCartControls();
+            const label = select?.selectedOptions?.[0]?.textContent?.trim() || value;
+            addTimelineEntry(t('cart.onCompleteChanged', { label }), 'info');
+          });
+        }
+
         dom.search.addEventListener('input', (event) => {
           state.query = event.target.value;
           renderCurriculum();
+          if (dom.globalSearch && dom.globalSearch.value !== state.query) {
+            dom.globalSearch.value = state.query;
+          }
         });
 
         dom.editForm.addEventListener('submit', async (event) => {
@@ -13333,12 +15471,60 @@
           });
         }
 
+        if (dom.globalHelp) {
+          dom.globalHelp.addEventListener('click', () => {
+            openHelpOverlay();
+          });
+        }
+
+        if (dom.helpOverlayClose) {
+          dom.helpOverlayClose.addEventListener('click', () => {
+            closeHelpOverlay();
+          });
+        }
+
+        if (dom.helpOverlay) {
+          dom.helpOverlay.addEventListener('click', (event) => {
+            if (event.target === dom.helpOverlay) {
+              closeHelpOverlay();
+            }
+          });
+        }
+
         if (dom.settingsLanguage) {
           dom.settingsLanguage.addEventListener('change', (event) => {
             const value = normalizeLanguage(event.target.value);
             applyTranslations(value);
             renderStorage();
             updateEditModeUI();
+            renderTaskCart();
+            renderTimeline();
+            if (dom.globalLanguage) {
+              dom.globalLanguage.value = value;
+            }
+          });
+        }
+
+        if (dom.globalLanguage) {
+          dom.globalLanguage.addEventListener('change', (event) => {
+            const value = normalizeLanguage(event.target.value);
+            if (dom.settingsLanguage) {
+              dom.settingsLanguage.value = value;
+            }
+            applyTranslations(value);
+            renderCurriculum();
+            renderTaskCart();
+            renderTimeline();
+          });
+        }
+
+        if (dom.globalTheme) {
+          dom.globalTheme.addEventListener('change', (event) => {
+            const value = event.target.value || 'system';
+            applyTheme(value);
+            if (dom.settingsTheme) {
+              dom.settingsTheme.value = value;
+            }
           });
         }
 
@@ -13400,6 +15586,7 @@
           stopDebugPolling();
         });
         setActiveView(state.activeView);
+        setPrimaryNavigation('catalog');
         updateEditModeUI();
         clearDetailPanel();
         applyTheme('system');
@@ -13407,6 +15594,9 @@
         await loadSettings();
         await fetchSystemUpdateStatus();
         await refreshData();
+        renderTaskCart();
+        renderTimeline();
+        updateStatusBadges();
       })();
     </script>
   </body>
