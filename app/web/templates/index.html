@@ -30,31 +30,42 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
+      id="font-inter"
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
+    <script>
+      (function () {
+        if (document.documentElement.getAttribute('data-low-ram') === 'true') {
+          const fontLink = document.getElementById('font-inter');
+          if (fontLink) {
+            fontLink.remove();
+          }
+        }
+      })();
+    </script>
     <style>
       :root {
         color-scheme: light;
-        --background: #f5f6f8;
-        --text: #1f2933;
-        --muted: #475569;
+        --background: #f7f8fc;
+        --text: #132238;
+        --muted: rgba(19, 34, 56, 0.64);
         --panel-bg: #ffffff;
-        --panel-border: #d2d6dc;
-        --panel-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-        --accent: #2563eb;
+        --panel-border: rgba(64, 75, 105, 0.16);
+        --panel-shadow: 0 18px 42px rgba(23, 37, 84, 0.08);
+        --accent: #4052ff;
         --accent-contrast: #ffffff;
-        --accent-muted: #e2e8f0;
-        --danger: #dc2626;
+        --accent-muted: rgba(64, 82, 255, 0.12);
+        --danger: #ff5f7a;
         --danger-contrast: #ffffff;
-        --placeholder: #64748b;
-        --status-info-bg: #e0f2fe;
-        --status-info-text: #0369a1;
-        --status-error-bg: #fee2e2;
-        --status-error-text: #b91c1c;
-        --status-success-bg: #dcfce7;
-        --status-success-text: #166534;
-        --status-progress-track: rgba(15, 23, 42, 0.16);
+        --placeholder: rgba(19, 34, 56, 0.45);
+        --status-info-bg: #eaf4ff;
+        --status-info-text: #344cb7;
+        --status-error-bg: #ffe9f0;
+        --status-error-text: #c54a6b;
+        --status-success-bg: #e8fff4;
+        --status-success-text: #2f7a5e;
+        --status-progress-track: rgba(19, 34, 56, 0.16);
       }
 
       body[data-theme='light'] {
@@ -63,25 +74,25 @@
 
       body[data-theme='dark'] {
         color-scheme: dark;
-        --background: #0f172a;
-        --text: #f8fafc;
-        --muted: #94a3b8;
-        --panel-bg: #1e293b;
-        --panel-border: #334155;
-        --panel-shadow: 0 1px 2px rgba(2, 6, 23, 0.5);
-        --accent: #38bdf8;
-        --accent-contrast: #0f172a;
-        --accent-muted: rgba(56, 189, 248, 0.18);
-        --danger: #f87171;
-        --danger-contrast: #0f172a;
-        --placeholder: #94a3b8;
-        --status-info-bg: rgba(14, 165, 233, 0.2);
-        --status-info-text: #bae6fd;
-        --status-error-bg: rgba(248, 113, 113, 0.24);
-        --status-error-text: #fecaca;
-        --status-success-bg: rgba(74, 222, 128, 0.22);
-        --status-success-text: #bbf7d0;
-        --status-progress-track: rgba(255, 255, 255, 0.25);
+        --background: #0c1729;
+        --text: #f5f8ff;
+        --muted: rgba(222, 233, 255, 0.7);
+        --panel-bg: #111f33;
+        --panel-border: rgba(167, 197, 255, 0.18);
+        --panel-shadow: 0 24px 56px rgba(2, 6, 18, 0.52);
+        --accent: #7d8bff;
+        --accent-contrast: #0c1729;
+        --accent-muted: rgba(125, 139, 255, 0.22);
+        --danger: #ff7b96;
+        --danger-contrast: #0c1729;
+        --placeholder: rgba(222, 233, 255, 0.5);
+        --status-info-bg: rgba(125, 139, 255, 0.25);
+        --status-info-text: #d9deff;
+        --status-error-bg: rgba(255, 171, 193, 0.28);
+        --status-error-text: #ffd8e3;
+        --status-success-bg: rgba(140, 246, 205, 0.28);
+        --status-success-text: #e5fff4;
+        --status-progress-track: rgba(245, 248, 255, 0.3);
       }
 
       body[data-theme='system'] {
@@ -91,25 +102,25 @@
       @media (prefers-color-scheme: dark) {
         body[data-theme='system'] {
           color-scheme: dark;
-          --background: #0f172a;
-          --text: #f8fafc;
-          --muted: #94a3b8;
-          --panel-bg: #1e293b;
-          --panel-border: #334155;
-          --panel-shadow: 0 1px 2px rgba(2, 6, 23, 0.5);
-          --accent: #38bdf8;
-          --accent-contrast: #0f172a;
-          --accent-muted: rgba(56, 189, 248, 0.18);
-          --danger: #f87171;
-          --danger-contrast: #0f172a;
-          --placeholder: #94a3b8;
-          --status-info-bg: rgba(14, 165, 233, 0.2);
-          --status-info-text: #bae6fd;
-          --status-error-bg: rgba(248, 113, 113, 0.24);
-          --status-error-text: #fecaca;
-          --status-success-bg: rgba(74, 222, 128, 0.22);
-          --status-success-text: #bbf7d0;
-          --status-progress-track: rgba(255, 255, 255, 0.25);
+          --background: #0c1729;
+          --text: #f5f8ff;
+          --muted: rgba(222, 233, 255, 0.7);
+          --panel-bg: #111f33;
+          --panel-border: rgba(167, 197, 255, 0.18);
+          --panel-shadow: 0 24px 56px rgba(2, 6, 18, 0.52);
+          --accent: #7d8bff;
+          --accent-contrast: #0c1729;
+          --accent-muted: rgba(125, 139, 255, 0.22);
+          --danger: #ff7b96;
+          --danger-contrast: #0c1729;
+          --placeholder: rgba(222, 233, 255, 0.5);
+          --status-info-bg: rgba(125, 139, 255, 0.25);
+          --status-info-text: #d9deff;
+          --status-error-bg: rgba(255, 171, 193, 0.28);
+          --status-error-text: #ffd8e3;
+          --status-success-bg: rgba(140, 246, 205, 0.28);
+          --status-success-text: #e5fff4;
+          --status-progress-track: rgba(245, 248, 255, 0.3);
         }
       }
 
@@ -3135,25 +3146,108 @@
         overflow: auto;
       }
 
+      .task-cart-items {
+        display: flex;
+        flex-direction: column;
+        gap: calc(var(--grid-unit) * 2);
+      }
+
       .task-cart-item {
+        position: relative;
         border-radius: 18px;
         border: 1px solid var(--app-border);
         padding: calc(var(--grid-unit) * 2);
         background: var(--app-surface-alt);
         display: grid;
-        grid-template-columns: 1fr auto;
+        grid-template-columns: auto 1fr auto;
         gap: calc(var(--grid-unit) * 2);
+        transition: border-color var(--transition-snappy),
+          background var(--transition-snappy),
+          box-shadow var(--transition-snappy);
+      }
+
+      .task-cart-item[data-status='running'] {
+        border-color: rgba(64, 82, 255, 0.45);
+        box-shadow: 0 6px 18px rgba(64, 82, 255, 0.18);
+      }
+
+      .task-cart-item[data-status='failed'] {
+        border-color: rgba(255, 99, 132, 0.5);
+        box-shadow: 0 6px 18px rgba(255, 99, 132, 0.15);
+      }
+
+      .task-cart-item[data-status='completed'] {
+        border-color: rgba(76, 201, 159, 0.45);
+      }
+
+      .task-cart-item[data-status='paused']::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: 18px;
+        background: rgba(15, 23, 42, 0.05);
+        pointer-events: none;
+      }
+
+      .task-cart-item[aria-grabbed='true'] {
+        opacity: 0.75;
+      }
+
+      .task-cart-item.drop-before::before,
+      .task-cart-item.drop-after::before {
+        content: '';
+        position: absolute;
+        left: calc(var(--grid-unit) * -2.5);
+        right: calc(var(--grid-unit) * -2.5);
+        height: 3px;
+        border-radius: 6px;
+        background: var(--accent-primary);
+      }
+
+      .task-cart-item.drop-before::before {
+        top: calc(var(--grid-unit) * -1.25);
+      }
+
+      .task-cart-item.drop-after::before {
+        bottom: calc(var(--grid-unit) * -1.25);
+      }
+
+      .task-cart-drag {
+        align-self: stretch;
+        width: 38px;
+        border-radius: 14px;
+        border: 1px solid transparent;
+        background: transparent;
+        color: var(--app-text-muted);
+        font-size: 1.15rem;
+        cursor: grab;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: color var(--transition-snappy),
+          background var(--transition-snappy),
+          border-color var(--transition-snappy);
+      }
+
+      .task-cart-drag:focus-visible,
+      .task-cart-drag:hover {
+        border-color: rgba(64, 82, 255, 0.35);
+        background: rgba(64, 82, 255, 0.08);
+        color: var(--accent-primary);
+        outline: none;
       }
 
       .task-cart-info {
         display: flex;
         flex-direction: column;
         gap: calc(var(--grid-unit) * 1);
+        min-width: 0;
       }
 
       .task-cart-item h3 {
         margin: 0;
         font-size: 0.95rem;
+        line-height: 1.3;
       }
 
       .task-cart-meta {
@@ -3168,11 +3262,164 @@
         margin: 0;
       }
 
+      .task-cart-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: rgba(64, 82, 255, 0.12);
+        color: var(--accent-primary);
+        font-size: 0.72rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .task-cart-item[data-status='failed'] .task-cart-status {
+        background: rgba(255, 99, 132, 0.12);
+        color: #ff5678;
+      }
+
+      .task-cart-item[data-status='completed'] .task-cart-status {
+        background: rgba(76, 201, 159, 0.14);
+        color: #2f9e67;
+      }
+
+      .task-cart-item[data-status='paused'] .task-cart-status {
+        background: rgba(15, 23, 42, 0.08);
+        color: var(--app-text-muted);
+      }
+
+      .task-cart-prerequisites {
+        margin: 0;
+        padding-left: calc(var(--grid-unit) * 2.5);
+        color: var(--app-text-muted);
+        font-size: 0.78rem;
+      }
+
+      .task-cart-prerequisites li {
+        margin-bottom: 2px;
+      }
+
+      .task-cart-logs {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-size: 0.75rem;
+        color: var(--app-text-muted);
+      }
+
+      .task-cart-logs li {
+        padding-left: calc(var(--grid-unit) * 1.5);
+        position: relative;
+      }
+
+      .task-cart-logs li::before {
+        content: '•';
+        position: absolute;
+        left: 0;
+        color: currentColor;
+      }
+
       .task-cart-item-controls {
         display: flex;
         flex-direction: column;
         gap: calc(var(--grid-unit) * 1);
         align-items: flex-end;
+      }
+
+      .task-cart-item-controls button {
+        white-space: nowrap;
+      }
+
+      .task-cart-presets {
+        display: flex;
+        flex-direction: column;
+        gap: calc(var(--grid-unit) * 1.5);
+        padding-bottom: calc(var(--grid-unit) * 2);
+        border-bottom: 1px solid var(--app-border);
+        margin-bottom: calc(var(--grid-unit) * 2);
+      }
+
+      .task-cart-presets-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: calc(var(--grid-unit) * 1);
+      }
+
+      .task-cart-presets-header h3 {
+        margin: 0;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--app-text-muted);
+      }
+
+      .task-cart-presets-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: calc(var(--grid-unit) * 1.5);
+      }
+
+      .task-cart-preset {
+        border-radius: 16px;
+        border: 1px solid var(--app-border);
+        background: var(--app-surface-alt);
+        padding: calc(var(--grid-unit) * 1.5);
+        display: flex;
+        flex-direction: column;
+        gap: calc(var(--grid-unit) * 1);
+        min-height: 120px;
+        transition: border-color var(--transition-snappy),
+          box-shadow var(--transition-snappy);
+      }
+
+      .task-cart-preset[data-builtin='false'] {
+        border-style: dashed;
+      }
+
+      .task-cart-preset:hover,
+      .task-cart-preset:focus-within {
+        border-color: rgba(64, 82, 255, 0.45);
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+      }
+
+      .task-cart-preset h4 {
+        margin: 0;
+        font-size: 0.9rem;
+      }
+
+      .task-cart-preset p {
+        margin: 0;
+        font-size: 0.78rem;
+        color: var(--app-text-muted);
+        flex: 1;
+      }
+
+      .task-cart-preset-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: calc(var(--grid-unit) * 1);
+      }
+
+      .task-cart-preset-actions button {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .task-cart-preset-actions .danger {
+        flex: 0;
+      }
+
+      .task-cart-presets-empty {
+        margin: 0;
+        font-size: 0.8rem;
+        color: var(--app-text-muted);
       }
 
       .task-cart-controls {
@@ -3358,6 +3605,29 @@
         padding: calc(var(--grid-unit) * 2);
       }
 
+      .tooltip-bubble {
+        position: fixed;
+        z-index: 120;
+        pointer-events: none;
+        padding: calc(var(--grid-unit) * 1) calc(var(--grid-unit) * 1.5);
+        background: rgba(12, 23, 41, 0.92);
+        color: #f8faff;
+        border-radius: 14px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        line-height: 1.3;
+        opacity: 0;
+        transform: translate(-50%, -6px) scale(0.96);
+        transition: opacity 120ms ease, transform 120ms ease;
+        max-width: 280px;
+        box-shadow: 0 18px 38px rgba(12, 23, 41, 0.35);
+      }
+
+      .tooltip-bubble[data-visible='true'] {
+        opacity: 1;
+        transform: translate(-50%, -12px) scale(1);
+      }
+
       .mobile-tab-bar {
         display: none;
       }
@@ -3486,38 +3756,73 @@
             <option value="light" data-i18n="settings.appearance.theme.light">Light</option>
             <option value="dark" data-i18n="settings.appearance.theme.dark">Dark</option>
           </select>
-          <button id="global-help" type="button" class="ghost" data-i18n="global.help">
+          <button
+            id="global-help"
+            type="button"
+            class="ghost"
+            data-i18n="global.help"
+            data-tooltip-key="tooltips.global.help"
+          >
             Help
           </button>
         </div>
       </header>
       <main class="layout app-main">
         <nav class="mega-rail" aria-label="Primary">
-          <button type="button" data-section="home" class="is-active">
+          <button
+            type="button"
+            data-section="home"
+            class="is-active"
+            data-tooltip-key="tooltips.mega.home"
+          >
             <span class="icon" aria-hidden="true">🏠</span>
             <span data-i18n="mega.home">Home</span>
           </button>
-          <button type="button" data-section="catalog">
+          <button
+            type="button"
+            data-section="catalog"
+            data-tooltip-key="tooltips.mega.catalog"
+          >
             <span class="icon" aria-hidden="true">📚</span>
             <span data-i18n="mega.catalog">Catalog</span>
           </button>
-          <button type="button" data-section="tasks">
+          <button
+            type="button"
+            data-section="tasks"
+            data-tooltip-key="tooltips.mega.tasks"
+          >
             <span class="icon" aria-hidden="true">🗂️</span>
             <span data-i18n="mega.tasks">Tasks</span>
           </button>
-          <button type="button" data-section="storage">
+          <button
+            type="button"
+            data-section="storage"
+            data-tooltip-key="tooltips.mega.storage"
+          >
             <span class="icon" aria-hidden="true">💽</span>
             <span data-i18n="mega.storage">Storage</span>
           </button>
-          <button type="button" data-section="system">
+          <button
+            type="button"
+            data-section="system"
+            data-tooltip-key="tooltips.mega.system"
+          >
             <span class="icon" aria-hidden="true">⚙️</span>
             <span data-i18n="mega.system">System</span>
           </button>
-          <button type="button" data-section="import">
+          <button
+            type="button"
+            data-section="import"
+            data-tooltip-key="tooltips.mega.import"
+          >
             <span class="icon" aria-hidden="true">📥</span>
             <span data-i18n="mega.import">Import/Export</span>
           </button>
-          <button type="button" data-section="debug">
+          <button
+            type="button"
+            data-section="debug"
+            data-tooltip-key="tooltips.mega.debug"
+          >
             <span class="icon" aria-hidden="true">🧪</span>
             <span data-i18n="mega.debug">Debug</span>
           </button>
@@ -3565,6 +3870,7 @@
                 data-view="details"
                 aria-pressed="true"
                 data-i18n="topBar.details"
+                data-tooltip-key="tooltips.topBar.details"
               >
                 Details
               </button>
@@ -3574,6 +3880,7 @@
                 class="ghost pill"
                 aria-pressed="false"
                 data-i18n="topBar.enableEdit"
+                data-tooltip-key="tooltips.topBar.editToggle"
               >
                 Enable edit mode
               </button>
@@ -3585,6 +3892,7 @@
                 data-view="progress"
                 aria-pressed="false"
                 data-i18n="topBar.progress"
+                data-tooltip-key="tooltips.topBar.progress"
               >
                 Progress
               </button>
@@ -3593,6 +3901,7 @@
                 data-view="create"
                 aria-pressed="false"
                 data-i18n="topBar.create"
+                data-tooltip-key="tooltips.topBar.create"
               >
                 Create
               </button>
@@ -3602,6 +3911,7 @@
                 data-view="storage"
                 aria-pressed="false"
                 data-i18n="topBar.storage"
+                data-tooltip-key="tooltips.topBar.storage"
               >
                 Storage
               </button>
@@ -3610,6 +3920,7 @@
                 data-view="settings"
                 aria-pressed="false"
                 data-i18n="topBar.settings"
+                data-tooltip-key="tooltips.topBar.settings"
               >
                 Settings
               </button>
@@ -4030,58 +4341,130 @@
         </section>
       </section>
       <aside class="action-dock" aria-label="Quick actions">
-        <button type="button" data-action="create">
+        <button type="button" data-action="create" data-tooltip-key="tooltips.dock.create">
           <span class="icon" aria-hidden="true">➕</span>
           <span data-i18n="dock.create">Create</span>
         </button>
-        <button type="button" data-action="bulk-upload">
+        <button
+          type="button"
+          data-action="bulk-upload"
+          data-tooltip-key="tooltips.dock.bulkUpload"
+        >
           <span class="icon" aria-hidden="true">⬆️</span>
           <span data-i18n="dock.bulkUpload">Bulk Upload</span>
         </button>
-        <button type="button" data-action="bulk-download">
+        <button
+          type="button"
+          data-action="bulk-download"
+          data-tooltip-key="tooltips.dock.bulkDownload"
+        >
           <span class="icon" aria-hidden="true">⬇️</span>
           <span data-i18n="dock.bulkDownload">Bulk Download</span>
         </button>
-        <button type="button" data-action="add-to-cart">
+        <button
+          type="button"
+          data-action="add-to-cart"
+          data-tooltip-key="tooltips.dock.addToCart"
+        >
           <span class="icon" aria-hidden="true">🛒</span>
           <span data-i18n="dock.addToCart">Add to Cart</span>
         </button>
-        <button type="button" data-action="run-cart">
+        <button
+          type="button"
+          data-action="run-cart"
+          data-tooltip-key="tooltips.dock.runCart"
+        >
           <span class="icon" aria-hidden="true">▶️</span>
           <span data-i18n="dock.runCart">Run Cart</span>
         </button>
-        <button type="button" data-action="export">
+        <button type="button" data-action="export" data-tooltip-key="tooltips.dock.export">
           <span class="icon" aria-hidden="true">📤</span>
           <span data-i18n="dock.export">Export</span>
         </button>
-        <button type="button" data-action="import">
+        <button type="button" data-action="import" data-tooltip-key="tooltips.dock.import">
           <span class="icon" aria-hidden="true">📥</span>
           <span data-i18n="dock.import">Import</span>
         </button>
-        <button type="button" data-action="purge">
+        <button type="button" data-action="purge" data-tooltip-key="tooltips.dock.purge">
           <span class="icon" aria-hidden="true">🧹</span>
           <span data-i18n="dock.purge">Purge</span>
         </button>
-        <button type="button" data-action="system-update">
+        <button
+          type="button"
+          data-action="system-update"
+          data-tooltip-key="tooltips.dock.update"
+        >
           <span class="icon" aria-hidden="true">⬆︎</span>
           <span data-i18n="dock.update">System Update</span>
         </button>
-        <button type="button" data-action="debug-toggle">
+        <button
+          type="button"
+          data-action="debug-toggle"
+          data-tooltip-key="tooltips.dock.debug"
+        >
           <span class="icon" aria-hidden="true">🐞</span>
           <span data-i18n="dock.debug">Debug On/Off</span>
         </button>
       </aside>
     </main>
       <nav class="mobile-tab-bar" aria-label="Primary">
-        <button type="button" data-section="home" class="is-active" data-i18n="mega.home">
+        <button
+          type="button"
+          data-section="home"
+          class="is-active"
+          data-i18n="mega.home"
+          data-tooltip-key="tooltips.mega.home"
+        >
           Home
         </button>
-        <button type="button" data-section="catalog" data-i18n="mega.catalog">Catalog</button>
-        <button type="button" data-section="tasks" data-i18n="mega.tasks">Tasks</button>
-        <button type="button" data-section="storage" data-i18n="mega.storage">Storage</button>
-        <button type="button" data-section="system" data-i18n="mega.system">System</button>
-        <button type="button" data-section="import" data-i18n="mega.import">Import/Export</button>
-        <button type="button" data-section="debug" data-i18n="mega.debug">Debug</button>
+        <button
+          type="button"
+          data-section="catalog"
+          data-i18n="mega.catalog"
+          data-tooltip-key="tooltips.mega.catalog"
+        >
+          Catalog
+        </button>
+        <button
+          type="button"
+          data-section="tasks"
+          data-i18n="mega.tasks"
+          data-tooltip-key="tooltips.mega.tasks"
+        >
+          Tasks
+        </button>
+        <button
+          type="button"
+          data-section="storage"
+          data-i18n="mega.storage"
+          data-tooltip-key="tooltips.mega.storage"
+        >
+          Storage
+        </button>
+        <button
+          type="button"
+          data-section="system"
+          data-i18n="mega.system"
+          data-tooltip-key="tooltips.mega.system"
+        >
+          System
+        </button>
+        <button
+          type="button"
+          data-section="import"
+          data-i18n="mega.import"
+          data-tooltip-key="tooltips.mega.import"
+        >
+          Import/Export
+        </button>
+        <button
+          type="button"
+          data-section="debug"
+          data-i18n="mega.debug"
+          data-tooltip-key="tooltips.mega.debug"
+        >
+          Debug
+        </button>
       </nav>
       <footer class="status-timeline" role="region" aria-live="polite">
         <div class="status-timeline-track">
@@ -4104,14 +4487,70 @@
         <button id="task-cart-close" type="button" class="ghost" aria-label="Close cart">✕</button>
       </div>
       <div id="task-cart-body" class="task-cart-body">
+        <section
+          id="task-cart-presets"
+          class="task-cart-presets"
+          aria-label="Task cart presets"
+          data-i18n-aria-label="cart.presets.aria"
+        >
+          <div class="task-cart-presets-header">
+            <h3 data-i18n="cart.presets.title">Presets</h3>
+            <button
+              id="task-cart-presets-reset"
+              type="button"
+              class="text"
+              data-tooltip-key="tooltips.cart.resetPresets"
+              data-i18n="cart.presets.reset"
+            >
+              Reset
+            </button>
+          </div>
+          <div id="task-cart-presets-list" class="task-cart-presets-list" role="list"></div>
+          <p
+            id="task-cart-presets-empty"
+            class="task-cart-presets-empty"
+            data-i18n="cart.presets.empty"
+          >
+            No presets available yet.
+          </p>
+        </section>
+        <div id="task-cart-items" class="task-cart-items" role="list"></div>
         <p id="task-cart-empty" class="placeholder" data-i18n="cart.empty">Cart is empty.</p>
       </div>
       <div class="task-cart-controls">
-        <button id="task-cart-run" type="button" data-i18n="cart.run">Run</button>
-        <button id="task-cart-pause" type="button" data-i18n="cart.pause">Pause</button>
-        <button id="task-cart-save" type="button" data-i18n="cart.savePreset">Save as Preset</button>
-        <button id="task-cart-dry-run" type="button" data-i18n="cart.dryRun">Dry Run</button>
-        <label for="task-cart-parallelism">
+        <button
+          id="task-cart-run"
+          type="button"
+          data-i18n="cart.run"
+          data-tooltip-key="tooltips.cart.run"
+        >
+          Run
+        </button>
+        <button
+          id="task-cart-pause"
+          type="button"
+          data-i18n="cart.pause"
+          data-tooltip-key="tooltips.cart.pause"
+        >
+          Pause
+        </button>
+        <button
+          id="task-cart-save"
+          type="button"
+          data-i18n="cart.savePreset"
+          data-tooltip-key="tooltips.cart.save"
+        >
+          Save as Preset
+        </button>
+        <button
+          id="task-cart-dry-run"
+          type="button"
+          data-i18n="cart.dryRun"
+          data-tooltip-key="tooltips.cart.dryRun"
+        >
+          Dry Run
+        </button>
+        <label for="task-cart-parallelism" data-tooltip-key="tooltips.cart.parallelism">
           <span data-i18n="cart.parallelism">Parallelism</span>
           <select id="task-cart-parallelism">
             <option value="auto" data-i18n="cart.parallel.auto">Auto</option>
@@ -4120,7 +4559,7 @@
             <option value="4">4</option>
           </select>
         </label>
-        <label for="task-cart-on-complete">
+        <label for="task-cart-on-complete" data-tooltip-key="tooltips.cart.onComplete">
           <span data-i18n="cart.onComplete">On completion</span>
           <select id="task-cart-on-complete">
             <option value="notify" data-i18n="cart.complete.notify">Notify</option>
@@ -4517,6 +4956,57 @@
               update: 'System Update',
               debug: 'Debug On/Off',
             },
+            tooltips: {
+              global: {
+                help: 'Show the guided tour for every control.',
+              },
+              topBar: {
+                details: 'Review the lecture overview and metadata.',
+                editToggle: 'Switch between browsing and inline editing.',
+                progress: 'Open live task progress and history.',
+                create: 'Create a new lecture in the selected module.',
+                storage: 'Browse stored assets and cleanup options.',
+                settings: 'Adjust appearance, language, and processing defaults.',
+              },
+              mega: {
+                home: 'Open mission control with shortcuts and status.',
+                catalog: 'Work in the curriculum tri-pane workspace.',
+                tasks: 'Monitor running jobs and manage the Task Cart.',
+                storage: 'Inspect storage usage and bulk export or purge.',
+                system: 'Configure themes, hardware, and automation.',
+                import: 'Import or export archives and presets.',
+                debug: 'Inspect live system logs and events.',
+              },
+              dock: {
+                create: 'Launch the create dialog for classes, modules, or lectures.',
+                bulkUpload: 'Upload multiple recordings, folders, or slide decks.',
+                bulkDownload: 'Download selected items as a single archive.',
+                addToCart: 'Place the current selection into the Task Cart.',
+                runCart: 'Start executing the queued tasks in the cart.',
+                export: 'Export the current selection to a ZIP file.',
+                import: 'Import lectures or assets from an archive.',
+                purge: 'Remove processed audio that already has transcripts.',
+                update: 'Launch the system update workflow.',
+                debug: 'Toggle the live debug console on or off.',
+              },
+              cart: {
+                run: 'Execute queued actions in order.',
+                pause: 'Pause the queue without clearing tasks.',
+                save: 'Save the current queue as a preset.',
+                dryRun: 'Validate requirements without running tasks.',
+                parallelism: 'Choose how many tasks run simultaneously.',
+                onComplete: 'Select what happens after the queue finishes.',
+                drag: 'Drag to reorder tasks.',
+                runSingle: 'Run only this task now.',
+                moveUp: 'Move task earlier in the queue.',
+                moveDown: 'Move task later in the queue.',
+                removeItem: 'Remove this task from the cart.',
+                resetPresets: 'Remove all custom presets.',
+                loadPreset: 'Load this preset into the cart.',
+                runPreset: 'Load and run this preset immediately.',
+                deletePreset: 'Delete this preset.',
+              },
+            },
             cart: {
               title: 'Task Cart',
               empty: 'Cart is empty.',
@@ -4540,9 +5030,78 @@
               completedStatus: 'Task Cart completed.',
               unsupported: 'This task type is not supported yet.',
               dryRunPending: 'Dry run will validate the queue soon.',
-              savePresetUnavailable: 'Preset saving will be available soon.',
+              dryRunSuccess: 'Dry run passed for {{count}} task{{count === 1 ? '' : 's'}}.',
+              dryRunFailure: 'Dry run failed: {{message}}',
+              dryRunTimeline: '{{count}} task{{count === 1 ? '' : 's'}} validated via dry run.',
+              dryRunUnsupported: 'Dry run is unavailable for the current queue.',
+              saveUnsupported: 'Only supported tasks can be saved as a preset.',
+              saveCancelled: 'Preset save cancelled.',
+              savedPreset: 'Preset “{{name}}” saved.',
+              presetDeleted: 'Preset “{{name}}” removed.',
+              presetLoaded: 'Preset “{{name}}” loaded into the cart.',
+              presetRunning: 'Preset “{{name}}” is running.',
+              presetQueued: 'Preset “{{name}}” is ready to run.',
+              presets: {
+                aria: 'Task cart presets',
+                title: 'Presets',
+                reset: 'Reset presets',
+                empty: 'No presets available yet.',
+                load: 'Load',
+                run: 'Load & Run',
+                delete: 'Delete',
+                saveTitle: 'Save preset',
+                saveMessage: 'Name this preset to reuse the current queue.',
+                savePlaceholder: 'Preset name',
+                deleteTitle: 'Remove preset “{{name}}”?',
+                deleteMessage: 'The preset will be removed from this device.',
+                resetTitle: 'Reset presets',
+                resetMessage: 'Remove all custom presets and restore defaults?',
+                resetConfirm: 'Reset presets',
+                resetSuccess: 'Custom presets removed.',
+                noneCustom: 'No custom presets to reset.',
+                missing: 'Preset could not be found.',
+                emptyPreset: 'Preset has no tasks to run.',
+                defaults: {
+                  nightly: {
+                    name: 'Nightly Transcribe',
+                    description: 'Transcribe every lecture with audio but no transcript.',
+                  },
+                  weekly: {
+                    name: 'Weekly Purge + Export',
+                    description: 'Export transcripts and notes, then purge mastered audio safely.',
+                    exportTitle: 'Export transcripts & notes',
+                    exportSubtitle: 'Zip all transcripts and notes for archival.',
+                    exportPrereq: 'Ensure storage has sufficient free space.',
+                    purgeTitle: 'Purge mastered audio',
+                    purgeSubtitle: 'Remove mastered audio once transcripts are archived.',
+                    purgePrereq: 'Confirm transcripts are backed up before purging.',
+                  },
+                },
+                shared: {
+                  audioReady: 'Audio uploaded and ready.',
+                },
+              },
               parallelismChanged: 'Parallelism set to {{label}}.',
               onCompleteChanged: 'Completion preference updated to {{label}}.',
+              queueAccepted: 'Task batch queued successfully.',
+              queueUnsupported: '{{count}} task{{count === 1 ? '' : 's'}} will stay in the cart.',
+              queueFallback: 'Running locally because batch queue failed ({{message}}).',
+              statuses: {
+                pending: 'Pending',
+                running: 'Running',
+                completed: 'Completed',
+                failed: 'Failed',
+                paused: 'Paused',
+              },
+              moveUp: 'Move up',
+              moveDown: 'Move down',
+              dragHandle: 'Drag to reorder',
+              logs: {
+                attempt: 'Attempt {{attempt}} started.',
+                completed: 'Completed successfully.',
+                transcribeQueued: 'Transcription job submitted.',
+                queuedRemote: 'Queued on the server.',
+              },
             },
             help: {
               title: 'Welcome to the new workspace',
@@ -5093,6 +5652,57 @@
               update: '系统更新',
               debug: '调试开关',
             },
+            tooltips: {
+              global: {
+                help: '查看所有控件的引导提示。',
+              },
+              topBar: {
+                details: '查看讲座概览和元数据。',
+                editToggle: '在浏览模式与内联编辑之间切换。',
+                progress: '打开实时任务进度与历史。',
+                create: '在所选模块中新建讲座。',
+                storage: '浏览存储空间并执行清理操作。',
+                settings: '配置外观、语言和处理默认值。',
+              },
+              mega: {
+                home: '进入总控台，快速查看状态与快捷操作。',
+                catalog: '进入三栏工作区管理课程结构。',
+                tasks: '监控运行中的任务并管理任务车。',
+                storage: '查看存储使用情况并执行批量导出或清理。',
+                system: '配置主题、硬件偏好和自动化。',
+                import: '导入或导出完整归档文件。',
+                debug: '查看实时系统事件和日志。',
+              },
+              dock: {
+                create: '打开新建班级、模块或讲座的对话框。',
+                bulkUpload: '批量上传录音、文件夹或课件。',
+                bulkDownload: '将所选内容打包成单个归档下载。',
+                addToCart: '把当前选中项目加入任务车。',
+                runCart: '开始执行任务车中的所有任务。',
+                export: '导出当前选中内容为 ZIP。',
+                import: '从归档中导入课程或资源。',
+                purge: '清理已有转录的处理后音频。',
+                update: '启动系统更新流程。',
+                debug: '切换实时调试面板。',
+              },
+              cart: {
+                run: '按顺序执行任务车中的任务。',
+                pause: '暂停队列但保留任务。',
+                save: '将当前队列保存为预设。',
+                dryRun: '验证资源与空间，不真正执行。',
+                parallelism: '设置同时运行的任务数量。',
+                onComplete: '选择队列完成后的动作。',
+                drag: '拖拽以重新排序任务。',
+                runSingle: '仅立即执行此任务。',
+                moveUp: '将任务上移。',
+                moveDown: '将任务下移。',
+                removeItem: '从任务车中移除此任务。',
+                resetPresets: '清除所有自定义预设。',
+                loadPreset: '将此预设加载到任务车。',
+                runPreset: '立即加载并执行此预设。',
+                deletePreset: '删除此预设。',
+              },
+            },
             cart: {
               title: '任务车',
               empty: '任务车为空。',
@@ -5115,10 +5725,79 @@
               runningStatus: '任务车正在运行…',
               completedStatus: '任务车已完成。',
               unsupported: '该任务类型暂不支持。',
-              dryRunPending: '试运行功能即将提供。',
-              savePresetUnavailable: '预设保存功能即将推出。',
+              dryRunPending: '试运行即将验证队列。',
+              dryRunSuccess: '试运行已验证 {{count}} 个任务。',
+              dryRunFailure: '试运行失败：{{message}}',
+              dryRunTimeline: '试运行已验证 {{count}} 个任务。',
+              dryRunUnsupported: '当前队列暂不支持试运行。',
+              saveUnsupported: '仅支持的任务才能保存为预设。',
+              saveCancelled: '预设保存已取消。',
+              savedPreset: '预设“{{name}}”已保存。',
+              presetDeleted: '预设“{{name}}”已删除。',
+              presetLoaded: '预设“{{name}}”已载入任务车。',
+              presetRunning: '预设“{{name}}”正在执行。',
+              presetQueued: '预设“{{name}}”已准备运行。',
+              presets: {
+                aria: '任务车预设',
+                title: '预设',
+                reset: '重置预设',
+                empty: '暂时没有可用预设。',
+                load: '加载',
+                run: '加载并运行',
+                delete: '删除',
+                saveTitle: '保存预设',
+                saveMessage: '为当前队列命名以便重复使用。',
+                savePlaceholder: '预设名称',
+                deleteTitle: '删除预设“{{name}}”？',
+                deleteMessage: '该预设将从此设备中移除。',
+                resetTitle: '重置预设',
+                resetMessage: '确定要删除所有自定义预设并恢复默认吗？',
+                resetConfirm: '重置预设',
+                resetSuccess: '自定义预设已删除。',
+                noneCustom: '没有可重置的自定义预设。',
+                missing: '未找到该预设。',
+                emptyPreset: '该预设没有任何任务。',
+                defaults: {
+                  nightly: {
+                    name: '夜间批量转写',
+                    description: '为所有有音频但未转写的讲座生成转录。',
+                  },
+                  weekly: {
+                    name: '每周导出与清理',
+                    description: '导出转录与笔记后，安全清理优化音频。',
+                    exportTitle: '导出转录与笔记',
+                    exportSubtitle: '打包全部转录与笔记方便归档。',
+                    exportPrereq: '请确保存储空间充足。',
+                    purgeTitle: '清理优化音频',
+                    purgeSubtitle: '归档完成后移除优化音频。',
+                    purgePrereq: '清理前请确认转录已备份。',
+                  },
+                },
+                shared: {
+                  audioReady: '音频已上传且可用。',
+                },
+              },
               parallelismChanged: '并行度设置为 {{label}}。',
               onCompleteChanged: '完成后操作已更新为 {{label}}。',
+              queueAccepted: '任务批次已成功入队。',
+              queueUnsupported: '{{count}} 个任务将保留在任务车中。',
+              queueFallback: '由于远程队列失败（{{message}}），改为在本地执行。',
+              statuses: {
+                pending: '待处理',
+                running: '进行中',
+                completed: '已完成',
+                failed: '失败',
+                paused: '已暂停',
+              },
+              moveUp: '上移',
+              moveDown: '下移',
+              dragHandle: '拖拽重新排序',
+              logs: {
+                attempt: '第 {{attempt}} 次尝试开始。',
+                completed: '已成功完成。',
+                transcribeQueued: '转写任务已提交。',
+                queuedRemote: '已提交至服务器队列。',
+              },
             },
             help: {
               title: '欢迎使用全新工作台',
@@ -5660,6 +6339,57 @@
               update: 'Actualizar sistema',
               debug: 'Depurar On/Off',
             },
+            tooltips: {
+              global: {
+                help: 'Mostrar el recorrido guiado de todos los controles.',
+              },
+              topBar: {
+                details: 'Revisa el resumen y los metadatos de la clase.',
+                editToggle: 'Alterna entre exploración y edición en línea.',
+                progress: 'Abre el seguimiento en vivo y el historial de tareas.',
+                create: 'Crea una clase nueva en el módulo seleccionado.',
+                storage: 'Examinar almacenamiento y opciones de limpieza.',
+                settings: 'Configura apariencia, idioma y valores predeterminados.',
+              },
+              mega: {
+                home: 'Abre la consola principal con accesos y estado.',
+                catalog: 'Trabaja en el espacio de trabajo de tres paneles.',
+                tasks: 'Supervisa tareas en ejecución y el carro.',
+                storage: 'Inspecciona almacenamiento y realiza exportaciones o purgas.',
+                system: 'Configura temas, hardware y automatizaciones.',
+                import: 'Importa o exporta archivos de respaldo.',
+                debug: 'Consulta eventos y registros del sistema en vivo.',
+              },
+              dock: {
+                create: 'Abre el diálogo para crear clases, módulos o lecciones.',
+                bulkUpload: 'Sube varias grabaciones, carpetas o diapositivas a la vez.',
+                bulkDownload: 'Descarga los elementos seleccionados en un solo archivo.',
+                addToCart: 'Añade la selección actual al carro de tareas.',
+                runCart: 'Inicia la ejecución de las tareas en el carro.',
+                export: 'Exporta la selección actual a un ZIP.',
+                import: 'Importa clases o recursos desde un archivo.',
+                purge: 'Elimina audio procesado que ya tiene transcripción.',
+                update: 'Inicia el proceso de actualización del sistema.',
+                debug: 'Activa o desactiva la consola de depuración.',
+              },
+              cart: {
+                run: 'Ejecuta las acciones en cola en orden.',
+                pause: 'Pausa la cola sin borrar las tareas.',
+                save: 'Guarda la cola actual como preajuste.',
+                dryRun: 'Valida requisitos sin ejecutar tareas.',
+                parallelism: 'Define cuántas tareas se ejecutan a la vez.',
+                onComplete: 'Elige qué ocurre al terminar la cola.',
+                drag: 'Arrastra para reordenar las tareas.',
+                runSingle: 'Ejecuta solo esta tarea ahora.',
+                moveUp: 'Mueve la tarea hacia arriba en la cola.',
+                moveDown: 'Mueve la tarea hacia abajo en la cola.',
+                removeItem: 'Elimina esta tarea del carro.',
+                resetPresets: 'Elimina todos los preajustes personalizados.',
+                loadPreset: 'Carga este preajuste en el carro.',
+                runPreset: 'Carga y ejecuta este preajuste de inmediato.',
+                deletePreset: 'Elimina este preajuste.',
+              },
+            },
             cart: {
               title: 'Carro de tareas',
               empty: 'El carro está vacío.',
@@ -5682,10 +6412,81 @@
               runningStatus: 'Ejecutando el carro de tareas…',
               completedStatus: 'El carro de tareas finalizó.',
               unsupported: 'Este tipo de tarea aún no es compatible.',
-              dryRunPending: 'La simulación estará disponible próximamente.',
-              savePresetUnavailable: 'Guardar preajustes estará disponible pronto.',
+              dryRunPending: 'La simulación validará la cola en breve.',
+              dryRunSuccess: 'La simulación validó {{count}} tarea{{count === 1 ? '' : 's'}}.',
+              dryRunFailure: 'La simulación falló: {{message}}',
+              dryRunTimeline: '{{count}} tarea{{count === 1 ? '' : 's'}} validadas con simulación.',
+              dryRunUnsupported: 'La simulación no está disponible para esta cola.',
+              saveUnsupported: 'Solo las tareas compatibles pueden guardarse como preajuste.',
+              saveCancelled: 'Se canceló el guardado del preajuste.',
+              savedPreset: 'Preajuste “{{name}}” guardado.',
+              presetDeleted: 'Preajuste “{{name}}” eliminado.',
+              presetLoaded: 'Preajuste “{{name}}” cargado en el carro.',
+              presetRunning: 'Preajuste “{{name}}” en ejecución.',
+              presetQueued: 'Preajuste “{{name}}” listo para ejecutar.',
+              presets: {
+                aria: 'Preajustes del carro de tareas',
+                title: 'Preajustes',
+                reset: 'Restablecer preajustes',
+                empty: 'Todavía no hay preajustes disponibles.',
+                load: 'Cargar',
+                run: 'Cargar y ejecutar',
+                delete: 'Eliminar',
+                saveTitle: 'Guardar preajuste',
+                saveMessage: 'Ponle nombre para reutilizar esta cola.',
+                savePlaceholder: 'Nombre del preajuste',
+                deleteTitle: '¿Eliminar el preajuste “{{name}}”?',
+                deleteMessage: 'El preajuste se eliminará de este dispositivo.',
+                resetTitle: 'Restablecer preajustes',
+                resetMessage:
+                  '¿Quieres eliminar todos los preajustes personalizados y restaurar los predeterminados?',
+                resetConfirm: 'Restablecer preajustes',
+                resetSuccess: 'Preajustes personalizados eliminados.',
+                noneCustom: 'No hay preajustes personalizados que restablecer.',
+                missing: 'No se encontró el preajuste.',
+                emptyPreset: 'El preajuste no contiene tareas.',
+                defaults: {
+                  nightly: {
+                    name: 'Transcripción nocturna',
+                    description: 'Transcribe cada lección con audio sin transcripción.',
+                  },
+                  weekly: {
+                    name: 'Purgado y exportación semanal',
+                    description:
+                      'Exporta transcripciones y notas y después purga el audio masterizado con seguridad.',
+                    exportTitle: 'Exportar transcripciones y notas',
+                    exportSubtitle: 'Comprime todas las transcripciones y notas para archivarlas.',
+                    exportPrereq: 'Asegúrate de tener espacio libre suficiente.',
+                    purgeTitle: 'Purgar audio masterizado',
+                    purgeSubtitle: 'Elimina el audio masterizado después de archivarlo.',
+                    purgePrereq: 'Confirma que las transcripciones estén respaldadas antes de purgar.',
+                  },
+                },
+                shared: {
+                  audioReady: 'Audio cargado y listo.',
+                },
+              },
               parallelismChanged: 'Paralelismo ajustado a {{label}}.',
               onCompleteChanged: 'Acción al finalizar actualizada a {{label}}.',
+              queueAccepted: 'Lote de tareas enviado correctamente.',
+              queueUnsupported: '{{count}} tarea{{count === 1 ? '' : 's'}} permanecerá en el carro.',
+              queueFallback: 'Se ejecuta localmente porque la cola remota falló ({{message}}).',
+              statuses: {
+                pending: 'Pendiente',
+                running: 'En progreso',
+                completed: 'Completada',
+                failed: 'Error',
+                paused: 'Pausada',
+              },
+              moveUp: 'Mover arriba',
+              moveDown: 'Mover abajo',
+              dragHandle: 'Arrastrar para reordenar',
+              logs: {
+                attempt: 'Intento {{attempt}} iniciado.',
+                completed: 'Completado correctamente.',
+                transcribeQueued: 'Transcripción enviada.',
+                queuedRemote: 'Cola enviada al servidor.',
+              },
             },
             help: {
               title: 'Bienvenido al nuevo espacio de trabajo',
@@ -6237,6 +7038,57 @@
               update: 'Mise à jour système',
               debug: 'Mode debug',
             },
+            tooltips: {
+              global: {
+                help: 'Afficher la visite guidée de tous les contrôles.',
+              },
+              topBar: {
+                details: 'Consulter le résumé et les métadonnées de la leçon.',
+                editToggle: 'Basculer entre navigation et édition en ligne.',
+                progress: 'Ouvrir le suivi et l’historique des tâches en direct.',
+                create: 'Créer une nouvelle leçon dans le module sélectionné.',
+                storage: 'Parcourir le stockage et les options de nettoyage.',
+                settings: 'Configurer l’apparence, la langue et les paramètres par défaut.',
+              },
+              mega: {
+                home: 'Ouvrir la console principale avec raccourcis et indicateurs.',
+                catalog: 'Travailler dans l’espace de travail à trois volets du catalogue.',
+                tasks: 'Surveiller les tâches en cours et le panier de tâches.',
+                storage: 'Inspecter le stockage et lancer exports ou purges.',
+                system: 'Configurer thèmes, matériel et automatisations.',
+                import: 'Importer ou exporter des archives complètes.',
+                debug: 'Consulter les journaux et événements en temps réel.',
+              },
+              dock: {
+                create: 'Ouvrir la boîte de dialogue de création de cours, modules ou leçons.',
+                bulkUpload: 'Importer plusieurs enregistrements, dossiers ou diapositives.',
+                bulkDownload: 'Télécharger les éléments sélectionnés en une archive.',
+                addToCart: 'Ajouter la sélection actuelle au panier de tâches.',
+                runCart: 'Lancer l’exécution des tâches du panier.',
+                export: 'Exporter la sélection actuelle en archive ZIP.',
+                import: 'Importer cours ou ressources depuis une archive.',
+                purge: 'Supprimer l’audio traité déjà transcrit.',
+                update: 'Démarrer le processus de mise à jour système.',
+                debug: 'Activer ou désactiver la console de debug en direct.',
+              },
+              cart: {
+                run: 'Exécuter les actions de la file dans l’ordre.',
+                pause: 'Mettre la file en pause sans la vider.',
+                save: 'Enregistrer la file actuelle comme preset.',
+                dryRun: 'Vérifier les prérequis sans exécuter les tâches.',
+                parallelism: 'Choisir le nombre de tâches en parallèle.',
+                onComplete: 'Choisir l’action à effectuer après la fin du panier.',
+                drag: 'Faites glisser pour réorganiser les tâches.',
+                runSingle: 'Exécuter uniquement cette tâche maintenant.',
+                moveUp: 'Déplacer la tâche vers le haut de la file.',
+                moveDown: 'Déplacer la tâche vers le bas de la file.',
+                removeItem: 'Retirer cette tâche du panier.',
+                resetPresets: 'Supprimer tous les presets personnalisés.',
+                loadPreset: 'Charger ce preset dans le panier.',
+                runPreset: 'Charger et exécuter ce preset immédiatement.',
+                deletePreset: 'Supprimer ce preset.',
+              },
+            },
             cart: {
               title: 'Panier de tâches',
               empty: 'Le panier est vide.',
@@ -6257,12 +7109,83 @@
               pausedNotice: 'Le panier est en pause. Appuyez sur Reprendre pour continuer.',
               resumed: 'Le panier a repris.',
               runningStatus: 'Panier de tâches en cours d’exécution…',
-              completedStatus: 'Panier de tâches terminé.',
+              completedStatus: 'Le panier de tâches est terminé.',
               unsupported: 'Ce type de tâche n’est pas encore pris en charge.',
-              dryRunPending: 'La simulation sera disponible prochainement.',
-              savePresetUnavailable: 'L’enregistrement de presets sera bientôt disponible.',
-              parallelismChanged: 'Parallélisme défini sur {{label}}.',
-              onCompleteChanged: 'Action de fin mise à jour : {{label}}.',
+              dryRunPending: 'La simulation va valider la file dans un instant.',
+              dryRunSuccess: 'La simulation a validé {{count}} tâche{{count === 1 ? '' : 's'}}.',
+              dryRunFailure: 'Échec de la simulation : {{message}}',
+              dryRunTimeline: '{{count}} tâche{{count === 1 ? '' : 's'}} validée(s) via simulation.',
+              dryRunUnsupported: 'La simulation n’est pas disponible pour cette file.',
+              saveUnsupported: 'Seules les tâches prises en charge peuvent être enregistrées en preset.',
+              saveCancelled: 'Enregistrement du preset annulé.',
+              savedPreset: 'Preset « {{name}} » enregistré.',
+              presetDeleted: 'Preset « {{name}} » supprimé.',
+              presetLoaded: 'Preset « {{name}} » chargé dans le panier.',
+              presetRunning: 'Preset « {{name}} » en cours d’exécution.',
+              presetQueued: 'Preset « {{name}} » prêt à être exécuté.',
+              presets: {
+                aria: 'Presets du panier de tâches',
+                title: 'Presets',
+                reset: 'Réinitialiser les presets',
+                empty: 'Aucun preset disponible pour le moment.',
+                load: 'Charger',
+                run: 'Charger et exécuter',
+                delete: 'Supprimer',
+                saveTitle: 'Enregistrer un preset',
+                saveMessage: 'Nommez ce preset pour réutiliser la file.',
+                savePlaceholder: 'Nom du preset',
+                deleteTitle: 'Supprimer le preset « {{name}} » ?',
+                deleteMessage: 'Le preset sera supprimé de cet appareil.',
+                resetTitle: 'Réinitialiser les presets',
+                resetMessage:
+                  'Supprimer tous les presets personnalisés et restaurer les valeurs par défaut ?',
+                resetConfirm: 'Réinitialiser les presets',
+                resetSuccess: 'Presets personnalisés supprimés.',
+                noneCustom: 'Aucun preset personnalisé à réinitialiser.',
+                missing: 'Preset introuvable.',
+                emptyPreset: 'Le preset ne contient aucune tâche.',
+                defaults: {
+                  nightly: {
+                    name: 'Transcription nocturne',
+                    description: 'Transcrire chaque leçon disposant d’un audio sans transcription.',
+                  },
+                  weekly: {
+                    name: 'Purge et export hebdomadaire',
+                    description:
+                      'Exporter transcriptions et notes, puis purger l’audio masterisé en toute sécurité.',
+                    exportTitle: 'Exporter transcriptions et notes',
+                    exportSubtitle: 'Compresser toutes les transcriptions et notes pour archivage.',
+                    exportPrereq: 'Vérifiez l’espace disponible avant l’export.',
+                    purgeTitle: 'Purger l’audio masterisé',
+                    purgeSubtitle: 'Supprimer l’audio masterisé après archivage.',
+                    purgePrereq: 'Confirmez que les transcriptions sont sauvegardées avant la purge.',
+                  },
+                },
+                shared: {
+                  audioReady: 'Audio téléchargé et prêt.',
+                },
+              },
+              parallelismChanged: 'Parallélisme réglé sur {{label}}.',
+              onCompleteChanged: 'Action en fin de file mise à jour sur {{label}}.',
+              queueAccepted: 'Lot de tâches mis en file avec succès.',
+              queueUnsupported: '{{count}} tâche{{count === 1 ? '' : 's'}} restera dans le panier.',
+              queueFallback: 'Exécution locale car la file distante a échoué ({{message}}).',
+              statuses: {
+                pending: 'En attente',
+                running: 'En cours',
+                completed: 'Terminée',
+                failed: 'Échec',
+                paused: 'En pause',
+              },
+              moveUp: 'Déplacer vers le haut',
+              moveDown: 'Déplacer vers le bas',
+              dragHandle: 'Faire glisser pour réorganiser',
+              logs: {
+                attempt: 'Tentative {{attempt}} lancée.',
+                completed: 'Terminé avec succès.',
+                transcribeQueued: 'Transcription envoyée.',
+                queuedRemote: 'File soumise au serveur.',
+              },
             },
             help: {
               title: 'Bienvenue dans le nouvel espace de travail',
@@ -6824,6 +7747,8 @@
           return `${BASE_PATH}${normalized}`;
         }
 
+        let tooltipManager;
+
         function resolveTranslation(locale, key) {
           if (!locale || !key) {
             return undefined;
@@ -6852,6 +7777,180 @@
               ? String(params[key])
               : match;
           });
+        }
+
+        function createTooltipManager() {
+          const attached = new WeakSet();
+          const bubble = document.createElement('div');
+          bubble.className = 'tooltip-bubble';
+          bubble.setAttribute('role', 'tooltip');
+          bubble.hidden = true;
+          document.body.appendChild(bubble);
+
+          let currentElement = null;
+          let showTimer = null;
+          let hideTimer = null;
+
+          function clearTimers() {
+            if (showTimer) {
+              window.clearTimeout(showTimer);
+              showTimer = null;
+            }
+            if (hideTimer) {
+              window.clearTimeout(hideTimer);
+              hideTimer = null;
+            }
+          }
+
+          function resolveMessage(element) {
+            if (!element) {
+              return '';
+            }
+            const direct = element.getAttribute('data-tooltip');
+            if (direct && direct.trim()) {
+              return direct.trim();
+            }
+            const aria = element.getAttribute('aria-label');
+            if (aria && aria.trim()) {
+              return aria.trim();
+            }
+            const text = element.textContent;
+            return text ? text.trim() : '';
+          }
+
+          function positionBubble(element) {
+            if (!element) {
+              return;
+            }
+            const rect = element.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const preferredTop = rect.top - 12;
+            const left = Math.min(window.innerWidth - 12, Math.max(12, centerX));
+            const top = Math.max(12, preferredTop);
+            bubble.style.left = `${left}px`;
+            bubble.style.top = `${top}px`;
+          }
+
+          function show(element, delay = 250) {
+            if (!element || !document.body.contains(element)) {
+              return;
+            }
+            const message = resolveMessage(element);
+            if (!message) {
+              return;
+            }
+            clearTimers();
+            const display = () => {
+              if (!document.body.contains(element)) {
+                return;
+              }
+              currentElement = element;
+              bubble.textContent = message;
+              bubble.hidden = false;
+              positionBubble(element);
+              requestAnimationFrame(() => {
+                bubble.dataset.visible = 'true';
+              });
+            };
+            if (delay <= 0) {
+              display();
+            } else {
+              showTimer = window.setTimeout(display, delay);
+            }
+          }
+
+          function hide(immediate = false) {
+            clearTimers();
+            if (bubble.hidden && !bubble.dataset.visible) {
+              currentElement = null;
+              return;
+            }
+            const finalize = () => {
+              bubble.hidden = true;
+              bubble.dataset.visible = 'false';
+              currentElement = null;
+            };
+            if (immediate) {
+              finalize();
+              return;
+            }
+            bubble.dataset.visible = 'false';
+            hideTimer = window.setTimeout(finalize, 120);
+          }
+
+          function attach(element) {
+            if (!element || attached.has(element)) {
+              return;
+            }
+            attached.add(element);
+            element.addEventListener('pointerenter', (event) => {
+              const target = event.currentTarget;
+              if (target instanceof HTMLElement) {
+                show(target, 250);
+              }
+            });
+            element.addEventListener('pointerleave', () => {
+              hide(false);
+            });
+            element.addEventListener('pointercancel', () => {
+              hide(true);
+            });
+            element.addEventListener('pointerdown', (event) => {
+              const target = event.currentTarget;
+              if (event.pointerType === 'touch' && target instanceof HTMLElement) {
+                show(target, 0);
+                clearTimers();
+                hideTimer = window.setTimeout(() => hide(true), 1800);
+              }
+            });
+            element.addEventListener('focus', (event) => {
+              const target = event.currentTarget;
+              if (target instanceof HTMLElement) {
+                show(target, 250);
+              }
+            });
+            element.addEventListener('blur', () => {
+              hide(false);
+            });
+          }
+
+          function refresh(root = document) {
+            if (!root) {
+              return;
+            }
+            if (root instanceof Element && root.hasAttribute('data-tooltip')) {
+              attach(root);
+            }
+            root.querySelectorAll('[data-tooltip]').forEach((element) => {
+              attach(element);
+            });
+          }
+
+          const handleViewportChange = () => {
+            if (!currentElement) {
+              return;
+            }
+            if (!document.body.contains(currentElement)) {
+              hide(true);
+              return;
+            }
+            positionBubble(currentElement);
+          };
+
+          document.addEventListener('scroll', handleViewportChange, true);
+          window.addEventListener('resize', handleViewportChange);
+          window.addEventListener('blur', () => hide(true));
+          document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+              hide(true);
+            }
+          });
+
+          return {
+            refresh,
+            attach,
+            hide,
+          };
         }
 
         function getLocale(language) {
@@ -6933,6 +8032,23 @@
             }
           });
 
+          document.querySelectorAll('[data-tooltip-key]').forEach((element) => {
+            const key = element.getAttribute('data-tooltip-key');
+            if (!key) {
+              return;
+            }
+            const template = resolveTranslation(locale, key) ?? resolveTranslation(fallback, key);
+            if (typeof template !== 'string') {
+              element.removeAttribute('data-tooltip');
+              return;
+            }
+            const message = formatTemplate(template, {});
+            element.setAttribute('data-tooltip', message);
+            if (!element.hasAttribute('aria-label') || element.getAttribute('aria-label') === '') {
+              element.setAttribute('aria-label', message);
+            }
+          });
+
           const titleTranslation = resolveTranslation(locale, 'document.title') ??
             resolveTranslation(fallback, 'document.title');
           if (typeof titleTranslation === 'string') {
@@ -6948,6 +8064,10 @@
           renderSystemUpdate();
           if (state.selectedLectureDetail) {
             renderAssets(state.selectedLectureDetail.lecture);
+          }
+
+          if (tooltipManager) {
+            tooltipManager.refresh();
           }
         }
 
@@ -6969,6 +8089,26 @@
         const MAX_SERVER_STREAM_ENTRIES = 20;
         const SERVER_LOG_CATEGORY = 'server';
         const UPDATE_POLL_INTERVAL_MS = 3000;
+        const TASK_CART_PRESET_STORAGE_KEY = 'lecture-tools.taskCart.presets';
+        const TASK_CART_MAX_ATTEMPTS = 3;
+        const TASK_CART_BACKOFF_BASE_MS = 800;
+        const TASK_CART_MAX_LOGS = 6;
+        const TASK_CART_DEFAULT_PRESETS = [
+          {
+            id: 'nightly-transcribe',
+            builtin: true,
+            nameKey: 'cart.presets.defaults.nightly.name',
+            descriptionKey: 'cart.presets.defaults.nightly.description',
+            resolver: 'nightly-transcribe',
+          },
+          {
+            id: 'weekly-purge-export',
+            builtin: true,
+            nameKey: 'cart.presets.defaults.weekly.name',
+            descriptionKey: 'cart.presets.defaults.weekly.description',
+            resolver: 'weekly-purge-export',
+          },
+        ];
 
         function normalizeWhisperModel(value) {
           const candidate =
@@ -7062,6 +8202,9 @@
             onComplete: 'notify',
             running: false,
             paused: false,
+            activePresetId: null,
+            lastDryRun: null,
+            draggingId: null,
           },
           systemUpdate: {
             running: false,
@@ -7350,6 +8493,11 @@
           },
           taskCart: document.getElementById('task-cart'),
           taskCartBody: document.getElementById('task-cart-body'),
+          taskCartPresets: document.getElementById('task-cart-presets'),
+          taskCartPresetsList: document.getElementById('task-cart-presets-list'),
+          taskCartPresetsEmpty: document.getElementById('task-cart-presets-empty'),
+          taskCartPresetsReset: document.getElementById('task-cart-presets-reset'),
+          taskCartItems: document.getElementById('task-cart-items'),
           taskCartEmpty: document.getElementById('task-cart-empty'),
           taskCartClose: document.getElementById('task-cart-close'),
           taskCartRun: document.getElementById('task-cart-run'),
@@ -7361,6 +8509,8 @@
           helpOverlay: document.getElementById('help-overlay'),
           helpOverlayClose: document.getElementById('help-overlay-close'),
         };
+
+        tooltipManager = createTooltipManager();
 
         const DEFAULT_DEBUG_EMPTY_TEXT = dom.debugEmpty
           ? dom.debugEmpty.textContent || ''
@@ -7725,6 +8875,10 @@
 
             container.appendChild(classItem);
           });
+
+          if (tooltipManager) {
+            tooltipManager.refresh(container);
+          }
         }
 
         function getStorageBrowserState() {
@@ -7942,6 +9096,10 @@
               downloadButton.disabled =
                 browserState.loading || isLoading || browserState.selected.size === 0;
             }
+          }
+
+          if (tooltipManager) {
+            tooltipManager.refresh(tableBody || dom.storage.container || document);
           }
         }
 
@@ -8811,6 +9969,7 @@
           }
         }
 
+        loadTaskCartPresets();
         applyTranslations(DEFAULT_LANGUAGE);
         renderStorage();
         renderSystemUpdate();
@@ -8913,6 +10072,10 @@
 
             container.appendChild(item);
           });
+
+          if (tooltipManager) {
+            tooltipManager.refresh(container);
+          }
         }
 
         function updateStatusBadges() {
@@ -9025,31 +10188,666 @@
           }
         }
 
-        function renderTaskCart() {
-          if (!dom.taskCartBody) {
+        function sanitizeCartPayload(payload) {
+          const seen = typeof WeakSet !== 'undefined' ? new WeakSet() : null;
+          function visit(value) {
+            if (
+              value === null ||
+              value === undefined ||
+              typeof value === 'string' ||
+              typeof value === 'number' ||
+              typeof value === 'boolean'
+            ) {
+              return { ok: true, value };
+            }
+            if (Array.isArray(value)) {
+              const result = [];
+              for (const entry of value) {
+                const next = visit(entry);
+                if (!next.ok) {
+                  return { ok: false, value: null };
+                }
+                result.push(next.value);
+              }
+              return { ok: true, value: result };
+            }
+            if (typeof value === 'object') {
+              if (seen) {
+                if (seen.has(value)) {
+                  return { ok: false, value: null };
+                }
+                seen.add(value);
+              }
+              const globalFile = typeof File !== 'undefined' ? File : null;
+              const globalBlob = typeof Blob !== 'undefined' ? Blob : null;
+              if ((globalFile && value instanceof globalFile) || (globalBlob && value instanceof globalBlob)) {
+                return { ok: false, value: null };
+              }
+              const result = {};
+              for (const [key, entry] of Object.entries(value)) {
+                if (typeof entry === 'function') {
+                  return { ok: false, value: null };
+                }
+                const next = visit(entry);
+                if (!next.ok) {
+                  return { ok: false, value: null };
+                }
+                if (next.value !== undefined) {
+                  result[key] = next.value;
+                }
+              }
+              return { ok: true, value: result };
+            }
+            return { ok: false, value: null };
+          }
+          return visit(payload);
+        }
+
+        function serializeCartItemBase(item) {
+          if (!item || typeof item !== 'object') {
+            return null;
+          }
+          const sanitized = sanitizeCartPayload(item.payload || {});
+          if (!sanitized.ok) {
+            return null;
+          }
+          const prerequisites = Array.isArray(item.prerequisites)
+            ? item.prerequisites.filter((entry) => typeof entry === 'string' && entry.trim())
+            : [];
+          return {
+            id: item.id,
+            type: item.type || 'custom',
+            lectureId: item.lectureId || null,
+            title: item.title || t('cart.title'),
+            subtitle: item.subtitle || '',
+            estimate: item.estimate || '',
+            prerequisites,
+            payload: sanitized.value || {},
+            maxAttempts:
+              typeof item.maxAttempts === 'number' && Number.isFinite(item.maxAttempts)
+                ? Math.max(1, Math.trunc(item.maxAttempts))
+                : TASK_CART_MAX_ATTEMPTS,
+          };
+        }
+
+        function serializeCartItemForPreset(item) {
+          const base = serializeCartItemBase(item);
+          if (!base) {
+            return null;
+          }
+          return {
+            type: base.type,
+            lectureId: base.lectureId,
+            title: base.title,
+            subtitle: base.subtitle,
+            estimate: base.estimate,
+            prerequisites: base.prerequisites,
+            payload: base.payload,
+            maxAttempts: base.maxAttempts,
+          };
+        }
+
+        function serializeCartItemForQueue(item) {
+          const base = serializeCartItemBase(item);
+          if (!base) {
+            return null;
+          }
+          const payload = base.payload || {};
+          if (base.type === 'transcribe') {
+            if (!base.lectureId) {
+              return null;
+            }
+            const model = normalizeWhisperModel(payload.model || getTranscribeModelValue());
+            return {
+              type: 'transcribe',
+              lecture_id: base.lectureId,
+              options: { model },
+            };
+          }
+          if (base.type === 'process_slides') {
+            if (!base.lectureId) {
+              return null;
+            }
+            const dpi = Number(payload.dpi || state.settings?.slide_dpi || DEFAULT_SLIDE_DPI);
+            const range = payload.range && typeof payload.range === 'object' ? payload.range : null;
+            const source = typeof payload.source === 'string' ? payload.source : 'slides';
+            return {
+              type: 'process_slides',
+              lecture_id: base.lectureId,
+              options: {
+                source,
+                dpi,
+                range: range || null,
+              },
+            };
+          }
+          if (base.type === 'export') {
+            return {
+              type: 'export',
+              options: {
+                scope: payload.scope || 'selection',
+                include: payload.include || {},
+                structure: payload.structure || 'hierarchy',
+                metadata: payload.metadata !== false,
+              },
+            };
+          }
+          if (base.type === 'purge') {
+            return {
+              type: 'purge',
+              options: payload,
+            };
+          }
+          if (base.type === 'bulk_upload') {
+            return {
+              type: 'bulk_upload',
+              options: payload,
+            };
+          }
+          if (base.type === 'custom' && payload && typeof payload.queue === 'object') {
+            const sanitized = sanitizeCartPayload(payload.queue);
+            if (sanitized.ok) {
+              return sanitized.value;
+            }
+          }
+          return null;
+        }
+
+        function buildTaskCartQueueSpec() {
+          const supported = [];
+          const unsupported = [];
+          for (const item of state.taskCart.items) {
+            const serialized = serializeCartItemForQueue(item);
+            if (serialized) {
+              supported.push({ item, serialized });
+            } else {
+              unsupported.push(item);
+            }
+          }
+          return {
+            supported,
+            unsupported,
+            payload: {
+              parallelism: state.taskCart.parallelism,
+              on_complete: state.taskCart.onComplete,
+              items: supported.map((entry) => entry.serialized),
+            },
+          };
+        }
+
+        function getPresetLabel(preset, keyName, fallback) {
+          if (!preset) {
+            return fallback;
+          }
+          if (keyName && typeof preset[keyName] === 'string' && preset[keyName]) {
+            return preset[keyName];
+          }
+          if (keyName) {
+            const i18nKey = preset[`${keyName}Key`];
+            if (typeof i18nKey === 'string' && i18nKey) {
+              return t(i18nKey);
+            }
+          }
+          return fallback;
+        }
+
+        function normalizeCartPreset(rawPreset) {
+          if (!rawPreset || typeof rawPreset !== 'object') {
+            return null;
+          }
+          const id = typeof rawPreset.id === 'string' && rawPreset.id ? rawPreset.id : null;
+          if (!id) {
+            return null;
+          }
+          const preset = {
+            id,
+            builtin: Boolean(rawPreset.builtin),
+            name: getPresetLabel(rawPreset, 'name', ''),
+            nameKey: typeof rawPreset.nameKey === 'string' ? rawPreset.nameKey : undefined,
+            description: getPresetLabel(rawPreset, 'description', ''),
+            descriptionKey:
+              typeof rawPreset.descriptionKey === 'string' ? rawPreset.descriptionKey : undefined,
+            resolver: typeof rawPreset.resolver === 'string' ? rawPreset.resolver : undefined,
+            items: Array.isArray(rawPreset.items) ? rawPreset.items : undefined,
+          };
+          return preset;
+        }
+
+        function loadTaskCartPresets() {
+          const map = new Map();
+          TASK_CART_DEFAULT_PRESETS.forEach((preset) => {
+            const normalized = normalizeCartPreset(preset);
+            if (normalized) {
+              map.set(normalized.id, normalized);
+            }
+          });
+          try {
+            const storedRaw = window.localStorage.getItem(TASK_CART_PRESET_STORAGE_KEY);
+            if (storedRaw) {
+              const stored = JSON.parse(storedRaw);
+              if (Array.isArray(stored)) {
+                stored.forEach((entry) => {
+                  const normalized = normalizeCartPreset(entry);
+                  if (normalized) {
+                    normalized.builtin = Boolean(entry.builtin) && normalized.builtin;
+                    map.set(normalized.id, normalized);
+                  }
+                });
+              }
+            }
+          } catch (error) {
+            console.warn('Unable to load Task Cart presets', error);
+          }
+          state.taskCart.presets = Array.from(map.values());
+        }
+
+        function persistTaskCartPresets() {
+          try {
+            const custom = state.taskCart.presets.filter((preset) => !preset.builtin);
+            const payload = custom.map((preset) => ({
+              id: preset.id,
+              name: preset.name,
+              description: preset.description,
+              items: preset.items,
+              builtin: false,
+            }));
+            window.localStorage.setItem(
+              TASK_CART_PRESET_STORAGE_KEY,
+              JSON.stringify(payload),
+            );
+          } catch (error) {
+            console.warn('Unable to persist Task Cart presets', error);
+          }
+        }
+
+        function renderTaskCartPresets() {
+          if (!dom.taskCartPresetsList) {
             return;
           }
+          const presets = Array.isArray(state.taskCart.presets)
+            ? state.taskCart.presets
+            : [];
+          dom.taskCartPresetsList.innerHTML = '';
+          const hasPresets = presets.length > 0;
+          if (dom.taskCartPresets) {
+            dom.taskCartPresets.hidden = !hasPresets;
+          }
+          if (dom.taskCartPresetsEmpty) {
+            dom.taskCartPresetsEmpty.hidden = hasPresets;
+          }
+          if (dom.taskCartPresetsReset) {
+            const hasCustom = presets.some((preset) => !preset.builtin);
+            dom.taskCartPresetsReset.disabled = !hasCustom;
+          }
+          if (!hasPresets) {
+            return;
+          }
+          presets.forEach((preset) => {
+            const card = document.createElement('article');
+            card.className = 'task-cart-preset';
+            card.dataset.presetId = preset.id;
+            card.dataset.builtin = preset.builtin ? 'true' : 'false';
+            card.setAttribute('role', 'listitem');
 
-          dom.taskCartBody.innerHTML = '';
+            const title = document.createElement('h4');
+            title.textContent = getPresetLabel(preset, 'name', t('cart.title'));
+            card.appendChild(title);
 
-          if (!state.taskCart.items.length) {
-            if (dom.taskCartEmpty) {
-              dom.taskCartEmpty.classList.remove('hidden');
-              dom.taskCartBody.appendChild(dom.taskCartEmpty);
+            const description = document.createElement('p');
+            description.textContent = getPresetLabel(preset, 'description', '');
+            card.appendChild(description);
+
+            const actions = document.createElement('div');
+            actions.className = 'task-cart-preset-actions';
+
+            const loadButton = document.createElement('button');
+            loadButton.type = 'button';
+            loadButton.dataset.presetAction = 'load';
+            loadButton.dataset.presetId = preset.id;
+            loadButton.textContent = t('cart.presets.load');
+            loadButton.setAttribute('data-tooltip-key', 'tooltips.cart.loadPreset');
+            actions.appendChild(loadButton);
+
+            const runButton = document.createElement('button');
+            runButton.type = 'button';
+            runButton.className = 'primary';
+            runButton.dataset.presetAction = 'run';
+            runButton.dataset.presetId = preset.id;
+            runButton.textContent = t('cart.presets.run');
+            runButton.setAttribute('data-tooltip-key', 'tooltips.cart.runPreset');
+            actions.appendChild(runButton);
+
+            if (!preset.builtin) {
+              const deleteButton = document.createElement('button');
+              deleteButton.type = 'button';
+              deleteButton.className = 'danger';
+              deleteButton.dataset.presetAction = 'delete';
+              deleteButton.dataset.presetId = preset.id;
+              deleteButton.textContent = t('cart.presets.delete');
+              deleteButton.setAttribute('data-tooltip-key', 'tooltips.cart.deletePreset');
+              actions.appendChild(deleteButton);
             }
+
+            card.appendChild(actions);
+            dom.taskCartPresetsList.appendChild(card);
+          });
+          if (tooltipManager) {
+            tooltipManager.refresh(dom.taskCartPresetsList);
+          }
+        }
+
+        async function resolvePresetItems(preset) {
+          if (!preset) {
+            return [];
+          }
+          if (Array.isArray(preset.items) && preset.items.length) {
+            return preset.items.map((item) => ({ ...item }));
+          }
+          if (preset.resolver === 'nightly-transcribe') {
+            const lectures = [];
+            for (const classEntry of state.classes || []) {
+              for (const moduleEntry of classEntry.modules || []) {
+                for (const lecture of moduleEntry.lectures || []) {
+                  if (lecture.audio_path && !lecture.transcript_path) {
+                    lectures.push({ lecture, module: moduleEntry, classRecord: classEntry });
+                  }
+                }
+              }
+            }
+            return lectures.map(({ lecture, module: moduleEntry, classRecord }) => {
+              const locationParts = [];
+              if (classRecord?.name) {
+                locationParts.push(classRecord.name);
+              }
+              if (moduleEntry?.name) {
+                locationParts.push(moduleEntry.name);
+              }
+              const subtitle = locationParts.length
+                ? `${t('assets.actions.transcribe')} • ${locationParts.join(' • ')}`
+                : t('assets.actions.transcribe');
+              return {
+                type: 'transcribe',
+                lectureId: lecture.id,
+                title: lecture.name || t('cart.title'),
+                subtitle,
+                estimate: lecture.duration ? `${lecture.duration} min` : '',
+                prerequisites: [t('cart.presets.defaults.shared.audioReady')],
+                payload: { model: getTranscribeModelValue() },
+              };
+            });
+          }
+          if (preset.resolver === 'weekly-purge-export') {
+            const exportItem = {
+              type: 'export',
+              lectureId: null,
+              title: t('cart.presets.defaults.weekly.exportTitle'),
+              subtitle: t('cart.presets.defaults.weekly.exportSubtitle'),
+              estimate: '',
+              prerequisites: [t('cart.presets.defaults.weekly.exportPrereq')],
+              payload: {
+                scope: 'all',
+                include: { transcripts: true, notes: true, slides: false, audio: false },
+                structure: 'hierarchy',
+                metadata: true,
+              },
+            };
+            const purgeItem = {
+              type: 'purge',
+              lectureId: null,
+              title: t('cart.presets.defaults.weekly.purgeTitle'),
+              subtitle: t('cart.presets.defaults.weekly.purgeSubtitle'),
+              estimate: '',
+              prerequisites: [t('cart.presets.defaults.weekly.purgePrereq')],
+              payload: { mode: 'processed_audio_with_transcripts' },
+            };
+            return [exportItem, purgeItem];
+          }
+          return [];
+        }
+
+        async function applyTaskCartPreset(presetId, { runImmediately = false } = {}) {
+          const preset = state.taskCart.presets.find((entry) => entry.id === presetId);
+          if (!preset) {
+            showStatus(t('cart.presets.missing'), 'error', { record: false });
+            return;
+          }
+          const items = await resolvePresetItems(preset);
+          if (!items.length) {
+            showStatus(t('cart.presets.emptyPreset'), 'info', { record: false });
+            return;
+          }
+          state.taskCart.items = [];
+          items.forEach((item) => {
+            addTaskCartItem({ ...item, presetId: preset.id }, { silent: true });
+          });
+          renderTaskCart();
+          openTaskCart();
+          state.taskCart.activePresetId = preset.id;
+          addTimelineEntry(t('cart.presetLoaded', { name: getPresetLabel(preset, 'name', '') }), 'info');
+          if (runImmediately) {
+            addTimelineEntry(t('cart.presetRunning', { name: getPresetLabel(preset, 'name', '') }), 'info');
+            await runTaskCart();
+          } else {
+            showStatus(t('cart.presetQueued', { name: getPresetLabel(preset, 'name', '') }), 'success', {
+              record: false,
+            });
+          }
+        }
+
+        async function saveTaskCartPreset() {
+          if (!state.taskCart.items.length) {
+            showStatus(t('cart.empty'), 'info', { record: false });
+            return;
+          }
+          const serializedItems = [];
+          for (const item of state.taskCart.items) {
+            const serialized = serializeCartItemForPreset(item);
+            if (!serialized) {
+              showStatus(t('cart.saveUnsupported'), 'info', { record: false });
+              return;
+            }
+            serializedItems.push(serialized);
+          }
+          const name = await promptDialog({
+            title: t('cart.presets.saveTitle'),
+            message: t('cart.presets.saveMessage'),
+            confirmText: t('cart.savePreset'),
+            placeholder: t('cart.presets.savePlaceholder'),
+            required: true,
+          });
+          if (!name || !name.trim()) {
+            showStatus(t('cart.saveCancelled'), 'info', { record: false });
+            return;
+          }
+          const trimmedName = name.trim();
+          const preset = {
+            id: `preset-${Date.now()}`,
+            builtin: false,
+            name: trimmedName,
+            description: '',
+            items: serializedItems,
+          };
+          state.taskCart.presets = state.taskCart.presets
+            .filter((entry) => entry.id !== preset.id)
+            .concat(preset);
+          persistTaskCartPresets();
+          renderTaskCartPresets();
+          showStatus(t('cart.savedPreset', { name: trimmedName }), 'success', { record: false });
+        }
+
+        async function deleteTaskCartPreset(presetId) {
+          const preset = state.taskCart.presets.find((entry) => entry.id === presetId);
+          if (!preset || preset.builtin) {
+            return;
+          }
+          const name = getPresetLabel(preset, 'name', '');
+          const confirmed = await confirmDialog({
+            title: t('cart.presets.deleteTitle', { name }),
+            message: t('cart.presets.deleteMessage', { name }),
+            confirmText: t('common.actions.delete'),
+            variant: 'danger',
+          });
+          if (!confirmed) {
+            return;
+          }
+          state.taskCart.presets = state.taskCart.presets.filter((entry) => entry.id !== presetId);
+          persistTaskCartPresets();
+          renderTaskCartPresets();
+          showStatus(t('cart.presetDeleted', { name }), 'success', { record: false });
+        }
+
+        async function resetTaskCartPresets() {
+          const customPresets = state.taskCart.presets.filter((preset) => !preset.builtin);
+          if (!customPresets.length) {
+            showStatus(t('cart.presets.noneCustom'), 'info', { record: false });
+            return;
+          }
+          const confirmed = await confirmDialog({
+            title: t('cart.presets.resetTitle'),
+            message: t('cart.presets.resetMessage'),
+            confirmText: t('cart.presets.resetConfirm'),
+            variant: 'danger',
+          });
+          if (!confirmed) {
+            return;
+          }
+          state.taskCart.presets = state.taskCart.presets.filter((preset) => preset.builtin);
+          persistTaskCartPresets();
+          renderTaskCartPresets();
+          showStatus(t('cart.presets.resetSuccess'), 'success', { record: false });
+        }
+
+        function wait(ms) {
+          return new Promise((resolve) => {
+            window.setTimeout(resolve, Math.max(0, Number(ms) || 0));
+          });
+        }
+
+        function addTaskCartLog(itemId, message) {
+          if (!itemId || !message) {
+            return;
+          }
+          const target = state.taskCart.items.find((entry) => entry.id === itemId);
+          if (!target) {
+            return;
+          }
+          if (!Array.isArray(target.logs)) {
+            target.logs = [];
+          }
+          target.logs.push(message);
+          if (target.logs.length > TASK_CART_MAX_LOGS) {
+            target.logs.splice(0, target.logs.length - TASK_CART_MAX_LOGS);
+          }
+        }
+
+        function setTaskCartItemStatus(itemId, status, message) {
+          const target = state.taskCart.items.find((entry) => entry.id === itemId);
+          if (!target) {
+            return;
+          }
+          if (status) {
+            target.status = status;
+          }
+          if (message) {
+            addTaskCartLog(itemId, message);
+          }
+        }
+
+        function clearTaskCartDropIndicators() {
+          if (!dom.taskCartItems) {
+            return;
+          }
+          dom.taskCartItems
+            .querySelectorAll('.task-cart-item.drop-before, .task-cart-item.drop-after')
+            .forEach((element) => {
+              element.classList.remove('drop-before', 'drop-after');
+              element.removeAttribute('data-drop-position');
+            });
+        }
+
+        function reorderTaskCartItems(sourceId, targetId, position) {
+          if (!sourceId || !targetId || sourceId === targetId) {
+            return;
+          }
+          const items = state.taskCart.items;
+          const sourceIndex = items.findIndex((item) => item.id === sourceId);
+          const targetIndex = items.findIndex((item) => item.id === targetId);
+          if (sourceIndex === -1 || targetIndex === -1) {
+            return;
+          }
+          const [moved] = items.splice(sourceIndex, 1);
+          let insertIndex = targetIndex;
+          if (position === 'after' && targetIndex < items.length) {
+            insertIndex = targetIndex + (sourceIndex < targetIndex ? 0 : 1);
+          } else if (position === 'before' && sourceIndex < targetIndex) {
+            insertIndex = targetIndex - 1;
+          }
+          items.splice(insertIndex, 0, moved);
+          renderTaskCart();
+        }
+
+        function moveTaskCartItem(itemId, direction) {
+          if (!itemId || !direction) {
+            return;
+          }
+          const items = state.taskCart.items;
+          const index = items.findIndex((item) => item.id === itemId);
+          if (index === -1) {
+            return;
+          }
+          const nextIndex = index + direction;
+          if (nextIndex < 0 || nextIndex >= items.length) {
+            return;
+          }
+          const [moved] = items.splice(index, 1);
+          items.splice(nextIndex, 0, moved);
+          renderTaskCart();
+        }
+
+        function renderTaskCart() {
+          renderTaskCartPresets();
+          const items = Array.isArray(state.taskCart.items) ? state.taskCart.items : [];
+          if (dom.taskCartEmpty) {
+            dom.taskCartEmpty.hidden = items.length > 0;
+          }
+          if (!dom.taskCartItems) {
+            updateStatusBadges();
+            updateTaskCartControls();
+            return;
+          }
+          dom.taskCartItems.innerHTML = '';
+          if (!items.length) {
             updateStatusBadges();
             updateTaskCartControls();
             return;
           }
 
-          if (dom.taskCartEmpty) {
-            dom.taskCartEmpty.classList.add('hidden');
-          }
-
-          state.taskCart.items.forEach((item, index) => {
+          items.forEach((item, index) => {
             const entry = document.createElement('div');
             entry.className = 'task-cart-item';
             entry.dataset.type = item.type || 'custom';
+            entry.dataset.itemId = item.id || '';
+            entry.dataset.status = item.status || 'pending';
+            entry.setAttribute('role', 'listitem');
+            entry.draggable = true;
+            entry.setAttribute('aria-grabbed', state.taskCart.draggingId === item.id ? 'true' : 'false');
+            entry.addEventListener('dragstart', handleTaskCartDragStart);
+            entry.addEventListener('dragover', handleTaskCartDragOver);
+            entry.addEventListener('dragleave', handleTaskCartDragLeave);
+            entry.addEventListener('drop', handleTaskCartDrop);
+            entry.addEventListener('dragend', handleTaskCartDragEnd);
+
+            const dragHandle = document.createElement('button');
+            dragHandle.type = 'button';
+            dragHandle.className = 'task-cart-drag';
+            dragHandle.textContent = '⋮⋮';
+            dragHandle.setAttribute('aria-label', t('cart.dragHandle'));
+            dragHandle.setAttribute('data-tooltip-key', 'tooltips.cart.drag');
+            dragHandle.setAttribute('data-drag-handle', 'true');
+            dragHandle.addEventListener('mousedown', (event) => {
+              event.stopPropagation();
+            });
+            entry.appendChild(dragHandle);
 
             const info = document.createElement('div');
             info.className = 'task-cart-info';
@@ -9057,6 +10855,12 @@
             const title = document.createElement('h3');
             title.textContent = item.title || t('cart.title');
             info.appendChild(title);
+
+            const statusKey = item.status || 'pending';
+            const statusChip = document.createElement('span');
+            statusChip.className = 'task-cart-status';
+            statusChip.textContent = t(`cart.statuses.${statusKey}`);
+            info.appendChild(statusChip);
 
             if (item.subtitle) {
               const subtitle = document.createElement('p');
@@ -9072,6 +10876,28 @@
               info.appendChild(estimate);
             }
 
+            if (Array.isArray(item.prerequisites) && item.prerequisites.length) {
+              const prereqList = document.createElement('ul');
+              prereqList.className = 'task-cart-prerequisites';
+              item.prerequisites.forEach((entryText) => {
+                const line = document.createElement('li');
+                line.textContent = entryText;
+                prereqList.appendChild(line);
+              });
+              info.appendChild(prereqList);
+            }
+
+            if (Array.isArray(item.logs) && item.logs.length) {
+              const logs = document.createElement('ul');
+              logs.className = 'task-cart-logs';
+              item.logs.slice(-TASK_CART_MAX_LOGS).forEach((log) => {
+                const line = document.createElement('li');
+                line.textContent = log;
+                logs.appendChild(line);
+              });
+              info.appendChild(logs);
+            }
+
             entry.appendChild(info);
 
             const controls = document.createElement('div');
@@ -9079,55 +10905,192 @@
 
             const runButton = document.createElement('button');
             runButton.type = 'button';
+            runButton.dataset.cartItemId = item.id || '';
             runButton.textContent = t('cart.run');
+            runButton.setAttribute('data-tooltip-key', 'tooltips.cart.runSingle');
             runButton.addEventListener('click', async () => {
-              await executeCartItem(item);
-              state.taskCart.items = state.taskCart.items.filter((candidate) => candidate.id !== item.id);
-              renderTaskCart();
+              try {
+                setTaskCartItemStatus(item.id, 'running');
+                renderTaskCart();
+                await runCartItemWithRetry(item);
+                removeTaskCartItem(item.id, { silent: true });
+                renderTaskCart();
+              } catch (error) {
+                const message = error instanceof Error ? error.message : String(error);
+                setTaskCartItemStatus(item.id, 'failed', message);
+                renderTaskCart();
+                showStatus(message, 'error', { record: false });
+              }
             });
             controls.appendChild(runButton);
+
+            const moveUpButton = document.createElement('button');
+            moveUpButton.type = 'button';
+            moveUpButton.className = 'text';
+            moveUpButton.textContent = t('cart.moveUp');
+            moveUpButton.setAttribute('data-tooltip-key', 'tooltips.cart.moveUp');
+            moveUpButton.disabled = index === 0;
+            moveUpButton.addEventListener('click', () => {
+              moveTaskCartItem(item.id, -1);
+            });
+            controls.appendChild(moveUpButton);
+
+            const moveDownButton = document.createElement('button');
+            moveDownButton.type = 'button';
+            moveDownButton.className = 'text';
+            moveDownButton.textContent = t('cart.moveDown');
+            moveDownButton.setAttribute('data-tooltip-key', 'tooltips.cart.moveDown');
+            moveDownButton.disabled = index === items.length - 1;
+            moveDownButton.addEventListener('click', () => {
+              moveTaskCartItem(item.id, 1);
+            });
+            controls.appendChild(moveDownButton);
 
             const removeButton = document.createElement('button');
             removeButton.type = 'button';
             removeButton.className = 'danger';
             removeButton.textContent = t('common.actions.delete');
+            removeButton.setAttribute('data-tooltip-key', 'tooltips.cart.removeItem');
             removeButton.addEventListener('click', () => {
               removeTaskCartItem(item.id);
             });
             controls.appendChild(removeButton);
 
             entry.appendChild(controls);
-            dom.taskCartBody.appendChild(entry);
+            dom.taskCartItems.appendChild(entry);
           });
+
+          if (tooltipManager) {
+            tooltipManager.refresh(dom.taskCartItems);
+          }
 
           updateStatusBadges();
           updateTaskCartControls();
         }
 
-        function removeTaskCartItem(itemId) {
+        function handleTaskCartDragStart(event) {
+          const entry = event.currentTarget;
+          if (!(entry instanceof HTMLElement)) {
+            return;
+          }
+          const handle = event.target instanceof HTMLElement ? event.target.closest('[data-drag-handle]') : null;
+          if (!handle) {
+            event.preventDefault();
+            return;
+          }
+          state.taskCart.draggingId = entry.dataset.itemId || null;
+          entry.setAttribute('aria-grabbed', 'true');
+          if (event.dataTransfer) {
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', entry.dataset.itemId || '');
+          }
+        }
+
+        function handleTaskCartDragOver(event) {
+          const entry = event.currentTarget;
+          if (!(entry instanceof HTMLElement)) {
+            return;
+          }
+          if (!state.taskCart.draggingId || state.taskCart.draggingId === entry.dataset.itemId) {
+            return;
+          }
+          event.preventDefault();
+          const rect = entry.getBoundingClientRect();
+          const position = event.clientY - rect.top < rect.height / 2 ? 'before' : 'after';
+          entry.dataset.dropPosition = position;
+          entry.classList.toggle('drop-before', position === 'before');
+          entry.classList.toggle('drop-after', position === 'after');
+        }
+
+        function handleTaskCartDragLeave(event) {
+          const entry = event.currentTarget;
+          if (!(entry instanceof HTMLElement)) {
+            return;
+          }
+          entry.classList.remove('drop-before', 'drop-after');
+          entry.removeAttribute('data-drop-position');
+        }
+
+        function handleTaskCartDrop(event) {
+          const entry = event.currentTarget;
+          if (!(entry instanceof HTMLElement)) {
+            return;
+          }
+          event.preventDefault();
+          const sourceId = state.taskCart.draggingId;
+          const targetId = entry.dataset.itemId || null;
+          const position = entry.dataset.dropPosition || 'after';
+          clearTaskCartDropIndicators();
+          if (sourceId && targetId) {
+            reorderTaskCartItems(sourceId, targetId, position);
+          }
+        }
+
+        function handleTaskCartDragEnd(event) {
+          const entry = event.currentTarget;
+          if (entry instanceof HTMLElement) {
+            entry.setAttribute('aria-grabbed', 'false');
+          }
+          state.taskCart.draggingId = null;
+          clearTaskCartDropIndicators();
+        }
+
+        function removeTaskCartItem(itemId, options = {}) {
           if (!itemId) {
             return;
           }
+          const previousLength = state.taskCart.items.length;
           state.taskCart.items = state.taskCart.items.filter((item) => item.id !== itemId);
-          renderTaskCart();
+          const changed = previousLength !== state.taskCart.items.length;
+          if (!options || options.silent !== true) {
+            renderTaskCart();
+          } else if (changed) {
+            updateStatusBadges();
+            updateTaskCartControls();
+          }
         }
 
-        function addTaskCartItem(item) {
+        function addTaskCartItem(item, options = {}) {
           if (!item) {
-            return;
+            return null;
           }
           const nextItem = {
-            id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+            id: item.id || `${Date.now()}-${Math.random().toString(16).slice(2)}`,
             type: item.type || 'custom',
             title: item.title || t('cart.title'),
             subtitle: item.subtitle || '',
             lectureId: item.lectureId || null,
-            payload: item.payload || null,
+            estimate: item.estimate || '',
+            prerequisites: Array.isArray(item.prerequisites) ? item.prerequisites : [],
+            payload: item.payload || {},
+            status: 'pending',
+            logs: Array.isArray(item.logs) ? item.logs.slice() : [],
+            attempts: 0,
+            maxAttempts: item.maxAttempts || TASK_CART_MAX_ATTEMPTS,
           };
-          state.taskCart.items.push(nextItem);
-          renderTaskCart();
-          openTaskCart();
-          addTimelineEntry(t('cart.added', { title: nextItem.title }), 'info');
+          const base = serializeCartItemBase(nextItem);
+          if (!base) {
+            showStatus(t('cart.unsupported'), 'info', { record: false });
+            return null;
+          }
+          nextItem.type = base.type;
+          nextItem.title = base.title;
+          nextItem.subtitle = base.subtitle;
+          nextItem.estimate = base.estimate;
+          nextItem.prerequisites = base.prerequisites;
+          nextItem.payload = base.payload;
+          nextItem.maxAttempts = base.maxAttempts;
+          if (options && options.replace === true) {
+            state.taskCart.items = [nextItem];
+          } else {
+            state.taskCart.items.push(nextItem);
+          }
+          if (!options || options.silent !== true) {
+            renderTaskCart();
+            openTaskCart();
+            addTimelineEntry(t('cart.added', { title: nextItem.title }), 'info');
+          }
+          return nextItem;
         }
 
         function toggleTaskCartPause() {
@@ -9146,9 +11109,16 @@
           }
 
           state.taskCart.paused = true;
+          state.taskCart.running = false;
+          state.taskCart.items.forEach((item) => {
+            if (item.status === 'running') {
+              item.status = 'paused';
+            }
+          });
           showStatus(t('cart.pausedNotice'), 'info', { record: false });
           addTimelineEntry(t('cart.pausedNotice'), 'warning');
           updateTaskCartControls();
+          renderTaskCart();
         }
 
         async function performTaskCartDryRun() {
@@ -9157,11 +11127,35 @@
             return;
           }
 
+          const spec = buildTaskCartQueueSpec();
+          if (!spec.payload.items.length) {
+            showStatus(t('cart.dryRunUnsupported'), 'info', { record: false });
+            return;
+          }
+
           showStatus(t('cart.dryRunPending'), 'info', { record: false });
           addTimelineEntry(t('cart.dryRunPending'), 'info');
+          try {
+            const response = await request('/api/tasks/batch', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ...spec.payload, dry_run: true }),
+            });
+            state.taskCart.lastDryRun = {
+              timestamp: Date.now(),
+              result: response || null,
+            };
+            showStatus(t('cart.dryRunSuccess', { count: spec.payload.items.length }), 'success', {
+              record: false,
+            });
+            addTimelineEntry(t('cart.dryRunTimeline', { count: spec.payload.items.length }), 'success');
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            showStatus(t('cart.dryRunFailure', { message }), 'error');
+          }
         }
 
-        async function runTaskCart() {
+        async function runTaskCart({ forceLocal = false } = {}) {
           if (!state.taskCart.items.length) {
             showStatus(t('cart.empty'), 'info', { record: false });
             return;
@@ -9175,25 +11169,69 @@
 
           state.taskCart.paused = false;
           state.taskCart.running = true;
+          state.taskCart.items.forEach((item) => {
+            if (item.status === 'failed' || item.status === 'paused') {
+              item.status = 'pending';
+            }
+          });
+          renderTaskCart();
           openTaskCart();
           updateTaskCartControls();
           showStatus(t('cart.runningStatus'), 'info', { record: false });
           addTimelineEntry(t('cart.runningStatus'), 'info');
 
-          const snapshot = [...state.taskCart.items];
-          for (const item of snapshot) {
+          const spec = buildTaskCartQueueSpec();
+          if (!forceLocal && spec.payload.items.length) {
+            try {
+              await request('/api/tasks/batch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ...spec.payload, dry_run: false }),
+              });
+              showStatus(t('cart.queueAccepted'), 'success', { record: false });
+              addTimelineEntry(t('cart.queueAccepted'), 'success');
+              state.taskCart.items = spec.unsupported.slice();
+              state.taskCart.running = false;
+              renderTaskCart();
+              updateTaskCartControls();
+              if (spec.unsupported.length) {
+                showStatus(t('cart.queueUnsupported', { count: spec.unsupported.length }), 'info', {
+                  record: false,
+                });
+              }
+              await refreshProgressQueue({ force: true, silent: true });
+              return;
+            } catch (error) {
+              const message = error instanceof Error ? error.message : String(error);
+              addTimelineEntry(message, 'warning');
+              showStatus(t('cart.queueFallback', { message }), 'info', { record: false });
+            }
+          }
+
+          await runTaskCartSequential();
+        }
+
+        async function runTaskCartSequential() {
+          const queue = state.taskCart.items.map((item) => item.id);
+          for (const itemId of queue) {
             if (state.taskCart.paused) {
               break;
             }
+            const item = state.taskCart.items.find((entry) => entry.id === itemId);
+            if (!item) {
+              continue;
+            }
             try {
-              await executeCartItem(item);
-              state.taskCart.items = state.taskCart.items.filter((candidate) => candidate.id !== item.id);
+              await runCartItemWithRetry(item);
+              removeTaskCartItem(item.id, { silent: true });
               renderTaskCart();
             } catch (error) {
-              state.taskCart.running = false;
               const message = error instanceof Error ? error.message : String(error);
+              setTaskCartItemStatus(item.id, 'failed', message);
+              renderTaskCart();
               showStatus(message, 'error', { record: false });
               addTimelineEntry(message, 'error');
+              state.taskCart.running = false;
               updateTaskCartControls();
               return;
             }
@@ -9208,6 +11246,31 @@
           }
         }
 
+        async function runCartItemWithRetry(item) {
+          const maxAttempts = Math.max(1, Number(item.maxAttempts) || TASK_CART_MAX_ATTEMPTS);
+          let attempt = 0;
+          while (attempt < maxAttempts && !state.taskCart.paused) {
+            attempt += 1;
+            item.attempts = attempt;
+            setTaskCartItemStatus(item.id, 'running', t('cart.logs.attempt', { attempt }));
+            renderTaskCart();
+            try {
+              await executeCartItem(item);
+              setTaskCartItemStatus(item.id, 'completed', t('cart.logs.completed'));
+              return;
+            } catch (error) {
+              const message = error instanceof Error ? error.message : String(error);
+              if (attempt >= maxAttempts) {
+                setTaskCartItemStatus(item.id, 'failed', message);
+                throw error;
+              }
+              setTaskCartItemStatus(item.id, 'pending', message);
+              renderTaskCart();
+              await wait(TASK_CART_BACKOFF_BASE_MS * 2 ** (attempt - 1));
+            }
+          }
+        }
+
         async function executeCartItem(item) {
           if (!item || !item.type) {
             return;
@@ -9216,6 +11279,7 @@
             const model = normalizeWhisperModel(item.payload?.model || getTranscribeModelValue());
             startTranscriptionProgress(item.lectureId);
             showStatus(t('status.transcriptionPreparing'), 'info', { persist: true });
+            addTaskCartLog(item.id, t('cart.logs.transcribeQueued'));
             try {
               await request(`/api/lectures/${item.lectureId}/transcribe`, {
                 method: 'POST',
@@ -9237,11 +11301,24 @@
 
           if (item.type === 'custom' && typeof item.payload?.run === 'function') {
             await item.payload.run();
+            addTaskCartLog(item.id, t('cart.logs.completed'));
+            return;
+          }
+
+          const queueSpec = serializeCartItemForQueue(item);
+          if (queueSpec) {
+            await request('/api/tasks/batch', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ items: [queueSpec], parallelism: '1', on_complete: 'notify' }),
+            });
+            addTaskCartLog(item.id, t('cart.logs.queuedRemote'));
             return;
           }
 
           showStatus(t('cart.unsupported'), 'info', { record: false });
           addTimelineEntry(t('cart.unsupported'), 'warning');
+          throw new Error(t('cart.unsupported'));
         }
 
         const assetDefinitions = [
@@ -12952,6 +15029,10 @@
               reject(error instanceof Error ? error : new Error('Unable to start upload.'));
             }
           });
+
+          if (tooltipManager) {
+            tooltipManager.refresh(dom.progress.list);
+          }
         }
 
         async function request(url, options = {}) {
@@ -13613,7 +15694,7 @@
           button.type = 'button';
           button.className = ['icon-button', ...classNames.filter(Boolean)].join(' ');
           button.setAttribute('aria-label', label);
-          button.title = label;
+          button.setAttribute('data-tooltip', label);
 
           const iconSpan = document.createElement('span');
           iconSpan.className = 'icon';
@@ -13625,6 +15706,10 @@
           srLabel.className = 'sr-only';
           srLabel.textContent = label;
           button.appendChild(srLabel);
+
+          if (tooltipManager) {
+            tooltipManager.attach(button);
+          }
 
           return button;
         }
@@ -14133,6 +16218,9 @@
           });
 
           dom.curriculum.appendChild(syllabus);
+          if (tooltipManager) {
+            tooltipManager.refresh(dom.curriculum);
+          }
           highlightSelected();
         }
 
@@ -14584,6 +16672,10 @@
             item.appendChild(actions);
             dom.assetList.appendChild(item);
           });
+
+          if (tooltipManager) {
+            tooltipManager.refresh(dom.assetList);
+          }
         }
 
         function renderSummary(detail) {
@@ -15066,14 +17158,42 @@
 
         if (dom.taskCartSave instanceof HTMLButtonElement) {
           dom.taskCartSave.addEventListener('click', () => {
-            showStatus(t('cart.savePresetUnavailable'), 'info', { record: false });
-            addTimelineEntry(t('cart.savePresetUnavailable'), 'info');
+            void saveTaskCartPreset();
           });
         }
 
         if (dom.taskCartDryRun instanceof HTMLButtonElement) {
           dom.taskCartDryRun.addEventListener('click', () => {
             void performTaskCartDryRun();
+          });
+        }
+
+        if (dom.taskCartPresetsList instanceof HTMLElement) {
+          dom.taskCartPresetsList.addEventListener('click', (event) => {
+            const target = event.target instanceof HTMLElement
+              ? event.target.closest('button[data-preset-action]')
+              : null;
+            if (!target) {
+              return;
+            }
+            const action = target.dataset.presetAction || '';
+            const presetId = target.dataset.presetId || '';
+            if (!presetId) {
+              return;
+            }
+            if (action === 'load') {
+              void applyTaskCartPreset(presetId, { runImmediately: false });
+            } else if (action === 'run') {
+              void applyTaskCartPreset(presetId, { runImmediately: true });
+            } else if (action === 'delete') {
+              void deleteTaskCartPreset(presetId);
+            }
+          });
+        }
+
+        if (dom.taskCartPresetsReset instanceof HTMLButtonElement) {
+          dom.taskCartPresetsReset.addEventListener('click', () => {
+            void resetTaskCartPresets();
           });
         }
 
