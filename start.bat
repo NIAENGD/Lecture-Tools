@@ -49,7 +49,10 @@ if "%~1"=="" (
     echo Example: start.bat ingest --help
     echo.
 )
-"%VENV_PY%" "%SCRIPT_DIR%run.py" %*
+REM Launch the CLI using the Windows `start` command so that we inherit the
+REM same behaviour as the cross-platform launcher. `/wait` ensures we capture
+REM the exit code from the Python process.
+start "" /wait "%VENV_PY%" "%SCRIPT_DIR%run.py" %*
 set "EXIT_CODE=%ERRORLEVEL%"
 if not "%EXIT_CODE%"=="0" goto :error
 
