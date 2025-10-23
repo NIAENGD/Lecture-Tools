@@ -8,6 +8,21 @@ import {
   type TaskCartItemLog,
 } from '../state/taskCart';
 import { useToastStore } from '../state/toast';
+import type { TaskCartLogEntry } from '@lecturetools/api';
+
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  try {
+    return JSON.stringify(error);
+  } catch {
+    return 'Unknown error';
+  }
+};
 
 type RunOptions = {
   dryRun?: boolean;
@@ -97,11 +112,11 @@ export const useTaskCartEngine = (options: { subscribe?: boolean } = {}) => {
         simulateLocalProgress(items, updateItemState, appendItemLog, toggleRunning, setActiveBatch);
       }
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       toggleRunning(false);
       pushToast({
         title: 'Cart failed to run',
-        description: error?.message ?? 'Unknown error while scheduling tasks.',
+        description: getErrorMessage(error) || 'Unknown error while scheduling tasks.',
         tone: 'error',
       });
     },
@@ -134,10 +149,10 @@ export const useTaskCartEngine = (options: { subscribe?: boolean } = {}) => {
         hydrateFromBatch(response.id, items.map((item) => ({ id: item.id, state: variables.command === 'pause' ? 'paused' : 'idle' })));
       }
     },
-    onError: (error: any) => {
+    onError: (error: unknown) => {
       pushToast({
         title: 'Cart control failed',
-        description: error?.message ?? 'Unable to update batch state.',
+        description: getErrorMessage(error) || 'Unable to update batch state.',
         tone: 'error',
       });
     },
@@ -151,10 +166,12 @@ export const useTaskCartEngine = (options: { subscribe?: boolean } = {}) => {
     },
   });
 
-  const syncLogsMutation = useMutation({
+  const syncLogsMutation = useMutation<TaskCartLogEntry[], Error, string>({
     mutationKey: ['task-cart', 'logs'],
     mutationFn: async (batchId: string) => {
-      if (!hasApi) return [] as const;
+      if (!hasApi) {
+        return [] as TaskCartLogEntry[];
+      }
       const response = await apiClient.tasks.fetchBatchLogs(batchId);
       response.entries.forEach((entry) => {
         appendItemLog(entry.itemId, {
@@ -164,7 +181,7 @@ export const useTaskCartEngine = (options: { subscribe?: boolean } = {}) => {
           message: entry.message,
         });
         if (entry.state) {
-          updateItemState(entry.itemId, entry.state as TaskCartItemState);
+          updateItemState(entry.itemId, entry.state);
         }
       });
       return response.entries;

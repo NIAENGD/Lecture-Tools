@@ -37,11 +37,13 @@ export type TaskCartPreset = {
   onCompletion: TaskCartState['onCompletion'];
 };
 
+export type CartCompletionMode = 'notify' | 'shutdown' | 'nothing';
+
 type TaskCartState = {
   items: TaskCartItem[];
   presets: TaskCartPreset[];
   parallelism: CartParallelism;
-  onCompletion: 'notify' | 'shutdown' | 'nothing';
+  onCompletion: CartCompletionMode;
   running: boolean;
   activeBatchId?: string;
   lastRunAt?: string;

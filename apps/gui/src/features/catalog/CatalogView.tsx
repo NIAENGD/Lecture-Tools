@@ -422,7 +422,7 @@ export const CatalogView = () => {
       action,
       lectureId: selectedNode?.id,
       params: { asset, targetId: selectedNode?.id },
-      estMs: estimateAssetMs(action, asset),
+      estMs: estimateAssetMs(action),
       prereqs: selectedNode ? [selectedNode.title] : [],
     });
     pushToast({ title: `${action} queued`, description: `${asset} moved to Task Cart.` });
@@ -927,7 +927,7 @@ const estimateBulkUploadMs = (item: BulkUploadPlanItem, options: typeof defaultB
   return (baseMinutes + optionMinutes) * 60_000;
 };
 
-const estimateAssetMs = (action: string, asset: string) => {
+const estimateAssetMs = (action: string) => {
   const normalizedAction = action.toLowerCase();
   if (normalizedAction.includes('transcribe')) {
     return 12 * 60_000;
