@@ -2789,6 +2789,366 @@
         padding: calc(var(--grid-unit) * 3);
       }
 
+      .workspace {
+        display: flex;
+        flex-direction: column;
+        gap: calc(var(--grid-unit) * 3);
+      }
+
+      .section {
+        display: none;
+      }
+
+      .section.is-active {
+        display: block;
+      }
+
+      .home-surface {
+        gap: calc(var(--grid-unit) * 3);
+      }
+
+      .home-header {
+        display: flex;
+        justify-content: space-between;
+        gap: calc(var(--grid-unit) * 3);
+        align-items: flex-start;
+      }
+
+      .home-header h1 {
+        margin: 0;
+        font-size: 2rem;
+      }
+
+      .home-header p {
+        margin: calc(var(--grid-unit) * 0.5) 0 0;
+        color: var(--app-text-muted);
+      }
+
+      .home-status {
+        display: flex;
+        gap: calc(var(--grid-unit) * 2);
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      .home-status .status-pill {
+        min-width: 160px;
+        text-align: left;
+      }
+
+      .home-quick-tiles {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: calc(var(--grid-unit) * 2);
+      }
+
+      .home-quick-tiles button {
+        border: 1px solid var(--app-border);
+        border-radius: 20px;
+        background: var(--app-surface-alt);
+        padding: calc(var(--grid-unit) * 2.5);
+        text-align: left;
+        display: grid;
+        gap: calc(var(--grid-unit) * 1.5);
+        cursor: pointer;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+        transition: transform var(--transition-snappy), box-shadow var(--transition-snappy),
+          border-color var(--transition-snappy);
+      }
+
+      .home-quick-tiles button:hover,
+      .home-quick-tiles button:focus-visible {
+        outline: none;
+        transform: translateY(-2px);
+        border-color: rgba(64, 82, 255, 0.45);
+        box-shadow: 0 14px 32px rgba(64, 82, 255, 0.12);
+      }
+
+      .home-quick-tiles .tile-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 16px;
+        background: rgba(64, 82, 255, 0.12);
+        display: grid;
+        place-items: center;
+        font-size: 1.6rem;
+      }
+
+      .home-quick-tiles .tile-label {
+        font-size: 1rem;
+        font-weight: 600;
+      }
+
+      .home-quick-tiles .tile-subtext {
+        font-size: 0.85rem;
+        color: var(--app-text-muted);
+      }
+
+      .home-grid {
+        display: grid;
+        gap: calc(var(--grid-unit) * 3);
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      }
+
+      .home-card {
+        border-radius: 24px;
+        border: 1px solid var(--app-border);
+        background: var(--app-surface-alt);
+        box-shadow: var(--app-shadow-soft);
+        padding: calc(var(--grid-unit) * 3);
+        display: flex;
+        flex-direction: column;
+        gap: calc(var(--grid-unit) * 2);
+      }
+
+      .home-card-header {
+        display: flex;
+        justify-content: space-between;
+        gap: calc(var(--grid-unit) * 1.5);
+        align-items: center;
+      }
+
+      .home-card-header h2 {
+        margin: 0;
+      }
+
+      .home-activity-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: calc(var(--grid-unit) * 1.5);
+      }
+
+      .home-activity-list li {
+        display: flex;
+        justify-content: space-between;
+        gap: calc(var(--grid-unit) * 2);
+        padding: calc(var(--grid-unit) * 1.5) calc(var(--grid-unit) * 2);
+        border-radius: 18px;
+        background: var(--app-surface);
+        border: 1px solid var(--app-border);
+        font-size: 0.9rem;
+        cursor: pointer;
+        outline: none;
+        transition: transform var(--transition-snappy), box-shadow var(--transition-snappy);
+      }
+
+      .home-activity-list li[data-variant='success'] {
+        background: linear-gradient(135deg, #E8FFF4 0%, #D4FFFA 50%, #F0FFE8 100%);
+        border-color: rgba(156, 246, 205, 0.55);
+      }
+
+      .home-activity-list li[data-variant='warning'] {
+        background: linear-gradient(135deg, #FFF1E4 0%, #FFE4EC 50%, #FFFBE4 100%);
+        border-color: rgba(255, 210, 140, 0.55);
+      }
+
+      .home-activity-list li[data-variant='danger'] {
+        background: linear-gradient(135deg, #FFE9F0 0%, #FFC9D2 50%, #FFEBE0 100%);
+        border-color: rgba(255, 169, 181, 0.55);
+      }
+
+      .home-activity-list li[data-variant='info'],
+      .home-activity-list li[data-variant='idle'],
+      .home-activity-list li:not([data-variant]) {
+        background: linear-gradient(135deg, #EAF4FF 0%, #EEE4FF 50%, #FFE8FA 100%);
+        border-color: rgba(201, 175, 255, 0.35);
+      }
+
+      .home-activity-list li:hover,
+      .home-activity-list li:focus-visible {
+        box-shadow: var(--focus-ring);
+        transform: translateY(-1px);
+      }
+
+      .home-activity-list time {
+        font-variant-numeric: tabular-nums;
+        color: var(--app-text-muted);
+      }
+
+      .home-activity-empty {
+        margin: 0;
+        color: var(--app-text-muted);
+        font-style: italic;
+      }
+
+      .home-snapshot {
+        display: grid;
+        gap: calc(var(--grid-unit) * 2);
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        margin: 0;
+      }
+
+      .home-snapshot dt {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--app-text-muted);
+      }
+
+      .home-snapshot dd {
+        margin: calc(var(--grid-unit) * 0.5) 0 0;
+        font-size: 1.2rem;
+        font-weight: 600;
+      }
+
+      .home-card-actions {
+        display: flex;
+        gap: calc(var(--grid-unit) * 1.5);
+        flex-wrap: wrap;
+      }
+
+      .home-card-actions .ghost {
+        border-radius: 999px;
+      }
+
+      .curriculum-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: calc(var(--grid-unit) * 1.5);
+        justify-content: flex-end;
+      }
+
+      .curriculum-actions button {
+        border-radius: 999px;
+        border: 1px solid var(--app-border);
+        background: var(--app-surface);
+        color: var(--app-text);
+        padding: calc(var(--grid-unit) * 1.2) calc(var(--grid-unit) * 2);
+        font-weight: 600;
+        font-size: 0.85rem;
+        cursor: pointer;
+      }
+
+      .curriculum-actions button.ghost {
+        background: var(--app-surface-alt);
+        color: var(--app-text-muted);
+      }
+
+      .curriculum-actions button:hover,
+      .curriculum-actions button:focus-visible {
+        outline: none;
+        border-color: var(--accent-primary);
+        color: var(--accent-primary);
+      }
+
+      .details-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: calc(var(--grid-unit) * 2);
+      }
+
+      .details-header h2 {
+        margin: 0;
+        font-size: 1.6rem;
+      }
+
+      .details-header p {
+        margin: calc(var(--grid-unit) * 0.5) 0 0;
+        color: var(--app-text-muted);
+        font-size: 0.9rem;
+      }
+
+      .details-controls {
+        display: flex;
+        gap: calc(var(--grid-unit) * 1.5);
+        flex-wrap: wrap;
+      }
+
+      .details-controls .pill {
+        border-radius: 999px;
+        border: 1px solid var(--app-border);
+        background: var(--app-surface-alt);
+        padding: calc(var(--grid-unit) * 1.25) calc(var(--grid-unit) * 2);
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .details-controls .pill.active {
+        background: rgba(64, 82, 255, 0.15);
+        color: var(--accent-primary);
+        border-color: rgba(64, 82, 255, 0.3);
+      }
+
+      .asset-command-stack {
+        display: flex;
+        flex-direction: column;
+        gap: calc(var(--grid-unit) * 2);
+      }
+
+      .asset-command {
+        display: flex;
+        justify-content: space-between;
+        gap: calc(var(--grid-unit) * 2);
+        border: 1px solid var(--app-border);
+        border-radius: 18px;
+        padding: calc(var(--grid-unit) * 2);
+        background: var(--app-surface-alt);
+        align-items: center;
+      }
+
+      .asset-command h3 {
+        margin: 0 0 calc(var(--grid-unit) * 0.5);
+        font-size: 1rem;
+      }
+
+      .asset-command p {
+        margin: 0;
+        color: var(--app-text-muted);
+        font-size: 0.85rem;
+      }
+
+      .asset-command-controls {
+        display: flex;
+        gap: calc(var(--grid-unit) * 1);
+        align-items: center;
+      }
+
+      #asset-transcribe-model {
+        border-radius: 999px;
+        border: 1px solid var(--app-border);
+        background: var(--app-surface);
+        padding: calc(var(--grid-unit) * 1) calc(var(--grid-unit) * 1.5);
+        font-size: 0.85rem;
+      }
+
+      #asset-transcribe,
+      #asset-process-slides,
+      #asset-open-cart,
+      #asset-add-all-cart {
+        border-radius: 999px;
+        border: 1px solid var(--accent-primary);
+        background: rgba(64, 82, 255, 0.12);
+        color: var(--accent-primary);
+        padding: calc(var(--grid-unit) * 1.2) calc(var(--grid-unit) * 2);
+        font-weight: 600;
+        font-size: 0.85rem;
+        cursor: pointer;
+      }
+
+      #asset-transcribe:disabled,
+      #asset-process-slides:disabled,
+      #asset-add-all-cart:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      #asset-open-cart {
+        border-color: var(--app-border);
+        background: var(--app-surface);
+        color: var(--app-text);
+      }
+
+      #asset-open-cart:hover,
+      #asset-open-cart:focus-visible {
+        border-color: var(--accent-primary);
+        color: var(--accent-primary);
+        outline: none;
+      }
+
       .mega-rail {
         display: flex;
         flex-direction: column;
@@ -3767,7 +4127,7 @@
           </button>
         </div>
       </header>
-      <main class="layout app-main">
+            <main class="layout app-main">
         <nav class="mega-rail" aria-label="Primary">
           <button
             type="button"
@@ -3827,317 +4187,564 @@
             <span data-i18n="mega.debug">Debug</span>
           </button>
         </nav>
-        <aside class="sidebar pane-tree">
-        <section class="panel">
-          <h1 data-i18n="sidebar.heading">Lecture Tools</h1>
-          <p data-i18n="sidebar.tagline">Review, organise, and process lecture resources quickly.</p>
-        </section>
-        <section id="sidebar-overview" class="panel" hidden>
-          <h2 data-i18n="sidebar.overview">Overview</h2>
-          <dl id="stats" class="stats-grid"></dl>
-        </section>
-        <section class="panel">
-          <div class="panel-heading">
-            <h2 data-i18n="sidebar.syllabusTitle">Course syllabus</h2>
-          </div>
-          <label
-            class="sr-only"
-            for="search-input"
-            data-i18n="sidebar.searchLabel"
-          >
-            Search syllabus
-          </label>
-          <input
-            id="search-input"
-            type="search"
-            placeholder="Search by name"
-            data-i18n="sidebar.searchPlaceholder"
-            data-i18n-attr="placeholder"
-            autocomplete="off"
-          />
-          <div id="curriculum" class="curriculum">
-            <div class="placeholder" data-i18n="sidebar.loading">Loading…</div>
-          </div>
-        </section>
-      </aside>
-        <section class="content pane-details">
-          <section class="panel content-panel">
-          <div class="top-bar" role="tablist">
-            <div class="top-bar-left">
-              <button
-                type="button"
-                class="active"
-                data-view="details"
-                aria-pressed="true"
-                data-i18n="topBar.details"
-                data-tooltip-key="tooltips.topBar.details"
-              >
-                Details
-              </button>
-              <button
-                id="toggle-edit-mode"
-                type="button"
-                class="ghost pill"
-                aria-pressed="false"
-                data-i18n="topBar.enableEdit"
-                data-tooltip-key="tooltips.topBar.editToggle"
-              >
-                Enable edit mode
-              </button>
-            </div>
-            <div class="top-bar-right">
-              <button
-                type="button"
-                class="ghost"
-                data-view="progress"
-                aria-pressed="false"
-                data-i18n="topBar.progress"
-                data-tooltip-key="tooltips.topBar.progress"
-              >
-                Progress
-              </button>
-              <button
-                type="button"
-                data-view="create"
-                aria-pressed="false"
-                data-i18n="topBar.create"
-                data-tooltip-key="tooltips.topBar.create"
-              >
-                Create
-              </button>
-              <button
-                type="button"
-                class="ghost"
-                data-view="storage"
-                aria-pressed="false"
-                data-i18n="topBar.storage"
-                data-tooltip-key="tooltips.topBar.storage"
-              >
-                Storage
-              </button>
-              <button
-                type="button"
-                data-view="settings"
-                aria-pressed="false"
-                data-i18n="topBar.settings"
-                data-tooltip-key="tooltips.topBar.settings"
-              >
-                Settings
-              </button>
-            </div>
-          </div>
-          <div id="view-details" class="view active" data-view="details">
-            <header style="display: flex; justify-content: space-between; align-items: center;">
-              <h2 data-i18n="details.title">Lecture details</h2>
-              <button
-                id="delete-lecture"
-                class="danger"
-                type="button"
-                hidden
-                data-i18n="details.deleteLecture"
-              >
-                Delete lecture
-              </button>
-            </header>
-            <div id="edit-mode-banner" class="edit-banner" hidden data-i18n="details.editModeBanner">
-              Edit mode is enabled. Update lecture information or remove items while it is active.
-            </div>
-            <div id="lecture-summary" class="placeholder" data-i18n="details.summaryPlaceholder">
-              Select a lecture from the curriculum.
-            </div>
-            <form id="lecture-edit-form" hidden>
-              <div class="field">
-                <label for="edit-lecture-name" data-i18n="details.edit.titleLabel">Title</label>
-                <input id="edit-lecture-name" name="name" type="text" required />
-              </div>
-              <div class="field">
-                <label for="edit-lecture-module" data-i18n="details.edit.moduleLabel">Module</label>
-                <select id="edit-lecture-module" name="module" required></select>
-              </div>
-              <div class="field">
-                <label
-                  for="edit-lecture-description"
-                  data-i18n="details.edit.descriptionLabel"
-                >
-                  Description
-                </label>
-                <textarea
-                  id="edit-lecture-description"
-                  name="description"
-                  rows="4"
-                ></textarea>
-              </div>
-              <div class="form-actions">
-                <button type="submit" data-i18n="details.edit.save">Save changes</button>
-              </div>
-            </form>
-            <section id="asset-section" hidden>
-              <h3 data-i18n="assets.title">Assets</h3>
-              <ul id="asset-list" class="asset-list"></ul>
-            </section>
-          </div>
-          <div id="view-progress" class="view" data-view="progress" hidden>
-            <section class="panel progress-panel">
-              <div class="progress-header">
-                <h2 data-i18n="progress.title">Processing queue</h2>
-                <button id="progress-refresh" type="button" class="ghost" data-i18n="progress.refresh">
-                  Refresh
-                </button>
-              </div>
-              <p id="progress-description" class="progress-description" data-i18n="progress.description">
-                Track conversions, mastering, and transcriptions as they run.
-              </p>
-              <div id="progress-empty" class="progress-empty" data-i18n="progress.empty">
-                No active tasks.
-              </div>
-              <ul id="progress-list" class="progress-list" aria-live="polite" aria-busy="false"></ul>
-            </section>
-          </div>
-          <div id="view-create" class="view" data-view="create" hidden>
-            <h2 data-i18n="create.title">Create lecture</h2>
-            <form id="lecture-create-form">
-              <div class="field">
-                <label for="create-module" data-i18n="create.moduleLabel">Module</label>
-                <select id="create-module" required></select>
-              </div>
-              <div class="field">
-                <label for="create-name" data-i18n="create.titleLabel">Title</label>
-                <input id="create-name" type="text" required />
-              </div>
-              <div class="field">
-                <label for="create-description" data-i18n="create.descriptionLabel">Description</label>
-                <textarea id="create-description" rows="4"></textarea>
-              </div>
-              <div class="form-actions">
-                <button id="create-submit" type="submit" data-i18n="create.submit">
-                  Add lecture
-                </button>
-              </div>
-            </form>
-          </div>
-          <div id="view-storage" class="view" data-view="storage" hidden>
-            <div class="storage-page">
-              <div class="storage-header">
-                <h2 data-i18n="storage.title">Storage manager</h2>
-                <div class="storage-actions">
-                  <button id="storage-refresh" type="button" data-i18n="storage.actions.refresh">
-                    Refresh
-                  </button>
-                  <button
-                    id="storage-download-selected"
-                    type="button"
-                    class="secondary"
-                    data-i18n="storage.actions.downloadSelected"
-                    disabled
-                  >
-                    Download selected
-                  </button>
-                  <button
-                    id="storage-purge"
-                    type="button"
-                    class="danger"
-                    data-i18n="storage.actions.purge"
-                  >
-                    Remove processed audio
-                  </button>
+        <div class="workspace">
+          <section class="section home is-active" data-section-panel="home">
+            <div class="pane-surface home-surface">
+              <header class="home-header">
+                <div>
+                  <h1 data-i18n="home.title">Mission Control</h1>
+                  <p data-i18n="home.subtitle">
+                    Command centre for uploads, tasks, and storage health.
+                  </p>
                 </div>
-              </div>
-              <section class="storage-browser" aria-live="polite">
-                <div class="storage-browser-toolbar">
-                  <div class="storage-browser-nav">
+                <div class="home-status">
+                  <div class="status-pill" data-variant="cpu">
+                    <span data-i18n="home.status.tasks">Active tasks</span>
+                    <strong id="home-status-cpu">—</strong>
+                  </div>
+                  <div class="status-pill" data-variant="tasks">
+                    <span data-i18n="home.status.queue">Queued in cart</span>
+                    <strong id="home-status-queue">—</strong>
+                  </div>
+                  <div class="status-pill" data-variant="storage">
+                    <span data-i18n="home.status.storage">Storage used</span>
+                    <strong id="home-status-storage">—</strong>
+                  </div>
+                </div>
+              </header>
+              <section
+                class="home-quick-tiles"
+                aria-label="home quick actions"
+              >
+                <button type="button" data-home-action="upload-recording">
+                  <span class="tile-icon" aria-hidden="true">🎙️</span>
+                  <span class="tile-label" data-i18n="home.tiles.uploadRecording">
+                    Upload recording
+                  </span>
+                  <span class="tile-subtext" data-i18n="home.tiles.uploadRecordingHint">
+                    Drop mastered audio in seconds.
+                  </span>
+                </button>
+                <button type="button" data-home-action="upload-slides">
+                  <span class="tile-icon" aria-hidden="true">🖼️</span>
+                  <span class="tile-label" data-i18n="home.tiles.uploadSlides">
+                    Upload slides
+                  </span>
+                  <span class="tile-subtext" data-i18n="home.tiles.uploadSlidesHint">
+                    Generate previews and notes automatically.
+                  </span>
+                </button>
+                <button type="button" data-home-action="create-lecture">
+                  <span class="tile-icon" aria-hidden="true">✨</span>
+                  <span class="tile-label" data-i18n="home.tiles.createLecture">
+                    Create lecture
+                  </span>
+                  <span class="tile-subtext" data-i18n="home.tiles.createLectureHint">
+                    Name, assign, and track in two taps.
+                  </span>
+                </button>
+                <button type="button" data-home-action="add-to-cart">
+                  <span class="tile-icon" aria-hidden="true">🛒</span>
+                  <span class="tile-label" data-i18n="home.tiles.addToCart">
+                    Add to cart
+                  </span>
+                  <span class="tile-subtext" data-i18n="home.tiles.addToCartHint">
+                    Stage work for peace-mode execution.
+                  </span>
+                </button>
+                <button type="button" data-home-action="run-cart">
+                  <span class="tile-icon" aria-hidden="true">▶️</span>
+                  <span class="tile-label" data-i18n="home.tiles.runCart">
+                    Run cart
+                  </span>
+                  <span class="tile-subtext" data-i18n="home.tiles.runCartHint">
+                    Fire the queued batch instantly.
+                  </span>
+                </button>
+              </section>
+              <div class="home-grid">
+                <section class="home-card" aria-labelledby="home-recent-title">
+                  <div class="home-card-header">
+                    <h2 id="home-recent-title" data-i18n="home.recent.title">
+                      Recent activity
+                    </h2>
                     <button
-                      id="storage-nav-root"
                       type="button"
-                      data-i18n="storage.browser.root"
+                      class="ghost"
+                      data-home-action="open-tasks"
+                      data-i18n="home.recent.openTasks"
                     >
-                      Root
-                    </button>
-                    <button
-                      id="storage-nav-up"
-                      type="button"
-                      data-i18n="storage.browser.up"
-                    >
-                      Up
+                      Open tasks
                     </button>
                   </div>
-                  <p id="storage-path" class="storage-path">/</p>
-                </div>
-                <div
-                  id="storage-browser-loading"
-                  class="storage-loading"
-                  hidden
-                  data-i18n="storage.browser.loading"
-                >
-                  Loading…
-                </div>
-                <div
-                  id="storage-browser-empty"
-                  class="storage-empty"
-                  hidden
-                  data-i18n="storage.browser.empty"
-                >
-                  No files or folders found.
-                </div>
-                <div
-                  id="storage-browser-table-wrapper"
-                  class="storage-browser-table-wrapper"
-                  hidden
-                >
-                  <table class="storage-browser-table">
-                    <thead>
-                      <tr>
-                        <th scope="col" class="storage-select-header">
-                          <label
-                            class="sr-only"
-                            for="storage-select-all"
-                            data-i18n="storage.browser.select"
-                          >
-                            Select
-                          </label>
-                          <input id="storage-select-all" type="checkbox" disabled />
-                        </th>
-                        <th scope="col" data-i18n="storage.browser.name">Name</th>
-                        <th scope="col" data-i18n="storage.browser.type">Type</th>
-                        <th scope="col" data-i18n="storage.browser.size">Size</th>
-                        <th scope="col" data-i18n="storage.browser.modified">Modified</th>
-                        <th scope="col" data-i18n="storage.browser.actions">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody id="storage-browser-body"></tbody>
-                  </table>
-                </div>
-              </section>
-              <section class="storage-usage" aria-live="polite">
-                <div class="storage-usage-item">
-                  <span class="storage-usage-label" data-i18n="storage.usage.used">Used</span>
-                  <span id="storage-used" class="storage-usage-value">--</span>
-                </div>
-                <div class="storage-usage-item">
-                  <span class="storage-usage-label" data-i18n="storage.usage.available">Available</span>
-                  <span id="storage-available" class="storage-usage-value">--</span>
-                </div>
-                <div class="storage-usage-item">
-                  <span class="storage-usage-label" data-i18n="storage.usage.total">Total</span>
-                  <span id="storage-total" class="storage-usage-value">--</span>
-                </div>
-              </section>
-              <p
-                id="storage-purge-summary"
-                class="storage-purge-summary"
-                data-i18n="storage.purge.none"
-              ></p>
-              <div id="storage-loading" class="storage-loading" hidden data-i18n="storage.loading">
-                Loading…
-              </div>
-              <div id="storage-empty" class="storage-empty" hidden data-i18n="storage.empty">
-                No stored classes found.
-              </div>
-              <div id="storage-class-wrapper" class="storage-class-wrapper" hidden>
-                <ul id="storage-class-list" class="storage-class-list"></ul>
+                  <ul id="home-recent-list" class="home-activity-list"></ul>
+                  <p
+                    id="home-recent-empty"
+                    class="home-activity-empty"
+                    data-i18n="home.recent.empty"
+                  >
+                    Quiet for now—queue something up!
+                  </p>
+                </section>
+                <section class="home-card" aria-labelledby="home-system-title">
+                  <h2 id="home-system-title" data-i18n="home.snapshot.title">
+                    System snapshot
+                  </h2>
+                  <dl class="home-snapshot">
+                    <div>
+                      <dt data-i18n="home.snapshot.classes">Classes</dt>
+                      <dd id="home-stat-classes">—</dd>
+                    </div>
+                    <div>
+                      <dt data-i18n="home.snapshot.modules">Modules</dt>
+                      <dd id="home-stat-modules">—</dd>
+                    </div>
+                    <div>
+                      <dt data-i18n="home.snapshot.lectures">Lectures</dt>
+                      <dd id="home-stat-lectures">—</dd>
+                    </div>
+                    <div>
+                      <dt data-i18n="home.snapshot.assets">Linked assets</dt>
+                      <dd id="home-stat-assets">—</dd>
+                    </div>
+                  </dl>
+                  <div class="home-card-actions">
+                    <button
+                      type="button"
+                      class="ghost"
+                      data-home-action="open-storage"
+                      data-i18n="home.snapshot.manageStorage"
+                    >
+                      Manage storage
+                    </button>
+                    <button
+                      type="button"
+                      class="ghost"
+                      data-home-action="open-system"
+                      data-i18n="home.snapshot.openSettings"
+                    >
+                      System settings
+                    </button>
+                  </div>
+                </section>
               </div>
             </div>
-          </div>
-          <div id="view-settings" class="view" data-view="settings" hidden>
+          </section>
+          <section class="section catalog" data-section-panel="catalog" hidden>
+            <div class="work-canvas">
+              <aside class="pane pane-tree">
+                <div class="pane-surface">
+                  <section class="panel hero-panel">
+                    <h1 data-i18n="sidebar.heading">Lecture Tools</h1>
+                    <p data-i18n="sidebar.tagline">
+                      Review, organise, and process lecture resources quickly.
+                    </p>
+                  </section>
+                  <section id="sidebar-overview" class="panel" hidden>
+                    <h2 data-i18n="sidebar.overview">Overview</h2>
+                    <dl id="stats" class="stats-grid"></dl>
+                  </section>
+                  <section class="panel curriculum-panel">
+                    <div class="curriculum-toolbar">
+                      <div class="curriculum-titles">
+                        <h2 data-i18n="catalog.curriculum">Curriculum tree</h2>
+                        <p data-i18n="catalog.curriculumHint">
+                          Everything is visible—select items to multi-edit and queue work.
+                        </p>
+                      </div>
+                      <div class="curriculum-actions" role="group">
+                        <button
+                          type="button"
+                          id="curriculum-create-class"
+                          data-i18n="catalog.actions.createClass"
+                        >
+                          Create class
+                        </button>
+                        <button
+                          type="button"
+                          id="curriculum-create-module"
+                          data-i18n="catalog.actions.createModule"
+                        >
+                          Create module
+                        </button>
+                        <button
+                          type="button"
+                          id="curriculum-create-lecture"
+                          data-i18n="catalog.actions.createLecture"
+                        >
+                          Create lecture
+                        </button>
+                        <button
+                          type="button"
+                          id="curriculum-bulk-upload"
+                          class="ghost"
+                          data-i18n="catalog.actions.bulkUpload"
+                        >
+                          Bulk upload
+                        </button>
+                        <button
+                          type="button"
+                          id="curriculum-bulk-edit"
+                          class="ghost"
+                          data-i18n="catalog.actions.bulkEdit"
+                        >
+                          Bulk edit
+                        </button>
+                      </div>
+                    </div>
+                    <label
+                      class="sr-only"
+                      for="search-input"
+                      data-i18n="sidebar.searchLabel"
+                    >
+                      Search syllabus
+                    </label>
+                    <input
+                      id="search-input"
+                      type="search"
+                      placeholder="Search by name"
+                      data-i18n="sidebar.searchPlaceholder"
+                      data-i18n-attr="placeholder"
+                      autocomplete="off"
+                    />
+                    <div id="curriculum" class="curriculum">
+                      <div class="placeholder" data-i18n="sidebar.loading">
+                        Loading…
+                      </div>
+                    </div>
+                  </section>
+                </div>
+              </aside>
+              <section class="pane pane-details">
+                <div class="pane-surface">
+                  <header class="details-header">
+                    <div>
+                      <h2 data-i18n="details.title">Lecture details</h2>
+                      <p id="details-subtitle" data-i18n="details.subtitle">
+                        Select a lecture to inspect metadata and linked assets.
+                      </p>
+                    </div>
+                    <div class="details-controls">
+                      <button
+                        id="toggle-edit-mode"
+                        type="button"
+                        class="pill"
+                        aria-pressed="false"
+                        data-i18n="topBar.enableEdit"
+                        data-tooltip-key="tooltips.topBar.editToggle"
+                      >
+                        Enable edit mode
+                      </button>
+                      <button
+                        id="delete-lecture"
+                        class="danger"
+                        type="button"
+                        hidden
+                        data-i18n="details.deleteLecture"
+                      >
+                        Delete lecture
+                      </button>
+                    </div>
+                  </header>
+                  <div
+                    id="edit-mode-banner"
+                    class="edit-banner"
+                    hidden
+                    data-i18n="details.editModeBanner"
+                  >
+                    Edit mode is enabled. Update lecture information or remove items while it is active.
+                  </div>
+                  <div id="view-details" class="view active" data-view="details">
+                    <div
+                      id="lecture-summary"
+                      class="placeholder"
+                      data-i18n="details.summaryPlaceholder"
+                    >
+                      Select a lecture from the curriculum.
+                    </div>
+                    <form id="lecture-edit-form" hidden>
+                      <div class="field">
+                        <label for="edit-lecture-name" data-i18n="details.edit.titleLabel">Title</label>
+                        <input id="edit-lecture-name" name="name" type="text" required />
+                      </div>
+                      <div class="field">
+                        <label for="edit-lecture-module" data-i18n="details.edit.moduleLabel">Module</label>
+                        <select id="edit-lecture-module" name="module" required></select>
+                      </div>
+                      <div class="field">
+                        <label
+                          for="edit-lecture-description"
+                          data-i18n="details.edit.descriptionLabel"
+                        >
+                          Description
+                        </label>
+                        <textarea
+                          id="edit-lecture-description"
+                          name="description"
+                          rows="4"
+                        ></textarea>
+                      </div>
+                      <div class="form-actions">
+                        <button type="submit" data-i18n="details.edit.save">Save changes</button>
+                      </div>
+                    </form>
+                  </div>
+                  <div id="view-create" class="view" data-view="create" hidden>
+                    <h2 data-i18n="create.title">Create lecture</h2>
+                    <form id="lecture-create-form">
+                      <div class="field">
+                        <label for="create-module" data-i18n="create.moduleLabel">Module</label>
+                        <select id="create-module" required></select>
+                      </div>
+                      <div class="field">
+                        <label for="create-name" data-i18n="create.titleLabel">Title</label>
+                        <input id="create-name" type="text" required />
+                      </div>
+                      <div class="field">
+                        <label for="create-description" data-i18n="create.descriptionLabel">Description</label>
+                        <textarea id="create-description" rows="4"></textarea>
+                      </div>
+                      <div class="form-actions">
+                        <button id="create-submit" type="submit" data-i18n="create.submit">
+                          Add lecture
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              </section>
+              <aside class="pane pane-assets">
+                <div class="pane-surface">
+                  <header class="assets-header">
+                    <div>
+                      <h2 data-i18n="assets.panel.title">Assets & actions</h2>
+                      <p data-i18n="assets.panel.subtitle">
+                        Upload, queue processing, or batch assets straight into the Task Cart.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      id="asset-add-all-cart"
+                      class="ghost"
+                      data-i18n="assets.addAllToCart"
+                    >
+                      Add all to cart
+                    </button>
+                  </header>
+                  <section class="asset-command-stack">
+                    <article class="asset-command" data-command="transcribe">
+                      <div>
+                        <h3 data-i18n="assets.commands.transcribe">Transcribe lecture</h3>
+                        <p data-i18n="assets.commands.transcribeHint">
+                          Queue Whisper with the preferred compute profile.
+                        </p>
+                      </div>
+                      <div class="asset-command-controls">
+                        <label for="asset-transcribe-model" class="sr-only" data-i18n="assets.modelLabel">
+                          Whisper model
+                        </label>
+                        <select id="asset-transcribe-model" aria-label="Whisper model"></select>
+                        <button
+                          type="button"
+                          id="asset-transcribe"
+                          data-i18n="assets.transcribe"
+                        >
+                          Transcribe
+                        </button>
+                      </div>
+                    </article>
+                    <article class="asset-command" data-command="slides">
+                      <div>
+                        <h3 data-i18n="assets.commands.processSlides">Process slides</h3>
+                        <p data-i18n="assets.commands.processSlidesHint">
+                          Render previews and Markdown bundles.
+                        </p>
+                      </div>
+                      <div class="asset-command-controls">
+                        <button
+                          type="button"
+                          id="asset-process-slides"
+                          data-i18n="assets.actions.processSlides"
+                        >
+                          Process slides
+                        </button>
+                      </div>
+                    </article>
+                    <article class="asset-command" data-command="cart">
+                      <div>
+                        <h3 data-i18n="assets.commands.addToCart">Task Cart</h3>
+                        <p data-i18n="assets.commands.addToCartHint">
+                          Stage custom batches with dry-runs and presets.
+                        </p>
+                      </div>
+                      <div class="asset-command-controls">
+                        <button
+                          type="button"
+                          id="asset-open-cart"
+                          data-i18n="assets.commands.openCart"
+                        >
+                          Open cart
+                        </button>
+                      </div>
+                    </article>
+                  </section>
+                  <section id="asset-section" hidden>
+                    <ul id="asset-list" class="asset-list"></ul>
+                  </section>
+                </div>
+              </aside>
+            </div>
+          </section>
+          <section class="section tasks" data-section-panel="tasks" hidden>
+            <div class="pane pane-tasks">
+              <div class="pane-surface">
+                <div id="view-progress" class="view" data-view="progress" hidden>
+                  <section class="panel progress-panel">
+                    <div class="progress-header">
+                      <h2 data-i18n="progress.title">Processing queue</h2>
+                      <button id="progress-refresh" type="button" class="ghost" data-i18n="progress.refresh">
+                        Refresh
+                      </button>
+                    </div>
+                    <p
+                      id="progress-description"
+                      class="progress-description"
+                      data-i18n="progress.description"
+                    >
+                      Track conversions, mastering, and transcriptions as they run.
+                    </p>
+                    <div id="progress-empty" class="progress-empty" data-i18n="progress.empty">
+                      No active tasks.
+                    </div>
+                    <ul
+                      id="progress-list"
+                      class="progress-list"
+                      aria-live="polite"
+                      aria-busy="false"
+                    ></ul>
+                  </section>
+                </div>
+              </div>
+            </div>
+          </section>
+          <section class="section storage" data-section-panel="storage" hidden>
+            <div class="pane pane-storage">
+              <div class="pane-surface">
+                <div id="view-storage" class="view" data-view="storage" hidden>
+                  <div class="storage-page">
+                    <div class="storage-header">
+                      <h2 data-i18n="storage.title">Storage manager</h2>
+                      <div class="storage-actions">
+                        <button id="storage-refresh" type="button" data-i18n="storage.actions.refresh">
+                          Refresh
+                        </button>
+                        <button
+                          id="storage-download-selected"
+                          type="button"
+                          class="secondary"
+                          data-i18n="storage.actions.downloadSelected"
+                          disabled
+                        >
+                          Download selected
+                        </button>
+                        <button
+                          id="storage-purge"
+                          type="button"
+                          class="danger"
+                          data-i18n="storage.actions.purge"
+                        >
+                          Remove processed audio
+                        </button>
+                      </div>
+                    </div>
+                    <section class="storage-browser" aria-live="polite">
+                      <div class="storage-browser-toolbar">
+                        <div class="storage-browser-nav">
+                          <button
+                            id="storage-nav-root"
+                            type="button"
+                            data-i18n="storage.browser.root"
+                          >
+                            Root
+                          </button>
+                          <button
+                            id="storage-nav-up"
+                            type="button"
+                            data-i18n="storage.browser.up"
+                          >
+                            Up
+                          </button>
+                        </div>
+                        <p id="storage-path" class="storage-path">/</p>
+                      </div>
+                      <div
+                        id="storage-browser-loading"
+                        class="storage-loading"
+                        hidden
+                        data-i18n="storage.browser.loading"
+                      >
+                        Loading…
+                      </div>
+                      <div
+                        id="storage-browser-empty"
+                        class="storage-empty"
+                        hidden
+                        data-i18n="storage.browser.empty"
+                      >
+                        No files or folders found.
+                      </div>
+                      <div
+                        id="storage-browser-table-wrapper"
+                        class="storage-browser-table-wrapper"
+                        hidden
+                      >
+                        <table class="storage-browser-table">
+                          <thead>
+                            <tr>
+                              <th scope="col" class="storage-select-header">
+                                <label
+                                  class="sr-only"
+                                  for="storage-select-all"
+                                  data-i18n="storage.browser.select"
+                                >
+                                  Select
+                                </label>
+                                <input id="storage-select-all" type="checkbox" disabled />
+                              </th>
+                              <th scope="col" data-i18n="storage.browser.name">Name</th>
+                              <th scope="col" data-i18n="storage.browser.type">Type</th>
+                              <th scope="col" data-i18n="storage.browser.size">Size</th>
+                              <th scope="col" data-i18n="storage.browser.modified">Modified</th>
+                              <th scope="col" data-i18n="storage.browser.actions">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody id="storage-browser-body"></tbody>
+                        </table>
+                      </div>
+                    </section>
+                    <section class="storage-usage" aria-live="polite">
+                      <div class="storage-usage-item">
+                        <span class="storage-usage-label" data-i18n="storage.usage.used">Used</span>
+                        <span id="storage-used" class="storage-usage-value">--</span>
+                      </div>
+                      <div class="storage-usage-item">
+                        <span class="storage-usage-label" data-i18n="storage.usage.available">Available</span>
+                        <span id="storage-available" class="storage-usage-value">--</span>
+                      </div>
+                      <div class="storage-usage-item">
+                        <span class="storage-usage-label" data-i18n="storage.usage.total">Total</span>
+                        <span id="storage-total" class="storage-usage-value">--</span>
+                      </div>
+                    </section>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+          <section class="section system" data-section-panel="system" hidden>
+            <div class="pane pane-system">
+              <div class="pane-surface">
+                    <div id="view-settings" class="view" data-view="settings" hidden>
             <h2 data-i18n="settings.title">Settings</h2>
             <form id="settings-form">
               <fieldset>
@@ -4338,75 +4945,78 @@
               </div>
             </form>
           </div>
-        </section>
-      </section>
-      <aside class="action-dock" aria-label="Quick actions">
-        <button type="button" data-action="create" data-tooltip-key="tooltips.dock.create">
-          <span class="icon" aria-hidden="true">➕</span>
-          <span data-i18n="dock.create">Create</span>
-        </button>
-        <button
-          type="button"
-          data-action="bulk-upload"
-          data-tooltip-key="tooltips.dock.bulkUpload"
-        >
-          <span class="icon" aria-hidden="true">⬆️</span>
-          <span data-i18n="dock.bulkUpload">Bulk Upload</span>
-        </button>
-        <button
-          type="button"
-          data-action="bulk-download"
-          data-tooltip-key="tooltips.dock.bulkDownload"
-        >
-          <span class="icon" aria-hidden="true">⬇️</span>
-          <span data-i18n="dock.bulkDownload">Bulk Download</span>
-        </button>
-        <button
-          type="button"
-          data-action="add-to-cart"
-          data-tooltip-key="tooltips.dock.addToCart"
-        >
-          <span class="icon" aria-hidden="true">🛒</span>
-          <span data-i18n="dock.addToCart">Add to Cart</span>
-        </button>
-        <button
-          type="button"
-          data-action="run-cart"
-          data-tooltip-key="tooltips.dock.runCart"
-        >
-          <span class="icon" aria-hidden="true">▶️</span>
-          <span data-i18n="dock.runCart">Run Cart</span>
-        </button>
-        <button type="button" data-action="export" data-tooltip-key="tooltips.dock.export">
-          <span class="icon" aria-hidden="true">📤</span>
-          <span data-i18n="dock.export">Export</span>
-        </button>
-        <button type="button" data-action="import" data-tooltip-key="tooltips.dock.import">
-          <span class="icon" aria-hidden="true">📥</span>
-          <span data-i18n="dock.import">Import</span>
-        </button>
-        <button type="button" data-action="purge" data-tooltip-key="tooltips.dock.purge">
-          <span class="icon" aria-hidden="true">🧹</span>
-          <span data-i18n="dock.purge">Purge</span>
-        </button>
-        <button
-          type="button"
-          data-action="system-update"
-          data-tooltip-key="tooltips.dock.update"
-        >
-          <span class="icon" aria-hidden="true">⬆︎</span>
-          <span data-i18n="dock.update">System Update</span>
-        </button>
-        <button
-          type="button"
-          data-action="debug-toggle"
-          data-tooltip-key="tooltips.dock.debug"
-        >
-          <span class="icon" aria-hidden="true">🐞</span>
-          <span data-i18n="dock.debug">Debug On/Off</span>
-        </button>
-      </aside>
-    </main>
+              </div>
+            </div>
+          </section>
+        </div>
+        <aside class="action-dock" aria-label="Quick actions">
+          <button type="button" data-action="create" data-tooltip-key="tooltips.dock.create">
+            <span class="icon" aria-hidden="true">➕</span>
+            <span data-i18n="dock.create">Create</span>
+          </button>
+          <button
+            type="button"
+            data-action="bulk-upload"
+            data-tooltip-key="tooltips.dock.bulkUpload"
+          >
+            <span class="icon" aria-hidden="true">⬆️</span>
+            <span data-i18n="dock.bulkUpload">Bulk Upload</span>
+          </button>
+          <button
+            type="button"
+            data-action="bulk-download"
+            data-tooltip-key="tooltips.dock.bulkDownload"
+          >
+            <span class="icon" aria-hidden="true">⬇️</span>
+            <span data-i18n="dock.bulkDownload">Bulk Download</span>
+          </button>
+          <button
+            type="button"
+            data-action="add-to-cart"
+            data-tooltip-key="tooltips.dock.addToCart"
+          >
+            <span class="icon" aria-hidden="true">🛒</span>
+            <span data-i18n="dock.addToCart">Add to Cart</span>
+          </button>
+          <button
+            type="button"
+            data-action="run-cart"
+            data-tooltip-key="tooltips.dock.runCart"
+          >
+            <span class="icon" aria-hidden="true">▶️</span>
+            <span data-i18n="dock.runCart">Run Cart</span>
+          </button>
+          <button type="button" data-action="export" data-tooltip-key="tooltips.dock.export">
+            <span class="icon" aria-hidden="true">📤</span>
+            <span data-i18n="dock.export">Export</span>
+          </button>
+          <button type="button" data-action="import" data-tooltip-key="tooltips.dock.import">
+            <span class="icon" aria-hidden="true">📥</span>
+            <span data-i18n="dock.import">Import</span>
+          </button>
+          <button type="button" data-action="purge" data-tooltip-key="tooltips.dock.purge">
+            <span class="icon" aria-hidden="true">🧹</span>
+            <span data-i18n="dock.purge">Purge</span>
+          </button>
+          <button
+            type="button"
+            data-action="system-update"
+            data-tooltip-key="tooltips.dock.update"
+          >
+            <span class="icon" aria-hidden="true">⬆︎</span>
+            <span data-i18n="dock.update">System Update</span>
+          </button>
+          <button
+            type="button"
+            data-action="debug-toggle"
+            data-tooltip-key="tooltips.dock.debug"
+          >
+            <span class="icon" aria-hidden="true">🐞</span>
+            <span data-i18n="dock.debug">Debug On/Off</span>
+          </button>
+        </aside>
+      </main>
+
       <nav class="mobile-tab-bar" aria-label="Primary">
         <button
           type="button"
@@ -4935,6 +5545,47 @@
               themeLabel: 'Theme',
               help: 'Help',
             },
+            home: {
+              title: 'Mission Control',
+              subtitle: 'Command centre for uploads, tasks, and storage health.',
+              status: {
+                tasks: 'Active tasks',
+                queue: 'Queued in cart',
+                storage: 'Storage used',
+                idle: 'Idle',
+                idleLabel: 'No active tasks.',
+                tasksAria: '{{count}} active tasks.',
+                queueAria: '{{count}} tasks queued in the cart.',
+                storageAria: '{{used}} of {{total}} used.',
+                unavailable: '—',
+              },
+              tiles: {
+                uploadRecording: 'Upload recording',
+                uploadRecordingHint: 'Drop mastered audio in seconds.',
+                uploadSlides: 'Upload slides',
+                uploadSlidesHint: 'Generate previews and notes automatically.',
+                createLecture: 'Create lecture',
+                createLectureHint: 'Name, assign, and track in two taps.',
+                addToCart: 'Add to cart',
+                addToCartHint: 'Stage work for peace-mode execution.',
+                runCart: 'Run cart',
+                runCartHint: 'Fire the queued batch instantly.',
+              },
+              recent: {
+                title: 'Recent activity',
+                openTasks: 'Open tasks',
+                empty: 'Quiet for now—queue something up!',
+              },
+              snapshot: {
+                title: 'System snapshot',
+                classes: 'Classes',
+                modules: 'Modules',
+                lectures: 'Lectures',
+                assets: 'Linked assets',
+                manageStorage: 'Manage storage',
+                openSettings: 'System settings',
+              },
+            },
             mega: {
               home: 'Home',
               catalog: 'Catalog',
@@ -5005,6 +5656,17 @@
                 loadPreset: 'Load this preset into the cart.',
                 runPreset: 'Load and run this preset immediately.',
                 deletePreset: 'Delete this preset.',
+              },
+            },
+            catalog: {
+              curriculum: 'Curriculum tree',
+              curriculumHint: 'Everything is visible—select items to multi-edit and queue work.',
+              actions: {
+                createClass: 'Create class',
+                createModule: 'Create module',
+                createLecture: 'Create lecture',
+                bulkUpload: 'Bulk upload',
+                bulkEdit: 'Bulk edit',
               },
             },
             cart: {
@@ -5118,6 +5780,7 @@
             },
             details: {
               title: 'Lecture details',
+              subtitle: 'Select a lecture to inspect metadata and linked assets.',
               deleteLecture: 'Delete lecture',
               editModeBanner:
                 'Edit mode is enabled. Update lecture information or remove items while it is active.',
@@ -5132,6 +5795,20 @@
             },
             assets: {
               title: 'Assets',
+              panel: {
+                title: 'Assets & actions',
+                subtitle: 'Upload, queue processing, or batch assets straight into the Task Cart.',
+              },
+              addAllToCart: 'Add all to cart',
+              commands: {
+                transcribe: 'Transcribe lecture',
+                transcribeHint: 'Queue Whisper with the preferred compute profile.',
+                processSlides: 'Process slides',
+                processSlidesHint: 'Render previews and Markdown bundles.',
+                addToCart: 'Task Cart',
+                addToCartHint: 'Stage custom batches with dry-runs and presets.',
+                openCart: 'Open cart',
+              },
               transcribe: 'Transcribe audio',
               modelLabel: 'Model',
               model: {
@@ -5593,6 +6270,18 @@
               bulkUploading: 'Uploading archive…',
               bulkUploadQueued: 'Bulk upload queued.',
               bulkUploadFailed: 'Bulk upload failed.',
+              idle: 'Idle',
+              cpuBadgeActive: '{{count}} active tasks',
+              cpuBadgeIdle: 'No active tasks',
+              tasksBadge: '{{running}} running, {{queued}} queued',
+              storageBadge: '{{used}} of {{total}} used',
+              selectLectureForCart: 'Select a lecture to stage tasks in the cart.',
+              cartAssetsAdded: 'Queued {{count}} actions for “{{title}}”.',
+              noAssetActionsAvailable: 'No asset actions are available yet.',
+              exportLocation: 'Export tools live under System settings.',
+              importLocation: 'Import tools live under System settings.',
+              storageLocation: 'Storage cleanup tools are in the Storage pane.',
+              updateLocation: 'System update controls are in System settings.',
             },
             counts: {
               module: { one: 'module', other: 'modules' },
@@ -5630,6 +6319,47 @@
               languageLabel: '语言',
               themeLabel: '主题',
               help: '帮助',
+            },
+            home: {
+              title: '任务控制台',
+              subtitle: '集中管理上传、任务与存储健康状态。',
+              status: {
+                tasks: '进行中任务',
+                queue: '任务车队列',
+                storage: '已用存储',
+                idle: '空闲',
+                idleLabel: '当前没有运行中的任务。',
+                tasksAria: '共有 {{count}} 个任务在运行。',
+                queueAria: '任务车中排队 {{count}} 个任务。',
+                storageAria: '已使用 {{used}} / 共 {{total}}。',
+                unavailable: '—',
+              },
+              tiles: {
+                uploadRecording: '上传录音',
+                uploadRecordingHint: '几秒内放入优化后的音频。',
+                uploadSlides: '上传课件',
+                uploadSlidesHint: '自动生成预览与笔记。',
+                createLecture: '创建讲座',
+                createLectureHint: '两步即可命名并归类。',
+                addToCart: '加入任务车',
+                addToCartHint: '预排工作，安心稍后执行。',
+                runCart: '运行任务车',
+                runCartHint: '立即执行已排队的批量操作。',
+              },
+              recent: {
+                title: '最近活动',
+                openTasks: '查看任务',
+                empty: '暂时一切安静——安排一些工作吧！',
+              },
+              snapshot: {
+                title: '系统快照',
+                classes: '课程',
+                modules: '模块',
+                lectures: '讲座',
+                assets: '关联资源',
+                manageStorage: '管理存储',
+                openSettings: '系统设置',
+              },
             },
             mega: {
               home: '主页',
@@ -5701,6 +6431,17 @@
                 loadPreset: '将此预设加载到任务车。',
                 runPreset: '立即加载并执行此预设。',
                 deletePreset: '删除此预设。',
+              },
+            },
+            catalog: {
+              curriculum: '课程树',
+              curriculumHint: '所有控件一目了然——选择条目即可批量编辑并排队处理。',
+              actions: {
+                createClass: '创建课程',
+                createModule: '创建模块',
+                createLecture: '创建讲座',
+                bulkUpload: '批量上传',
+                bulkEdit: '批量编辑',
               },
             },
             cart: {
@@ -5814,6 +6555,7 @@
             },
             details: {
               title: '讲座详情',
+              subtitle: '选择一个讲座即可查看元数据与关联资源。',
               deleteLecture: '删除讲座',
               editModeBanner: '编辑模式已开启，可更新讲座信息或移除项目。',
               summaryPlaceholder: '从课程表中选择一个讲座。',
@@ -5827,6 +6569,20 @@
             },
             assets: {
               title: '资源',
+              panel: {
+                title: '资源与操作',
+                subtitle: '放心上传、排队处理或一次性加入任务车。',
+              },
+              addAllToCart: '全部加入任务车',
+              commands: {
+                transcribe: '转写讲座',
+                transcribeHint: '按首选算力排队 Whisper。',
+                processSlides: '处理课件',
+                processSlidesHint: '生成预览图与 Markdown 包。',
+                addToCart: '任务车',
+                addToCartHint: '借助试运行与预设排布批量操作。',
+                openCart: '打开任务车',
+              },
               transcribe: '转录音频',
               modelLabel: '模型',
               model: {
@@ -6280,6 +7036,18 @@
               bulkUploading: '正在上传压缩包…',
               bulkUploadQueued: '批量上传已排队。',
               bulkUploadFailed: '批量上传失败。',
+              idle: '空闲',
+              cpuBadgeActive: '正在运行 {{count}} 个任务',
+              cpuBadgeIdle: '当前没有运行中的任务',
+              tasksBadge: '正在运行 {{running}} 个，排队 {{queued}} 个',
+              storageBadge: '已使用 {{used}} / 共 {{total}}',
+              selectLectureForCart: '请选择一个讲座后再加入任务车。',
+              cartAssetsAdded: '已为“{{title}}”排队 {{count}} 项操作。',
+              noAssetActionsAvailable: '当前没有可加入的资源操作。',
+              exportLocation: '导出工具位于系统设置。',
+              importLocation: '导入工具位于系统设置。',
+              storageLocation: '存储清理工具在“存储”面板中。',
+              updateLocation: '系统更新控件在系统设置中。',
             },
             counts: {
               module: { one: '模块', other: '模块' },
@@ -6317,6 +7085,47 @@
               languageLabel: 'Idioma',
               themeLabel: 'Tema',
               help: 'Ayuda',
+            },
+            home: {
+              title: 'Centro de mando',
+              subtitle: 'Controla subidas, tareas y salud del almacenamiento desde un solo lugar.',
+              status: {
+                tasks: 'Tareas activas',
+                queue: 'En cola en el carrito',
+                storage: 'Almacenamiento usado',
+                idle: 'Inactivo',
+                idleLabel: 'No hay tareas en ejecución.',
+                tasksAria: '{{count}} tareas activas.',
+                queueAria: '{{count}} tareas en cola en el carrito.',
+                storageAria: 'Se usan {{used}} de {{total}}.',
+                unavailable: '—',
+              },
+              tiles: {
+                uploadRecording: 'Subir grabación',
+                uploadRecordingHint: 'Carga audio masterizado en segundos.',
+                uploadSlides: 'Subir diapositivas',
+                uploadSlidesHint: 'Genera vistas previas y notas automáticamente.',
+                createLecture: 'Crear lección',
+                createLectureHint: 'Nómbrala y asígnala en dos toques.',
+                addToCart: 'Añadir al carrito',
+                addToCartHint: 'Prepara el trabajo para ejecutarlo en modo paz.',
+                runCart: 'Ejecutar carrito',
+                runCartHint: 'Dispara la cola al instante.',
+              },
+              recent: {
+                title: 'Actividad reciente',
+                openTasks: 'Abrir tareas',
+                empty: 'Todo tranquilo por ahora—¡prepara algo!',
+              },
+              snapshot: {
+                title: 'Instantánea del sistema',
+                classes: 'Clases',
+                modules: 'Módulos',
+                lectures: 'Lecciones',
+                assets: 'Recursos vinculados',
+                manageStorage: 'Gestionar almacenamiento',
+                openSettings: 'Configuración del sistema',
+              },
             },
             mega: {
               home: 'Inicio',
@@ -6388,6 +7197,17 @@
                 loadPreset: 'Carga este preajuste en el carro.',
                 runPreset: 'Carga y ejecuta este preajuste de inmediato.',
                 deletePreset: 'Elimina este preajuste.',
+              },
+            },
+            catalog: {
+              curriculum: 'Árbol curricular',
+              curriculumHint: 'Todo es visible: selecciona elementos para editar en lote y ponerlos en cola.',
+              actions: {
+                createClass: 'Crear clase',
+                createModule: 'Crear módulo',
+                createLecture: 'Crear lección',
+                bulkUpload: 'Carga masiva',
+                bulkEdit: 'Edición masiva',
               },
             },
             cart: {
@@ -6503,6 +7323,7 @@
             },
             details: {
               title: 'Detalles de la clase',
+              subtitle: 'Selecciona una lección para revisar metadatos y recursos vinculados.',
               deleteLecture: 'Eliminar clase',
               editModeBanner: 'El modo edición está activo. Actualiza o elimina elementos mientras esté activo.',
               summaryPlaceholder: 'Selecciona una clase del plan de estudios.',
@@ -6516,6 +7337,20 @@
             },
             assets: {
               title: 'Recursos',
+              panel: {
+                title: 'Recursos y acciones',
+                subtitle: 'Sube, programa procesamientos o manda recursos al carrito en lote.',
+              },
+              addAllToCart: 'Añadir todo al carrito',
+              commands: {
+                transcribe: 'Transcribir lección',
+                transcribeHint: 'Programa Whisper con el perfil de cómputo preferido.',
+                processSlides: 'Procesar diapositivas',
+                processSlidesHint: 'Genera vistas previas e informes en Markdown.',
+                addToCart: 'Carrito de tareas',
+                addToCartHint: 'Organiza lotes con pruebas en seco y presets.',
+                openCart: 'Abrir carrito',
+              },
               transcribe: 'Transcribir audio',
               modelLabel: 'Modelo',
               model: {
@@ -6979,6 +7814,18 @@
               bulkUploading: 'Subiendo archivo comprimido…',
               bulkUploadQueued: 'Carga masiva en cola.',
               bulkUploadFailed: 'La carga masiva falló.',
+              idle: 'Inactivo',
+              cpuBadgeActive: '{{count}} tareas activas',
+              cpuBadgeIdle: 'No hay tareas en ejecución',
+              tasksBadge: '{{running}} en ejecución, {{queued}} en cola',
+              storageBadge: '{{used}} de {{total}} usados',
+              selectLectureForCart: 'Selecciona una lección antes de añadirla al carrito.',
+              cartAssetsAdded: 'Se han puesto {{count}} acciones para “{{title}}” en cola.',
+              noAssetActionsAvailable: 'No hay acciones de recursos disponibles todavía.',
+              exportLocation: 'Las herramientas de exportación están en Configuración del sistema.',
+              importLocation: 'Las herramientas de importación están en Configuración del sistema.',
+              storageLocation: 'Las herramientas de limpieza están en el panel de Almacenamiento.',
+              updateLocation: 'Los controles de actualización están en Configuración del sistema.',
             },
             counts: {
               module: { one: 'módulo', other: 'módulos' },
@@ -7016,6 +7863,47 @@
               languageLabel: 'Langue',
               themeLabel: 'Thème',
               help: 'Aide',
+            },
+            home: {
+              title: 'Centre de contrôle',
+              subtitle: 'Pilotez les importations, les tâches et l’état du stockage en un coup d’œil.',
+              status: {
+                tasks: 'Tâches actives',
+                queue: 'En file dans le panier',
+                storage: 'Stockage utilisé',
+                idle: 'Inactif',
+                idleLabel: 'Aucune tâche en cours.',
+                tasksAria: '{{count}} tâches actives.',
+                queueAria: '{{count}} tâches en file dans le panier.',
+                storageAria: '{{used}} sur {{total}} utilisés.',
+                unavailable: '—',
+              },
+              tiles: {
+                uploadRecording: 'Importer un enregistrement',
+                uploadRecordingHint: 'Déposez un audio masterisé en quelques secondes.',
+                uploadSlides: 'Importer des diapositives',
+                uploadSlidesHint: 'Générez automatiquement aperçus et notes.',
+                createLecture: 'Créer un cours',
+                createLectureHint: 'Nommez et affectez en deux actions.',
+                addToCart: 'Ajouter au panier',
+                addToCartHint: 'Préparez les opérations pour une exécution sereine.',
+                runCart: 'Exécuter le panier',
+                runCartHint: 'Lancez immédiatement la file programmée.',
+              },
+              recent: {
+                title: 'Activité récente',
+                openTasks: 'Ouvrir les tâches',
+                empty: 'Calme pour l’instant—préparez une nouvelle action !',
+              },
+              snapshot: {
+                title: 'Instantané système',
+                classes: 'Cours',
+                modules: 'Modules',
+                lectures: 'Séances',
+                assets: 'Ressources liées',
+                manageStorage: 'Gérer le stockage',
+                openSettings: 'Paramètres système',
+              },
             },
             mega: {
               home: 'Accueil',
@@ -7087,6 +7975,17 @@
                 loadPreset: 'Charger ce preset dans le panier.',
                 runPreset: 'Charger et exécuter ce preset immédiatement.',
                 deletePreset: 'Supprimer ce preset.',
+              },
+            },
+            catalog: {
+              curriculum: 'Arborescence du programme',
+              curriculumHint: 'Tout est visible : sélectionnez pour éditer en masse et mettre en file.',
+              actions: {
+                createClass: 'Créer un cours',
+                createModule: 'Créer un module',
+                createLecture: 'Créer une séance',
+                bulkUpload: 'Import massif',
+                bulkEdit: 'Édition massive',
               },
             },
             cart: {
@@ -7202,6 +8101,7 @@
             },
             details: {
               title: 'Détails du cours',
+              subtitle: 'Sélectionnez une séance pour consulter les métadonnées et les ressources liées.',
               deleteLecture: 'Supprimer le cours',
               editModeBanner:
                 'Le mode édition est activé. Mettez à jour les informations ou supprimez des éléments pendant qu’il est actif.',
@@ -7216,6 +8116,20 @@
             },
             assets: {
               title: 'Ressources',
+              panel: {
+                title: 'Ressources et actions',
+                subtitle: 'Importez, mettez en file ou envoyez les ressources au panier en une fois.',
+              },
+              addAllToCart: 'Tout ajouter au panier',
+              commands: {
+                transcribe: 'Transcrire la séance',
+                transcribeHint: 'Planifiez Whisper avec le profil de calcul souhaité.',
+                processSlides: 'Traiter les diapositives',
+                processSlidesHint: 'Générez aperçus et bundles Markdown.',
+                addToCart: 'Panier de tâches',
+                addToCartHint: 'Organisez des lots avec simulation et presets.',
+                openCart: 'Ouvrir le panier',
+              },
               transcribe: 'Transcrire l’audio',
               modelLabel: 'Modèle',
               model: {
@@ -7679,6 +8593,18 @@
               bulkUploading: 'Téléversement de l’archive…',
               bulkUploadQueued: 'Import massif ajouté à la file.',
               bulkUploadFailed: 'Échec de l’import massif.',
+              idle: 'Inactif',
+              cpuBadgeActive: '{{count}} tâches actives',
+              cpuBadgeIdle: 'Aucune tâche en cours',
+              tasksBadge: '{{running}} en cours, {{queued}} en attente',
+              storageBadge: '{{used}} sur {{total}} utilisés',
+              selectLectureForCart: 'Sélectionnez une séance avant de l’ajouter au panier.',
+              cartAssetsAdded: '{{count}} actions ajoutées au panier pour « {{title}} ».',
+              noAssetActionsAvailable: 'Aucune action disponible pour le moment.',
+              exportLocation: 'Les outils d’export se trouvent dans Paramètres système.',
+              importLocation: 'Les outils d’import se trouvent dans Paramètres système.',
+              storageLocation: 'Les outils de nettoyage sont dans le panneau Stockage.',
+              updateLocation: 'Les contrôles de mise à jour sont dans Paramètres système.',
             },
             counts: {
               module: { one: 'module', other: 'modules' },
@@ -8149,7 +9075,7 @@
           expandedModules: new Map(),
           editMode: false,
           activeView: 'details',
-          primarySection: 'catalog',
+          primarySection: 'home',
           settings: null,
           draggingLectureId: null,
           draggingSourceModuleId: null,
@@ -8303,6 +9229,40 @@
           select.value = normalizeWhisperModel(value);
         }
 
+        function ensureTranscribeModelOptions(select) {
+          if (!(select instanceof HTMLSelectElement)) {
+            return null;
+          }
+          let gpuOption = select.querySelector('option.gpu-only');
+          if (select.dataset.initialized === 'true' && gpuOption) {
+            return gpuOption;
+          }
+          const modelChoices = ['tiny', 'base', 'small', 'medium', 'large', 'gpu'];
+          select.innerHTML = '';
+          gpuOption = null;
+          modelChoices.forEach((choice) => {
+            const option = document.createElement('option');
+            option.value = choice;
+            option.setAttribute('data-i18n', `assets.model.${choice}`);
+            option.textContent = t(`assets.model.${choice}`);
+            if (choice === GPU_MODEL) {
+              option.classList.add('gpu-only');
+              option.disabled = true;
+              gpuOption = option;
+            }
+            select.appendChild(option);
+          });
+          const requestedModel = normalizeWhisperModel(
+            state.settings?.whisper_model_requested || state.settings?.whisper_model,
+          );
+          select.value = requestedModel;
+          select.dataset.initialized = 'true';
+          if (dom.gpuModelOptions instanceof Set && gpuOption) {
+            dom.gpuModelOptions.add(gpuOption);
+          }
+          return gpuOption;
+        }
+
         function getTranscribeModelValue() {
           const select = getTranscribeModelSelect();
           if (select && select.value) {
@@ -8322,6 +9282,26 @@
           badgeStorage: document.getElementById('badge-storage'),
           megaRailButtons: Array.from(document.querySelectorAll('.mega-rail button')),
           mobileTabButtons: Array.from(document.querySelectorAll('.mobile-tab-bar button')),
+          viewButtons: Array.from(document.querySelectorAll('.top-bar [data-view]')),
+          sections: {
+            home: document.querySelector('[data-section-panel="home"]'),
+            catalog: document.querySelector('[data-section-panel="catalog"]'),
+            tasks: document.querySelector('[data-section-panel="tasks"]'),
+            storage: document.querySelector('[data-section-panel="storage"]'),
+            system: document.querySelector('[data-section-panel="system"]'),
+          },
+          home: {
+            statusCpu: document.getElementById('home-status-cpu'),
+            statusQueue: document.getElementById('home-status-queue'),
+            statusStorage: document.getElementById('home-status-storage'),
+            recentList: document.getElementById('home-recent-list'),
+            recentEmpty: document.getElementById('home-recent-empty'),
+            statClasses: document.getElementById('home-stat-classes'),
+            statModules: document.getElementById('home-stat-modules'),
+            statLectures: document.getElementById('home-stat-lectures'),
+            statAssets: document.getElementById('home-stat-assets'),
+            quickTiles: Array.from(document.querySelectorAll('[data-home-action]')),
+          },
           status: document.getElementById('status-bar'),
           statusMessage: document.getElementById('status-bar-message'),
           statusProgress: document.getElementById('status-bar-progress'),
@@ -8346,7 +9326,6 @@
           createName: document.getElementById('create-name'),
           createDescription: document.getElementById('create-description'),
           createSubmit: document.getElementById('create-submit'),
-          viewButtons: Array.from(document.querySelectorAll('.top-bar [data-view]')),
           views: {
             details: document.getElementById('view-details'),
             progress: document.getElementById('view-progress'),
@@ -8354,6 +9333,11 @@
             storage: document.getElementById('view-storage'),
             settings: document.getElementById('view-settings'),
           },
+          assetTranscribe: document.getElementById('asset-transcribe'),
+          assetTranscribeModel: document.getElementById('asset-transcribe-model'),
+          assetProcessSlides: document.getElementById('asset-process-slides'),
+          assetOpenCart: document.getElementById('asset-open-cart'),
+          assetAddAllCart: document.getElementById('asset-add-all-cart'),
           sidebarOverview: document.getElementById('sidebar-overview'),
           settingsForm: document.getElementById('settings-form'),
           settingsTheme: document.getElementById('settings-theme'),
@@ -9415,6 +10399,7 @@
           browserState.loading = false;
           browserState.initialized = true;
           renderStorage();
+          updateStatusBadges();
         }
 
         async function handleStorageEntryDeletion(path, name) {
@@ -9977,7 +10962,7 @@
         void refreshProgressQueue({ silent: true });
 
         const STATUS_DEFAULT_TIMEOUT = 5000;
-        const TIMELINE_MAX_ENTRIES = 8;
+        const TIMELINE_MAX_ENTRIES = 20;
 
         function resetStatusProgress() {
           if (dom.statusProgress) {
@@ -10076,25 +11061,89 @@
           if (tooltipManager) {
             tooltipManager.refresh(container);
           }
+          renderHomeActivity();
+        }
+
+        function renderHomeActivity() {
+          if (!dom.home || !dom.home.recentList || !dom.home.recentEmpty) {
+            return;
+          }
+          const list = dom.home.recentList;
+          const emptyState = dom.home.recentEmpty;
+          list.innerHTML = '';
+          const entries = state.timeline.entries.slice(0, 20);
+          if (!entries.length) {
+            list.hidden = true;
+            emptyState.hidden = false;
+            return;
+          }
+          list.hidden = false;
+          emptyState.hidden = true;
+          entries.forEach((entry) => {
+            const item = document.createElement('li');
+            item.dataset.variant = entry.variant || 'info';
+            item.setAttribute('role', 'button');
+            item.tabIndex = 0;
+
+            const message = document.createElement('span');
+            message.textContent = entry.message;
+            item.appendChild(message);
+
+            const timeElement = document.createElement('time');
+            timeElement.dateTime = entry.time || '';
+            try {
+              const entryDate = entry.time ? new Date(entry.time) : null;
+              if (entryDate) {
+                timeElement.textContent = entryDate.toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                });
+                timeElement.setAttribute('aria-label', entryDate.toLocaleString());
+              } else {
+                timeElement.textContent = '';
+              }
+            } catch (error) {
+              timeElement.textContent = '';
+            }
+            item.appendChild(timeElement);
+
+            const activate = () => {
+              navigatePrimary('tasks');
+              setActiveView('progress');
+            };
+
+            item.addEventListener('click', activate);
+            item.addEventListener('keydown', (event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                activate();
+              }
+            });
+
+            list.appendChild(item);
+          });
         }
 
         function updateStatusBadges() {
+          const runningCount = state.progress.entries.filter(
+            (entry) => entry.status === 'running',
+          ).length;
+          const queuedCount = state.taskCart.items.length;
+          const formattedRunning = formatNumber(runningCount);
+          const formattedQueued = formatNumber(queuedCount);
+
           const tasksBadge = dom.badgeTasks instanceof HTMLElement ? dom.badgeTasks : null;
           if (tasksBadge) {
-            const running = state.progress.entries.filter(
-              (entry) => entry.status === 'running',
-            ).length;
-            const queued = state.taskCart.items.length;
-            tasksBadge.textContent = `${running} • ${queued}`;
+            tasksBadge.textContent = `${formattedRunning} • ${formattedQueued}`;
             tasksBadge.setAttribute(
               'aria-label',
-              `${running} running, ${queued} queued`,
+              t('status.tasksBadge', { running: formattedRunning, queued: formattedQueued }),
             );
           }
 
           const storageBadge = dom.badgeStorage instanceof HTMLElement ? dom.badgeStorage : null;
+          const usage = state.storage.usage;
           if (storageBadge) {
-            const usage = state.storage.usage;
             if (
               usage &&
               typeof usage.used === 'number' &&
@@ -10102,10 +11151,12 @@
               usage.total > 0
             ) {
               const percent = Math.round((usage.used / usage.total) * 100);
+              const usedBytes = formatBytes(usage.used);
+              const totalBytes = formatBytes(usage.total);
               storageBadge.textContent = `${percent}%`;
               storageBadge.setAttribute(
                 'aria-label',
-                `${formatBytes(usage.used)} / ${formatBytes(usage.total)}`,
+                t('status.storageBadge', { used: usedBytes, total: totalBytes }),
               );
             } else {
               storageBadge.textContent = '—';
@@ -10115,11 +11166,57 @@
 
           const cpuBadge = dom.badgeCpu instanceof HTMLElement ? dom.badgeCpu : null;
           if (cpuBadge) {
-            const running = state.progress.entries.filter(
-              (entry) => entry.status === 'running',
-            ).length;
-            cpuBadge.textContent = running > 0 ? `${running}x` : 'Idle';
-            cpuBadge.setAttribute('aria-label', `${running} active tasks`);
+            if (runningCount > 0) {
+              cpuBadge.textContent = `${formattedRunning}×`;
+              cpuBadge.setAttribute(
+                'aria-label',
+                t('status.cpuBadgeActive', { count: formattedRunning }),
+              );
+            } else {
+              cpuBadge.textContent = t('status.idle');
+              cpuBadge.setAttribute('aria-label', t('status.cpuBadgeIdle'));
+            }
+          }
+
+          if (dom.home) {
+            if (dom.home.statusCpu) {
+              if (runningCount > 0) {
+                dom.home.statusCpu.textContent = formattedRunning;
+                dom.home.statusCpu.setAttribute(
+                  'aria-label',
+                  t('home.status.tasksAria', { count: formattedRunning }),
+                );
+              } else {
+                dom.home.statusCpu.textContent = t('home.status.idle');
+                dom.home.statusCpu.setAttribute('aria-label', t('home.status.idleLabel'));
+              }
+            }
+            if (dom.home.statusQueue) {
+              dom.home.statusQueue.textContent = formattedQueued;
+              dom.home.statusQueue.setAttribute(
+                'aria-label',
+                t('home.status.queueAria', { count: formattedQueued }),
+              );
+            }
+            if (dom.home.statusStorage) {
+              if (
+                usage &&
+                typeof usage.used === 'number' &&
+                typeof usage.total === 'number' &&
+                usage.total > 0
+              ) {
+                const usedBytes = formatBytes(usage.used);
+                const totalBytes = formatBytes(usage.total);
+                dom.home.statusStorage.textContent = `${usedBytes} / ${totalBytes}`;
+                dom.home.statusStorage.setAttribute(
+                  'aria-label',
+                  t('home.status.storageAria', { used: usedBytes, total: totalBytes }),
+                );
+              } else {
+                dom.home.statusStorage.textContent = t('home.status.unavailable');
+                dom.home.statusStorage.setAttribute('aria-label', t('home.status.unavailable'));
+              }
+            }
           }
         }
 
@@ -15326,22 +16423,27 @@
             return;
           }
           state.activeView = view;
-          dom.viewButtons.forEach((button) => {
-            const isActive = button.dataset.view === view;
-            button.classList.toggle('active', isActive);
-            button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-          });
           if (dom.sidebarOverview) {
             dom.sidebarOverview.hidden = view !== 'settings';
           }
           Object.entries(dom.views).forEach(([key, element]) => {
-            if (!element) {
+            if (!(element instanceof HTMLElement)) {
               return;
             }
             const isActive = key === view;
             element.classList.toggle('active', isActive);
             element.hidden = !isActive;
           });
+          if (Array.isArray(dom.viewButtons)) {
+            dom.viewButtons.forEach((button) => {
+              if (!(button instanceof HTMLElement)) {
+                return;
+              }
+              const isActive = button.dataset.view === view;
+              button.classList.toggle('active', isActive);
+              button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+            });
+          }
           if (view === 'storage') {
             const browserState = getStorageBrowserState();
             if (
@@ -15374,6 +16476,15 @@
         function setPrimaryNavigation(section) {
           const target = section || 'catalog';
           state.primarySection = target;
+          const resolved = target === 'import' ? 'system' : target;
+          Object.entries(dom.sections || {}).forEach(([key, element]) => {
+            if (!(element instanceof HTMLElement)) {
+              return;
+            }
+            const isActive = key === resolved;
+            element.classList.toggle('is-active', isActive);
+            element.hidden = !isActive;
+          });
           dom.megaRailButtons.forEach((button) => {
             if (!(button instanceof HTMLElement)) {
               return;
@@ -15392,6 +16503,7 @@
           setPrimaryNavigation(section);
           switch (section) {
             case 'home':
+              break;
             case 'catalog':
               setActiveView('details');
               break;
@@ -15445,7 +16557,7 @@
                   payload: { model: getTranscribeModelValue() },
                 });
               } else {
-                showStatus('Select a lecture to add tasks to the cart.', 'info', { record: false });
+                showStatus(t('status.selectLectureForCart'), 'info', { record: false });
               }
               break;
             case 'run-cart':
@@ -15458,9 +16570,7 @@
               if (dom.settingsExport) {
                 dom.settingsExport.click();
               } else {
-                showStatus('Export controls are available in System settings.', 'info', {
-                  record: false,
-                });
+                showStatus(t('status.exportLocation'), 'info', { record: false });
               }
               break;
             case 'import':
@@ -15468,9 +16578,7 @@
               if (dom.settingsImport) {
                 dom.settingsImport.click();
               } else {
-                showStatus('Import controls are available in System settings.', 'info', {
-                  record: false,
-                });
+                showStatus(t('status.importLocation'), 'info', { record: false });
               }
               break;
             case 'purge':
@@ -15478,9 +16586,7 @@
               if (dom.storage && dom.storage.purge) {
                 void handlePurgeProcessedAudio();
               } else {
-                showStatus('Storage purge tools live in the Storage pane.', 'info', {
-                  record: false,
-                });
+                showStatus(t('status.storageLocation'), 'info', { record: false });
               }
               break;
             case 'system-update':
@@ -15488,14 +16594,100 @@
               if (dom.settingsUpdateRun) {
                 dom.settingsUpdateRun.click();
               } else {
-                showStatus('System update controls are in System settings.', 'info', {
-                  record: false,
-                });
+                showStatus(t('status.updateLocation'), 'info', { record: false });
               }
               break;
             case 'debug-toggle':
               setDebugMode(!state.debug.enabled);
               setPrimaryNavigation('debug');
+              break;
+            default:
+              break;
+          }
+        }
+
+        function handleAddAllAssetsToCart() {
+          if (!state.selectedLectureDetail || !state.selectedLectureId) {
+            showStatus(t('status.selectLectureForCart'), 'info', { record: false });
+            return;
+          }
+          const lecture = state.selectedLectureDetail.lecture;
+          if (!lecture) {
+            showStatus(t('status.selectLectureForCart'), 'info', { record: false });
+            return;
+          }
+          const lectureTitle = lecture.name || t('cart.title');
+          const tasks = [];
+          if (lecture.audio_path) {
+            tasks.push({
+              type: 'transcribe',
+              lectureId: lecture.id,
+              title: lectureTitle,
+              subtitle: t('assets.actions.transcribe'),
+              payload: { model: getTranscribeModelValue() },
+            });
+          }
+          const slidesAvailable = Boolean(lecture.slide_path);
+          const slidesProcessing = state.processingProgressLectureId === lecture.id;
+          if (slidesAvailable && !slidesProcessing) {
+            const dpiValue = Number(
+              normalizeSlideDpi(state.settings?.slide_dpi || DEFAULT_SLIDE_DPI),
+            );
+            tasks.push({
+              type: 'process_slides',
+              lectureId: lecture.id,
+              title: lectureTitle,
+              subtitle: t('assets.actions.processSlides'),
+              payload: { source: 'slides', dpi: dpiValue },
+            });
+          }
+          if (!tasks.length) {
+            showStatus(t('status.noAssetActionsAvailable'), 'info', { record: false });
+            return;
+          }
+          tasks.forEach((task) => {
+            addTaskCartItem(task, { silent: true });
+          });
+          renderTaskCart();
+          openTaskCart();
+          const additionMessage = t('status.cartAssetsAdded', {
+            title: lectureTitle,
+            count: formatNumber(tasks.length),
+          });
+          showStatus(additionMessage, 'success', { record: false });
+          addTimelineEntry(additionMessage, 'success');
+        }
+
+        function handleHomeAction(action) {
+          switch (action) {
+            case 'upload-recording':
+            case 'upload-slides':
+              void openBulkUploadDialog();
+              break;
+            case 'create-lecture':
+              handleActionDock('create');
+              break;
+            case 'add-to-cart':
+              handleActionDock('add-to-cart');
+              break;
+            case 'run-cart':
+              handleActionDock('run-cart');
+              break;
+            case 'open-tasks':
+              navigatePrimary('tasks');
+              setActiveView('progress');
+              break;
+            case 'open-storage':
+              navigatePrimary('storage');
+              setActiveView('storage');
+              break;
+            case 'open-system':
+              navigatePrimary('system');
+              setActiveView('settings');
+              break;
+            case 'open-cart':
+              navigatePrimary('tasks');
+              openTaskCart();
               break;
             default:
               break;
@@ -15526,6 +16718,35 @@
             block.appendChild(data);
             dom.stats.appendChild(block);
           });
+          renderHomeSnapshot(stats);
+        }
+
+        function renderHomeSnapshot(stats = {}) {
+          if (!dom.home) {
+            return;
+          }
+          const classesValue = formatNumber(stats.class_count || 0);
+          const modulesValue = formatNumber(stats.module_count || 0);
+          const lecturesValue = formatNumber(stats.lecture_count || 0);
+          const assetTotal =
+            (stats.audio_count || 0) +
+            (stats.processed_audio_count || 0) +
+            (stats.transcript_count || 0) +
+            (stats.notes_count || 0) +
+            (stats.slide_count || 0) +
+            (stats.slide_image_count || 0);
+          if (dom.home.statClasses) {
+            dom.home.statClasses.textContent = classesValue;
+          }
+          if (dom.home.statModules) {
+            dom.home.statModules.textContent = modulesValue;
+          }
+          if (dom.home.statLectures) {
+            dom.home.statLectures.textContent = lecturesValue;
+          }
+          if (dom.home.statAssets) {
+            dom.home.statAssets.textContent = formatNumber(assetTotal);
+          }
         }
 
         function updateModuleOptions() {
@@ -16519,6 +17740,9 @@
         function renderAssets(lecture) {
           dom.assetList.innerHTML = '';
           setTranscribeControls(null, null, null);
+          let audioAvailable = false;
+          let slidesAvailable = false;
+          let slidesProcessing = false;
           assetDefinitions.forEach((definition) => {
             const value = lecture[definition.key];
             if (
@@ -16559,11 +17783,6 @@
             const actions = document.createElement('div');
             actions.className = 'asset-actions';
 
-            let transcribeButton = null;
-            let modelLabel = null;
-            let modelSelect = null;
-            let gpuOption = null;
-
             if (definition.accept) {
               const uploadButton = document.createElement('button');
               uploadButton.type = 'button';
@@ -16576,40 +17795,7 @@
             }
 
             if (definition.type === 'audio') {
-              transcribeButton = document.createElement('button');
-              transcribeButton.type = 'button';
-              transcribeButton.className = 'secondary';
-              transcribeButton.setAttribute('data-i18n', 'assets.transcribe');
-              transcribeButton.textContent = t('assets.transcribe');
-              transcribeButton.disabled = !value;
-              actions.appendChild(transcribeButton);
-
-              modelLabel = document.createElement('label');
-              modelLabel.className = 'inline';
-              modelLabel.textContent = t('assets.modelLabel');
-              modelLabel.setAttribute('for', 'transcribe-model');
-              modelLabel.style.marginLeft = 'auto';
-
-              modelSelect = document.createElement('select');
-              modelSelect.id = 'transcribe-model';
-              const modelChoices = ['tiny', 'base', 'small', 'medium', 'large', 'gpu'];
-              modelChoices.forEach((choice) => {
-                const option = document.createElement('option');
-                option.value = choice;
-                option.setAttribute('data-i18n', `assets.model.${choice}`);
-                option.textContent = t(`assets.model.${choice}`);
-                if (choice === GPU_MODEL) {
-                  option.classList.add('gpu-only');
-                  option.disabled = true;
-                  gpuOption = option;
-                }
-                modelSelect.appendChild(option);
-              });
-              const requestedModel = normalizeWhisperModel(
-                state.settings?.whisper_model_requested || state.settings?.whisper_model,
-              );
-              modelSelect.value = requestedModel;
-              modelLabel.appendChild(modelSelect);
+              audioAvailable = Boolean(value);
             }
 
             const downloadButton = document.createElement('button');
@@ -16636,16 +17822,8 @@
 
             if (definition.type === 'slides') {
               const isProcessing = state.processingProgressLectureId === lecture.id;
-              const processSlidesButton = document.createElement('button');
-              processSlidesButton.type = 'button';
-              processSlidesButton.className = 'secondary';
-              processSlidesButton.setAttribute('data-i18n', 'assets.actions.processSlides');
-              processSlidesButton.textContent = t('assets.actions.processSlides');
-              processSlidesButton.disabled = !value || isProcessing;
-              processSlidesButton.addEventListener('click', () => {
-                handleSlideProcessing(definition);
-              });
-              actions.appendChild(processSlidesButton);
+              slidesAvailable = Boolean(value);
+              slidesProcessing = slidesProcessing || isProcessing;
             }
 
             actions.appendChild(downloadButton);
@@ -16663,15 +17841,32 @@
             });
             actions.appendChild(removeButton);
 
-            if (definition.type === 'audio' && modelLabel && modelSelect) {
-              actions.appendChild(modelLabel);
-              setTranscribeControls(transcribeButton, modelSelect, gpuOption);
-              setTranscribeButtonDisabled(!value);
-            }
-
             item.appendChild(actions);
             dom.assetList.appendChild(item);
           });
+
+          let gpuOption = null;
+          if (dom.assetTranscribeModel instanceof HTMLSelectElement) {
+            gpuOption = ensureTranscribeModelOptions(dom.assetTranscribeModel);
+            dom.assetTranscribeModel.disabled = !audioAvailable;
+          }
+          if (dom.assetTranscribe instanceof HTMLButtonElement) {
+            dom.assetTranscribe.disabled = !audioAvailable;
+          }
+          setTranscribeControls(
+            audioAvailable ? dom.assetTranscribe : null,
+            audioAvailable ? dom.assetTranscribeModel : null,
+            gpuOption,
+          );
+          const canProcessSlides = slidesAvailable && !slidesProcessing;
+          if (dom.assetProcessSlides instanceof HTMLButtonElement) {
+            dom.assetProcessSlides.disabled = !canProcessSlides;
+            dom.assetProcessSlides.setAttribute('aria-busy', slidesProcessing ? 'true' : 'false');
+          }
+          if (dom.assetAddAllCart instanceof HTMLButtonElement) {
+            dom.assetAddAllCart.disabled =
+              !state.selectedLectureId || (!audioAvailable && !canProcessSlides);
+          }
 
           if (tooltipManager) {
             tooltipManager.refresh(dom.assetList);
@@ -17135,6 +18330,43 @@
                 handleActionDock(dockAction);
               }
             });
+          });
+        }
+
+        if (dom.home && Array.isArray(dom.home.quickTiles)) {
+          dom.home.quickTiles.forEach((element) => {
+            if (!(element instanceof HTMLElement)) {
+              return;
+            }
+            element.addEventListener('click', () => {
+              const action = element.dataset.homeAction || '';
+              if (action) {
+                handleHomeAction(action);
+              }
+            });
+          });
+        }
+
+        const slidesAssetDefinition = assetDefinitions.find(
+          (definition) => definition.type === 'slides',
+        );
+
+        if (dom.assetProcessSlides instanceof HTMLButtonElement && slidesAssetDefinition) {
+          dom.assetProcessSlides.addEventListener('click', () => {
+            void handleSlideProcessing(slidesAssetDefinition);
+          });
+        }
+
+        if (dom.assetOpenCart instanceof HTMLButtonElement) {
+          dom.assetOpenCart.addEventListener('click', () => {
+            navigatePrimary('tasks');
+            openTaskCart();
+          });
+        }
+
+        if (dom.assetAddAllCart instanceof HTMLButtonElement) {
+          dom.assetAddAllCart.addEventListener('click', () => {
+            handleAddAllAssetsToCart();
           });
         }
 
@@ -17705,8 +18937,9 @@
         window.addEventListener('beforeunload', () => {
           stopDebugPolling();
         });
+        const initialSection = state.primarySection || 'home';
         setActiveView(state.activeView);
-        setPrimaryNavigation('catalog');
+        setPrimaryNavigation(initialSection);
         updateEditModeUI();
         clearDetailPanel();
         applyTheme('system');
