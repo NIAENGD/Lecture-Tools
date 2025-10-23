@@ -70,14 +70,8 @@ echo (Pass commands such as "overview" to run the CLI directly.)
 echo.
 
 set "PNPM_CMD=pnpm"
-where %PNPM_CMD% >nul 2>nul
-if errorlevel 1 (
-    echo Error: Could not find "pnpm" on PATH.
-    echo Install Node.js 18 or later and enable pnpm with "corepack enable".
-    echo Alternatively install pnpm manually from https://pnpm.io/installation.
-    set "EXIT_CODE=1"
-    goto :cleanup
-)
+call :ensure_pnpm
+if errorlevel 1 goto :cleanup
 
 if not exist "node_modules" (
     echo Installing JavaScript workspace dependencies...
@@ -109,6 +103,45 @@ echo Lecture Tools development services are starting.
 echo   GUI URL: http://localhost:5173
 echo Close the spawned windows to stop the servers.
 set "EXIT_CODE=0"
+
+:ensure_pnpm
+where %PNPM_CMD% >nul 2>nul
+if not errorlevel 1 (
+    rem pnpm already available
+    exit /b 0
+)
+
+echo pnpm was not detected on PATH. Attempting to set it up automatically...
+
+where node >nul 2>nul
+if errorlevel 1 (
+    echo Error: Node.js 18 or later is required to run the JavaScript tooling.
+    echo Please install Node.js from https://nodejs.org/ and run this script again.
+    set "EXIT_CODE=1"
+    exit /b 1
+)
+
+where corepack >nul 2>nul
+if not errorlevel 1 (
+    echo Enabling pnpm via Corepack...
+    corepack enable pnpm >nul 2>nul
+    where %PNPM_CMD% >nul 2>nul
+    if not errorlevel 1 exit /b 0
+)
+
+where npm >nul 2>nul
+if not errorlevel 1 (
+    echo Installing pnpm globally via npm...
+    npm install -g pnpm || goto :pnpm_install_failed
+    where %PNPM_CMD% >nul 2>nul
+    if not errorlevel 1 exit /b 0
+)
+
+:pnpm_install_failed
+echo Error: Could not provision pnpm automatically.
+echo If pnpm remains unavailable, install it manually following https://pnpm.io/installation.
+set "EXIT_CODE=1"
+exit /b 1
 
 :cleanup
 popd >nul
