@@ -1,0 +1,177 @@
+"""Tests for the run.py entrypoint helpers."""
+
+from __future__ import annotations
+
+from types import SimpleNamespace
+
+import run
+
+
+def _setup_serve(
+    monkeypatch,
+    tmp_path,
+    upload_limit,
+    *,
+    support_limit_max: bool = True,
+    support_h11_limit: bool = True,
+):
+    captured = {}
+
+    monkeypatch.setattr(
+        run,
+        "initialize_app",
+        lambda: SimpleNamespace(storage_root=tmp_path),
+    )
+    monkeypatch.setattr(run, "_prepare_logging", lambda storage_root: None)
+    monkeypatch.setattr(run, "LectureRepository", lambda config: object())
+
+    dummy_app = SimpleNamespace(state=SimpleNamespace())
+    monkeypatch.setattr(run, "create_app", lambda repository, config, root_path: dummy_app)
+
+    if support_limit_max and support_h11_limit:
+        
+        class DummyConfig:
+            def __init__(
+                self,
+                app,
+                *,
+                limit_max_request_size=None,
+                h11_max_incomplete_event_size=None,
+                http=None,
+                **kwargs,
+            ):
+                captured["app"] = app
+                captured_kwargs = dict(kwargs)
+                if limit_max_request_size is not None:
+                    captured_kwargs["limit_max_request_size"] = limit_max_request_size
+                if h11_max_incomplete_event_size is not None:
+                    captured_kwargs["h11_max_incomplete_event_size"] = (
+                        h11_max_incomplete_event_size
+                    )
+                if http is not None:
+                    captured_kwargs["http"] = http
+                captured["config_kwargs"] = captured_kwargs
+
+    elif support_limit_max:
+
+        class DummyConfig:
+            def __init__(
+                self,
+                app,
+                *,
+                limit_max_request_size=None,
+                http=None,
+                **kwargs,
+            ):
+                captured["app"] = app
+                captured_kwargs = dict(kwargs)
+                if limit_max_request_size is not None:
+                    captured_kwargs["limit_max_request_size"] = limit_max_request_size
+                if http is not None:
+                    captured_kwargs["http"] = http
+                captured["config_kwargs"] = captured_kwargs
+
+    elif support_h11_limit:
+
+        class DummyConfig:
+            def __init__(
+                self,
+                app,
+                *,
+                h11_max_incomplete_event_size=None,
+                http=None,
+                **kwargs,
+            ):
+                captured["app"] = app
+                captured_kwargs = dict(kwargs)
+                if h11_max_incomplete_event_size is not None:
+                    captured_kwargs["h11_max_incomplete_event_size"] = (
+                        h11_max_incomplete_event_size
+                    )
+                if http is not None:
+                    captured_kwargs["http"] = http
+                captured["config_kwargs"] = captured_kwargs
+
+    else:
+
+        class DummyConfig:
+            def __init__(self, app, *, http=None, **kwargs):
+                captured["app"] = app
+                captured_kwargs = dict(kwargs)
+                if http is not None:
+                    captured_kwargs["http"] = http
+                captured["config_kwargs"] = captured_kwargs
+
+    class DummyServer:
+        def __init__(self, config):
+            captured["server_config"] = config
+            captured["server_instance"] = self
+
+        def run(self):
+            captured["server_run"] = True
+
+    class DummyThread:
+        def __init__(self, target, daemon):
+            self._target = target
+            captured["thread_daemon"] = daemon
+
+        def start(self):
+            captured["thread_started"] = True
+
+    monkeypatch.setattr(run.uvicorn, "Config", DummyConfig)
+    monkeypatch.setattr(run.uvicorn, "Server", DummyServer)
+    monkeypatch.setattr(run.threading, "Thread", DummyThread)
+    monkeypatch.setattr(run.webbrowser, "open", lambda *args, **kwargs: True)
+    monkeypatch.setattr(run, "get_max_upload_bytes", lambda: upload_limit)
+
+    run.serve(host="0.0.0.0", port=9000, root_path="/api")
+
+    captured["app_state_server"] = dummy_app.state.server
+    return captured
+
+
+def _get_limit_key(config_kwargs):
+    for key in ("limit_max_request_size", "h11_max_incomplete_event_size"):
+        if key in config_kwargs:
+            return key
+    raise AssertionError("Expected an upload size limit parameter to be set")
+
+
+def test_serve_applies_request_size_limit(monkeypatch, tmp_path):
+    captured = _setup_serve(monkeypatch, tmp_path, upload_limit=50 * 1024 * 1024)
+
+    limit_key = _get_limit_key(captured["config_kwargs"])
+    assert captured["config_kwargs"][limit_key] == 50 * 1024 * 1024
+    assert captured["app_state_server"] is captured["server_instance"]
+
+
+def test_serve_forces_h11_with_native_limit_support(monkeypatch, tmp_path):
+    captured = _setup_serve(monkeypatch, tmp_path, upload_limit=10 * 1024 * 1024)
+
+    assert captured["config_kwargs"].get("http") == "h11"
+
+
+def test_serve_uses_large_limit_when_disabled(monkeypatch, tmp_path):
+    captured = _setup_serve(monkeypatch, tmp_path, upload_limit=0)
+    limit_key = _get_limit_key(captured["config_kwargs"])
+    assert captured["config_kwargs"][limit_key] >= 2**31 - 1
+
+
+def test_serve_forces_h11_when_using_legacy_limit(monkeypatch, tmp_path):
+    captured = _setup_serve(monkeypatch, tmp_path, upload_limit=1024)
+
+    config_kwargs = captured["config_kwargs"]
+    if "h11_max_incomplete_event_size" in config_kwargs:
+        assert config_kwargs.get("http") == "h11"
+
+
+def test_serve_forces_h11_without_limit_support(monkeypatch, tmp_path):
+    captured = _setup_serve(
+        monkeypatch,
+        tmp_path,
+        upload_limit=5 * 1024 * 1024,
+        support_limit_max=False,
+        support_h11_limit=False,
+    )
+
+    assert captured["config_kwargs"].get("http") == "h11"

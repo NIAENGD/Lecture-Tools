@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
+import inspect
 import logging
 import shutil
 import sys
+import threading
 import time
+import webbrowser
 from enum import Enum
 from pathlib import Path
-from typing import Optional
+from typing import Any, Dict, Optional
 
+import uvicorn
 import typer
 
 from app.bootstrap import initialize_app
@@ -33,6 +37,8 @@ from app.services.progress import (
 from app.services.storage import LectureRepository
 from app.ui.console import ConsoleUI
 from app.ui.modern import ModernUI
+from app.web import create_app
+from app.web.server import get_max_upload_bytes
 
 
 LOGGER = logging.getLogger("lecture_tools.mastering")
@@ -56,7 +62,6 @@ class UIStyle(str, Enum):
     MODERN = "modern"
     CONSOLE = "console"
 
-
 style_option = typer.Option(
     UIStyle.MODERN,
     "--style",
@@ -68,11 +73,109 @@ style_option = typer.Option(
 
 @cli.callback(invoke_without_command=True)
 def main(ctx: typer.Context) -> None:
-    """Display help when no subcommand is selected."""
+    """Launch the web server when no explicit command is provided."""
 
     if ctx.invoked_subcommand is None:
-        typer.echo(ctx.get_help())
-        ctx.exit()
+        ctx.invoke(serve, host=DEFAULT_HOST, port=DEFAULT_PORT, root_path=None)
+
+
+DEFAULT_HOST = "127.0.0.1"
+DEFAULT_PORT = 8000
+
+
+def _normalize_root_path(root_path: Optional[str]) -> str:
+    if root_path is None:
+        return ""
+    normalized = root_path.strip()
+    if not normalized:
+        return ""
+    if not normalized.startswith("/"):
+        normalized = f"/{normalized}"
+    normalized = normalized.rstrip("/")
+    if normalized == "":
+        return ""
+    return normalized
+
+
+@cli.command()
+def serve(
+    host: str = typer.Option(DEFAULT_HOST, help="Host interface for the web server"),
+    port: int = typer.Option(DEFAULT_PORT, help="Port for the web server"),
+    root_path: Optional[str] = typer.Option(
+        None,
+        help="Prefix the application expects when mounted behind a proxy",
+        envvar="LECTURE_TOOLS_ROOT_PATH",
+    ),
+) -> None:
+    """Run the FastAPI-powered web experience."""
+
+    app_config = initialize_app()
+    _prepare_logging(app_config.storage_root)
+
+    repository = LectureRepository(app_config)
+    normalized_root = _normalize_root_path(root_path)
+    app = create_app(repository, config=app_config, root_path=normalized_root)
+
+    config_kwargs: Dict[str, Any] = {}
+    max_upload_bytes = get_max_upload_bytes()
+    config_signature = inspect.signature(uvicorn.Config.__init__)
+    limit_parameter: str | None = None
+    if "limit_max_request_size" in config_signature.parameters:
+        limit_parameter = "limit_max_request_size"
+    elif "h11_max_incomplete_event_size" in config_signature.parameters:
+        limit_parameter = "h11_max_incomplete_event_size"
+
+    if limit_parameter is not None:
+        effective_limit = max_upload_bytes if max_upload_bytes > 0 else sys.maxsize
+        config_kwargs[limit_parameter] = effective_limit
+        if limit_parameter == "limit_max_request_size":
+            LOGGER.debug(
+                "Applying uvicorn request size limit using limit_max_request_size=%s", effective_limit
+            )
+        else:
+            LOGGER.debug(
+                "Applying uvicorn request size limit using h11_max_incomplete_event_size=%s",
+                effective_limit,
+            )
+    elif max_upload_bytes > 0:
+        LOGGER.warning(
+            "Ignoring max upload size limit; uvicorn.Config does not expose request size controls."
+        )
+
+    # ``httptools`` – the native HTTP parser uvicorn enables on Linux – enforces a ~1MB
+    # body limit internally. Force the pure-Python ``h11`` implementation instead so the
+    # configured limit (or lack thereof) is honoured consistently across Linux, macOS,
+    # and Windows deployments.
+    config_kwargs["http"] = "h11"
+
+    server_config = uvicorn.Config(
+        app,
+        host=host,
+        port=port,
+        log_config=None,
+        root_path=normalized_root,
+        **config_kwargs,
+    )
+    server = uvicorn.Server(server_config)
+    app.state.server = server
+
+    browser_host = host
+    if not browser_host or browser_host in {"0.0.0.0", "::"}:
+        browser_host = "127.0.0.1"
+    browser_suffix = normalized_root.rstrip("/")
+    url_path = f"{browser_suffix}/" if browser_suffix else "/"
+    url = f"http://{browser_host}:{port}{url_path}"
+
+    def _open_browser_later() -> None:
+        time.sleep(1.0)
+        try:
+            webbrowser.open(url, new=2, autoraise=True)
+        except Exception:
+            pass
+
+    threading.Thread(target=_open_browser_later, daemon=True).start()
+
+    server.run()
 
 
 @cli.command()
