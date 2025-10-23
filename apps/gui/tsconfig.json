@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "types": ["vite/client", "node"],
+    "jsx": "react-jsx",
+    "noEmit": true
+  },
+  "include": ["src", "vite.config.ts", "tsconfig.app.json", "tsconfig.node.json", "tailwind.config.ts", "postcss.config.cjs"],
+  "references": [
+    { "path": "./tsconfig.app.json" },
+    { "path": "./tsconfig.node.json" },
+    { "path": "../../packages/api/tsconfig.json" },
+    { "path": "../../packages/design-tokens/tsconfig.json" }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "name": "lecture-tools",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.5.2",
+  "scripts": {
+    "dev": "pnpm --filter gui dev",
+    "build": "pnpm --filter gui build",
+    "preview": "pnpm --filter gui preview",
+    "lint": "pnpm --filter gui lint",
+    "test": "pnpm -r test"
+  }
+}
