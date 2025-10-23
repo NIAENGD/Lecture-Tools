@@ -82,7 +82,7 @@ if not exist "node_modules" (
 
 echo.
 echo Starting the Lecture Tools GUI dev server in a new window...
-start "Lecture Tools GUI" cmd /k "cd /d \"%SCRIPT_DIR%\" && call %PNPM_CMD% --filter gui dev -- --host 127.0.0.1 --port 5173"
+start "Lecture Tools GUI" /D "%SCRIPT_DIR%" cmd /k "call %PNPM_CMD% --filter gui dev -- --host 127.0.0.1 --port 5173"
 if errorlevel 1 (
     echo Failed to launch the GUI dev server window.
     set "EXIT_CODE=1"
@@ -91,7 +91,7 @@ if errorlevel 1 (
 
 echo.
 echo Opening a shell with the Python virtual environment activated...
-start "Lecture Tools CLI" cmd /k "cd /d \"%SCRIPT_DIR%\" && call .venv\Scripts\activate && echo Virtual environment ready. && echo Run python run.py --help to explore CLI commands. && echo."
+start "Lecture Tools CLI" /D "%SCRIPT_DIR%" cmd /k "call .venv\Scripts\activate && echo Virtual environment ready. && echo Run python run.py --help to explore CLI commands. && echo."
 if errorlevel 1 (
     echo Failed to launch the CLI shell window.
     set "EXIT_CODE=1"
