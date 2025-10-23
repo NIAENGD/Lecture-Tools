@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --motion-entrance: 150ms;
+  --motion-tap: 100ms;
+  --motion-crossfade: 250ms;
+}
+
+body {
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  background: radial-gradient(circle at top right, rgba(201, 175, 255, 0.06), transparent 55%),
+    radial-gradient(circle at bottom left, rgba(156, 246, 205, 0.05), transparent 50%),
+    #05060A;
+}
+
+.press-hold-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: linear-gradient(180deg, rgba(255, 169, 181, 0.18) 0%, rgba(255, 169, 181, 0.05) 85%, transparent 100%);
+  transform: translateY(100%);
+  pointer-events: none;
+}
+
+.press-hold-overlay[data-active='true'] {
+  animation: press-hold-fill 0.8s linear forwards;
+}
+
+@keyframes press-hold-fill {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(-5%);
+  }
+}
+
+[data-reduced-motion='true'] *,
+[data-reduced-motion='true'] *::before,
+[data-reduced-motion='true'] *::after {
+  animation-duration: 1ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 1ms !important;
+  scroll-behavior: auto !important;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2e364a;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
