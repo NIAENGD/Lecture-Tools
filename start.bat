@@ -1,5 +1,6 @@
 @echo off
 setlocal ENABLEDELAYEDEXPANSION
+set "EXIT_CODE=0"
 
 REM Determine repository root based on the location of this script
 set "SCRIPT_DIR=%~dp0"
@@ -41,20 +42,73 @@ if exist requirements-dev.txt (
     echo No requirements file found. Skipping dependency installation.
 )
 
+REM If no CLI arguments were supplied, start the full dev environment instead of
+REM running a single command.
+if "%~1"=="" goto :launch_dev_environment
+
 echo.
 echo Launching Lecture Tools CLI...
-if "%~1"=="" (
-    echo Hint: pass commands such as "overview" or "ingest" after start.bat.
-    echo Example: start.bat overview --style modern
-    echo Example: start.bat ingest --help
-    echo.
-)
+echo.
+echo Hint: pass commands such as "overview" or "ingest" after start.bat.
+echo Example: start.bat overview --style modern
+echo Example: start.bat ingest --help
+echo.
 REM Launch the CLI directly so that stdout and stderr remain visible in this
 REM window. This makes it easier to diagnose failures, especially when the
 REM Python process exits with an error code.
 "%VENV_PY%" "%SCRIPT_DIR%run.py" %*
 set "EXIT_CODE=%ERRORLEVEL%"
 if not "%EXIT_CODE%"=="0" goto :error
+goto :cleanup
+
+:launch_dev_environment
+REM Launch the web GUI dev server and an activated CLI shell so contributors can
+REM inspect and debug the stack locally.
+echo.
+echo No CLI arguments detected - launching the full development server stack...
+echo (Pass commands such as "overview" to run the CLI directly.)
+echo.
+
+set "PNPM_CMD=pnpm"
+where %PNPM_CMD% >nul 2>nul
+if errorlevel 1 (
+    echo Error: Could not find "pnpm" on PATH.
+    echo Install Node.js 18 or later and enable pnpm with "corepack enable".
+    echo Alternatively install pnpm manually from https://pnpm.io/installation.
+    set "EXIT_CODE=1"
+    goto :cleanup
+)
+
+if not exist "node_modules" (
+    echo Installing JavaScript workspace dependencies...
+    call %PNPM_CMD% install || goto :error
+) else (
+    echo JavaScript dependencies already installed. Skipping pnpm install.
+)
+
+echo.
+echo Starting the Lecture Tools GUI dev server in a new window...
+start "Lecture Tools GUI" cmd /k "cd /d \"%SCRIPT_DIR%\" && call %PNPM_CMD% --filter gui dev -- --host 127.0.0.1 --port 5173"
+if errorlevel 1 (
+    echo Failed to launch the GUI dev server window.
+    set "EXIT_CODE=1"
+    goto :cleanup
+)
+
+echo.
+echo Opening a shell with the Python virtual environment activated...
+start "Lecture Tools CLI" cmd /k "cd /d \"%SCRIPT_DIR%\" && call .venv\Scripts\activate && echo Virtual environment ready. && echo Run python run.py --help to explore CLI commands. && echo."
+if errorlevel 1 (
+    echo Failed to launch the CLI shell window.
+    set "EXIT_CODE=1"
+    goto :cleanup
+)
+
+echo.
+echo Lecture Tools development services are starting.
+echo   GUI URL: http://localhost:5173
+echo Close the spawned windows to stop the servers.
+set "EXIT_CODE=0"
 
 :cleanup
 popd >nul
