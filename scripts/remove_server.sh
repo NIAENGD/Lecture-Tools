@@ -15,8 +15,7 @@ warn() {
 }
 
 CONFIG_FILE="/etc/lecture-tools.conf"
-HELPER_PATH="/usr/local/bin/lecturetools"
-LEGACY_HELPER="/usr/local/bin/lecturetool"
+HELPER_PATH="/usr/local/bin/lecturetool"
 DEFAULT_UNIT="/etc/systemd/system/lecture-tools.service"
 DEFAULT_SERVICE="lecture-tools.service"
 
@@ -55,10 +54,6 @@ fi
 if [[ -f $HELPER_PATH ]]; then
   log "Removing helper CLI $HELPER_PATH..."
   rm -f "$HELPER_PATH"
-fi
-if [[ -f $LEGACY_HELPER ]]; then
-  log "Removing helper CLI $LEGACY_HELPER..."
-  rm -f "$LEGACY_HELPER"
 fi
 
 if [[ -f $CONFIG_FILE ]]; then

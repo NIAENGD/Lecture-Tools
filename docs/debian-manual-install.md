@@ -1,10 +1,6 @@
 # Manual Debian Server Installation
 
-This guide walks through a full manual installation of Lecture Tools on a Debian 12 (Bookworm) server without relying on Docker. Every step assumes you have `sudo` privileges on the target machine. Adjust paths and usernames to match your environment.
-
-> ℹ️ Prefer an automated setup? Run `sudo bash scripts/install_server.sh` to provision the managed
-> service. The installer keeps the default HTTP port at `8000` and installs the `lecturetools`
-> helper CLI for ongoing maintenance.
+This guide walks through a full manual installation of Lecture Tools on a Debian 12 (Bookworm) server without relying on Docker. Every step assumes you have `sudo` privileges on the target machine. Adjust paths and usernames to match your environment. Prefer an automated setup? Run `scripts/install_server.sh` (or download it directly from GitHub) to provision a systemd service with sensible defaults.
 
 ## 1. Update the operating system
 
@@ -62,7 +58,7 @@ Whenever you start a new shell session, reactivate the virtual environment with 
 
 ## 6. Install Python requirements
 
-The repository ships with a `requirements-dev.txt` that mirrors the dependencies used in local development (`faster-whisper`, `rich`, `mutagen`, etc.). Install them via pip:
+The repository ships with a `requirements-dev.txt` that mirrors the dependencies used in the Docker image (`faster-whisper`, FastAPI, uvicorn, etc.). Install them via pip:
 
 ```bash
 pip install --upgrade pip
@@ -93,19 +89,51 @@ The bootstrap process creates any missing directories and ensures the database s
 python run.py overview --style console
 ```
 
-You can substitute any command—the bootstrap executes automatically during startup.
+You can substitute any command (including `serve`)—the bootstrap executes automatically during startup.
 
-## 9. Explore the CLI
+## 9. Launch the web UI
 
-With the GUI offline, the Typer CLI exposes the remaining workflows. List commands and try the overview experience:
+Start the FastAPI server and expose it on all interfaces. Adjust the port or root path when running behind a reverse proxy:
 
 ```bash
-python run.py --help
-python run.py overview --style modern
-python run.py ingest --help
+python run.py serve --host 0.0.0.0 --port 8000
 ```
 
-## 10. Updating the deployment
+Visit `http://SERVER_IP:8000/` in your browser. If you are serving the app from a sub-path (e.g., `/lecture`), pass `--root-path /lecture` or set `LECTURE_TOOLS_ROOT_PATH=/lecture` in the environment before launching.
+
+## 10. Open firewall ports (if applicable)
+
+On Debian systems with UFW enabled, allow inbound HTTP traffic:
+
+```bash
+sudo ufw allow 8000/tcp
+```
+
+When reverse proxying, open the port exposed by your proxy instead.
+
+## 11. Optional: run Lecture Tools as a systemd service
+
+A sample unit file is provided in `config/systemd/lecture-tools.service`. Copy and edit it so `WorkingDirectory`, `ExecStart`, `User`, and `Group` match your installation:
+
+```ini
+[Service]
+WorkingDirectory=/opt/lecture-tools
+ExecStart=/opt/lecture-tools/.venv/bin/python run.py serve --host 0.0.0.0 --port 8000
+User=lecturetools
+Group=lecturetools
+```
+
+Install the service and enable it at boot:
+
+```bash
+sudo cp config/systemd/lecture-tools.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now lecture-tools.service
+```
+
+Check the logs with `journalctl -u lecture-tools.service -f`.
+
+## 12. Updating the deployment
 
 When new releases land, pull the latest changes and reinstall dependencies:
 
@@ -114,7 +142,7 @@ cd /opt/lecture-tools/Lecture-Tools
 source .venv/bin/activate
 git pull
 pip install -r requirements-dev.txt
-sudo systemctl restart lecture-tools.service  # legacy deployments only
+sudo systemctl restart lecture-tools.service  # if using systemd
 ```
 
 That’s it—Lecture Tools is now running natively on your Debian server without containers.
