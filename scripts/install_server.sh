@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-printf '[lecture-tools] The legacy web GUI has been removed while a new interface is developed.\n' >&2
-printf '[lecture-tools] The automated installer is temporarily disabled.\n' >&2
-exit 1
-
 if [[ ${EUID:-$(id -u)} -ne 0 ]]; then
   echo "[lecture-tools] error: This installer must be run as root (e.g. with sudo)." >&2
   exit 1
@@ -34,7 +30,7 @@ readonly FALLBACK_TLS_CERT=""
 readonly FALLBACK_TLS_KEY=""
 readonly FALLBACK_SERVICE_NAME="lecture-tools.service"
 readonly FALLBACK_UNIT_PATH="/etc/systemd/system/lecture-tools.service"
-readonly HELPER_PATH_DEFAULT="/usr/local/bin/lecturetool"
+readonly HELPER_PATH_DEFAULT="/usr/local/bin/lecturetools"
 
 trim() {
   local value="$1"
@@ -468,7 +464,7 @@ HELPER_PATH="${HELPER_PATH:-$SCRIPT_PATH}"
 
 usage() {
   cat <<'EOU'
-Usage: lecturetool <command>
+Usage: lecturetools <command>
 Commands:
   start        Start the Lecture Tools service
   stop         Stop the service
@@ -801,6 +797,9 @@ detect_existing_installation() {
   if [[ -f $HELPER_PATH_DEFAULT ]]; then
     EXISTING_TRACES+=("helper CLI $HELPER_PATH_DEFAULT")
   fi
+  if [[ -f $LEGACY_HELPER && $LEGACY_HELPER != $HELPER_PATH_DEFAULT ]]; then
+    EXISTING_TRACES+=("helper CLI $LEGACY_HELPER")
+  fi
 
   if [[ -f $NGINX_SITE_AVAILABLE || -L $NGINX_SITE_ENABLED ]]; then
     EXISTING_TRACES+=("nginx site configuration")
@@ -856,6 +855,10 @@ remove_existing_installation() {
   if [[ -f $HELPER_PATH_DEFAULT ]]; then
     log "Removing helper CLI $HELPER_PATH_DEFAULT..."
     rm -f "$HELPER_PATH_DEFAULT"
+  fi
+  if [[ -f $LEGACY_HELPER && $LEGACY_HELPER != $HELPER_PATH_DEFAULT ]]; then
+    log "Removing helper CLI $LEGACY_HELPER..."
+    rm -f "$LEGACY_HELPER"
   fi
 
   if [[ -f $CONFIG_FILE ]]; then
@@ -1332,6 +1335,9 @@ purge_installation() {
   if [[ -n ${HELPER_PATH:-} && -f $HELPER_PATH ]]; then
     rm -f "$HELPER_PATH"
   fi
+  if [[ -f $LEGACY_HELPER && $LEGACY_HELPER != ${HELPER_PATH:-} ]]; then
+    rm -f "$LEGACY_HELPER"
+  fi
 
   remove_nginx_site
 
@@ -1410,7 +1416,7 @@ case $1 in
         configure_nginx_ip "$listen_port"
         ;;
       *)
-        echo "Usage: lecturetool nginx [guided|https|http|ip] [options]" >&2
+        echo "Usage: lecturetools nginx [guided|https|http|ip] [options]" >&2
         echo "  guided                      Launch the interactive proxy configuration wizard (default)." >&2
         echo "  https [domain] [cert] [key] Configure HTTPS reverse proxy using the stored or provided values." >&2
         echo "  http [domain] [port]        Configure HTTP reverse proxy for a domain (default port 80)." >&2
@@ -2511,13 +2517,16 @@ EOFCONF
       tls_key_path="${TLS_PRIVATE_KEY_PATH:-$tls_key_path}"
     fi
   else
-    log "Skip configuring Nginx. You can run 'sudo lecturetool nginx guided' later."
+    log "Skip configuring Nginx. You can run 'sudo lecturetools nginx guided' later."
   fi
 
-  helper_path="/usr/local/bin/lecturetool"
+  helper_path="$HELPER_PATH_DEFAULT"
   log "Installing helper CLI at $helper_path..."
   write_helper_script "$helper_path"
   chmod 0755 "$helper_path"
+  if [[ $LEGACY_HELPER != "$HELPER_PATH_DEFAULT" ]]; then
+    ln -sf "$helper_path" "$LEGACY_HELPER"
+  fi
 
   systemctl daemon-reload
   if prompt_yes_no "Enable and start the Lecture Tools service now?" "yes"; then
@@ -2536,7 +2545,7 @@ EOFCONF
     fi
   fi
 
-  log "Installation complete. Use 'sudo lecturetool status' to inspect the service."
+  log "Installation complete. Use 'sudo lecturetools status' to inspect the service."
 }
 
 

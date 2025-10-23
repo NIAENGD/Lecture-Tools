@@ -2,9 +2,9 @@
 
 This guide walks through a full manual installation of Lecture Tools on a Debian 12 (Bookworm) server without relying on Docker. Every step assumes you have `sudo` privileges on the target machine. Adjust paths and usernames to match your environment.
 
-> ⚠️ The legacy web GUI and automated installers are temporarily offline while a new interface is being designed.
-
-Prefer an automated setup? The helper script will return alongside the GUI overhaul.
+> ℹ️ Prefer an automated setup? Run `sudo bash scripts/install_server.sh` to provision the managed
+> service. The installer keeps the default HTTP port at `8000` and installs the `lecturetools`
+> helper CLI for ongoing maintenance.
 
 ## 1. Update the operating system
 
