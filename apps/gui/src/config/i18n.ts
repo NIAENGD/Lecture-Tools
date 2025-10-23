@@ -10,10 +10,10 @@ export type SupportedLocale = (typeof supportedLocales)[number];
 type TranslationData = Record<string, unknown>;
 
 const localeLoaders: Record<SupportedLocale, () => Promise<{ default: TranslationData }>> = {
-  en: async () => ({ default: enTranslation as TranslationData }),
-  es: async () => (await import('../locales/es/translation')) as { default: TranslationData },
-  fr: async () => (await import('../locales/fr/translation')) as { default: TranslationData },
-  zh: async () => (await import('../locales/zh/translation')) as { default: TranslationData },
+  en: () => Promise.resolve({ default: enTranslation as TranslationData }),
+  es: () => import('../locales/es/translation') as Promise<{ default: TranslationData }>,
+  fr: () => import('../locales/fr/translation') as Promise<{ default: TranslationData }>,
+  zh: () => import('../locales/zh/translation') as Promise<{ default: TranslationData }>,
 };
 
 export const resolveLocale = (language: string): SupportedLocale => {
@@ -33,12 +33,13 @@ i18n
 
       const locale = resolveLocale(language);
 
-      localeLoaders[locale]()
+      void localeLoaders[locale]()
         .then((module) => {
           callback(null, module.default);
         })
         .catch((error: unknown) => {
-          callback(error as Error, null);
+          const normalizedError = error instanceof Error ? error : new Error(String(error));
+          callback(normalizedError, null);
         });
     }),
   )

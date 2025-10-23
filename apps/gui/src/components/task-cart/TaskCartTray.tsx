@@ -16,6 +16,7 @@ import {
   useTaskCartStore,
   selectTaskCartPresets,
   type TaskCartItem,
+  type CartCompletionMode,
 } from '../../state/taskCart';
 import { useTaskCartEngine } from '../../lib/useTaskCartEngine';
 import { clsx } from 'clsx';
@@ -24,6 +25,11 @@ import { useTranslation } from 'react-i18next';
 export type TaskCartTrayProps = {
   reducedMotion: boolean;
 };
+
+const completionModes: readonly CartCompletionMode[] = ['notify', 'shutdown', 'nothing'];
+
+const isCartCompletionMode = (value: string): value is CartCompletionMode =>
+  completionModes.some((mode) => mode === value);
 
 export const TaskCartTray = ({ reducedMotion }: TaskCartTrayProps) => {
   const presets = useTaskCartStore(selectTaskCartPresets);
@@ -151,7 +157,12 @@ export const TaskCartTray = ({ reducedMotion }: TaskCartTrayProps) => {
                 On completion
                 <select
                   value={engine.onCompletion}
-                  onChange={(event) => engine.setOnCompletion(event.target.value as any)}
+                  onChange={(event) => {
+                    const nextMode = event.target.value;
+                    if (isCartCompletionMode(nextMode)) {
+                      engine.setOnCompletion(nextMode);
+                    }
+                  }}
                   className="h-11 rounded-lg border border-border-subtle bg-surface-base px-3 text-sm text-foreground focus:border-focus focus:shadow-focus"
                 >
                   <option value="notify">Notify</option>

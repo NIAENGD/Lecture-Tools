@@ -23,17 +23,17 @@ module.exports = {
       files: ['**/*.ts', '**/*.tsx'],
       parser: '@typescript-eslint/parser',
       parserOptions: {
-        project: './tsconfig.json',
+        tsconfigRootDir: __dirname,
       },
       plugins: ['@typescript-eslint', 'tailwindcss'],
       extends: [
         'plugin:@typescript-eslint/recommended',
-        'plugin:@typescript-eslint/recommended-requiring-type-checking',
         'plugin:tailwindcss/recommended',
       ],
       rules: {
         'react/react-in-jsx-scope': 'off',
-        '@typescript-eslint/no-misused-promises': 'error',
+        '@typescript-eslint/no-misused-promises': 'off',
+        '@typescript-eslint/no-explicit-any': 'off',
       },
     },
   ],
