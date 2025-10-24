@@ -4127,7 +4127,7 @@
           </button>
         </div>
       </header>
-            <main class="layout app-main">
+      <main class="app-main">
         <nav class="mega-rail" aria-label="Primary">
           <button
             type="button"
@@ -4426,20 +4426,20 @@
                     </div>
                     <div class="details-controls">
                       <button
-                        id="toggle-edit-mode"
+                        id="details-edit-toggle"
                         type="button"
                         class="pill"
                         aria-pressed="false"
-                        data-i18n="topBar.enableEdit"
+                        data-i18n="details.editToggle"
                         data-tooltip-key="tooltips.topBar.editToggle"
                       >
-                        Enable edit mode
+                        Edit lecture
                       </button>
                       <button
                         id="delete-lecture"
-                        class="danger"
+                        class="danger ghost"
                         type="button"
-                        hidden
+                        disabled
                         data-i18n="details.deleteLecture"
                       >
                         Delete lecture
@@ -4452,7 +4452,7 @@
                     hidden
                     data-i18n="details.editModeBanner"
                   >
-                    Edit mode is enabled. Update lecture information or remove items while it is active.
+                    Editing lecture details. Changes apply after saving.
                   </div>
                   <div id="view-details" class="view active" data-view="details">
                     <div
@@ -5782,8 +5782,9 @@
               title: 'Lecture details',
               subtitle: 'Select a lecture to inspect metadata and linked assets.',
               deleteLecture: 'Delete lecture',
-              editModeBanner:
-                'Edit mode is enabled. Update lecture information or remove items while it is active.',
+              editToggle: 'Edit lecture',
+              exitEdit: 'Finish editing',
+              editModeBanner: 'Editing lecture details. Changes apply after saving.',
               summaryPlaceholder: 'Select a lecture from the curriculum.',
               edit: {
                 titleLabel: 'Title',
@@ -6080,6 +6081,16 @@
                 message: 'Lecture title for {{context}}',
                 placeholder: 'Lecture title',
               },
+              chooseClass: {
+                title: 'Choose class',
+                message: 'Select the class to continue.',
+                placeholder: 'Number or class name',
+              },
+              chooseModule: {
+                title: 'Choose module',
+                message: 'Select a module in {{className}}.',
+                placeholder: 'Number or module name',
+              },
               lectureDescription: {
                 title: 'Lecture description',
                 placeholder: 'Add a short outline…',
@@ -6216,8 +6227,12 @@
               },
             },
             status: {
-              requireEdit: 'Enable edit mode to manage the curriculum.',
-              requireEditLecture: 'Enable edit mode to update lecture details.',
+              requireEditLecture: 'Enable editing to update lecture details.',
+              noClassesAvailable: 'Create a class before continuing.',
+              classNotFound: 'No class matched that input.',
+              noModulesAvailable: '{{className}} has no modules yet.',
+              moduleNotFound: 'Unable to find a matching module in {{className}}.',
+              bulkEditHint: 'Select multiple items in the curriculum to start a bulk edit.',
               classCreated: 'Class created.',
               classRemoved: 'Class removed.',
               moduleCreated: 'Module created.',
@@ -6557,7 +6572,9 @@
               title: '讲座详情',
               subtitle: '选择一个讲座即可查看元数据与关联资源。',
               deleteLecture: '删除讲座',
-              editModeBanner: '编辑模式已开启，可更新讲座信息或移除项目。',
+              editToggle: '编辑讲座',
+              exitEdit: '完成编辑',
+              editModeBanner: '正在编辑讲座详情，保存后生效。',
               summaryPlaceholder: '从课程表中选择一个讲座。',
               edit: {
                 titleLabel: '标题',
@@ -6851,6 +6868,16 @@
                 message: '为 {{context}} 输入讲座标题',
                 placeholder: '讲座标题',
               },
+              chooseClass: {
+                title: '选择课程',
+                message: '请选择要继续的课程。',
+                placeholder: '编号或课程名称',
+              },
+              chooseModule: {
+                title: '选择模块',
+                message: '请选择 {{className}} 中的一个模块。',
+                placeholder: '编号或模块名称',
+              },
               lectureDescription: {
                 title: '讲座描述',
                 placeholder: '添加简短大纲…',
@@ -6982,8 +7009,12 @@
               },
             },
             status: {
-              requireEdit: '开启编辑模式以管理课程表。',
-              requireEditLecture: '开启编辑模式以更新讲座详情。',
+              requireEditLecture: '开启编辑以更新讲座详情。',
+              noClassesAvailable: '请先创建课程。',
+              classNotFound: '未找到匹配的课程。',
+              noModulesAvailable: '{{className}} 目前还没有模块。',
+              moduleNotFound: '在 {{className}} 中未找到匹配的模块。',
+              bulkEditHint: '在课程树中选择多个项目即可开始批量编辑。',
               classCreated: '课程已创建。',
               classRemoved: '课程已删除。',
               moduleCreated: '模块已创建。',
@@ -7325,7 +7356,9 @@
               title: 'Detalles de la clase',
               subtitle: 'Selecciona una lección para revisar metadatos y recursos vinculados.',
               deleteLecture: 'Eliminar clase',
-              editModeBanner: 'El modo edición está activo. Actualiza o elimina elementos mientras esté activo.',
+              editToggle: 'Editar lección',
+              exitEdit: 'Finalizar edición',
+              editModeBanner: 'Editando detalles de la lección. Los cambios se aplican al guardar.',
               summaryPlaceholder: 'Selecciona una clase del plan de estudios.',
               edit: {
                 titleLabel: 'Título',
@@ -7623,6 +7656,16 @@
                 message: 'Título de la clase para {{context}}',
                 placeholder: 'Título de la clase',
               },
+              chooseClass: {
+                title: 'Elegir curso',
+                message: 'Selecciona el curso con el que quieres continuar.',
+                placeholder: 'Número o nombre del curso',
+              },
+              chooseModule: {
+                title: 'Elegir módulo',
+                message: 'Selecciona un módulo dentro de {{className}}.',
+                placeholder: 'Número o nombre del módulo',
+              },
               lectureDescription: {
                 title: 'Descripción de la clase',
                 placeholder: 'Agrega un esquema breve…',
@@ -7760,8 +7803,12 @@
               },
             },
             status: {
-              requireEdit: 'Activa el modo edición para gestionar el plan de estudios.',
-              requireEditLecture: 'Activa el modo edición para actualizar los detalles.',
+              requireEditLecture: 'Activa la edición para actualizar los detalles.',
+              noClassesAvailable: 'Crea un curso antes de continuar.',
+              classNotFound: 'No se encontró un curso que coincida.',
+              noModulesAvailable: '{{className}} todavía no tiene módulos.',
+              moduleNotFound: 'No hay módulos que coincidan en {{className}}.',
+              bulkEditHint: 'Selecciona varios elementos en el árbol para iniciar una edición masiva.',
               classCreated: 'Curso creado.',
               classRemoved: 'Curso eliminado.',
               moduleCreated: 'Módulo creado.',
@@ -8103,8 +8150,10 @@
               title: 'Détails du cours',
               subtitle: 'Sélectionnez une séance pour consulter les métadonnées et les ressources liées.',
               deleteLecture: 'Supprimer le cours',
+              editToggle: 'Modifier la séance',
+              exitEdit: 'Terminer l’édition',
               editModeBanner:
-                'Le mode édition est activé. Mettez à jour les informations ou supprimez des éléments pendant qu’il est actif.',
+                'Modification des détails de la séance. Les changements seront appliqués après enregistrement.',
               summaryPlaceholder: 'Sélectionnez un cours dans le programme.',
               edit: {
                 titleLabel: 'Titre',
@@ -8402,6 +8451,16 @@
                 message: 'Titre de la leçon pour {{context}}',
                 placeholder: 'Titre de la leçon',
               },
+              chooseClass: {
+                title: 'Choisir un cours',
+                message: 'Sélectionnez le cours à utiliser.',
+                placeholder: 'Numéro ou nom du cours',
+              },
+              chooseModule: {
+                title: 'Choisir un module',
+                message: 'Sélectionnez un module dans {{className}}.',
+                placeholder: 'Numéro ou nom du module',
+              },
               lectureDescription: {
                 title: 'Description de la leçon',
                 placeholder: 'Ajoutez un court aperçu…',
@@ -8539,8 +8598,12 @@
               },
             },
             status: {
-              requireEdit: 'Activez le mode édition pour gérer le programme.',
-              requireEditLecture: 'Activez le mode édition pour mettre à jour les détails.',
+              requireEditLecture: 'Activez l’édition pour mettre à jour les détails.',
+              noClassesAvailable: 'Créez un cours avant de continuer.',
+              classNotFound: 'Aucun cours ne correspond à cette saisie.',
+              noModulesAvailable: '{{className}} ne contient pas encore de modules.',
+              moduleNotFound: 'Aucun module correspondant dans {{className}}.',
+              bulkEditHint: 'Sélectionnez plusieurs éléments dans l’arbre pour lancer une édition groupée.',
               classCreated: 'Cours créé.',
               classRemoved: 'Cours supprimé.',
               moduleCreated: 'Module créé.',
@@ -9073,7 +9136,7 @@
           buttonMap: new Map(),
           expandedClasses: new Map(),
           expandedModules: new Map(),
-          editMode: false,
+          detailsEditing: false,
           activeView: 'details',
           primarySection: 'home',
           settings: null,
@@ -9310,6 +9373,11 @@
           statusTimelineEvents: document.getElementById('status-timeline-events'),
           stats: document.getElementById('stats'),
           curriculum: document.getElementById('curriculum'),
+          curriculumCreateClass: document.getElementById('curriculum-create-class'),
+          curriculumCreateModule: document.getElementById('curriculum-create-module'),
+          curriculumCreateLecture: document.getElementById('curriculum-create-lecture'),
+          curriculumBulkUpload: document.getElementById('curriculum-bulk-upload'),
+          curriculumBulkEdit: document.getElementById('curriculum-bulk-edit'),
           search: document.getElementById('search-input'),
           summary: document.getElementById('lecture-summary'),
           editForm: document.getElementById('lecture-edit-form'),
@@ -9317,7 +9385,7 @@
           editModule: document.getElementById('edit-lecture-module'),
           editDescription: document.getElementById('edit-lecture-description'),
           deleteButton: document.getElementById('delete-lecture'),
-          editToggle: document.getElementById('toggle-edit-mode'),
+          detailsEditToggle: document.getElementById('details-edit-toggle'),
           editBanner: document.getElementById('edit-mode-banner'),
           assetSection: document.getElementById('asset-section'),
           assetList: document.getElementById('asset-list'),
@@ -14171,7 +14239,7 @@
           updateGpuWhisperUI({ ...state.gpuWhisper });
           applyTranslations(languageValue);
           renderStorage();
-          updateEditModeUI();
+          updateDetailsEditingUI();
           setDebugMode(debugEnabled);
         }
 
@@ -16392,30 +16460,37 @@
           setTranscribeControls(null, null, null);
           setTranscribeButtonDisabled(true);
           state.selectedLectureDetail = null;
-          updateEditControlsAvailability();
+          state.detailsEditing = false;
+          updateDetailsEditingUI();
         }
 
-        function updateEditControlsAvailability() {
+        function updateDetailsEditingUI() {
           const hasSelection = Boolean(state.selectedLectureId);
-          const allowEditing = state.editMode && hasSelection;
-          dom.editForm.hidden = !allowEditing;
-          dom.deleteButton.hidden = !allowEditing;
-        }
+          const editing = state.detailsEditing && hasSelection;
 
-        function updateEditModeUI() {
-          const isActive = state.editMode;
-          if (dom.editToggle) {
-            dom.editToggle.textContent = isActive
-              ? t('topBar.exitEdit')
-              : t('topBar.enableEdit');
-            dom.editToggle.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-            dom.editToggle.classList.toggle('active', isActive);
+          if (dom.detailsEditToggle) {
+            dom.detailsEditToggle.textContent = editing
+              ? t('details.exitEdit')
+              : t('details.editToggle');
+            dom.detailsEditToggle.setAttribute('aria-pressed', editing ? 'true' : 'false');
+            dom.detailsEditToggle.classList.toggle('active', editing);
+            dom.detailsEditToggle.disabled = !hasSelection;
+            dom.detailsEditToggle.setAttribute('aria-disabled', hasSelection ? 'false' : 'true');
           }
+
           if (dom.editBanner) {
-            dom.editBanner.hidden = !isActive;
+            dom.editBanner.hidden = !editing;
           }
-          renderCurriculum();
-          updateEditControlsAvailability();
+
+          if (dom.editForm) {
+            dom.editForm.hidden = !editing;
+          }
+
+          if (dom.deleteButton) {
+            const canDelete = hasSelection && editing;
+            dom.deleteButton.disabled = !canDelete;
+            dom.deleteButton.setAttribute('aria-disabled', canDelete ? 'false' : 'true');
+          }
         }
 
         function setActiveView(view) {
@@ -16977,10 +17052,6 @@
         }
 
         function startLectureDrag(event, lecture, moduleId) {
-          if (!state.editMode) {
-            event.preventDefault();
-            return;
-          }
           state.draggingLectureId = lecture.id;
           state.draggingSourceModuleId = moduleId;
           state.draggedElement = event.currentTarget || null;
@@ -17009,7 +17080,7 @@
         }
 
         function handleLectureDragOver(event) {
-          if (!state.editMode || !state.draggingLectureId) {
+          if (!state.draggingLectureId) {
             return;
           }
           event.preventDefault();
@@ -17054,7 +17125,7 @@
         }
 
         async function handleLectureDrop(event, targetModuleId) {
-          if (!state.editMode || !state.draggingLectureId) {
+          if (!state.draggingLectureId) {
             return;
           }
           event.preventDefault();
@@ -17161,28 +17232,6 @@
           const filtered = computeFilteredClasses();
           dom.curriculum.innerHTML = '';
 
-          if (state.editMode) {
-            const toolbar = document.createElement('div');
-            toolbar.className = 'curriculum-toolbar';
-
-            const heading = document.createElement('h3');
-            heading.textContent = t('curriculum.manageHeading');
-            toolbar.appendChild(heading);
-
-            const actions = document.createElement('div');
-            actions.className = 'curriculum-toolbar-actions';
-
-            const addClassButton = createIconButton(t('curriculum.addClass'), '+');
-            addClassButton.addEventListener('click', (event) => {
-              event.preventDefault();
-              handleAddClass();
-            });
-            actions.appendChild(addClassButton);
-
-            toolbar.appendChild(actions);
-            dom.curriculum.appendChild(toolbar);
-          }
-
           if (filtered.length === 0) {
             const message = document.createElement('div');
             message.className = 'placeholder';
@@ -17252,28 +17301,26 @@
 
             summary.appendChild(summaryText);
 
-            if (state.editMode) {
-              const actions = document.createElement('div');
-              actions.className = 'syllabus-actions';
+            const actions = document.createElement('div');
+            actions.className = 'syllabus-actions';
 
-              const addModuleButton = createIconButton(t('curriculum.addModule'), '+');
-              addModuleButton.addEventListener('click', (event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                handleAddModule(entry.class);
-              });
-              actions.appendChild(addModuleButton);
+            const addModuleButton = createIconButton(t('curriculum.addModule'), '+');
+            addModuleButton.addEventListener('click', (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              handleAddModule(entry.class);
+            });
+            actions.appendChild(addModuleButton);
 
-              const deleteClassButton = createIconButton(t('common.actions.delete'), '×', 'danger');
-              deleteClassButton.addEventListener('click', (event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                handleDeleteClass(entry);
-              });
-              actions.appendChild(deleteClassButton);
+            const deleteClassButton = createIconButton(t('common.actions.delete'), '×', 'danger');
+            deleteClassButton.addEventListener('click', (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              handleDeleteClass(entry);
+            });
+            actions.appendChild(deleteClassButton);
 
-              summary.appendChild(actions);
-            }
+            summary.appendChild(actions);
 
             classDetails.appendChild(summary);
 
@@ -17342,24 +17389,22 @@
 
                 moduleSummary.appendChild(moduleSummaryText);
 
-                if (state.editMode) {
-                  const moduleActions = document.createElement('div');
-                  moduleActions.className = 'syllabus-actions';
+                const moduleActions = document.createElement('div');
+                moduleActions.className = 'syllabus-actions';
 
-                  const deleteModuleButton = createIconButton(
-                    t('common.actions.delete'),
-                    '×',
-                    'danger',
-                  );
-                  deleteModuleButton.addEventListener('click', (event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    handleDeleteModule(moduleEntry, entry.class);
-                  });
-                  moduleActions.appendChild(deleteModuleButton);
+                const deleteModuleButton = createIconButton(
+                  t('common.actions.delete'),
+                  '×',
+                  'danger',
+                );
+                deleteModuleButton.addEventListener('click', (event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  handleDeleteModule(moduleEntry, entry.class);
+                });
+                moduleActions.appendChild(deleteModuleButton);
 
-                  moduleSummary.appendChild(moduleActions);
-                }
+                moduleSummary.appendChild(moduleActions);
 
                 moduleDetails.appendChild(moduleSummary);
 
@@ -17394,36 +17439,32 @@
                     lectureItem.appendChild(button);
                     state.buttonMap.set(lecture.id, button);
 
-                    if (state.editMode) {
-                      lectureItem.draggable = true;
-                      lectureItem.addEventListener('dragstart', (event) => {
-                        startLectureDrag(event, lecture, moduleEntry.module.id);
-                      });
-                      lectureItem.addEventListener('dragend', clearLectureDrag);
+                    lectureItem.draggable = true;
+                    lectureItem.addEventListener('dragstart', (event) => {
+                      startLectureDrag(event, lecture, moduleEntry.module.id);
+                    });
+                    lectureItem.addEventListener('dragend', clearLectureDrag);
 
-                      const deleteLectureButton = createIconButton(
-                        t('common.actions.delete'),
-                        '×',
-                        'danger',
-                      );
-                      deleteLectureButton.addEventListener('click', (event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        handleDeleteLecture(lecture, moduleEntry.module, entry.class);
-                      });
-                      lectureItem.appendChild(deleteLectureButton);
-                    }
+                    const deleteLectureButton = createIconButton(
+                      t('common.actions.delete'),
+                      '×',
+                      'danger',
+                    );
+                    deleteLectureButton.addEventListener('click', (event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      handleDeleteLecture(lecture, moduleEntry.module, entry.class);
+                    });
+                    lectureItem.appendChild(deleteLectureButton);
 
                     lectureList.appendChild(lectureItem);
                   });
                 }
 
-                if (state.editMode) {
-                  const dropHandler = (event) => handleLectureDrop(event, moduleEntry.module.id);
-                  lectureList.addEventListener('dragover', handleLectureDragOver);
-                  lectureList.addEventListener('dragleave', handleLectureDragLeave);
-                  lectureList.addEventListener('drop', dropHandler);
-                }
+                const dropHandler = (event) => handleLectureDrop(event, moduleEntry.module.id);
+                lectureList.addEventListener('dragover', handleLectureDragOver);
+                lectureList.addEventListener('dragleave', handleLectureDragLeave);
+                lectureList.addEventListener('drop', dropHandler);
 
                 moduleContent.appendChild(lectureList);
 
@@ -17475,18 +17516,139 @@
           });
         }
 
-        function requireEditMode(message = t('status.requireEdit')) {
-          if (!state.editMode) {
-            showStatus(message, 'info');
-            return false;
+        async function chooseClassRecord({ titleKey, messageKey, placeholderKey }) {
+          const classEntries = state.classes
+            .map((entry) => entry?.class)
+            .filter((record) => record && record.id != null);
+          if (!classEntries.length) {
+            showStatus(t('status.noClassesAvailable'), 'info');
+            return null;
           }
-          return true;
+          if (classEntries.length === 1) {
+            return classEntries[0];
+          }
+          const list = classEntries
+            .map((record, index) => `${index + 1}. ${record.name}`)
+            .join('\n');
+          const input = await promptDialog({
+            title: t(titleKey),
+            message: `${t(messageKey)}\n\n${list}`,
+            placeholder: t(placeholderKey),
+            required: true,
+          });
+          if (!input) {
+            return null;
+          }
+          const trimmed = input.trim();
+          const numeric = Number(trimmed);
+          if (Number.isInteger(numeric) && numeric >= 1 && numeric <= classEntries.length) {
+            return classEntries[numeric - 1];
+          }
+          const lower = trimmed.toLowerCase();
+          const exactMatch = classEntries.find(
+            (record) => record.name?.toLowerCase() === lower,
+          );
+          if (exactMatch) {
+            return exactMatch;
+          }
+          const partialMatches = classEntries.filter((record) =>
+            record.name?.toLowerCase().includes(lower),
+          );
+          if (partialMatches.length === 1) {
+            return partialMatches[0];
+          }
+          showStatus(t('status.classNotFound'), 'error');
+          return null;
+        }
+
+        async function chooseModuleRecord(classRecord, { titleKey, messageKey, placeholderKey }) {
+          if (!classRecord || classRecord.id == null) {
+            return null;
+          }
+          const classEntry = state.classes.find((entry) => entry.class?.id === classRecord.id);
+          const moduleEntries = (classEntry?.modules || [])
+            .map((entry) => entry?.module)
+            .filter((module) => module && module.id != null);
+          if (!moduleEntries.length) {
+            showStatus(t('status.noModulesAvailable', { className: classRecord.name }), 'info');
+            return null;
+          }
+          if (moduleEntries.length === 1) {
+            return moduleEntries[0];
+          }
+          const list = moduleEntries
+            .map((module, index) => `${index + 1}. ${module.name}`)
+            .join('\n');
+          const input = await promptDialog({
+            title: t(titleKey, { className: classRecord.name }),
+            message: `${t(messageKey, { className: classRecord.name })}\n\n${list}`,
+            placeholder: t(placeholderKey),
+            required: true,
+          });
+          if (!input) {
+            return null;
+          }
+          const trimmed = input.trim();
+          const numeric = Number(trimmed);
+          if (Number.isInteger(numeric) && numeric >= 1 && numeric <= moduleEntries.length) {
+            return moduleEntries[numeric - 1];
+          }
+          const lower = trimmed.toLowerCase();
+          const exactMatch = moduleEntries.find(
+            (module) => module.name?.toLowerCase() === lower,
+          );
+          if (exactMatch) {
+            return exactMatch;
+          }
+          const partialMatches = moduleEntries.filter((module) =>
+            module.name?.toLowerCase().includes(lower),
+          );
+          if (partialMatches.length === 1) {
+            return partialMatches[0];
+          }
+          showStatus(t('status.moduleNotFound', { className: classRecord.name }), 'error');
+          return null;
+        }
+
+        async function resolveModuleForLectureCreation() {
+          if (state.selectedLectureDetail?.module && state.selectedLectureDetail?.class) {
+            return {
+              moduleRecord: state.selectedLectureDetail.module,
+              classRecord: state.selectedLectureDetail.class,
+            };
+          }
+          const classRecord = await chooseClassRecord({
+            titleKey: 'dialogs.chooseClass.title',
+            messageKey: 'dialogs.chooseClass.message',
+            placeholderKey: 'dialogs.chooseClass.placeholder',
+          });
+          if (!classRecord) {
+            return null;
+          }
+          const moduleRecord = await chooseModuleRecord(classRecord, {
+            titleKey: 'dialogs.chooseModule.title',
+            messageKey: 'dialogs.chooseModule.message',
+            placeholderKey: 'dialogs.chooseModule.placeholder',
+          });
+          if (!moduleRecord) {
+            return null;
+          }
+          return { moduleRecord, classRecord };
+        }
+
+        async function resolveClassForModuleCreation() {
+          if (state.selectedLectureDetail?.class) {
+            return state.selectedLectureDetail.class;
+          }
+          const classRecord = await chooseClassRecord({
+            titleKey: 'dialogs.chooseClass.title',
+            messageKey: 'dialogs.chooseClass.message',
+            placeholderKey: 'dialogs.chooseClass.placeholder',
+          });
+          return classRecord;
         }
 
         async function handleAddClass() {
-          if (!requireEditMode()) {
-            return;
-          }
           const name = await promptDialog({
             title: t('dialogs.createClass.title'),
             message: t('dialogs.createClass.message'),
@@ -17511,9 +17673,6 @@
         }
 
         async function handleAddModule(classRecord) {
-          if (!requireEditMode()) {
-            return;
-          }
           const name = await promptDialog({
             title: t('dialogs.createModule.title'),
             message: t('dialogs.createModule.message', { className: classRecord.name }),
@@ -17541,9 +17700,6 @@
         }
 
         async function handleDeleteClass(classEntry) {
-          if (!requireEditMode()) {
-            return;
-          }
           const moduleCount = classEntry.modules.length;
           const lectureCount = classEntry.modules.reduce(
             (total, moduleEntry) => total + (moduleEntry.lectures?.length || 0),
@@ -17591,9 +17747,6 @@
         }
 
         async function handleDeleteModule(moduleEntry, classRecord) {
-          if (!requireEditMode()) {
-            return;
-          }
           const lectureCount = moduleEntry.lectures.length;
           const classContext = classRecord
             ? t('dialogs.deleteModule.classContext', { className: classRecord.name })
@@ -17638,9 +17791,6 @@
         }
 
         async function handleAddLecture(moduleRecord, classRecord) {
-          if (!requireEditMode()) {
-            return;
-          }
           const contextParts = classRecord
             ? [classRecord.name, moduleRecord.name]
             : [moduleRecord.name];
@@ -17685,9 +17835,6 @@
         }
 
         async function handleDeleteLecture(lecture, moduleRecord, classRecord) {
-          if (!requireEditMode()) {
-            return;
-          }
           const contextParts = [lecture.name];
           if (moduleRecord) {
             contextParts.push(moduleRecord.name);
@@ -17953,9 +18100,9 @@
             dom.editDescription.value = detail.lecture.description || '';
             dom.editModule.value = String(detail.lecture.module_id);
 
-            updateEditControlsAvailability();
+            updateDetailsEditingUI();
 
-            if (state.editMode) {
+            if (state.detailsEditing && dom.editName) {
               dom.editName.focus();
             }
 
@@ -18275,20 +18422,59 @@
             setActiveView(view);
             if (view === 'create') {
               dom.createModule.focus();
-            } else if (view === 'details' && state.editMode && state.selectedLectureId) {
+            } else if (view === 'details' && state.detailsEditing && state.selectedLectureId) {
               dom.editName.focus();
             }
           });
         });
 
-        if (dom.editToggle) {
-          dom.editToggle.addEventListener('click', () => {
-            state.editMode = !state.editMode;
-            updateEditModeUI();
-            if (state.editMode && state.selectedLectureId) {
+        if (dom.detailsEditToggle) {
+          dom.detailsEditToggle.addEventListener('click', () => {
+            state.detailsEditing = !state.detailsEditing;
+            updateDetailsEditingUI();
+            if (state.detailsEditing && state.selectedLectureId) {
               setActiveView('details');
               dom.editName.focus();
             }
+          });
+        }
+
+        if (dom.curriculumCreateClass) {
+          dom.curriculumCreateClass.addEventListener('click', () => {
+            void handleAddClass();
+          });
+        }
+
+        if (dom.curriculumCreateModule) {
+          dom.curriculumCreateModule.addEventListener('click', async () => {
+            const classRecord = await resolveClassForModuleCreation();
+            if (!classRecord) {
+              return;
+            }
+            await handleAddModule(classRecord);
+          });
+        }
+
+        if (dom.curriculumCreateLecture) {
+          dom.curriculumCreateLecture.addEventListener('click', async () => {
+            const result = await resolveModuleForLectureCreation();
+            if (!result) {
+              return;
+            }
+            await handleAddLecture(result.moduleRecord, result.classRecord);
+          });
+        }
+
+        if (dom.curriculumBulkUpload) {
+          dom.curriculumBulkUpload.addEventListener('click', () => {
+            void openBulkUploadDialog();
+          });
+        }
+
+        if (dom.curriculumBulkEdit) {
+          dom.curriculumBulkEdit.addEventListener('click', () => {
+            navigatePrimary('catalog');
+            showStatus(t('status.bulkEditHint'), 'info', { record: false });
           });
         }
 
@@ -18461,7 +18647,7 @@
 
         dom.editForm.addEventListener('submit', async (event) => {
           event.preventDefault();
-          if (!state.editMode) {
+          if (!state.detailsEditing) {
             showStatus(t('status.requireEditLecture'), 'info');
             return;
           }
@@ -18495,7 +18681,7 @@
         });
 
         dom.deleteButton.addEventListener('click', async () => {
-          if (!state.selectedLectureId || !state.editMode) {
+          if (!state.selectedLectureId || !state.detailsEditing) {
             return;
           }
           const lectureName = dom.editName.value.trim() || dom.editName.placeholder || '';
@@ -18848,7 +19034,7 @@
             const value = normalizeLanguage(event.target.value);
             applyTranslations(value);
             renderStorage();
-            updateEditModeUI();
+            updateDetailsEditingUI();
             renderTaskCart();
             renderTimeline();
             if (dom.globalLanguage) {
@@ -18940,7 +19126,7 @@
         const initialSection = state.primarySection || 'home';
         setActiveView(state.activeView);
         setPrimaryNavigation(initialSection);
-        updateEditModeUI();
+        updateDetailsEditingUI();
         clearDetailPanel();
         applyTheme('system');
         await loadGpuWhisperStatus();
