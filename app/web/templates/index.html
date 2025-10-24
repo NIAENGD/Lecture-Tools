@@ -798,6 +798,34 @@
         gap: 16px;
       }
 
+      .bulk-assign-container {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .bulk-assign-form {
+        display: grid;
+        gap: 12px;
+      }
+
+      .bulk-assign-field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 0.9rem;
+        text-align: left;
+      }
+
+      .bulk-assign-field select {
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid var(--panel-border);
+        background: var(--panel-bg);
+        color: inherit;
+        font-size: 0.95rem;
+      }
+
       .upload-dialog-window .dialog-header {
         margin-bottom: -8px;
       }
@@ -815,6 +843,11 @@
         background: rgba(148, 163, 184, 0.08);
         cursor: pointer;
         transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+      }
+
+      .upload-dropzone[aria-disabled='true'] {
+        cursor: default;
+        opacity: 0.85;
       }
 
       .upload-dropzone:focus {
@@ -2845,7 +2878,7 @@
       .home-quick-tiles button {
         border: 1px solid var(--app-border);
         border-radius: 20px;
-        background: var(--app-surface-alt);
+        background: linear-gradient(180deg, rgba(64, 82, 255, 0.08), rgba(255, 255, 255, 0.02));
         padding: calc(var(--grid-unit) * 2.5);
         text-align: left;
         display: grid;
@@ -2854,6 +2887,7 @@
         box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
         transition: transform var(--transition-snappy), box-shadow var(--transition-snappy),
           border-color var(--transition-snappy);
+        color: var(--app-text-strong, var(--app-text));
       }
 
       .home-quick-tiles button:hover,
@@ -2877,6 +2911,7 @@
       .home-quick-tiles .tile-label {
         font-size: 1rem;
         font-weight: 600;
+        color: var(--app-text-strong, var(--app-text));
       }
 
       .home-quick-tiles .tile-subtext {
@@ -2899,6 +2934,37 @@
         display: flex;
         flex-direction: column;
         gap: calc(var(--grid-unit) * 2);
+      }
+
+      .home-lecture-card {
+        gap: calc(var(--grid-unit) * 1.5);
+      }
+
+      .home-selector-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--app-text-muted);
+      }
+
+      .home-selector-select {
+        border-radius: 14px;
+        border: 1px solid var(--app-border);
+        padding: calc(var(--grid-unit) * 1.25) calc(var(--grid-unit) * 1.5);
+        font-size: 0.95rem;
+        background: var(--app-surface);
+        color: var(--app-text);
+      }
+
+      .home-selector-actions {
+        display: flex;
+        gap: calc(var(--grid-unit) * 1);
+        flex-wrap: wrap;
+      }
+
+      .home-selector-empty {
+        margin: 0;
+        font-size: 0.85rem;
+        color: var(--app-text-muted);
       }
 
       .home-card-header {
@@ -3484,6 +3550,80 @@
         transform: translateY(0);
       }
 
+      .task-cart-toggle {
+        position: fixed;
+        right: calc(var(--grid-unit) * 3);
+        bottom: calc(var(--timeline-height) + var(--grid-unit));
+        display: inline-flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: calc(var(--grid-unit) * 1.25);
+        padding: calc(var(--grid-unit) * 1.5) calc(var(--grid-unit) * 2.25);
+        min-width: 220px;
+        border: 1px solid var(--app-border);
+        border-radius: 999px;
+        background: var(--app-surface);
+        color: var(--app-text-strong, var(--app-text));
+        box-shadow: var(--app-shadow-soft);
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform var(--transition-snappy), box-shadow var(--transition-snappy);
+        z-index: 65;
+      }
+
+      .task-cart-toggle:hover,
+      .task-cart-toggle:focus-visible {
+        outline: none;
+        transform: translateY(-2px);
+        box-shadow: 0 16px 32px rgba(12, 23, 52, 0.18);
+      }
+
+      .task-cart-toggle-icon {
+        font-size: 1rem;
+        transition: transform var(--transition-snappy);
+      }
+
+      .task-cart-toggle[aria-expanded='true'] .task-cart-toggle-icon {
+        transform: rotate(180deg);
+      }
+
+      .task-cart-toggle-text {
+        display: flex;
+        flex-direction: column;
+        gap: calc(var(--grid-unit) * 0.25);
+        text-align: left;
+      }
+
+      .task-cart-toggle-title {
+        font-size: 0.85rem;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+        color: var(--app-text-strong, var(--app-text));
+      }
+
+      .task-cart-toggle-label {
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: var(--app-text-muted);
+      }
+
+      .task-cart-toggle-count {
+        min-width: 2.5ch;
+        padding: calc(var(--grid-unit) * 0.5) calc(var(--grid-unit) * 0.75);
+        border-radius: 999px;
+        background: rgba(64, 82, 255, 0.14);
+        color: var(--accent-primary);
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-align: center;
+        line-height: 1;
+      }
+
+      .task-cart-toggle-count[data-empty='true'] {
+        background: rgba(12, 23, 52, 0.08);
+        color: var(--app-text-muted);
+      }
+
       .task-cart-header {
         padding: calc(var(--grid-unit) * 2.5) calc(var(--grid-unit) * 3);
         border-bottom: 1px solid var(--app-border);
@@ -3491,6 +3631,7 @@
         align-items: center;
         justify-content: space-between;
         gap: calc(var(--grid-unit) * 2);
+        color: var(--app-text-strong, var(--app-text));
       }
 
       .task-cart-header h2 {
@@ -3504,6 +3645,7 @@
         flex-direction: column;
         gap: calc(var(--grid-unit) * 2);
         overflow: auto;
+        color: var(--app-text);
       }
 
       .task-cart-items {
@@ -4176,7 +4318,7 @@
             data-tooltip-key="tooltips.mega.import"
           >
             <span class="icon" aria-hidden="true">📥</span>
-            <span data-i18n="mega.import">Import/Export</span>
+            <span data-i18n="mega.import">Transfer</span>
           </button>
           <button
             type="button"
@@ -4243,26 +4385,56 @@
                     Name, assign, and track in two taps.
                   </span>
                 </button>
-                <button type="button" data-home-action="add-to-cart">
-                  <span class="tile-icon" aria-hidden="true">🛒</span>
-                  <span class="tile-label" data-i18n="home.tiles.addToCart">
-                    Add to cart
+                <button type="button" data-home-action="browse-catalog">
+                  <span class="tile-icon" aria-hidden="true">📚</span>
+                  <span class="tile-label" data-i18n="home.tiles.browseCatalog">
+                    Browse catalog
                   </span>
-                  <span class="tile-subtext" data-i18n="home.tiles.addToCartHint">
-                    Stage work for peace-mode execution.
-                  </span>
-                </button>
-                <button type="button" data-home-action="run-cart">
-                  <span class="tile-icon" aria-hidden="true">▶️</span>
-                  <span class="tile-label" data-i18n="home.tiles.runCart">
-                    Run cart
-                  </span>
-                  <span class="tile-subtext" data-i18n="home.tiles.runCartHint">
-                    Fire the queued batch instantly.
+                  <span class="tile-subtext" data-i18n="home.tiles.browseCatalogHint">
+                    Jump to the lecture tree to pick one.
                   </span>
                 </button>
               </section>
               <div class="home-grid">
+                <section
+                  class="home-card home-lecture-card"
+                  aria-labelledby="home-lecture-picker-title"
+                >
+                  <h2 id="home-lecture-picker-title" data-i18n="home.selector.title">
+                    Jump to a lecture
+                  </h2>
+                  <p data-i18n="home.selector.description">
+                    Select a lecture to open it in the catalog workspace.
+                  </p>
+                  <label
+                    class="home-selector-label"
+                    for="home-lecture-picker"
+                    data-i18n="home.selector.label"
+                  >
+                    Lecture
+                  </label>
+                  <select
+                    id="home-lecture-picker"
+                    class="home-selector-select"
+                    aria-describedby="home-lecture-picker-empty"
+                  ></select>
+                  <div class="home-selector-actions">
+                    <button
+                      type="button"
+                      id="home-lecture-picker-open"
+                      data-i18n="home.selector.open"
+                    >
+                      Open lecture
+                    </button>
+                  </div>
+                  <p
+                    id="home-lecture-picker-empty"
+                    class="home-selector-empty"
+                    data-i18n="home.selector.empty"
+                  >
+                    Create a lecture to use this shortcut.
+                  </p>
+                </section>
                 <section class="home-card" aria-labelledby="home-recent-title">
                   <div class="home-card-header">
                     <h2 id="home-recent-title" data-i18n="home.recent.title">
@@ -5065,7 +5237,7 @@
           data-i18n="mega.import"
           data-tooltip-key="tooltips.mega.import"
         >
-          Import/Export
+          Transfer
         </button>
         <button
           type="button"
@@ -5179,6 +5351,26 @@
         </label>
       </div>
     </div>
+    <button
+      id="task-cart-toggle"
+      class="task-cart-toggle"
+      type="button"
+      aria-expanded="false"
+      data-tooltip-key="tooltips.cart.toggle"
+    >
+      <span class="task-cart-toggle-icon" aria-hidden="true">▲</span>
+      <span class="task-cart-toggle-text">
+        <span class="task-cart-toggle-title" data-i18n="cart.title">Task Cart</span>
+        <span
+          id="task-cart-toggle-label"
+          class="task-cart-toggle-label"
+          data-i18n="cart.toggle.open"
+        >
+          Open cart
+        </span>
+      </span>
+      <span id="task-cart-toggle-count" class="task-cart-toggle-count" aria-hidden="true">0</span>
+    </button>
     <div id="help-overlay" class="help-overlay" aria-hidden="true" role="dialog">
       <div class="help-grid">
         <header>
@@ -5566,10 +5758,15 @@
                 uploadSlidesHint: 'Generate previews and notes automatically.',
                 createLecture: 'Create lecture',
                 createLectureHint: 'Name, assign, and track in two taps.',
-                addToCart: 'Add to cart',
-                addToCartHint: 'Stage work for peace-mode execution.',
-                runCart: 'Run cart',
-                runCartHint: 'Fire the queued batch instantly.',
+                browseCatalog: 'Browse catalog',
+                browseCatalogHint: 'Jump to the curriculum to pick a lecture.',
+              },
+              selector: {
+                title: 'Lecture switcher',
+                description: 'Select a lecture to open it in the catalog workspace.',
+                label: 'Lecture',
+                open: 'Open lecture',
+                empty: 'Create a lecture to use this shortcut.',
               },
               recent: {
                 title: 'Recent activity',
@@ -5592,7 +5789,7 @@
               tasks: 'Tasks',
               storage: 'Storage',
               system: 'System',
-              import: 'Import/Export',
+              import: 'Transfer',
               debug: 'Debug',
             },
             dock: {
@@ -5625,7 +5822,7 @@
                 tasks: 'Monitor running jobs and manage the Task Cart.',
                 storage: 'Inspect storage usage and bulk export or purge.',
                 system: 'Configure themes, hardware, and automation.',
-                import: 'Import or export archives and presets.',
+                import: 'Manage archive transfers.',
                 debug: 'Inspect live system logs and events.',
               },
               dock: {
@@ -5656,6 +5853,7 @@
                 loadPreset: 'Load this preset into the cart.',
                 runPreset: 'Load and run this preset immediately.',
                 deletePreset: 'Delete this preset.',
+                toggle: 'Show or hide the Task Cart.',
               },
             },
             catalog: {
@@ -5684,6 +5882,11 @@
                 notify: 'Notify',
                 shutdown: 'Shutdown',
                 nothing: 'Nothing',
+              },
+              toggle: {
+                open: 'Open cart',
+                close: 'Hide cart',
+                aria: '{{count}} in cart. {{action}}.',
               },
               added: 'Added “{{title}}” to Task Cart.',
               pausedNotice: 'Task Cart paused. Tap Resume to continue.',
@@ -6181,17 +6384,17 @@
                 assetDescription: 'Choose a new file to attach to this resource.',
                 archiveTitle: 'Import archive',
                 archiveDescription: 'Select a Lecture Tools export (.zip) to import.',
-                bulkUpload: {
-                  title: 'Bulk upload',
-                  description: 'Upload a ZIP archive to distribute assets across lectures.',
-                  prompt: 'Drop a ZIP file or choose one from your device.',
-                  help: 'Archives are processed server-side and matched to lectures.',
-                  action: 'Upload archive',
-                  success: 'Bulk upload queued successfully.',
-                  failure: 'Bulk upload failed.',
-                  cancelled: 'Bulk upload cancelled.',
-                  invalid: 'Select a ZIP archive to continue.',
-                },
+              },
+              bulkAssign: {
+                title: 'Assign “{{name}}”',
+                description: 'Choose where this file should land.',
+                lectureLabel: 'Lecture',
+                assetLabel: 'Asset type',
+                confirm: 'Assign & Upload',
+                skip: 'Skip file',
+                unnamed: 'Untitled file',
+                uploadTitle: 'Upload “{{name}}”',
+                uploadDescription: 'Uploading to {{lecture}} as {{asset}}.',
               },
               descriptionOptional: 'Description (optional)',
               descriptionPlaceholder: 'Add a short summary…',
@@ -6249,6 +6452,15 @@
               processingSlides: 'Processing slides…',
               audioProcessingQueued: 'Audio uploaded. Mastering will continue in the background.',
               assetUploaded: 'Asset uploaded successfully.',
+              bulkNoLectures: 'Create a lecture before assigning uploads.',
+              bulkNoAssetTypes: 'No upload destinations are available right now.',
+              bulkUnsupportedAsset: 'This upload type is not supported yet.',
+              bulkNoFiles: 'No files were selected.',
+              bulkFileSkipped: 'Skipped “{{name}}”.',
+              bulkFileUploaded: 'Uploaded “{{name}}” to {{lecture}} as {{asset}}.',
+              bulkFileTimeline: 'Uploaded “{{name}}” for {{lecture}}.',
+              bulkUploadComplete:
+                '{{count}} file{{count === 1 ? '' : 's'}} uploaded successfully.',
               assetRemoved: 'Asset removed.',
               transcriptionPreparing: '====> Preparing transcription…',
               transcriptionCompleted: 'Transcription completed.',
@@ -6282,8 +6494,6 @@
               importing: 'Importing archive…',
               importSuccess: 'Imported {{count}} lectures.',
               importNoChanges: 'Archive imported (no new lectures).',
-              bulkUploading: 'Uploading archive…',
-              bulkUploadQueued: 'Bulk upload queued.',
               bulkUploadFailed: 'Bulk upload failed.',
               idle: 'Idle',
               cpuBadgeActive: '{{count}} active tasks',
@@ -6301,6 +6511,7 @@
             counts: {
               module: { one: 'module', other: 'modules' },
               lecture: { one: 'lecture', other: 'lectures' },
+              cartItem: { one: 'task', other: 'tasks' },
             },
           },
           zh: {
@@ -6356,10 +6567,15 @@
                 uploadSlidesHint: '自动生成预览与笔记。',
                 createLecture: '创建讲座',
                 createLectureHint: '两步即可命名并归类。',
-                addToCart: '加入任务车',
-                addToCartHint: '预排工作，安心稍后执行。',
-                runCart: '运行任务车',
-                runCartHint: '立即执行已排队的批量操作。',
+                browseCatalog: '浏览目录',
+                browseCatalogHint: '进入课程树选择讲座。',
+              },
+              selector: {
+                title: '快速跳转',
+                description: '选择讲座即可在目录工作区中打开。',
+                label: '讲座',
+                open: '打开讲座',
+                empty: '创建讲座后即可使用此快捷方式。',
               },
               recent: {
                 title: '最近活动',
@@ -6382,7 +6598,7 @@
               tasks: '任务',
               storage: '存储',
               system: '系统',
-              import: '导入/导出',
+              import: '传输',
               debug: '调试',
             },
             dock: {
@@ -6415,7 +6631,7 @@
                 tasks: '监控运行中的任务并管理任务车。',
                 storage: '查看存储使用情况并执行批量导出或清理。',
                 system: '配置主题、硬件偏好和自动化。',
-                import: '导入或导出完整归档文件。',
+                import: '管理归档传输。',
                 debug: '查看实时系统事件和日志。',
               },
               dock: {
@@ -6446,6 +6662,7 @@
                 loadPreset: '将此预设加载到任务车。',
                 runPreset: '立即加载并执行此预设。',
                 deletePreset: '删除此预设。',
+                toggle: '显示或隐藏任务车。',
               },
             },
             catalog: {
@@ -6474,6 +6691,11 @@
                 notify: '通知',
                 shutdown: '关机',
                 nothing: '无操作',
+              },
+              toggle: {
+                open: '展开任务车',
+                close: '收起任务车',
+                aria: '任务车内有 {{count}}。{{action}}。',
               },
               added: '已将“{{title}}”加入任务车。',
               pausedNotice: '任务车已暂停。点击“继续”恢复。',
@@ -6963,17 +7185,17 @@
                 assetDescription: '为此资源选择一个新文件。',
                 archiveTitle: '导入归档',
                 archiveDescription: '选择一个 Lecture Tools 导出的压缩包（.zip）。',
-                bulkUpload: {
-                  title: '批量上传',
-                  description: '上传包含多个讲座资源的 ZIP 压缩包。',
-                  prompt: '拖入 ZIP 文件或从设备中选择。',
-                  help: '服务器会解析压缩包并匹配到相应讲座。',
-                  action: '上传压缩包',
-                  success: '批量上传已排队处理。',
-                  failure: '批量上传失败。',
-                  cancelled: '批量上传已取消。',
-                  invalid: '请选择 ZIP 压缩包。',
-                },
+              },
+              bulkAssign: {
+                title: '分配“{{name}}”',
+                description: '为此文件选择目标讲座和资源类型。',
+                lectureLabel: '讲座',
+                assetLabel: '资源类型',
+                confirm: '分配并上传',
+                skip: '跳过文件',
+                unnamed: '未命名文件',
+                uploadTitle: '上传“{{name}}”',
+                uploadDescription: '将其作为 {{asset}} 上传至 {{lecture}}。',
               },
               descriptionOptional: '描述（可选）',
               descriptionPlaceholder: '添加简短摘要…',
@@ -7031,6 +7253,14 @@
               processingSlides: '正在处理课件…',
               audioProcessingQueued: '音频已上传，母带处理将在后台继续进行。',
               assetUploaded: '资源上传成功。',
+              bulkNoLectures: '请先创建讲座以分配上传文件。',
+              bulkNoAssetTypes: '当前没有可用的上传目标。',
+              bulkUnsupportedAsset: '该上传类型暂不支持。',
+              bulkNoFiles: '未选择任何文件。',
+              bulkFileSkipped: '已跳过“{{name}}”。',
+              bulkFileUploaded: '已将“{{name}}”作为 {{asset}} 上传到 {{lecture}}。',
+              bulkFileTimeline: '已为 {{lecture}} 上传“{{name}}”。',
+              bulkUploadComplete: '已成功上传 {{count}} 个文件。',
               assetRemoved: '资源已移除。',
               transcriptionPreparing: '====> 正在准备转录…',
               transcriptionCompleted: '转录完成。',
@@ -7064,8 +7294,6 @@
               importing: '正在导入归档…',
               importSuccess: '已导入 {{count}} 个讲座。',
               importNoChanges: '归档导入完成（没有新讲座）。',
-              bulkUploading: '正在上传压缩包…',
-              bulkUploadQueued: '批量上传已排队。',
               bulkUploadFailed: '批量上传失败。',
               idle: '空闲',
               cpuBadgeActive: '正在运行 {{count}} 个任务',
@@ -7083,6 +7311,7 @@
             counts: {
               module: { one: '模块', other: '模块' },
               lecture: { one: '讲座', other: '讲座' },
+              cartItem: { one: '个任务', other: '个任务' },
             },
           },
           es: {
@@ -7138,10 +7367,15 @@
                 uploadSlidesHint: 'Genera vistas previas y notas automáticamente.',
                 createLecture: 'Crear lección',
                 createLectureHint: 'Nómbrala y asígnala en dos toques.',
-                addToCart: 'Añadir al carrito',
-                addToCartHint: 'Prepara el trabajo para ejecutarlo en modo paz.',
-                runCart: 'Ejecutar carrito',
-                runCartHint: 'Dispara la cola al instante.',
+                browseCatalog: 'Explorar catálogo',
+                browseCatalogHint: 'Ve al árbol curricular para elegir una lección.',
+              },
+              selector: {
+                title: 'Selector de lección',
+                description: 'Elige una lección para abrirla en el espacio del catálogo.',
+                label: 'Lección',
+                open: 'Abrir lección',
+                empty: 'Crea una lección para usar este acceso directo.',
               },
               recent: {
                 title: 'Actividad reciente',
@@ -7164,7 +7398,7 @@
               tasks: 'Tareas',
               storage: 'Almacenamiento',
               system: 'Sistema',
-              import: 'Importar/Exportar',
+              import: 'Transferir',
               debug: 'Depuración',
             },
             dock: {
@@ -7197,7 +7431,7 @@
                 tasks: 'Supervisa tareas en ejecución y el carro.',
                 storage: 'Inspecciona almacenamiento y realiza exportaciones o purgas.',
                 system: 'Configura temas, hardware y automatizaciones.',
-                import: 'Importa o exporta archivos de respaldo.',
+                import: 'Gestiona transferencias de archivos.',
                 debug: 'Consulta eventos y registros del sistema en vivo.',
               },
               dock: {
@@ -7228,6 +7462,7 @@
                 loadPreset: 'Carga este preajuste en el carro.',
                 runPreset: 'Carga y ejecuta este preajuste de inmediato.',
                 deletePreset: 'Elimina este preajuste.',
+                toggle: 'Mostrar u ocultar el carro.',
               },
             },
             catalog: {
@@ -7256,6 +7491,11 @@
                 notify: 'Notificar',
                 shutdown: 'Apagar',
                 nothing: 'Nada',
+              },
+              toggle: {
+                open: 'Abrir carro',
+                close: 'Ocultar carro',
+                aria: '{{count}} en el carro. {{action}}.',
               },
               added: 'Se añadió “{{title}}” al carro de tareas.',
               pausedNotice: 'El carro se pausó. Pulsa Reanudar para continuar.',
@@ -7757,17 +7997,17 @@
                 assetDescription: 'Elige un archivo nuevo para este recurso.',
                 archiveTitle: 'Importar archivo comprimido',
                 archiveDescription: 'Selecciona un archivo exportado de Lecture Tools (.zip).',
-                bulkUpload: {
-                  title: 'Carga masiva',
-                  description: 'Sube un archivo ZIP con recursos para múltiples clases.',
-                  prompt: 'Suelta un archivo ZIP o selecciónalo desde tu dispositivo.',
-                  help: 'El servidor distribuirá el contenido del ZIP automáticamente.',
-                  action: 'Subir ZIP',
-                  success: 'Carga masiva en cola correctamente.',
-                  failure: 'La carga masiva falló.',
-                  cancelled: 'Carga masiva cancelada.',
-                  invalid: 'Selecciona un archivo ZIP para continuar.',
-                },
+              },
+              bulkAssign: {
+                title: 'Asignar “{{name}}”',
+                description: 'Elige la lección y el tipo de recurso para este archivo.',
+                lectureLabel: 'Lección',
+                assetLabel: 'Tipo de recurso',
+                confirm: 'Asignar y subir',
+                skip: 'Omitir archivo',
+                unnamed: 'Archivo sin nombre',
+                uploadTitle: 'Subir “{{name}}”',
+                uploadDescription: 'Se subirá a {{lecture}} como {{asset}}.',
               },
               descriptionOptional: 'Descripción (opcional)',
               descriptionPlaceholder: 'Agrega un breve resumen…',
@@ -7825,6 +8065,15 @@
               processingSlides: 'Procesando diapositivas…',
               audioProcessingQueued: 'Audio subido. La masterización continuará en segundo plano.',
               assetUploaded: 'Recurso subido correctamente.',
+              bulkNoLectures: 'Crea una lección antes de asignar archivos.',
+              bulkNoAssetTypes: 'No hay destinos de carga disponibles en este momento.',
+              bulkUnsupportedAsset: 'Este tipo de carga aún no está soportado.',
+              bulkNoFiles: 'No se seleccionó ningún archivo.',
+              bulkFileSkipped: 'Se omitió “{{name}}”.',
+              bulkFileUploaded: 'Se subió “{{name}}” a {{lecture}} como {{asset}}.',
+              bulkFileTimeline: 'Se subió “{{name}}” para {{lecture}}.',
+              bulkUploadComplete:
+                '{{count}} archivo{{count === 1 ? '' : 's'}} subido correctamente.',
               assetRemoved: 'Recurso eliminado.',
               transcriptionPreparing: '====> Preparando transcripción…',
               transcriptionCompleted: 'Transcripción completada.',
@@ -7858,8 +8107,6 @@
               importing: 'Importando archivo…',
               importSuccess: 'Se importaron {{count}} clases.',
               importNoChanges: 'Archivo importado (sin clases nuevas).',
-              bulkUploading: 'Subiendo archivo comprimido…',
-              bulkUploadQueued: 'Carga masiva en cola.',
               bulkUploadFailed: 'La carga masiva falló.',
               idle: 'Inactivo',
               cpuBadgeActive: '{{count}} tareas activas',
@@ -7877,6 +8124,7 @@
             counts: {
               module: { one: 'módulo', other: 'módulos' },
               lecture: { one: 'clase', other: 'clases' },
+              cartItem: { one: 'tarea', other: 'tareas' },
             },
           },
           fr: {
@@ -7932,10 +8180,15 @@
                 uploadSlidesHint: 'Générez automatiquement aperçus et notes.',
                 createLecture: 'Créer un cours',
                 createLectureHint: 'Nommez et affectez en deux actions.',
-                addToCart: 'Ajouter au panier',
-                addToCartHint: 'Préparez les opérations pour une exécution sereine.',
-                runCart: 'Exécuter le panier',
-                runCartHint: 'Lancez immédiatement la file programmée.',
+                browseCatalog: 'Explorer le catalogue',
+                browseCatalogHint: 'Accédez à l’arborescence pour choisir une séance.',
+              },
+              selector: {
+                title: 'Sélecteur de séance',
+                description: 'Choisissez une séance à ouvrir instantanément dans le catalogue.',
+                label: 'Séance',
+                open: 'Ouvrir la séance',
+                empty: 'Créez une séance pour utiliser ce raccourci.',
               },
               recent: {
                 title: 'Activité récente',
@@ -7958,7 +8211,7 @@
               tasks: 'Tâches',
               storage: 'Stockage',
               system: 'Système',
-              import: 'Importer/Exporter',
+              import: 'Transférer',
               debug: 'Debug',
             },
             dock: {
@@ -7991,7 +8244,7 @@
                 tasks: 'Surveiller les tâches en cours et le panier de tâches.',
                 storage: 'Inspecter le stockage et lancer exports ou purges.',
                 system: 'Configurer thèmes, matériel et automatisations.',
-                import: 'Importer ou exporter des archives complètes.',
+                import: 'Gérer les transferts d’archives.',
                 debug: 'Consulter les journaux et événements en temps réel.',
               },
               dock: {
@@ -8022,6 +8275,7 @@
                 loadPreset: 'Charger ce preset dans le panier.',
                 runPreset: 'Charger et exécuter ce preset immédiatement.',
                 deletePreset: 'Supprimer ce preset.',
+                toggle: 'Afficher ou masquer le panier de tâches.',
               },
             },
             catalog: {
@@ -8050,6 +8304,11 @@
                 notify: 'Notifier',
                 shutdown: 'Éteindre',
                 nothing: 'Aucune action',
+              },
+              toggle: {
+                open: 'Ouvrir le panier',
+                close: 'Masquer le panier',
+                aria: '{{count}} dans le panier. {{action}}.',
               },
               added: '« {{title}} » a été ajouté au panier de tâches.',
               pausedNotice: 'Le panier est en pause. Appuyez sur Reprendre pour continuer.',
@@ -8552,17 +8811,6 @@
                 assetDescription: 'Choisissez un nouveau fichier à associer à cette ressource.',
                 archiveTitle: 'Importer une archive',
                 archiveDescription: 'Sélectionnez une archive Lecture Tools exportée (.zip).',
-                bulkUpload: {
-                  title: 'Import massif',
-                  description: 'Téléversez une archive ZIP contenant plusieurs ressources de cours.',
-                  prompt: 'Déposez une archive ZIP ou choisissez-en une sur votre appareil.',
-                  help: 'Le serveur répartira automatiquement le contenu de l’archive.',
-                  action: 'Téléverser l’archive',
-                  success: 'Import massif ajouté à la file.',
-                  failure: 'Échec de l’import massif.',
-                  cancelled: 'Import massif annulé.',
-                  invalid: 'Sélectionnez une archive ZIP pour continuer.',
-                },
               },
               descriptionOptional: 'Description (optionnel)',
               descriptionPlaceholder: 'Ajoutez un court résumé…',
@@ -8653,8 +8901,6 @@
               importing: 'Importation de l’archive…',
               importSuccess: '{{count}} cours importés.',
               importNoChanges: 'Archive importée (aucun nouveau cours).',
-              bulkUploading: 'Téléversement de l’archive…',
-              bulkUploadQueued: 'Import massif ajouté à la file.',
               bulkUploadFailed: 'Échec de l’import massif.',
               idle: 'Inactif',
               cpuBadgeActive: '{{count}} tâches actives',
@@ -8672,6 +8918,7 @@
             counts: {
               module: { one: 'module', other: 'modules' },
               lecture: { one: 'leçon', other: 'leçons' },
+              cartItem: { one: 'tâche', other: 'tâches' },
             },
           },
         };
@@ -9058,6 +9305,9 @@
           if (tooltipManager) {
             tooltipManager.refresh();
           }
+
+          renderHomeLecturePicker();
+          updateTaskCartToggle();
         }
 
         const WHISPER_MODEL_CHOICES = new Set([
@@ -9364,6 +9614,9 @@
             statLectures: document.getElementById('home-stat-lectures'),
             statAssets: document.getElementById('home-stat-assets'),
             quickTiles: Array.from(document.querySelectorAll('[data-home-action]')),
+            lecturePicker: document.getElementById('home-lecture-picker'),
+            lecturePickerOpen: document.getElementById('home-lecture-picker-open'),
+            lecturePickerEmpty: document.getElementById('home-lecture-picker-empty'),
           },
           status: document.getElementById('status-bar'),
           statusMessage: document.getElementById('status-bar-message'),
@@ -9558,6 +9811,9 @@
           taskCartDryRun: document.getElementById('task-cart-dry-run'),
           taskCartParallelism: document.getElementById('task-cart-parallelism'),
           taskCartOnComplete: document.getElementById('task-cart-on-complete'),
+          taskCartToggle: document.getElementById('task-cart-toggle'),
+          taskCartToggleLabel: document.getElementById('task-cart-toggle-label'),
+          taskCartToggleCount: document.getElementById('task-cart-toggle-count'),
           helpOverlay: document.getElementById('help-overlay'),
           helpOverlayClose: document.getElementById('help-overlay-close'),
         };
@@ -10979,47 +11235,319 @@
           }
         }
 
-        async function openBulkUploadDialog() {
-          try {
-            const dialogResult = await showUploadDialog({
-              accept: '.zip,.tar,.tgz,.tar.gz',
-              title: t('dialogs.upload.bulkUpload.title'),
-              description: t('dialogs.upload.bulkUpload.description'),
-              prompt: t('dialogs.upload.bulkUpload.prompt'),
-              help: t('dialogs.upload.bulkUpload.help'),
-              uploadLabel: t('dialogs.upload.bulkUpload.action'),
-              onUpload: async (file, helpers) => {
-                if (!(file instanceof Blob)) {
-                  throw new Error(t('dialogs.upload.bulkUpload.invalid'));
+        function collectLectureOptions() {
+          const options = [];
+          const fallbackClass = t('storage.unnamedClass');
+          const fallbackModule = t('storage.unnamedModule');
+          const fallbackLecture = t('storage.unnamedLecture');
+          state.classes.forEach((klass) => {
+            const className = klass?.name || fallbackClass;
+            (klass.modules || []).forEach((module) => {
+              const moduleName = module?.name || fallbackModule;
+              (module.lectures || []).forEach((lecture) => {
+                if (!lecture || typeof lecture.id !== 'number') {
+                  return;
                 }
-                const formData = new FormData();
-                formData.append('archive', file, file.name || 'bulk-upload.zip');
-                showStatus(t('status.bulkUploading'), 'info', { persist: true });
-                const response = await uploadWithProgress('/api/storage/bulk-upload', {
-                  method: 'POST',
-                  body: formData,
-                  onProgress: (ratio) => {
-                    helpers?.reportProgress?.(ratio);
-                  },
-                });
-                return response;
-              },
+                const lectureName = lecture.name || fallbackLecture;
+                const label = `${className} • ${moduleName} • ${lectureName}`;
+                options.push({ id: lecture.id, label });
+              });
             });
+          });
+          options.sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
+          return options;
+        }
 
-            if (!dialogResult || !dialogResult.confirmed) {
-              return;
-            }
-
-            if (dialogResult.uploaded) {
-              showStatus(t('status.bulkUploadQueued'), 'success', { record: false });
-              addTimelineEntry(t('status.bulkUploadQueued'), 'success');
-              await refreshData();
-              await refreshStorage({ includeOverview: true, force: true });
-            }
-          } catch (error) {
-            const message = error instanceof Error ? error.message : t('status.bulkUploadFailed');
-            showStatus(message, 'error');
+        function formatLectureLabel(lectureId) {
+          const numericId = Number(lectureId);
+          if (!Number.isFinite(numericId)) {
+            return '';
           }
+          const options = collectLectureOptions();
+          const match = options.find((option) => option.id === numericId);
+          if (match) {
+            return match.label;
+          }
+          const fallback = t('storage.unnamedLecture');
+          return `${fallback} #${numericId}`;
+        }
+
+        function getAssignableAssetDefinitions() {
+          const allowed = new Set(['audio', 'slides', 'transcript', 'notes']);
+          return assetDefinitions.filter((definition) => allowed.has(definition.type));
+        }
+
+        async function promptBulkAssignment(file, context = {}) {
+          const lectureOptions =
+            Array.isArray(context.lectureOptions) && context.lectureOptions.length
+              ? context.lectureOptions
+              : collectLectureOptions();
+          if (!lectureOptions.length) {
+            showStatus(t('status.bulkNoLectures'), 'info', { record: false });
+            return null;
+          }
+          const assetOptions =
+            Array.isArray(context.assetOptions) && context.assetOptions.length
+              ? context.assetOptions
+              : getAssignableAssetDefinitions();
+          if (!assetOptions.length) {
+            showStatus(t('status.bulkNoAssetTypes'), 'info', { record: false });
+            return null;
+          }
+
+          const fileName = file?.name || t('dialogs.bulkAssign.unnamed');
+          let selectedLectureId = lectureOptions.some((option) => option.id === state.selectedLectureId)
+            ? state.selectedLectureId
+            : lectureOptions[0]?.id ?? null;
+          const preferredAssetType = context?.preferredAssetType || null;
+          let selectedAssetType = assetOptions[0]?.type ?? null;
+          if (preferredAssetType) {
+            const preferred = assetOptions.find((definition) => definition.type === preferredAssetType);
+            if (preferred) {
+              selectedAssetType = preferred.type;
+            }
+          }
+
+          const result = await showDialog({
+            title: t('dialogs.bulkAssign.title', { name: fileName }),
+            confirmText: t('dialogs.bulkAssign.confirm'),
+            cancelText: t('dialogs.bulkAssign.skip'),
+            renderContent: ({ container, updateConfirm }) => {
+              container.classList.add('bulk-assign-container');
+              const description = document.createElement('p');
+              description.textContent = t('dialogs.bulkAssign.description');
+              container.appendChild(description);
+
+              const form = document.createElement('div');
+              form.className = 'bulk-assign-form';
+
+              const lectureField = document.createElement('label');
+              lectureField.className = 'bulk-assign-field';
+              const lectureLabel = document.createElement('span');
+              lectureLabel.textContent = t('dialogs.bulkAssign.lectureLabel');
+              lectureField.appendChild(lectureLabel);
+              const lectureSelect = document.createElement('select');
+              lectureOptions.forEach((option) => {
+                const choice = document.createElement('option');
+                choice.value = String(option.id);
+                choice.textContent = option.label;
+                lectureSelect.appendChild(choice);
+              });
+              if (Number.isFinite(selectedLectureId)) {
+                lectureSelect.value = String(selectedLectureId);
+              }
+              lectureSelect.addEventListener('change', (event) => {
+                const value = Number(event.target.value);
+                selectedLectureId = Number.isFinite(value) ? value : null;
+                updateConfirm();
+              });
+              lectureField.appendChild(lectureSelect);
+              form.appendChild(lectureField);
+
+              const assetField = document.createElement('label');
+              assetField.className = 'bulk-assign-field';
+              const assetLabel = document.createElement('span');
+              assetLabel.textContent = t('dialogs.bulkAssign.assetLabel');
+              assetField.appendChild(assetLabel);
+              const assetSelect = document.createElement('select');
+              assetOptions.forEach((definition) => {
+                const choice = document.createElement('option');
+                choice.value = definition.type;
+                choice.textContent = t(definition.labelKey);
+                assetSelect.appendChild(choice);
+              });
+              if (selectedAssetType) {
+                assetSelect.value = selectedAssetType;
+              }
+              assetSelect.addEventListener('change', (event) => {
+                const value = String(event.target.value || '');
+                selectedAssetType = value || null;
+                updateConfirm();
+              });
+              assetField.appendChild(assetSelect);
+              form.appendChild(assetField);
+
+              container.appendChild(form);
+
+              updateConfirm();
+
+              return {
+                getValue: () => ({
+                  lectureId: selectedLectureId,
+                  assetType: selectedAssetType,
+                }),
+                isValid: () => Number.isFinite(selectedLectureId) && Boolean(selectedAssetType),
+                initialFocus: lectureSelect,
+              };
+            },
+          });
+
+          if (!result || !result.confirmed) {
+            return null;
+          }
+
+          const value = result.value;
+          if (!value || !Number.isFinite(value.lectureId) || !value.assetType) {
+            return null;
+          }
+
+          return {
+            lectureId: Number(value.lectureId),
+            assetType: String(value.assetType),
+          };
+        }
+
+        async function uploadBulkFile(file, assignment) {
+          const { lectureId, assetType } = assignment || {};
+          if (!Number.isFinite(lectureId) || !assetType) {
+            return false;
+          }
+
+          const assetDefinition = assetDefinitions.find((definition) => definition.type === assetType);
+          if (!assetDefinition) {
+            showStatus(t('status.bulkUnsupportedAsset'), 'error');
+            return false;
+          }
+
+          const lectureLabel = formatLectureLabel(lectureId) || t('cart.title');
+          const assetLabel = t(assetDefinition.labelKey);
+          const fileName = file?.name || t('dialogs.bulkAssign.unnamed');
+
+          const dialogResult = await showUploadDialog({
+            title: t('dialogs.bulkAssign.uploadTitle', { name: fileName }),
+            description: t('dialogs.bulkAssign.uploadDescription', { lecture: lectureLabel, asset: assetLabel }),
+            prompt: t('dialogs.upload.prompt'),
+            help: t('dialogs.upload.help'),
+            uploadLabel: t('dialogs.upload.action'),
+            allowFileSelection: false,
+            preselectedFile: file,
+            onUpload: async (selectedFile, helpers) => {
+              const formData = new FormData();
+              formData.append('file', selectedFile);
+              const endpoint = `/api/lectures/${lectureId}/assets/${assetType}`;
+              const response = await uploadWithProgress(endpoint, {
+                method: 'POST',
+                body: formData,
+                onProgress: (ratio) => {
+                  helpers?.reportProgress?.(ratio);
+                },
+              });
+              return response;
+            },
+          });
+
+          const backgroundProcessingActive = Boolean(
+            (dialogResult && dialogResult.processing) ||
+              (dialogResult && dialogResult.result && dialogResult.result.processing),
+          );
+
+          if (!dialogResult || (!dialogResult.uploaded && !backgroundProcessingActive)) {
+            return false;
+          }
+
+          showStatus(
+            t('status.bulkFileUploaded', { name: fileName, lecture: lectureLabel, asset: assetLabel }),
+            'success',
+            { record: false },
+          );
+          addTimelineEntry(
+            t('status.bulkFileTimeline', { name: fileName, lecture: lectureLabel, asset: assetLabel }),
+            'success',
+          );
+          await refreshData();
+          await selectLecture(lectureId);
+          return true;
+        }
+
+        async function processBulkFileList(files, options = {}) {
+          const entries = Array.isArray(files) ? files.filter((item) => item instanceof Blob) : [];
+          if (!entries.length) {
+            showStatus(t('status.bulkNoFiles'), 'info', { record: false });
+            return;
+          }
+
+          const lectureOptions = collectLectureOptions();
+          if (!lectureOptions.length) {
+            showStatus(t('status.bulkNoLectures'), 'info', { record: false });
+            return;
+          }
+
+          const assetOptions = getAssignableAssetDefinitions();
+          if (!assetOptions.length) {
+            showStatus(t('status.bulkNoAssetTypes'), 'info', { record: false });
+            return;
+          }
+
+          let uploadedCount = 0;
+          let lastPreferredAssetType = options?.preferredAssetType || null;
+          for (const entry of entries) {
+            const assignment = await promptBulkAssignment(entry, {
+              lectureOptions,
+              assetOptions,
+              preferredAssetType: lastPreferredAssetType,
+            });
+            if (!assignment) {
+              const name = entry?.name || t('dialogs.bulkAssign.unnamed');
+              showStatus(t('status.bulkFileSkipped', { name }), 'info', { record: false });
+              continue;
+            }
+            lastPreferredAssetType = assignment.assetType;
+            try {
+              const success = await uploadBulkFile(entry, assignment);
+              if (success) {
+                uploadedCount += 1;
+              }
+            } catch (error) {
+              const message = error instanceof Error ? error.message : t('status.bulkUploadFailed');
+              showStatus(message, 'error');
+            }
+          }
+
+          if (uploadedCount > 0) {
+            showStatus(t('status.bulkUploadComplete', { count: uploadedCount }), 'success');
+            await refreshStorage({ includeOverview: true, force: true });
+          }
+        }
+
+        async function openBulkUploadDialog(preferences = {}) {
+          const lectureOptions = collectLectureOptions();
+          if (!lectureOptions.length) {
+            showStatus(t('status.bulkNoLectures'), 'info', { record: false });
+            return;
+          }
+
+          const assetOptions = getAssignableAssetDefinitions();
+          if (!assetOptions.length) {
+            showStatus(t('status.bulkNoAssetTypes'), 'info', { record: false });
+            return;
+          }
+
+          const fileInput = document.createElement('input');
+          fileInput.type = 'file';
+          fileInput.multiple = true;
+          const acceptedTypes = assetOptions
+            .map((definition) => definition.accept)
+            .filter((value) => typeof value === 'string' && value.trim().length > 0);
+          if (acceptedTypes.length) {
+            fileInput.accept = acceptedTypes.join(',');
+          } else {
+            fileInput.removeAttribute('accept');
+          }
+
+          await new Promise((resolve) => {
+            fileInput.addEventListener(
+              'change',
+              async () => {
+                const files = Array.from(fileInput.files || []);
+                await processBulkFileList(files, {
+                  preferredAssetType: preferences?.preferredAssetType || null,
+                });
+                resolve();
+              },
+              { once: true },
+            );
+            fileInput.click();
+          });
         }
 
         loadTaskCartPresets();
@@ -11028,6 +11556,7 @@
         renderSystemUpdate();
         renderProgressQueue();
         void refreshProgressQueue({ silent: true });
+        updateTaskCartToggle();
 
         const STATUS_DEFAULT_TIMEOUT = 5000;
         const TIMELINE_MAX_ENTRIES = 20;
@@ -11192,6 +11721,65 @@
           });
         }
 
+        function updateHomeLecturePickerState() {
+          const picker = dom.home?.lecturePicker;
+          const openButton = dom.home?.lecturePickerOpen;
+          if (!(openButton instanceof HTMLButtonElement)) {
+            return;
+          }
+          const value = picker instanceof HTMLSelectElement ? Number(picker.value) : NaN;
+          openButton.disabled = !Number.isFinite(value);
+        }
+
+        function renderHomeLecturePicker() {
+          const picker = dom.home?.lecturePicker;
+          const openButton = dom.home?.lecturePickerOpen;
+          const emptyMessage = dom.home?.lecturePickerEmpty;
+          if (
+            !(picker instanceof HTMLSelectElement) ||
+            !(openButton instanceof HTMLButtonElement) ||
+            !(emptyMessage instanceof HTMLElement)
+          ) {
+            return;
+          }
+
+          const previousValue = picker.value;
+          const lectureOptions = collectLectureOptions();
+          picker.innerHTML = '';
+
+          if (!lectureOptions.length) {
+            picker.disabled = true;
+            picker.value = '';
+            openButton.disabled = true;
+            emptyMessage.hidden = false;
+            return;
+          }
+
+          emptyMessage.hidden = true;
+          picker.disabled = false;
+
+          lectureOptions.forEach((option) => {
+            const choice = document.createElement('option');
+            choice.value = String(option.id);
+            choice.textContent = option.label;
+            picker.appendChild(choice);
+          });
+
+          const selectedId = Number(state.selectedLectureId);
+          const hasPrevious = lectureOptions.some((option) => String(option.id) === previousValue);
+          if (hasPrevious) {
+            picker.value = previousValue;
+          } else if (Number.isFinite(selectedId)) {
+            const match = lectureOptions.find((option) => option.id === selectedId);
+            picker.value = match ? String(match.id) : String(lectureOptions[0].id);
+          } else {
+            picker.value = String(lectureOptions[0].id);
+          }
+
+          openButton.disabled = false;
+          updateHomeLecturePickerState();
+        }
+
         function updateStatusBadges() {
           const runningCount = state.progress.entries.filter(
             (entry) => entry.status === 'running',
@@ -11294,6 +11882,7 @@
           }
           dom.taskCart.setAttribute('data-open', 'true');
           state.taskCart.open = true;
+          updateTaskCartToggle();
         }
 
         function closeTaskCart() {
@@ -11302,6 +11891,31 @@
           }
           dom.taskCart.setAttribute('data-open', 'false');
           state.taskCart.open = false;
+          updateTaskCartToggle();
+        }
+
+        function updateTaskCartToggle() {
+          if (!(dom.taskCartToggle instanceof HTMLButtonElement)) {
+            return;
+          }
+          const expanded = Boolean(state.taskCart.open);
+          dom.taskCartToggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+          if (dom.taskCartToggleLabel) {
+            const label = expanded ? t('cart.toggle.close') : t('cart.toggle.open');
+            dom.taskCartToggleLabel.textContent = label;
+          }
+          const items = Array.isArray(state.taskCart.items) ? state.taskCart.items : [];
+          const count = items.length;
+          const formattedCount = formatNumber(count);
+          if (dom.taskCartToggleCount) {
+            dom.taskCartToggleCount.textContent = formattedCount;
+            dom.taskCartToggleCount.dataset.empty = count === 0 ? 'true' : 'false';
+          }
+          const actionLabel = expanded ? t('cart.toggle.close') : t('cart.toggle.open');
+          const itemWord = pluralize(currentLanguage, 'counts.cartItem', count);
+          const countLabel = `${formattedCount} ${itemWord}`.trim();
+          const ariaLabel = t('cart.toggle.aria', { count: countLabel, action: actionLabel });
+          dom.taskCartToggle.setAttribute('aria-label', ariaLabel);
         }
 
         function openHelpOverlay() {
@@ -11978,12 +12592,14 @@
           if (!dom.taskCartItems) {
             updateStatusBadges();
             updateTaskCartControls();
+            updateTaskCartToggle();
             return;
           }
           dom.taskCartItems.innerHTML = '';
           if (!items.length) {
             updateStatusBadges();
             updateTaskCartControls();
+            updateTaskCartToggle();
             return;
           }
 
@@ -12131,6 +12747,7 @@
 
           updateStatusBadges();
           updateTaskCartControls();
+          updateTaskCartToggle();
         }
 
         function handleTaskCartDragStart(event) {
@@ -14253,6 +14870,9 @@
           placeholder = '',
           defaultValue = '',
           required = false,
+          renderContent = null,
+          getValue = null,
+          validate = null,
         } = {}) {
           return new Promise((resolve) => {
             const dialog = dom.dialog;
@@ -14266,10 +14886,43 @@
               document.activeElement instanceof HTMLElement ? document.activeElement : null;
             const requireValue = Boolean(required && input);
             const variantClass = variant === 'danger' ? 'danger' : 'primary';
+            let customCleanup = null;
+            let customGetValue = typeof getValue === 'function' ? getValue : null;
+            let customValidate = typeof validate === 'function' ? validate : null;
+            let customInitialFocus = null;
 
             dialog.title.textContent = title || '';
-            dialog.message.textContent = message || '';
-            dialog.message.style.display = message ? 'block' : 'none';
+            if (dialog.message) {
+              dialog.message.innerHTML = '';
+              if (typeof renderContent === 'function') {
+                dialog.message.style.display = 'block';
+                const result =
+                  renderContent({
+                    container: dialog.message,
+                    updateConfirm: () => updateConfirmState(),
+                  }) || null;
+                if (result) {
+                  if (typeof result.cleanup === 'function') {
+                    customCleanup = result.cleanup;
+                  }
+                  if (typeof result.getValue === 'function') {
+                    customGetValue = result.getValue;
+                  }
+                  if (typeof result.isValid === 'function') {
+                    customValidate = result.isValid;
+                  }
+                  if (result.initialFocus instanceof HTMLElement) {
+                    customInitialFocus = result.initialFocus;
+                  }
+                }
+              } else if (message) {
+                dialog.message.textContent = message;
+                dialog.message.style.display = 'block';
+              } else {
+                dialog.message.textContent = '';
+                dialog.message.style.display = 'none';
+              }
+            }
 
             if (input) {
               dialog.inputWrapper.classList.remove('hidden');
@@ -14294,11 +14947,13 @@
             focusOrder.push(dialog.cancel, dialog.confirm);
 
             function updateConfirmState() {
+              const customValid = typeof customValidate === 'function' ? customValidate() : true;
               if (!requireValue) {
-                dialog.confirm.disabled = false;
+                dialog.confirm.disabled = !customValid;
                 return;
               }
-              dialog.confirm.disabled = dialog.input.value.trim().length === 0;
+              const hasValue = dialog.input.value.trim().length > 0;
+              dialog.confirm.disabled = !(hasValue && customValid);
             }
 
             function cleanup() {
@@ -14308,6 +14963,13 @@
               dialog.window.removeEventListener('keydown', handleKeyDown);
               if (input) {
                 dialog.input.removeEventListener('input', updateConfirmState);
+              }
+              if (typeof customCleanup === 'function') {
+                try {
+                  customCleanup();
+                } catch (cleanupError) {
+                  console.warn('Dialog custom cleanup failed', cleanupError);
+                }
               }
               dialog.root.classList.add('hidden');
               dialog.root.setAttribute('aria-hidden', 'true');
@@ -14328,7 +14990,11 @@
               if (dialog.confirm.disabled) {
                 return;
               }
-              const value = input ? dialog.input.value : null;
+              const value = input
+                ? dialog.input.value
+                : customGetValue
+                ? customGetValue()
+                : null;
               resolveAndClose({ confirmed: true, value });
             }
 
@@ -14393,7 +15059,12 @@
             document.body.classList.add('dialog-open');
             updateConfirmState();
 
-            const initialFocus = input ? dialog.input : dialog.confirm;
+            const initialFocus =
+              customInitialFocus instanceof HTMLElement
+                ? customInitialFocus
+                : input
+                ? dialog.input
+                : dialog.confirm;
             window.requestAnimationFrame(() => {
               initialFocus.focus({ preventScroll: true });
               if (input) {
@@ -14442,6 +15113,9 @@
             const enableProcessingStage = options.enableProcessingStage !== false;
             const backgroundProcessingMessage =
               typeof options.backgroundProcessing === 'string' ? options.backgroundProcessing : '';
+            const allowFileSelection = options.allowFileSelection !== false;
+            const initialFile =
+              options.preselectedFile instanceof Blob ? options.preselectedFile : null;
 
             const actionLabelCandidate =
               options.uploadLabel ||
@@ -14846,6 +15520,9 @@
             }
 
             async function handleDrop(event) {
+              if (!allowFileSelection) {
+                return;
+              }
               event.preventDefault();
               if (dialog.dropzone) {
                 dialog.dropzone.classList.remove('active');
@@ -14857,6 +15534,9 @@
             }
 
             async function handleInputChange(event) {
+              if (!allowFileSelection) {
+                return;
+              }
               const files = event.target?.files;
               if (files && files.length > 0) {
                 await setSelectedFile(files[0]);
@@ -14865,6 +15545,9 @@
 
             async function handleClearSelection(event) {
               event.preventDefault();
+              if (!allowFileSelection) {
+                return;
+              }
               await setSelectedFile(null);
             }
 
@@ -14888,6 +15571,9 @@
             }
 
             function handleBrowseClick(event) {
+              if (!allowFileSelection) {
+                return;
+              }
               if (!dialog.input) {
                 return;
               }
@@ -14907,6 +15593,9 @@
             }
 
             function handleDragOver(event) {
+              if (!allowFileSelection) {
+                return;
+              }
               event.preventDefault();
               if (event.dataTransfer) {
                 event.dataTransfer.dropEffect = 'copy';
@@ -14917,6 +15606,9 @@
             }
 
             function handleDragLeave(event) {
+              if (!allowFileSelection) {
+                return;
+              }
               event.preventDefault();
               if (dialog.dropzone) {
                 dialog.dropzone.classList.remove('active');
@@ -15077,19 +15769,25 @@
             }
             if (dialog.dropzone) {
               dialog.dropzone.setAttribute('aria-label', labels.prompt);
+              dialog.dropzone.setAttribute('aria-disabled', allowFileSelection ? 'false' : 'true');
+              dialog.dropzone.tabIndex = allowFileSelection ? 0 : -1;
             }
             if (dialog.help) {
               dialog.help.textContent = labels.help;
             }
             if (dialog.browse) {
               dialog.browse.textContent = labels.browse;
+              dialog.browse.disabled = !allowFileSelection;
+              dialog.browse.classList.toggle('hidden', !allowFileSelection);
             }
             if (dialog.clear) {
               dialog.clear.textContent = labels.clear;
+              dialog.clear.disabled = !allowFileSelection;
             }
             if (dialog.input) {
               dialog.input.accept = accept;
               dialog.input.value = '';
+              dialog.input.disabled = !allowFileSelection;
             }
             if (dialog.progress) {
               dialog.progress.setAttribute('aria-label', labels.progress);
@@ -15124,26 +15822,33 @@
             if (dialog.window) {
               dialog.window.addEventListener('keydown', handleKeyDown);
             }
-            if (dialog.dropzone) {
+            if (allowFileSelection && dialog.dropzone) {
               dialog.dropzone.addEventListener('click', handleBrowseClick);
               dialog.dropzone.addEventListener('keydown', handleDropzoneKeyDown);
               dialog.dropzone.addEventListener('dragover', handleDragOver);
               dialog.dropzone.addEventListener('dragleave', handleDragLeave);
               dialog.dropzone.addEventListener('drop', handleDrop);
             }
-            if (dialog.browse) {
+            if (allowFileSelection && dialog.browse) {
               dialog.browse.addEventListener('click', handleBrowseClick);
               dialog.browse.addEventListener('keydown', handleDropzoneKeyDown);
             }
-            if (dialog.input) {
+            if (allowFileSelection && dialog.input) {
               dialog.input.addEventListener('change', handleInputChange);
             }
-            if (dialog.clear) {
+            if (allowFileSelection && dialog.clear) {
               dialog.clear.addEventListener('click', handleClearSelection);
             }
 
+            if (initialFile) {
+              void setSelectedFile(initialFile);
+            }
+
             window.requestAnimationFrame(() => {
-              const target = dialog.dropzone instanceof HTMLElement ? dialog.dropzone : dialog.confirm;
+              const target =
+                allowFileSelection && dialog.dropzone instanceof HTMLElement
+                  ? dialog.dropzone
+                  : dialog.confirm;
               target?.focus?.({ preventScroll: true });
             });
           });
@@ -16736,17 +17441,17 @@
         function handleHomeAction(action) {
           switch (action) {
             case 'upload-recording':
+              void openBulkUploadDialog({ preferredAssetType: 'audio' });
+              break;
             case 'upload-slides':
-              void openBulkUploadDialog();
+              void openBulkUploadDialog({ preferredAssetType: 'slides' });
               break;
             case 'create-lecture':
               handleActionDock('create');
               break;
-            case 'add-to-cart':
-              handleActionDock('add-to-cart');
-              break;
-            case 'run-cart':
-              handleActionDock('run-cart');
+            case 'browse-catalog':
+              navigatePrimary('catalog');
+              setActiveView('details');
               break;
             case 'open-tasks':
               navigatePrimary('tasks');
@@ -18073,6 +18778,8 @@
                 clearDetailPanel();
               }
             }
+
+            renderHomeLecturePicker();
           } catch (error) {
             showStatus(error.message, 'error');
           }
@@ -18109,6 +18816,7 @@
             setTranscribeButtonDisabled(!detail.lecture.audio_path);
 
             renderAssets(detail.lecture);
+            renderHomeLecturePicker();
           } catch (error) {
             state.selectedLectureDetail = null;
             showStatus(error.message, 'error');
@@ -18471,6 +19179,26 @@
           });
         }
 
+        if (dom.home && dom.home.lecturePicker instanceof HTMLSelectElement) {
+          dom.home.lecturePicker.addEventListener('change', () => {
+            updateHomeLecturePickerState();
+          });
+        }
+
+        if (dom.home && dom.home.lecturePickerOpen instanceof HTMLButtonElement) {
+          dom.home.lecturePickerOpen.addEventListener('click', () => {
+            if (!(dom.home.lecturePicker instanceof HTMLSelectElement)) {
+              return;
+            }
+            const lectureId = Number(dom.home.lecturePicker.value);
+            if (!Number.isFinite(lectureId)) {
+              return;
+            }
+            navigatePrimary('catalog');
+            void selectLecture(lectureId);
+          });
+        }
+
         if (dom.curriculumBulkEdit) {
           dom.curriculumBulkEdit.addEventListener('click', () => {
             navigatePrimary('catalog');
@@ -18559,6 +19287,16 @@
         if (dom.taskCartClose instanceof HTMLButtonElement) {
           dom.taskCartClose.addEventListener('click', () => {
             closeTaskCart();
+          });
+        }
+
+        if (dom.taskCartToggle instanceof HTMLButtonElement) {
+          dom.taskCartToggle.addEventListener('click', () => {
+            if (state.taskCart.open) {
+              closeTaskCart();
+            } else {
+              openTaskCart();
+            }
           });
         }
 
