@@ -2450,59 +2450,6 @@
         gap: 16px;
       }
 
-      .update-status {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-      }
-
-      .update-meta {
-        font-size: 0.85rem;
-        color: var(--muted);
-      }
-
-      .update-log-wrapper {
-        margin-top: 12px;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-      }
-
-      .update-log-label {
-        font-size: 0.9rem;
-        font-weight: 500;
-      }
-
-      .update-log {
-        background: rgba(15, 23, 42, 0.05);
-        border: 1px solid var(--panel-border);
-        border-radius: 6px;
-        padding: 12px;
-        font-family: 'JetBrains Mono', 'SFMono-Regular', Menlo, Monaco, Consolas,
-          'Liberation Mono', 'Courier New', monospace;
-        font-size: 0.85rem;
-        line-height: 1.4;
-        max-height: 240px;
-        overflow-y: auto;
-        white-space: pre-wrap;
-        word-break: break-word;
-      }
-
-      body[data-theme='dark'] .update-log {
-        background: rgba(148, 163, 184, 0.12);
-      }
-
-      @media (prefers-color-scheme: dark) {
-        body[data-theme='system'] .update-log {
-          background: rgba(148, 163, 184, 0.12);
-        }
-      }
-
-      .update-log-empty {
-        font-size: 0.85rem;
-        color: var(--muted);
-      }
-
       .field-help {
         font-size: 0.85rem;
         color: var(--muted);
@@ -3153,21 +3100,15 @@
 
       .work-canvas {
         display: grid;
-        grid-template-columns: 28% 72%;
+        grid-template-columns: minmax(0, 1fr);
+        grid-auto-rows: auto;
         gap: calc(var(--grid-unit) * 3);
         align-items: start;
       }
 
-      .section.catalog[data-catalog-mode='browse'] .pane-details {
-        display: none;
-      }
-
-      .section.catalog[data-catalog-mode='lecture'] .work-canvas {
-        grid-template-columns: 1fr;
-      }
-
-      .section.catalog[data-catalog-mode='lecture'] .pane-tree {
-        display: none;
+      .pane-tree,
+      .pane-details {
+        grid-column: 1 / -1;
       }
 
       .pane {
@@ -3355,6 +3296,53 @@
         display: none;
       }
 
+      .action-dock[data-collapsed='true'] {
+        pointer-events: none;
+        opacity: 0;
+        transform: translateX(24px);
+        transition: opacity var(--transition-fade), transform var(--transition-snappy);
+      }
+
+      .action-dock-toggle-button {
+        align-self: flex-end;
+        border: 1px solid var(--app-border);
+        border-radius: 14px;
+        padding: calc(var(--grid-unit) * 0.75) calc(var(--grid-unit) * 1.5);
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        cursor: pointer;
+        background: var(--app-surface-alt);
+        color: var(--app-text-muted);
+      }
+
+      .action-dock-toggle-button:hover,
+      .action-dock-toggle-button:focus-visible {
+        outline: none;
+        color: var(--accent-primary);
+      }
+
+      .action-dock-expander {
+        position: fixed;
+        right: calc(var(--grid-unit) * 2.5);
+        top: calc(var(--grid-unit) * 10);
+        border-radius: 16px;
+        border: 1px solid var(--app-border);
+        background: var(--app-surface);
+        color: var(--app-text);
+        font-size: 0.8rem;
+        font-weight: 600;
+        padding: calc(var(--grid-unit) * 1) calc(var(--grid-unit) * 1.75);
+        box-shadow: var(--app-shadow-soft);
+        cursor: pointer;
+        z-index: 80;
+      }
+
+      .action-dock-expander.hidden {
+        display: none;
+      }
+
       #asset-section {
         margin-top: calc(var(--grid-unit) * 2);
       }
@@ -3404,6 +3392,36 @@
       .asset-status {
         color: var(--app-text-muted);
         font-size: 0.9rem;
+      }
+
+      .asset-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: calc(var(--grid-unit) * 1);
+      }
+
+      .asset-actions button {
+        border-radius: 12px;
+        border: 1px solid var(--app-border);
+        background: var(--app-surface-alt);
+        color: var(--app-text);
+        font-size: 0.78rem;
+        font-weight: 600;
+        padding: calc(var(--grid-unit) * 1) calc(var(--grid-unit) * 1.5);
+        cursor: pointer;
+        transition: background var(--transition-snappy), color var(--transition-snappy);
+      }
+
+      .asset-actions button:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+      }
+
+      .asset-actions button:not(:disabled):hover,
+      .asset-actions button:not(:disabled):focus-visible {
+        outline: none;
+        background: rgba(64, 82, 255, 0.12);
+        color: var(--accent-primary);
       }
 
       .task-cart-tray {
@@ -3725,6 +3743,65 @@
         gap: calc(var(--grid-unit) * 1);
         align-items: flex-end;
         min-width: 0;
+      }
+
+      .task-cart-config {
+        display: grid;
+        gap: calc(var(--grid-unit) * 1.5);
+        margin-top: calc(var(--grid-unit) * 2);
+        padding-top: calc(var(--grid-unit) * 1.5);
+        border-top: 1px solid rgba(19, 34, 56, 0.08);
+      }
+
+      body[data-theme='dark'] .task-cart-config {
+        border-top: 1px solid rgba(222, 233, 255, 0.12);
+      }
+
+      .task-cart-field {
+        display: flex;
+        flex-direction: column;
+        gap: calc(var(--grid-unit) * 0.75);
+      }
+
+      .task-cart-field-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .task-cart-select {
+        width: 100%;
+        border-radius: 14px;
+        border: 1px solid var(--panel-border);
+        background: var(--panel-bg);
+        color: var(--text);
+        padding: calc(var(--grid-unit) * 1.25) calc(var(--grid-unit) * 2);
+        font-size: 0.9rem;
+        font-family: inherit;
+        transition: border-color var(--transition-snappy), box-shadow var(--transition-snappy);
+      }
+
+      .task-cart-select:focus {
+        outline: none;
+        border-color: rgba(64, 82, 255, 0.5);
+        box-shadow: 0 0 0 3px rgba(64, 82, 255, 0.12);
+      }
+
+      .task-cart-warning {
+        margin: 0;
+        padding: calc(var(--grid-unit) * 1.25) calc(var(--grid-unit) * 1.5);
+        border-radius: 12px;
+        background: var(--status-error-bg);
+        color: var(--status-error-text);
+        font-size: 0.85rem;
+        line-height: 1.4;
+      }
+
+      .task-cart-item[data-available='false'] {
+        border-color: rgba(255, 95, 122, 0.28);
+        box-shadow: 0 0 0 1px rgba(255, 95, 122, 0.12);
       }
 
       @media (max-width: 1024px) {
@@ -4492,20 +4569,6 @@
                         >
                           Create class
                         </button>
-                        <button
-                          type="button"
-                          id="curriculum-create-module"
-                          data-i18n="catalog.actions.createModule"
-                        >
-                          Create module
-                        </button>
-                        <button
-                          type="button"
-                          id="curriculum-create-lecture"
-                          data-i18n="catalog.actions.createLecture"
-                        >
-                          Create lecture
-                        </button>
                       </div>
                     </div>
                     <label
@@ -4904,51 +4967,6 @@
                 </div>
               </fieldset>
               <fieldset>
-                <legend data-i18n="settings.update.legend">System updates</legend>
-                <p class="field-help" data-i18n="settings.update.description">
-                  Update Lecture Tools without leaving the browser.
-                </p>
-                <div class="field-inline">
-                  <button id="settings-update-run" type="button" class="secondary" data-i18n="settings.update.run">
-                    Run update
-                  </button>
-                  <button
-                    id="settings-update-refresh"
-                    type="button"
-                    class="ghost"
-                    data-i18n="settings.update.refresh"
-                  >
-                    Refresh status
-                  </button>
-                </div>
-                <div class="update-status">
-                  <div
-                    id="settings-update-status"
-                    class="field-help"
-                    data-i18n="settings.update.status.idle"
-                  >
-                    No update in progress.
-                  </div>
-                  <div id="settings-update-meta" class="update-meta" hidden></div>
-                </div>
-                <div id="settings-update-log-wrapper" class="update-log-wrapper" hidden>
-                  <div class="update-log-label" data-i18n="settings.update.logLabel">Activity log</div>
-                  <pre
-                    id="settings-update-log"
-                    class="update-log"
-                    aria-live="polite"
-                    hidden
-                  ></pre>
-                  <div
-                    id="settings-update-log-empty"
-                    class="update-log-empty"
-                    data-i18n="settings.update.logEmpty"
-                  >
-                    No update activity yet.
-                  </div>
-                </div>
-              </fieldset>
-              <fieldset>
                 <legend data-i18n="settings.archive.legend">Archive</legend>
                 <p class="field-help" data-i18n="settings.archive.description">
                   Export your lectures and assets or import an archive from another machine.
@@ -4991,7 +5009,15 @@
             </div>
           </section>
         </div>
-        <aside class="action-dock" aria-label="Quick actions">
+        <aside class="action-dock" aria-label="Quick actions" data-collapsed="false">
+          <button
+            type="button"
+            id="action-dock-collapse"
+            class="action-dock-toggle-button"
+            data-i18n="dock.collapse"
+          >
+            Hide actions
+          </button>
           <button type="button" data-action="create" data-tooltip-key="tooltips.dock.create">
             <span class="icon" aria-hidden="true">➕</span>
             <span data-i18n="dock.create">Create</span>
@@ -5014,19 +5040,11 @@
           </button>
           <button
             type="button"
-            data-action="add-to-cart"
-            data-tooltip-key="tooltips.dock.addToCart"
+            data-action="open-cart"
+            data-tooltip-key="tooltips.dock.openCart"
           >
             <span class="icon" aria-hidden="true">🛒</span>
-            <span data-i18n="dock.addToCart">Add to Cart</span>
-          </button>
-          <button
-            type="button"
-            data-action="run-cart"
-            data-tooltip-key="tooltips.dock.runCart"
-          >
-            <span class="icon" aria-hidden="true">▶️</span>
-            <span data-i18n="dock.runCart">Run Cart</span>
+            <span data-i18n="dock.openCart">Open Cart</span>
           </button>
           <button type="button" data-action="export" data-tooltip-key="tooltips.dock.export">
             <span class="icon" aria-hidden="true">📤</span>
@@ -5042,14 +5060,6 @@
           </button>
           <button
             type="button"
-            data-action="system-update"
-            data-tooltip-key="tooltips.dock.update"
-          >
-            <span class="icon" aria-hidden="true">⬆︎</span>
-            <span data-i18n="dock.update">System Update</span>
-          </button>
-          <button
-            type="button"
             data-action="debug-toggle"
             data-tooltip-key="tooltips.dock.debug"
           >
@@ -5057,6 +5067,14 @@
             <span data-i18n="dock.debug">Debug On/Off</span>
           </button>
         </aside>
+        <button
+          id="action-dock-expander"
+          class="action-dock-expander hidden"
+          type="button"
+          data-i18n="dock.expand"
+        >
+          Show actions
+        </button>
       </main>
 
       <nav class="mobile-tab-bar" aria-label="Primary">
@@ -5663,13 +5681,13 @@
               create: 'Create',
               bulkUpload: 'Bulk Upload',
               bulkDownload: 'Bulk Download',
-              addToCart: 'Add to Cart',
-              runCart: 'Open Cart',
+              openCart: 'Open Cart',
               export: 'Export',
               import: 'Import',
               purge: 'Purge',
-              update: 'System Update',
               debug: 'Debug On/Off',
+              collapse: 'Hide actions',
+              expand: 'Show actions',
             },
             tooltips: {
               global: {
@@ -5696,13 +5714,13 @@
                 create: 'Launch the create dialog for classes, modules, or lectures.',
                 bulkUpload: 'Upload multiple recordings, folders, or slide decks.',
                 bulkDownload: 'Download selected items as a single archive.',
-                addToCart: 'Place the current selection into the Task Cart.',
-                runCart: 'Open the Task Cart to review queued work.',
+                openCart: 'Open the Task Cart to review queued work.',
                 export: 'Export the current selection to a ZIP file.',
                 import: 'Import lectures or assets from an archive.',
                 purge: 'Remove processed audio that already has transcripts.',
-                update: 'Launch the system update workflow.',
                 debug: 'Toggle the live debug console on or off.',
+                collapse: 'Collapse the quick actions sidebar.',
+                expand: 'Show the quick actions sidebar.',
               },
               cart: {
                 run: 'Submit the queue for background processing.',
@@ -5829,6 +5847,18 @@
                 transcribeQueued: 'Transcription job submitted.',
                 queuedRemote: 'Queued on the server.',
               },
+              edit: {
+                lectureLabel: 'Lecture',
+                lecturePlaceholder: 'Select a lecture',
+                actionLabel: 'Action',
+                actionPlaceholder: 'Select an action',
+                noLectures: 'Add a lecture before configuring this task.',
+                selectLecture: 'Choose a lecture to enable this task.',
+                noActionsAvailable: 'No compatible actions are available for this lecture.',
+                audioMissing: 'Upload audio to process this lecture.',
+                slidesMissing: 'Upload slides before processing this lecture.',
+                slidesProcessing: 'Slides are currently processing—try again later.',
+              },
             },
             help: {
               title: 'Welcome to the new workspace',
@@ -5911,6 +5941,7 @@
                 processSlides: 'Process slides',
                 download: 'Download',
                 remove: 'Remove',
+                addToCart: 'Add to cart',
               },
             },
             progress: {
@@ -6006,23 +6037,6 @@
                   400: '400 dpi (high detail)',
                   600: '600 dpi (maximum)',
                 },
-              },
-              update: {
-                legend: 'System updates',
-                description: 'Update Lecture Tools without leaving the browser.',
-                run: 'Run update',
-                refresh: 'Refresh status',
-                status: {
-                  idle: 'No update in progress.',
-                  running: 'Update running. Keep this window open until it completes.',
-                  success: 'The most recent update completed successfully.',
-                  failure: 'The most recent update encountered an error.',
-                },
-                startedAt: 'Started {{time}}.',
-                finishedAt: 'Finished {{time}}.',
-                exitCode: 'Exit code {{code}}.',
-                logLabel: 'Activity log',
-                logEmpty: 'No update activity yet.',
               },
               archive: {
                 legend: 'Archive',
@@ -6346,11 +6360,6 @@
               gpuUnavailable: 'GPU acceleration is unavailable on this platform.',
               gpuUnsupported: 'GPU Whisper is not supported on this platform.',
               gpuNotAvailable: 'GPU acceleration is not available on this platform.',
-              updateStarted: 'Update started.',
-              updateRunning: 'Update in progress. Keep this window open.',
-              updateCompleted: 'Update completed successfully.',
-              updateFailed: 'Update failed. Review the log for details.',
-              updateConflict: 'An update is already running.',
               shuttingDown: 'Shutting down application…',
               settingsSaved: 'Settings saved.',
               gpuFallback: 'Falling back to {{model}} model.',
@@ -6373,7 +6382,6 @@
               exportLocation: 'Export tools live under System settings.',
               importLocation: 'Import tools live under System settings.',
               storageLocation: 'Storage cleanup tools are in the Storage pane.',
-              updateLocation: 'System update controls are in System settings.',
             },
             counts: {
               module: { one: 'module', other: 'modules' },
@@ -6472,13 +6480,13 @@
               create: '新建',
               bulkUpload: '批量上传',
               bulkDownload: '批量下载',
-              addToCart: '加入任务车',
-              runCart: '打开任务车',
+              openCart: '打开任务车',
               export: '导出',
               import: '导入',
               purge: '清理',
-              update: '系统更新',
               debug: '调试开关',
+              collapse: '隐藏操作',
+              expand: '显示操作',
             },
             tooltips: {
               global: {
@@ -6505,13 +6513,13 @@
                 create: '打开新建班级、模块或讲座的对话框。',
                 bulkUpload: '批量上传录音、文件夹或课件。',
                 bulkDownload: '将所选内容打包成单个归档下载。',
-                addToCart: '把当前选中项目加入任务车。',
-                runCart: '打开任务车查看待处理任务。',
+                openCart: '打开任务车查看待处理任务。',
                 export: '导出当前选中内容为 ZIP。',
                 import: '从归档中导入课程或资源。',
                 purge: '清理已有转录的处理后音频。',
-                update: '启动系统更新流程。',
                 debug: '切换实时调试面板。',
+                collapse: '折叠快捷操作侧栏。',
+                expand: '显示快捷操作侧栏。',
               },
               cart: {
                 run: '将队列提交到后台依次处理。',
@@ -6638,6 +6646,18 @@
                 transcribeQueued: '转写任务已提交。',
                 queuedRemote: '已提交至服务器队列。',
               },
+              edit: {
+                lectureLabel: '讲座',
+                lecturePlaceholder: '请选择讲座',
+                actionLabel: '操作',
+                actionPlaceholder: '选择操作',
+                noLectures: '请先创建讲座再配置此任务。',
+                selectLecture: '选择讲座以启用此任务。',
+                noActionsAvailable: '当前讲座没有可用的操作。',
+                audioMissing: '请上传音频后再处理此讲座。',
+                slidesMissing: '请先上传课件再进行处理。',
+                slidesProcessing: '课件正在处理中，请稍后再试。',
+              },
             },
             help: {
               title: '欢迎使用全新工作台',
@@ -6720,6 +6740,7 @@
                 processSlides: '处理课件',
                 download: '下载',
                 remove: '移除',
+                addToCart: '加入任务车',
               },
             },
             progress: {
@@ -6814,23 +6835,6 @@
                   400: '400 dpi（高细节）',
                   600: '600 dpi（最高）',
                 },
-              },
-              update: {
-                legend: '系统更新',
-                description: '在浏览器内更新 Lecture Tools。',
-                run: '运行更新',
-                refresh: '刷新状态',
-                status: {
-                  idle: '当前没有更新任务。',
-                  running: '正在更新。请保持此窗口打开直到完成。',
-                  success: '最近一次更新已成功完成。',
-                  failure: '最近一次更新时发生错误。',
-                },
-                startedAt: '开始于 {{time}}。',
-                finishedAt: '结束于 {{time}}。',
-                exitCode: '退出代码 {{code}}。',
-                logLabel: '活动日志',
-                logEmpty: '暂时没有更新活动。',
               },
               archive: {
                 legend: '归档',
@@ -7146,11 +7150,6 @@
               gpuUnavailable: '此平台不支持 GPU 加速。',
               gpuUnsupported: '此平台不支持 GPU Whisper。',
               gpuNotAvailable: '此平台无法使用 GPU 加速。',
-              updateStarted: '已开始更新。',
-              updateRunning: '正在更新，请保持此窗口打开。',
-              updateCompleted: '更新已成功完成。',
-              updateFailed: '更新失败。请查看日志了解详情。',
-              updateConflict: '已有更新任务正在运行。',
               shuttingDown: '正在关闭应用…',
               settingsSaved: '设置已保存。',
               gpuFallback: '将回退到 {{model}} 模型。',
@@ -7173,7 +7172,6 @@
               exportLocation: '导出工具位于系统设置。',
               importLocation: '导入工具位于系统设置。',
               storageLocation: '存储清理工具在“存储”面板中。',
-              updateLocation: '系统更新控件在系统设置中。',
             },
             counts: {
               module: { one: '模块', other: '模块' },
@@ -7272,13 +7270,13 @@
               create: 'Crear',
               bulkUpload: 'Subida masiva',
               bulkDownload: 'Descarga masiva',
-              addToCart: 'Añadir al carro',
-              runCart: 'Abrir carrito',
+              openCart: 'Abrir carrito',
               export: 'Exportar',
               import: 'Importar',
               purge: 'Purgar',
-              update: 'Actualizar sistema',
               debug: 'Depurar On/Off',
+              collapse: 'Ocultar acciones',
+              expand: 'Mostrar acciones',
             },
             tooltips: {
               global: {
@@ -7305,13 +7303,13 @@
                 create: 'Abre el diálogo para crear clases, módulos o lecciones.',
                 bulkUpload: 'Sube varias grabaciones, carpetas o diapositivas a la vez.',
                 bulkDownload: 'Descarga los elementos seleccionados en un solo archivo.',
-                addToCart: 'Añade la selección actual al carro de tareas.',
-                runCart: 'Abre el carro de tareas para revisarlo.',
+                openCart: 'Abre el carro de tareas para revisarlo.',
                 export: 'Exporta la selección actual a un ZIP.',
                 import: 'Importa clases o recursos desde un archivo.',
                 purge: 'Elimina audio procesado que ya tiene transcripción.',
-                update: 'Inicia el proceso de actualización del sistema.',
                 debug: 'Activa o desactiva la consola de depuración.',
+                collapse: 'Contrae la barra lateral de acciones rápidas.',
+                expand: 'Muestra la barra lateral de acciones rápidas.',
               },
               cart: {
                 run: 'Envía la cola para procesarla en segundo plano.',
@@ -7440,6 +7438,18 @@
                 transcribeQueued: 'Transcripción enviada.',
                 queuedRemote: 'Cola enviada al servidor.',
               },
+              edit: {
+                lectureLabel: 'Lección',
+                lecturePlaceholder: 'Selecciona una lección',
+                actionLabel: 'Acción',
+                actionPlaceholder: 'Selecciona una acción',
+                noLectures: 'Agrega una lección antes de configurar esta tarea.',
+                selectLecture: 'Elige una lección para habilitar esta tarea.',
+                noActionsAvailable: 'No hay acciones compatibles para esta lección.',
+                audioMissing: 'Sube audio para procesar esta lección.',
+                slidesMissing: 'Sube las diapositivas antes de procesarlas.',
+                slidesProcessing: 'Las diapositivas se están procesando; inténtalo más tarde.',
+              },
             },
             help: {
               title: 'Bienvenido al nuevo espacio de trabajo',
@@ -7522,6 +7532,7 @@
                 processSlides: 'Procesar diapositivas',
                 download: 'Descargar',
                 remove: 'Eliminar',
+                addToCart: 'Añadir al carrito',
               },
             },
             progress: {
@@ -7617,23 +7628,6 @@
                   400: '400 dpi (alto detalle)',
                   600: '600 dpi (máximo)',
                 },
-              },
-              update: {
-                legend: 'Actualizaciones del sistema',
-                description: 'Actualiza Lecture Tools sin salir del navegador.',
-                run: 'Ejecutar actualización',
-                refresh: 'Actualizar estado',
-                status: {
-                  idle: 'No hay ninguna actualización en curso.',
-                  running: 'Actualización en curso. Mantén esta ventana abierta hasta que termine.',
-                  success: 'La actualización más reciente se completó correctamente.',
-                  failure: 'La actualización más reciente tuvo un error.',
-                },
-                startedAt: 'Inició {{time}}.',
-                finishedAt: 'Finalizó {{time}}.',
-                exitCode: 'Código de salida {{code}}.',
-                logLabel: 'Registro de actividad',
-                logEmpty: 'Aún no hay actividad de actualización.',
               },
               archive: {
                 legend: 'Archivo',
@@ -7959,11 +7953,6 @@
               gpuUnavailable: 'GPU no disponible en esta plataforma.',
               gpuUnsupported: 'GPU Whisper no es compatible con esta plataforma.',
               gpuNotAvailable: 'La aceleración GPU no está disponible en esta plataforma.',
-              updateStarted: 'Actualización iniciada.',
-              updateRunning: 'Actualización en curso. Mantén esta ventana abierta.',
-              updateCompleted: 'Actualización completada correctamente.',
-              updateFailed: 'La actualización falló. Revisa el registro para más detalles.',
-              updateConflict: 'Ya hay una actualización en curso.',
               shuttingDown: 'Cerrando la aplicación…',
               settingsSaved: 'Configuración guardada.',
               gpuFallback: 'Se usará el modelo {{model}}.',
@@ -7986,7 +7975,6 @@
               exportLocation: 'Las herramientas de exportación están en Configuración del sistema.',
               importLocation: 'Las herramientas de importación están en Configuración del sistema.',
               storageLocation: 'Las herramientas de limpieza están en el panel de Almacenamiento.',
-              updateLocation: 'Los controles de actualización están en Configuración del sistema.',
             },
             counts: {
               module: { one: 'módulo', other: 'módulos' },
@@ -8085,13 +8073,13 @@
               create: 'Créer',
               bulkUpload: 'Import massif',
               bulkDownload: 'Export massif',
-              addToCart: 'Ajouter au panier',
-              runCart: 'Ouvrir le panier',
+              openCart: 'Ouvrir le panier',
               export: 'Exporter',
               import: 'Importer',
               purge: 'Purger',
-              update: 'Mise à jour système',
               debug: 'Mode debug',
+              collapse: 'Masquer les actions',
+              expand: 'Afficher les actions',
             },
             tooltips: {
               global: {
@@ -8118,13 +8106,13 @@
                 create: 'Ouvrir la boîte de dialogue de création de cours, modules ou leçons.',
                 bulkUpload: 'Importer plusieurs enregistrements, dossiers ou diapositives.',
                 bulkDownload: 'Télécharger les éléments sélectionnés en une archive.',
-                addToCart: 'Ajouter la sélection actuelle au panier de tâches.',
-                runCart: 'Ouvrir le panier de tâches pour le consulter.',
+                openCart: 'Ouvrir le panier de tâches pour le consulter.',
                 export: 'Exporter la sélection actuelle en archive ZIP.',
                 import: 'Importer cours ou ressources depuis une archive.',
                 purge: 'Supprimer l’audio traité déjà transcrit.',
-                update: 'Démarrer le processus de mise à jour système.',
                 debug: 'Activer ou désactiver la console de debug en direct.',
+                collapse: 'Replier la barre latérale des actions rapides.',
+                expand: 'Afficher la barre latérale des actions rapides.',
               },
               cart: {
                 run: 'Soumettre la file pour un traitement en arrière-plan.',
@@ -8254,6 +8242,18 @@
                 transcribeQueued: 'Transcription envoyée.',
                 queuedRemote: 'File soumise au serveur.',
               },
+              edit: {
+                lectureLabel: 'Séance',
+                lecturePlaceholder: 'Sélectionnez une séance',
+                actionLabel: 'Action',
+                actionPlaceholder: 'Sélectionnez une action',
+                noLectures: 'Ajoutez une séance avant de configurer cette tâche.',
+                selectLecture: 'Choisissez une séance pour activer cette tâche.',
+                noActionsAvailable: 'Aucune action compatible n’est disponible pour cette séance.',
+                audioMissing: 'Importez l’audio avant de traiter cette séance.',
+                slidesMissing: 'Importez les diapositives avant de les traiter.',
+                slidesProcessing: 'Les diapositives sont en cours de traitement—réessayez plus tard.',
+              },
             },
             help: {
               title: 'Bienvenue dans le nouvel espace de travail',
@@ -8337,6 +8337,7 @@
                 processSlides: 'Traiter les diapositives',
                 download: 'Télécharger',
                 remove: 'Supprimer',
+                addToCart: 'Ajouter au panier',
               },
             },
             progress: {
@@ -8432,23 +8433,6 @@
                   400: '400 dpi (très détaillé)',
                   600: '600 dpi (maximum)',
                 },
-              },
-              update: {
-                legend: 'Mises à jour du système',
-                description: 'Mettez Lecture Tools à jour sans quitter le navigateur.',
-                run: 'Lancer la mise à jour',
-                refresh: 'Actualiser l’état',
-                status: {
-                  idle: 'Aucune mise à jour en cours.',
-                  running: 'Mise à jour en cours. Laissez cette fenêtre ouverte jusqu’à la fin.',
-                  success: 'La dernière mise à jour s’est terminée avec succès.',
-                  failure: 'La dernière mise à jour a rencontré une erreur.',
-                },
-                startedAt: 'Démarrée {{time}}.',
-                finishedAt: 'Terminée {{time}}.',
-                exitCode: 'Code de sortie {{code}}.',
-                logLabel: 'Journal d’activité',
-                logEmpty: 'Aucune activité de mise à jour pour le moment.',
               },
               archive: {
                 legend: 'Archive',
@@ -8754,11 +8738,6 @@
               gpuUnavailable: 'GPU indisponible sur cette plateforme.',
               gpuUnsupported: 'GPU Whisper n’est pas pris en charge sur cette plateforme.',
               gpuNotAvailable: 'L’accélération GPU n’est pas disponible sur cette plateforme.',
-              updateStarted: 'Mise à jour lancée.',
-              updateRunning: 'Mise à jour en cours. Laissez cette fenêtre ouverte.',
-              updateCompleted: 'Mise à jour terminée avec succès.',
-              updateFailed: 'Échec de la mise à jour. Consultez le journal pour plus de détails.',
-              updateConflict: 'Une mise à jour est déjà en cours.',
               shuttingDown: 'Fermeture de l’application…',
               settingsSaved: 'Paramètres enregistrés.',
               gpuFallback: 'Bascule vers le modèle {{model}}.',
@@ -8781,7 +8760,6 @@
               exportLocation: 'Les outils d’export se trouvent dans Paramètres système.',
               importLocation: 'Les outils d’import se trouvent dans Paramètres système.',
               storageLocation: 'Les outils de nettoyage sont dans le panneau Stockage.',
-              updateLocation: 'Les contrôles de mise à jour sont dans Paramètres système.',
             },
             counts: {
               module: { one: 'module', other: 'modules' },
@@ -9219,7 +9197,6 @@
           }
 
           renderProgressQueue();
-          renderSystemUpdate();
           if (state.selectedLectureDetail) {
             renderAssets(state.selectedLectureDetail.lecture);
           }
@@ -9249,7 +9226,6 @@
         const MAX_DEBUG_LOG_ENTRIES = 500;
         const MAX_SERVER_STREAM_ENTRIES = 20;
         const SERVER_LOG_CATEGORY = 'server';
-        const UPDATE_POLL_INTERVAL_MS = 3000;
         const TASK_CART_PRESET_STORAGE_KEY = 'lecture-tools.taskCart.presets';
         const TASK_CART_MAX_ATTEMPTS = 3;
         const TASK_CART_BACKOFF_BASE_MS = 800;
@@ -9367,16 +9343,7 @@
             lastDryRun: null,
             draggingId: null,
           },
-          systemUpdate: {
-            running: false,
-            startedAt: null,
-            finishedAt: null,
-            success: null,
-            exitCode: null,
-            error: null,
-            log: [],
-            pollTimer: null,
-          },
+          actionDockCollapsed: false,
           transcribeControls: {
             button: null,
             model: null,
@@ -9549,8 +9516,6 @@
           stats: document.getElementById('stats'),
           curriculum: document.getElementById('curriculum'),
           curriculumCreateClass: document.getElementById('curriculum-create-class'),
-          curriculumCreateModule: document.getElementById('curriculum-create-module'),
-          curriculumCreateLecture: document.getElementById('curriculum-create-lecture'),
           curriculumBulkUpload: document.getElementById('curriculum-bulk-upload'),
           curriculumBulkEdit: document.getElementById('curriculum-bulk-edit'),
           search: document.getElementById('search-input'),
@@ -9592,16 +9557,11 @@
           settingsExport: document.getElementById('settings-export'),
           settingsImport: document.getElementById('settings-import'),
           settingsImportMode: document.getElementById('settings-import-mode'),
-          settingsUpdateRun: document.getElementById('settings-update-run'),
-          settingsUpdateRefresh: document.getElementById('settings-update-refresh'),
-          settingsUpdateStatus: document.getElementById('settings-update-status'),
-          settingsUpdateMeta: document.getElementById('settings-update-meta'),
-          settingsUpdateLogWrapper: document.getElementById('settings-update-log-wrapper'),
-          settingsUpdateLog: document.getElementById('settings-update-log'),
-          settingsUpdateLogEmpty: document.getElementById('settings-update-log-empty'),
           gpuModelOptions: new Set(Array.from(document.querySelectorAll('option.gpu-only'))),
           actionDock: document.querySelector('.action-dock'),
-          actionDockButtons: Array.from(document.querySelectorAll('.action-dock button')),
+          actionDockButtons: Array.from(document.querySelectorAll('.action-dock [data-action]')),
+          actionDockCollapse: document.getElementById('action-dock-collapse'),
+          actionDockExpand: document.getElementById('action-dock-expander'),
           debugPane: document.getElementById('debug-pane'),
           debugLog: document.getElementById('debug-log-window'),
           debugEmpty: document.getElementById('debug-log-empty'),
@@ -10377,174 +10337,6 @@
             }).format(date);
           } catch (error) {
             return date.toLocaleString();
-          }
-        }
-
-        function startUpdatePolling() {
-          if (state.systemUpdate.pollTimer) {
-            return;
-          }
-          state.systemUpdate.pollTimer = window.setInterval(() => {
-            void fetchSystemUpdateStatus();
-          }, UPDATE_POLL_INTERVAL_MS);
-        }
-
-        function stopUpdatePolling() {
-          if (state.systemUpdate.pollTimer) {
-            window.clearInterval(state.systemUpdate.pollTimer);
-            state.systemUpdate.pollTimer = null;
-          }
-        }
-
-        function renderSystemUpdate() {
-          if (!dom.settingsUpdateStatus) {
-            return;
-          }
-          const update = state.systemUpdate;
-          const statusKey = update.running
-            ? 'running'
-            : update.success === true
-            ? 'success'
-            : update.success === false
-            ? 'failure'
-            : 'idle';
-          dom.settingsUpdateStatus.textContent = t(`settings.update.status.${statusKey}`);
-
-          if (dom.settingsUpdateMeta) {
-            const parts = [];
-            if (update.startedAt) {
-              parts.push(t('settings.update.startedAt', { time: formatDateTime(update.startedAt) }));
-            }
-            if (update.finishedAt && !update.running) {
-              parts.push(t('settings.update.finishedAt', { time: formatDateTime(update.finishedAt) }));
-            }
-            if (typeof update.exitCode === 'number' && Number.isFinite(update.exitCode)) {
-              parts.push(t('settings.update.exitCode', { code: update.exitCode }));
-            }
-            if (update.error && !update.running) {
-              parts.push(update.error);
-            }
-            if (parts.length > 0) {
-              dom.settingsUpdateMeta.textContent = parts.join(' ');
-              dom.settingsUpdateMeta.hidden = false;
-            } else {
-              dom.settingsUpdateMeta.textContent = '';
-              dom.settingsUpdateMeta.hidden = true;
-            }
-          }
-
-          if (dom.settingsUpdateRun) {
-            dom.settingsUpdateRun.disabled = update.running;
-          }
-          if (dom.settingsUpdateRefresh) {
-            dom.settingsUpdateRefresh.disabled = update.running;
-          }
-
-          if (dom.settingsUpdateLogWrapper) {
-            const entries = Array.isArray(update.log) ? update.log : [];
-            const hasEntries = entries.length > 0;
-            const shouldShowWrapper = update.running || hasEntries;
-            dom.settingsUpdateLogWrapper.hidden = !shouldShowWrapper;
-            if (dom.settingsUpdateLog) {
-              if (hasEntries) {
-                const formatted = entries
-                  .map((entry) => {
-                    const stamp = parseIsoDate(entry.timestamp);
-                    const prefix = stamp ? `[${formatDateTime(stamp)}] ` : '';
-                    const message = typeof entry.message === 'string' ? entry.message : '';
-                    return `${prefix}${message}`.trimEnd();
-                  })
-                  .join('\n');
-                dom.settingsUpdateLog.textContent = formatted;
-                dom.settingsUpdateLog.hidden = false;
-                dom.settingsUpdateLog.scrollTop = dom.settingsUpdateLog.scrollHeight;
-              } else {
-                dom.settingsUpdateLog.textContent = '';
-                dom.settingsUpdateLog.hidden = true;
-              }
-            }
-            if (dom.settingsUpdateLogEmpty) {
-              dom.settingsUpdateLogEmpty.hidden = hasEntries;
-            }
-          }
-        }
-
-        function applySystemUpdate(update) {
-          if (!update || typeof update !== 'object') {
-            return;
-          }
-          const previousRunning = state.systemUpdate.running;
-          state.systemUpdate.running = Boolean(update.running);
-          state.systemUpdate.startedAt = parseIsoDate(update.started_at);
-          state.systemUpdate.finishedAt = parseIsoDate(update.finished_at);
-          state.systemUpdate.success =
-            typeof update.success === 'boolean' ? update.success : null;
-          state.systemUpdate.exitCode =
-            typeof update.exit_code === 'number' && Number.isFinite(update.exit_code)
-              ? update.exit_code
-              : null;
-          state.systemUpdate.error =
-            typeof update.error === 'string' && update.error ? update.error : null;
-          state.systemUpdate.log = Array.isArray(update.log) ? update.log : [];
-          renderSystemUpdate();
-          if (state.systemUpdate.running) {
-            if (!previousRunning) {
-              showStatus(t('status.updateRunning'), 'info', { persist: true });
-            }
-            startUpdatePolling();
-          } else {
-            stopUpdatePolling();
-            if (previousRunning) {
-              if (state.systemUpdate.success) {
-                showStatus(t('status.updateCompleted'), 'success');
-              } else if (state.systemUpdate.success === false) {
-                const message = state.systemUpdate.error || t('status.updateFailed');
-                showStatus(message, 'error');
-              }
-            }
-          }
-        }
-
-        async function fetchSystemUpdateStatus() {
-          try {
-            const payload = await request('/api/system/update');
-            applySystemUpdate(payload?.update);
-          } catch (error) {
-            if (state.systemUpdate.running) {
-              const message = error instanceof Error ? error.message : String(error);
-              showStatus(message || t('status.updateFailed'), 'error');
-              stopUpdatePolling();
-            }
-          } finally {
-            renderSystemUpdate();
-          }
-        }
-
-        async function triggerSystemUpdate() {
-          if (!dom.settingsUpdateRun) {
-            return;
-          }
-          if (dom.settingsUpdateRun.disabled) {
-            return;
-          }
-          showStatus(t('status.updateStarted'), 'info');
-          dom.settingsUpdateRun.disabled = true;
-          if (dom.settingsUpdateRefresh) {
-            dom.settingsUpdateRefresh.disabled = true;
-          }
-          try {
-            const payload = await request('/api/system/update', { method: 'POST' });
-            applySystemUpdate(payload?.update);
-          } catch (error) {
-            const message = error instanceof Error ? error.message : String(error);
-            if (typeof message === 'string' && message.toLowerCase().includes('already')) {
-              showStatus(t('status.updateConflict'), 'info');
-            } else {
-              showStatus(message || t('status.updateFailed'), 'error');
-            }
-            await fetchSystemUpdateStatus();
-          } finally {
-            renderSystemUpdate();
           }
         }
 
@@ -11470,7 +11262,6 @@
         loadTaskCartPresets();
         applyTranslations(DEFAULT_LANGUAGE);
         renderStorage();
-        renderSystemUpdate();
         renderProgressQueue();
         void refreshProgressQueue({ silent: true });
         updateTaskCartToggle();
@@ -11833,6 +11624,24 @@
           const countLabel = `${formattedCount} ${itemWord}`.trim();
           const ariaLabel = t('cart.toggle.aria', { count: countLabel, action: actionLabel });
           dom.taskCartToggle.setAttribute('aria-label', ariaLabel);
+        }
+
+        function setActionDockCollapsed(collapsed) {
+          const isCollapsed = Boolean(collapsed);
+          state.actionDockCollapsed = isCollapsed;
+          if (dom.actionDock) {
+            dom.actionDock.dataset.collapsed = isCollapsed ? 'true' : 'false';
+            dom.actionDock.setAttribute('aria-hidden', isCollapsed ? 'true' : 'false');
+          }
+          if (dom.actionDockExpand) {
+            dom.actionDockExpand.classList.toggle('hidden', !isCollapsed);
+            dom.actionDockExpand.setAttribute('aria-hidden', isCollapsed ? 'false' : 'true');
+            dom.actionDockExpand.tabIndex = isCollapsed ? 0 : -1;
+          }
+          if (dom.actionDockCollapse) {
+            dom.actionDockCollapse.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+            dom.actionDockCollapse.tabIndex = isCollapsed ? -1 : 0;
+          }
         }
 
         function openHelpOverlay() {
@@ -12435,6 +12244,202 @@
           }
         }
 
+        const LECTURE_ACTION_TYPES = new Set(['transcribe', 'process_slides']);
+
+        function isLectureCartAction(type) {
+          return LECTURE_ACTION_TYPES.has(type);
+        }
+
+        function getCartActionLabel(type) {
+          if (type === 'transcribe') {
+            return t('assets.actions.transcribe');
+          }
+          if (type === 'process_slides') {
+            return t('assets.actions.processSlides');
+          }
+          return '';
+        }
+
+        function formatCartLectureContext(detail) {
+          if (!detail) {
+            return '';
+          }
+          const className = detail.classEntry?.name || t('storage.unnamedClass');
+          const moduleName = detail.moduleEntry?.name || t('storage.unnamedModule');
+          const lectureName = detail.lecture?.name || t('progress.labels.untitled');
+          return `${className} • ${moduleName} • ${lectureName}`;
+        }
+
+        function getCartLectureDetail(lectureId) {
+          if (lectureId == null) {
+            return null;
+          }
+          const location = findLectureLocation(lectureId);
+          if (!location) {
+            return null;
+          }
+          const moduleEntry = location.moduleEntry;
+          if (!moduleEntry || !Array.isArray(moduleEntry.lectures)) {
+            return null;
+          }
+          const lecture = moduleEntry.lectures[location.index];
+          if (!lecture) {
+            return null;
+          }
+          return {
+            classEntry: location.classEntry,
+            moduleEntry,
+            lecture,
+          };
+        }
+
+        function getCartLectureOptions() {
+          const options = [];
+          const classes = Array.isArray(state.classes) ? state.classes : [];
+          classes.forEach((classEntry) => {
+            const modules = Array.isArray(classEntry.modules) ? classEntry.modules : [];
+            modules.forEach((moduleEntry) => {
+              const lectures = Array.isArray(moduleEntry.lectures) ? moduleEntry.lectures : [];
+              lectures.forEach((lecture) => {
+                if (!lecture || lecture.id == null) {
+                  return;
+                }
+                options.push({
+                  value: String(lecture.id),
+                  lectureId: lecture.id,
+                  label: formatCartLectureContext({
+                    classEntry,
+                    moduleEntry,
+                    lecture,
+                  }),
+                });
+              });
+            });
+          });
+          return options;
+        }
+
+        function evaluateCartActionAvailability(type, detail) {
+          if (!isLectureCartAction(type)) {
+            return { ok: true, messageKey: null };
+          }
+          if (!detail || !detail.lecture) {
+            return { ok: false, messageKey: 'cart.edit.selectLecture' };
+          }
+          if (type === 'transcribe') {
+            if (!detail.lecture.audio_path) {
+              return { ok: false, messageKey: 'cart.edit.audioMissing' };
+            }
+            return { ok: true, messageKey: null };
+          }
+          if (type === 'process_slides') {
+            if (!detail.lecture.slide_path) {
+              return { ok: false, messageKey: 'cart.edit.slidesMissing' };
+            }
+            if (state.processingProgressLectureId === detail.lecture.id) {
+              return { ok: false, messageKey: 'cart.edit.slidesProcessing' };
+            }
+            return { ok: true, messageKey: null };
+          }
+          return { ok: true, messageKey: null };
+        }
+
+        function getCartActionOptions(detail) {
+          return Array.from(LECTURE_ACTION_TYPES).map((type) => {
+            const availability = evaluateCartActionAvailability(type, detail);
+            return {
+              type,
+              label: getCartActionLabel(type),
+              disabled: !availability.ok,
+              messageKey: availability.messageKey,
+            };
+          });
+        }
+
+        function getFirstAvailableCartAction(detail) {
+          const options = getCartActionOptions(detail);
+          const available = options.find((option) => !option.disabled);
+          return available ? available.type : null;
+        }
+
+        function evaluateCartItemSelection(item, detail) {
+          if (!isLectureCartAction(item.type)) {
+            return { ok: true, messageKey: null };
+          }
+          return evaluateCartActionAvailability(item.type, detail);
+        }
+
+        function buildCartActionPayload(type, previousPayload, detail) {
+          if (!isLectureCartAction(type)) {
+            return previousPayload || {};
+          }
+          const existing = previousPayload && typeof previousPayload === 'object' ? previousPayload : {};
+          if (type === 'transcribe') {
+            const model =
+              typeof existing.model === 'string' && existing.model
+                ? existing.model
+                : getTranscribeModelValue();
+            return { model };
+          }
+          if (type === 'process_slides') {
+            const source =
+              typeof existing.source === 'string' && existing.source ? existing.source : 'slides';
+            const dpiCandidate =
+              typeof existing.dpi !== 'undefined' ? existing.dpi : state.settings?.slide_dpi;
+            const dpiValue = Number(normalizeSlideDpi(dpiCandidate || DEFAULT_SLIDE_DPI));
+            const nextPayload = { source, dpi: dpiValue };
+            if (existing.range && typeof existing.range === 'object') {
+              nextPayload.range = existing.range;
+            }
+            return nextPayload;
+          }
+          return existing;
+        }
+
+        function updateTaskCartItemSelection(itemId, lectureId, actionType) {
+          const target = state.taskCart.items.find((entry) => entry.id === itemId);
+          if (!target) {
+            return;
+          }
+          const detail = lectureId != null ? getCartLectureDetail(Number(lectureId)) : null;
+          if (detail && detail.lecture && detail.lecture.id != null) {
+            target.lectureId = detail.lecture.id;
+            target.title = detail.lecture.name || t('progress.labels.untitled');
+          } else {
+            target.lectureId = lectureId != null ? Number(lectureId) : null;
+          }
+          const resolvedType = isLectureCartAction(actionType) ? actionType : target.type;
+          if (isLectureCartAction(resolvedType)) {
+            target.type = resolvedType;
+            const subtitle = getCartActionLabel(resolvedType);
+            if (subtitle) {
+              target.subtitle = subtitle;
+            }
+            target.payload = buildCartActionPayload(resolvedType, target.payload, detail);
+            target.prerequisites = [];
+          }
+          target.logs = [];
+          target.status = 'pending';
+          target.attempts = 0;
+        }
+
+        function applyTaskCartSelectionChange(itemId, lectureValue, actionValue) {
+          const lectureId = lectureValue ? Number(lectureValue) : null;
+          const detail = lectureId != null ? getCartLectureDetail(lectureId) : null;
+          let nextAction = typeof actionValue === 'string' && actionValue ? actionValue : null;
+          if (detail) {
+            const availability = evaluateCartActionAvailability(nextAction, detail);
+            if (!availability.ok) {
+              const fallback = getFirstAvailableCartAction(detail);
+              if (fallback) {
+                nextAction = fallback;
+              }
+            }
+          }
+          updateTaskCartItemSelection(itemId, lectureId, nextAction);
+          renderTaskCart();
+        }
+
         function clearTaskCartDropIndicators() {
           if (!dom.taskCartItems) {
             return;
@@ -12506,12 +12511,14 @@
             return;
           }
 
+          const lectureOptions = getCartLectureOptions();
           items.forEach((item, index) => {
             const entry = document.createElement('div');
             entry.className = 'task-cart-item';
             entry.dataset.type = item.type || 'custom';
             entry.dataset.itemId = item.id || '';
             entry.dataset.status = item.status || 'pending';
+            entry.dataset.available = 'true';
             entry.setAttribute('role', 'listitem');
             entry.draggable = true;
             entry.setAttribute('aria-grabbed', state.taskCart.draggingId === item.id ? 'true' : 'false');
@@ -12533,6 +12540,8 @@
             });
             entry.appendChild(dragHandle);
 
+            const lectureDetail =
+              item.lectureId != null ? getCartLectureDetail(Number(item.lectureId)) : null;
             const info = document.createElement('div');
             info.className = 'task-cart-info';
 
@@ -12551,6 +12560,13 @@
               subtitle.className = 'task-cart-meta';
               subtitle.textContent = item.subtitle;
               info.appendChild(subtitle);
+            }
+
+            if (lectureDetail) {
+              const contextLine = document.createElement('p');
+              contextLine.className = 'task-cart-meta';
+              contextLine.textContent = formatCartLectureContext(lectureDetail);
+              info.appendChild(contextLine);
             }
 
             if (item.estimate) {
@@ -12583,6 +12599,130 @@
             }
 
             entry.appendChild(info);
+
+            if (isLectureCartAction(item.type)) {
+              const config = document.createElement('div');
+              config.className = 'task-cart-config';
+
+              const lectureSelectId = `task-cart-lecture-${item.id}`;
+              const actionSelectId = `task-cart-action-${item.id}`;
+
+              const lectureField = document.createElement('label');
+              lectureField.className = 'task-cart-field';
+              lectureField.setAttribute('for', lectureSelectId);
+
+              const lectureLabel = document.createElement('span');
+              lectureLabel.className = 'task-cart-field-label';
+              lectureLabel.textContent = t('cart.edit.lectureLabel');
+              lectureField.appendChild(lectureLabel);
+
+              const lectureSelect = document.createElement('select');
+              lectureSelect.className = 'task-cart-select';
+              lectureSelect.id = lectureSelectId;
+              lectureSelect.disabled = lectureOptions.length === 0;
+
+              const lecturePlaceholder = document.createElement('option');
+              lecturePlaceholder.value = '';
+              lecturePlaceholder.textContent = t('cart.edit.lecturePlaceholder');
+              lecturePlaceholder.disabled = true;
+              lecturePlaceholder.selected = item.lectureId == null;
+              lectureSelect.appendChild(lecturePlaceholder);
+
+              lectureOptions.forEach((option) => {
+                const optionElement = document.createElement('option');
+                optionElement.value = option.value;
+                optionElement.textContent = option.label;
+                lectureSelect.appendChild(optionElement);
+              });
+
+              if (item.lectureId != null) {
+                lectureSelect.value = String(item.lectureId);
+              }
+
+              lectureField.appendChild(lectureSelect);
+              config.appendChild(lectureField);
+
+              const actionField = document.createElement('label');
+              actionField.className = 'task-cart-field';
+              actionField.setAttribute('for', actionSelectId);
+
+              const actionLabel = document.createElement('span');
+              actionLabel.className = 'task-cart-field-label';
+              actionLabel.textContent = t('cart.edit.actionLabel');
+              actionField.appendChild(actionLabel);
+
+              const actionSelect = document.createElement('select');
+              actionSelect.className = 'task-cart-select';
+              actionSelect.id = actionSelectId;
+
+              const actionPlaceholder = document.createElement('option');
+              actionPlaceholder.value = '';
+              actionPlaceholder.textContent = t('cart.edit.actionPlaceholder');
+              actionPlaceholder.disabled = true;
+              actionSelect.appendChild(actionPlaceholder);
+
+              const actionOptions = getCartActionOptions(lectureDetail);
+              actionOptions.forEach((option) => {
+                const optionElement = document.createElement('option');
+                optionElement.value = option.type;
+                optionElement.textContent = option.label;
+                optionElement.disabled = option.disabled;
+                actionSelect.appendChild(optionElement);
+              });
+
+              let actionValue = null;
+              if (item.type && actionOptions.some((option) => option.type === item.type && !option.disabled)) {
+                actionValue = item.type;
+              } else {
+                const fallback = actionOptions.find((option) => !option.disabled);
+                if (fallback) {
+                  actionValue = fallback.type;
+                }
+              }
+
+              if (actionValue) {
+                actionSelect.value = actionValue;
+              } else {
+                actionSelect.value = '';
+              }
+
+              actionSelect.disabled = actionOptions.every((option) => option.disabled);
+
+              actionField.appendChild(actionSelect);
+              config.appendChild(actionField);
+
+              lectureSelect.addEventListener('change', () => {
+                applyTaskCartSelectionChange(item.id, lectureSelect.value, actionSelect.value);
+              });
+
+              actionSelect.addEventListener('change', () => {
+                applyTaskCartSelectionChange(item.id, lectureSelect.value, actionSelect.value);
+              });
+
+              let warningKey = null;
+              if (lectureOptions.length === 0) {
+                warningKey = 'cart.edit.noLectures';
+              } else if (!lectureSelect.value) {
+                warningKey = 'cart.edit.selectLecture';
+              } else if (actionOptions.every((option) => option.disabled)) {
+                warningKey = 'cart.edit.noActionsAvailable';
+              } else {
+                const availability = evaluateCartItemSelection(item, lectureDetail);
+                if (!availability.ok) {
+                  warningKey = availability.messageKey;
+                }
+              }
+
+              if (warningKey) {
+                entry.dataset.available = 'false';
+                const warning = document.createElement('p');
+                warning.className = 'task-cart-warning';
+                warning.textContent = t(warningKey);
+                config.appendChild(warning);
+              }
+
+              entry.appendChild(config);
+            }
 
             const controls = document.createElement('div');
             controls.className = 'task-cart-item-controls';
@@ -17115,21 +17255,7 @@
               navigatePrimary('storage');
               void handleStorageDownloadSelected();
               break;
-            case 'add-to-cart':
-              if (state.selectedLectureDetail && state.selectedLectureId) {
-                const lectureName = state.selectedLectureDetail.lecture?.name || t('cart.title');
-                addTaskCartItem({
-                  type: 'transcribe',
-                  lectureId: state.selectedLectureId,
-                  title: lectureName,
-                  subtitle: t('assets.actions.transcribe'),
-                  payload: { model: getTranscribeModelValue() },
-                });
-              } else {
-                showStatus(t('status.selectLectureForCart'), 'info', { record: false });
-              }
-              break;
-            case 'run-cart':
+            case 'open-cart':
               navigatePrimary('tasks');
               openTaskCart();
               break;
@@ -17155,14 +17281,6 @@
                 void handlePurgeProcessedAudio();
               } else {
                 showStatus(t('status.storageLocation'), 'info', { record: false });
-              }
-              break;
-            case 'system-update':
-              navigatePrimary('system');
-              if (dom.settingsUpdateRun) {
-                dom.settingsUpdateRun.click();
-              } else {
-                showStatus(t('status.updateLocation'), 'info', { record: false });
               }
               break;
             case 'debug-toggle':
@@ -18249,7 +18367,8 @@
             const status = document.createElement('div');
             status.className = 'asset-status';
             let statusText = t('assets.status.notLinked');
-            if (value) {
+            const hasValue = typeof value === 'string' && value.length > 0;
+            if (hasValue) {
               const fileName = value.split('/').pop();
               if (definition.type === 'slides') {
                 statusText = t('assets.status.slidesUploaded', { name: fileName });
@@ -18267,6 +18386,53 @@
             }
             status.textContent = statusText;
             item.appendChild(status);
+
+            const actions = document.createElement('div');
+            actions.className = 'asset-actions';
+
+            const uploadButton = document.createElement('button');
+            uploadButton.type = 'button';
+            uploadButton.textContent = t('assets.actions.upload');
+            uploadButton.disabled = !definition.accept;
+            uploadButton.addEventListener('click', () => {
+              handleAssetUpload(definition);
+            });
+            actions.appendChild(uploadButton);
+
+            const downloadButton = document.createElement('button');
+            downloadButton.type = 'button';
+            downloadButton.textContent = t('assets.actions.download');
+            downloadButton.disabled = !hasValue;
+            downloadButton.addEventListener('click', () => {
+              handleAssetDownload(definition, value);
+            });
+            actions.appendChild(downloadButton);
+
+            const removeButton = document.createElement('button');
+            removeButton.type = 'button';
+            removeButton.textContent = t('assets.actions.remove');
+            removeButton.disabled = !hasValue;
+            removeButton.addEventListener('click', () => {
+              handleAssetRemoval(definition);
+            });
+            actions.appendChild(removeButton);
+
+            if (definition.type === 'audio' || definition.type === 'slides') {
+              const cartButton = document.createElement('button');
+              cartButton.type = 'button';
+              cartButton.textContent = t('assets.actions.addToCart');
+              let cartEnabled = hasValue;
+              if (definition.type === 'slides' && state.processingProgressLectureId === lecture.id) {
+                cartEnabled = false;
+              }
+              cartButton.disabled = !cartEnabled;
+              cartButton.addEventListener('click', () => {
+                handleAssetAddToCart(definition);
+              });
+              actions.appendChild(cartButton);
+            }
+
+            item.appendChild(actions);
 
             dom.assetList.appendChild(item);
             visibleCount += 1;
@@ -18412,6 +18578,80 @@
           } catch (error) {
             showStatus(error.message, 'error');
           }
+        }
+
+        function handleAssetDownload(definition, assetPath) {
+          if (!definition || typeof assetPath !== 'string' || !assetPath) {
+            return;
+          }
+          const url = buildStorageURL(assetPath);
+          const link = document.createElement('a');
+          link.href = url;
+          link.target = '_blank';
+          link.rel = 'noopener';
+          link.download = '';
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+        }
+
+        function handleAssetAddToCart(definition) {
+          if (!definition || !state.selectedLectureDetail || !state.selectedLectureId) {
+            showStatus(t('status.selectLectureForCart'), 'info', { record: false });
+            return;
+          }
+          const lecture = state.selectedLectureDetail.lecture;
+          if (!lecture) {
+            return;
+          }
+          const lectureTitle = lecture.name || t('cart.title');
+          let task = null;
+
+          if (definition.type === 'audio') {
+            if (!lecture.audio_path) {
+              showStatus(t('status.noAssetActionsAvailable'), 'info', { record: false });
+              return;
+            }
+            task = {
+              type: 'transcribe',
+              lectureId: lecture.id,
+              title: lectureTitle,
+              subtitle: t('assets.actions.transcribe'),
+              payload: { model: getTranscribeModelValue() },
+            };
+          } else if (definition.type === 'slides') {
+            if (!lecture.slide_path) {
+              showStatus(t('status.slidesUploadRequired'), 'info');
+              return;
+            }
+            if (state.processingProgressLectureId === lecture.id) {
+              showStatus(t('status.noAssetActionsAvailable'), 'info', { record: false });
+              return;
+            }
+            const dpiValue = Number(
+              normalizeSlideDpi(state.settings?.slide_dpi || DEFAULT_SLIDE_DPI),
+            );
+            task = {
+              type: 'process_slides',
+              lectureId: lecture.id,
+              title: lectureTitle,
+              subtitle: t('assets.actions.processSlides'),
+              payload: { source: 'slides', dpi: dpiValue },
+            };
+          } else {
+            showStatus(t('status.noAssetActionsAvailable'), 'info', { record: false });
+            return;
+          }
+
+          addTaskCartItem(task, { silent: true });
+          renderTaskCart();
+          openTaskCart();
+          const additionMessage = t('status.cartAssetsAdded', {
+            title: lectureTitle,
+            count: formatNumber(1),
+          });
+          showStatus(additionMessage, 'success', { record: false });
+          addTimelineEntry(additionMessage, 'success');
         }
 
         async function handleAssetUpload(definition) {
@@ -18721,26 +18961,6 @@
           });
         }
 
-        if (dom.curriculumCreateModule) {
-          dom.curriculumCreateModule.addEventListener('click', async () => {
-            const classRecord = await resolveClassForModuleCreation();
-            if (!classRecord) {
-              return;
-            }
-            await handleAddModule(classRecord);
-          });
-        }
-
-        if (dom.curriculumCreateLecture) {
-          dom.curriculumCreateLecture.addEventListener('click', async () => {
-            const result = await resolveModuleForLectureCreation();
-            if (!result) {
-              return;
-            }
-            await handleAddLecture(result.moduleRecord, result.classRecord);
-          });
-        }
-
         if (dom.curriculumBulkUpload) {
           dom.curriculumBulkUpload.addEventListener('click', () => {
             void openBulkUploadDialog();
@@ -18814,6 +19034,26 @@
             });
           });
         }
+
+        if (dom.actionDockCollapse instanceof HTMLButtonElement) {
+          dom.actionDockCollapse.addEventListener('click', () => {
+            setActionDockCollapsed(true);
+            if (dom.actionDockExpand instanceof HTMLButtonElement) {
+              dom.actionDockExpand.focus();
+            }
+          });
+        }
+
+        if (dom.actionDockExpand instanceof HTMLButtonElement) {
+          dom.actionDockExpand.addEventListener('click', () => {
+            setActionDockCollapsed(false);
+            if (dom.actionDockCollapse instanceof HTMLButtonElement) {
+              dom.actionDockCollapse.focus();
+            }
+          });
+        }
+
+        setActionDockCollapsed(state.actionDockCollapsed);
 
         if (dom.home && Array.isArray(dom.home.quickTiles)) {
           dom.home.quickTiles.forEach((element) => {
@@ -19095,26 +19335,6 @@
               showStatus(message, 'error');
             } finally {
               dom.settingsWhisperGpuTest.disabled = state.gpuWhisper.unavailable;
-            }
-          });
-        }
-
-        if (dom.settingsUpdateRun) {
-          dom.settingsUpdateRun.addEventListener('click', () => {
-            void triggerSystemUpdate();
-          });
-        }
-
-        if (dom.settingsUpdateRefresh) {
-          dom.settingsUpdateRefresh.addEventListener('click', async () => {
-            if (dom.settingsUpdateRefresh.disabled) {
-              return;
-            }
-            dom.settingsUpdateRefresh.disabled = true;
-            try {
-              await fetchSystemUpdateStatus();
-            } finally {
-              dom.settingsUpdateRefresh.disabled = state.systemUpdate.running;
             }
           });
         }
