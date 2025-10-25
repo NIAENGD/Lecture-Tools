@@ -188,7 +188,7 @@
         border: none;
         border-radius: 0;
         padding: calc(var(--grid-unit) * 2) 0;
-        padding-left: calc(var(--grid-unit) * 3);
+        padding-left: calc(var(--grid-unit) * 4);
         box-shadow: none;
         border-left: 2px solid rgba(64, 82, 255, 0.28);
         transition: color 0.2s ease, border-color 0.2s ease;
@@ -2413,92 +2413,6 @@
         margin-top: 12px;
       }
 
-      .asset-list {
-        list-style: none;
-        margin: 12px 0 0;
-        padding: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-      }
-
-      .asset-item {
-        border: 1px solid var(--panel-border);
-        border-radius: 6px;
-        padding: 10px 12px;
-        background: var(--background);
-      }
-
-      .asset-header {
-        font-weight: 600;
-        margin-bottom: 4px;
-      }
-
-      .asset-status {
-        font-size: 0.9rem;
-        color: var(--muted);
-        margin-bottom: 6px;
-      }
-
-      .asset-actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        align-items: center;
-      }
-
-      .asset-actions button {
-        border-radius: 999px;
-        border: 1px solid var(--panel-border);
-        background: transparent;
-        color: var(--muted);
-        padding: 6px 14px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease,
-          filter 0.2s ease;
-      }
-
-      .asset-actions button.secondary {
-        background: transparent;
-      }
-
-      .asset-actions button.secondary:hover {
-        border-color: var(--accent);
-        color: var(--text);
-        background: var(--accent-muted);
-      }
-
-      .asset-actions button.danger {
-        background: var(--danger);
-        border-color: var(--danger);
-        color: var(--danger-contrast);
-      }
-
-      .asset-actions button.danger:hover {
-        filter: brightness(0.95);
-      }
-
-      .asset-actions button:disabled {
-        cursor: not-allowed;
-        opacity: 0.6;
-        filter: none;
-      }
-
-      .asset-actions label.inline {
-        display: inline-flex;
-        flex-direction: column;
-        font-weight: 600;
-        font-size: 0.85rem;
-        color: var(--muted);
-      }
-
-      .asset-actions label.inline select,
-      .asset-actions label.inline input {
-        margin-top: 4px;
-        min-width: 120px;
-      }
-
       #asset-section {
         margin-top: 16px;
       }
@@ -3130,9 +3044,33 @@
 
       .details-header {
         display: flex;
-        justify-content: space-between;
+        flex-direction: column;
         align-items: flex-start;
         gap: calc(var(--grid-unit) * 2);
+      }
+
+      .details-back-button {
+        align-self: flex-start;
+        padding: calc(var(--grid-unit) * 1) calc(var(--grid-unit) * 1.5);
+        border-radius: 999px;
+        border: 1px solid transparent;
+        background: transparent;
+        color: var(--app-text-muted);
+        font-size: 0.85rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+      }
+
+      .details-back-button:focus-visible,
+      .details-back-button:hover {
+        outline: none;
+        border-color: rgba(64, 82, 255, 0.4);
+        color: var(--accent-primary);
+      }
+
+      .section.catalog[data-catalog-mode='browse'] .details-back-button {
+        display: none;
       }
 
       .details-header h2 {
@@ -3150,6 +3088,7 @@
         display: flex;
         gap: calc(var(--grid-unit) * 1.5);
         flex-wrap: wrap;
+        width: 100%;
       }
 
       .details-controls .pill {
@@ -3165,82 +3104,6 @@
         background: rgba(64, 82, 255, 0.15);
         color: var(--accent-primary);
         border-color: rgba(64, 82, 255, 0.3);
-      }
-
-      .asset-command-stack {
-        display: flex;
-        flex-direction: column;
-        gap: calc(var(--grid-unit) * 2);
-      }
-
-      .asset-command {
-        display: flex;
-        justify-content: space-between;
-        gap: calc(var(--grid-unit) * 2);
-        border: 1px solid var(--app-border);
-        border-radius: 18px;
-        padding: calc(var(--grid-unit) * 2);
-        background: var(--app-surface-alt);
-        align-items: center;
-      }
-
-      .asset-command h3 {
-        margin: 0 0 calc(var(--grid-unit) * 0.5);
-        font-size: 1rem;
-      }
-
-      .asset-command p {
-        margin: 0;
-        color: var(--app-text-muted);
-        font-size: 0.85rem;
-      }
-
-      .asset-command-controls {
-        display: flex;
-        gap: calc(var(--grid-unit) * 1);
-        align-items: center;
-      }
-
-      #asset-transcribe-model {
-        border-radius: 999px;
-        border: 1px solid var(--app-border);
-        background: var(--app-surface);
-        padding: calc(var(--grid-unit) * 1) calc(var(--grid-unit) * 1.5);
-        font-size: 0.85rem;
-      }
-
-      #asset-transcribe,
-      #asset-process-slides,
-      #asset-open-cart,
-      #asset-add-all-cart {
-        border-radius: 999px;
-        border: 1px solid var(--accent-primary);
-        background: rgba(64, 82, 255, 0.12);
-        color: var(--accent-primary);
-        padding: calc(var(--grid-unit) * 1.2) calc(var(--grid-unit) * 2);
-        font-weight: 600;
-        font-size: 0.85rem;
-        cursor: pointer;
-      }
-
-      #asset-transcribe:disabled,
-      #asset-process-slides:disabled,
-      #asset-add-all-cart:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-
-      #asset-open-cart {
-        border-color: var(--app-border);
-        background: var(--app-surface);
-        color: var(--app-text);
-      }
-
-      #asset-open-cart:hover,
-      #asset-open-cart:focus-visible {
-        border-color: var(--accent-primary);
-        color: var(--accent-primary);
-        outline: none;
       }
 
       .mega-rail {
@@ -3290,9 +3153,21 @@
 
       .work-canvas {
         display: grid;
-        grid-template-columns: 24% 46% 30%;
+        grid-template-columns: 28% 72%;
         gap: calc(var(--grid-unit) * 3);
         align-items: start;
+      }
+
+      .section.catalog[data-catalog-mode='browse'] .pane-details {
+        display: none;
+      }
+
+      .section.catalog[data-catalog-mode='lecture'] .work-canvas {
+        grid-template-columns: 1fr;
+      }
+
+      .section.catalog[data-catalog-mode='lecture'] .pane-tree {
+        display: none;
       }
 
       .pane {
@@ -3306,14 +3181,14 @@
 
       .pane-surface {
         height: 100%;
-        background: transparent;
-        border: none;
-        border-radius: 0;
-        padding: 0;
+        background: var(--panel-bg);
+        border: 1px solid var(--panel-border);
+        border-radius: 20px;
+        padding: calc(var(--grid-unit) * 4);
         display: flex;
         flex-direction: column;
         gap: calc(var(--grid-unit) * 4);
-        box-shadow: none;
+        box-shadow: var(--panel-shadow);
       }
 
       .pane-scroll {
@@ -3328,13 +3203,24 @@
       }
 
       .pane-tree .panel {
-        background: transparent;
-        border-radius: 0;
+        position: relative;
+        background: rgba(64, 82, 255, 0.04);
+        border-radius: 16px;
         padding: calc(var(--grid-unit) * 2) 0;
-        border: none;
+        border: 1px solid rgba(64, 75, 105, 0.12);
         box-shadow: none;
-        border-left: 2px solid rgba(64, 82, 255, 0.3);
-        padding-left: calc(var(--grid-unit) * 3);
+        padding-left: calc(var(--grid-unit) * 6);
+      }
+
+      .pane-tree .panel::before {
+        content: '';
+        position: absolute;
+        top: calc(var(--grid-unit) * 2);
+        bottom: calc(var(--grid-unit) * 2);
+        left: calc(var(--grid-unit) * 2.5);
+        width: 3px;
+        border-radius: 3px;
+        background: rgba(64, 82, 255, 0.3);
       }
 
       .pane-tree .panel h1 {
@@ -3469,18 +3355,22 @@
         display: none;
       }
 
-      .pane-assets .pane-surface {
-        gap: calc(var(--grid-unit) * 2);
+      #asset-section {
+        margin-top: calc(var(--grid-unit) * 2);
       }
 
-      #asset-section {
-        background: transparent;
-        border-radius: 0;
-        border: none;
-        padding: 0;
-        padding-left: calc(var(--grid-unit) * 3);
-        box-shadow: none;
-        border-left: 2px solid rgba(64, 82, 255, 0.28);
+      .assets-overview {
+        padding-top: calc(var(--grid-unit) * 2);
+        border-top: 1px solid var(--panel-border);
+        display: flex;
+        flex-direction: column;
+        gap: calc(var(--grid-unit) * 1);
+      }
+
+      .assets-overview p {
+        margin: 0;
+        color: var(--app-text-muted);
+        font-size: 0.9rem;
       }
 
       #asset-section h3 {
@@ -3501,9 +3391,9 @@
         border-radius: 16px;
         border: 1px solid var(--app-border);
         padding: calc(var(--grid-unit) * 2);
-        display: grid;
-        grid-template-columns: 1fr auto;
-        gap: calc(var(--grid-unit) * 2);
+        display: flex;
+        flex-direction: column;
+        gap: calc(var(--grid-unit) * 1.25);
       }
 
       .asset-item .asset-header {
@@ -3511,31 +3401,9 @@
         color: var(--app-text-muted);
       }
 
-      .asset-item .asset-actions {
-        display: flex;
-        flex-direction: column;
-        gap: calc(var(--grid-unit) * 1);
-      }
-
-      .asset-item button {
-        border-radius: 12px;
-        border: 1px solid var(--app-border);
-        background: var(--app-surface-alt);
-        color: var(--app-text);
-        font-size: 0.8rem;
-        font-weight: 600;
-        padding: calc(var(--grid-unit) * 1.25) calc(var(--grid-unit) * 1.5);
-        cursor: pointer;
-        transition: background var(--transition-snappy), color var(--transition-snappy),
-          transform var(--transition-snappy);
-      }
-
-      .asset-item button:hover,
-      .asset-item button:focus-visible {
-        outline: none;
-        background: rgba(64, 82, 255, 0.14);
-        color: var(--accent-primary);
-        transform: translateY(-1px);
+      .asset-status {
+        color: var(--app-text-muted);
+        font-size: 0.9rem;
       }
 
       .task-cart-tray {
@@ -4193,7 +4061,7 @@
         font-weight: 600;
         line-height: 1.3;
         opacity: 0;
-        transform: translate(-50%, -6px) scale(0.96);
+        transform: scale(0.96);
         transition: opacity 120ms ease, transform 120ms ease;
         max-width: 280px;
         box-shadow: 0 18px 38px rgba(12, 23, 41, 0.35);
@@ -4201,7 +4069,28 @@
 
       .tooltip-bubble[data-visible='true'] {
         opacity: 1;
-        transform: translate(-50%, -12px) scale(1);
+        transform: scale(1);
+      }
+
+      .tooltip-bubble[data-side='right']::after,
+      .tooltip-bubble[data-side='left']::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 0;
+        height: 0;
+        border: 6px solid transparent;
+      }
+
+      .tooltip-bubble[data-side='right']::after {
+        left: -12px;
+        border-right-color: rgba(12, 23, 41, 0.92);
+      }
+
+      .tooltip-bubble[data-side='left']::after {
+        right: -12px;
+        border-left-color: rgba(12, 23, 41, 0.92);
       }
 
       .mobile-tab-bar {
@@ -4218,11 +4107,7 @@
         }
 
         .work-canvas {
-          grid-template-columns: 28% 72%;
-        }
-
-        .pane-assets {
-          display: none;
+          grid-template-columns: 32% 68%;
         }
       }
 
@@ -4249,10 +4134,6 @@
           margin-bottom: calc(var(--grid-unit) * 2);
         }
 
-        .pane-assets {
-          display: block;
-          margin-top: calc(var(--grid-unit) * 2);
-        }
 
         .task-cart-tray {
           right: calc(var(--grid-unit) * 2);
@@ -4576,7 +4457,12 @@
               </div>
             </div>
           </section>
-          <section class="section catalog" data-section-panel="catalog" hidden>
+          <section
+            class="section catalog"
+            data-section-panel="catalog"
+            data-catalog-mode="browse"
+            hidden
+          >
             <div class="work-canvas">
               <aside class="pane pane-tree">
                 <div class="pane-surface">
@@ -4620,22 +4506,6 @@
                         >
                           Create lecture
                         </button>
-                        <button
-                          type="button"
-                          id="curriculum-bulk-upload"
-                          class="ghost"
-                          data-i18n="catalog.actions.bulkUpload"
-                        >
-                          Bulk upload
-                        </button>
-                        <button
-                          type="button"
-                          id="curriculum-bulk-edit"
-                          class="ghost"
-                          data-i18n="catalog.actions.bulkEdit"
-                        >
-                          Bulk edit
-                        </button>
                       </div>
                     </div>
                     <label
@@ -4664,6 +4534,14 @@
               <section class="pane pane-details">
                 <div class="pane-surface">
                   <header class="details-header">
+                    <button
+                      id="catalog-back"
+                      type="button"
+                      class="ghost details-back-button"
+                      data-i18n="details.back"
+                    >
+                      Back to curriculum
+                    </button>
                     <div>
                       <h2 data-i18n="details.title">Lecture details</h2>
                       <p id="details-subtitle" data-i18n="details.subtitle">
@@ -4680,15 +4558,6 @@
                         data-tooltip-key="tooltips.topBar.editToggle"
                       >
                         Edit lecture
-                      </button>
-                      <button
-                        id="delete-lecture"
-                        class="danger ghost"
-                        type="button"
-                        disabled
-                        data-i18n="details.deleteLecture"
-                      >
-                        Delete lecture
                       </button>
                     </div>
                   </header>
@@ -4757,88 +4626,15 @@
                       </div>
                     </form>
                   </div>
-                </div>
-              </section>
-              <aside class="pane pane-assets">
-                <div class="pane-surface">
-                  <header class="assets-header">
-                    <div>
-                      <h2 data-i18n="assets.panel.title">Assets & actions</h2>
-                      <p data-i18n="assets.panel.subtitle">
-                        Upload, queue processing, or batch assets straight into the Task Cart.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      id="asset-add-all-cart"
-                      class="ghost"
-                      data-i18n="assets.addAllToCart"
-                    >
-                      Add all to cart
-                    </button>
-                  </header>
-                  <section class="asset-command-stack">
-                    <article class="asset-command" data-command="transcribe">
-                      <div>
-                        <h3 data-i18n="assets.commands.transcribe">Transcribe lecture</h3>
-                        <p data-i18n="assets.commands.transcribeHint">
-                          Queue Whisper with the preferred compute profile.
-                        </p>
-                      </div>
-                      <div class="asset-command-controls">
-                        <label for="asset-transcribe-model" class="sr-only" data-i18n="assets.modelLabel">
-                          Whisper model
-                        </label>
-                        <select id="asset-transcribe-model" aria-label="Whisper model"></select>
-                        <button
-                          type="button"
-                          id="asset-transcribe"
-                          data-i18n="assets.transcribe"
-                        >
-                          Transcribe
-                        </button>
-                      </div>
-                    </article>
-                    <article class="asset-command" data-command="slides">
-                      <div>
-                        <h3 data-i18n="assets.commands.processSlides">Process slides</h3>
-                        <p data-i18n="assets.commands.processSlidesHint">
-                          Render previews and Markdown bundles.
-                        </p>
-                      </div>
-                      <div class="asset-command-controls">
-                        <button
-                          type="button"
-                          id="asset-process-slides"
-                          data-i18n="assets.actions.processSlides"
-                        >
-                          Process slides
-                        </button>
-                      </div>
-                    </article>
-                    <article class="asset-command" data-command="cart">
-                      <div>
-                        <h3 data-i18n="assets.commands.addToCart">Task Cart</h3>
-                        <p data-i18n="assets.commands.addToCartHint">
-                          Stage custom batches with dry-runs and presets.
-                        </p>
-                      </div>
-                      <div class="asset-command-controls">
-                        <button
-                          type="button"
-                          id="asset-open-cart"
-                          data-i18n="assets.commands.openCart"
-                        >
-                          Open cart
-                        </button>
-                      </div>
-                    </article>
-                  </section>
-                  <section id="asset-section" hidden>
+                  <section id="asset-section" class="assets-overview" hidden>
+                    <h3 data-i18n="assets.overview.title">Lecture assets</h3>
+                    <p data-i18n="assets.overview.subtitle">
+                      Review linked materials for the selected lecture.
+                    </p>
                     <ul id="asset-list" class="asset-list"></ul>
                   </section>
                 </div>
-              </aside>
+              </section>
             </div>
           </section>
           <section class="section tasks" data-section-panel="tasks" hidden>
@@ -5408,11 +5204,8 @@
         </button>
         <label for="task-cart-parallelism" data-tooltip-key="tooltips.cart.parallelism">
           <span data-i18n="cart.parallelism">Parallelism</span>
-          <select id="task-cart-parallelism">
-            <option value="auto" data-i18n="cart.parallel.auto">Auto</option>
+          <select id="task-cart-parallelism" disabled>
             <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="4">4</option>
           </select>
         </label>
         <label for="task-cart-on-complete" data-tooltip-key="tooltips.cart.onComplete">
@@ -5871,7 +5664,7 @@
               bulkUpload: 'Bulk Upload',
               bulkDownload: 'Bulk Download',
               addToCart: 'Add to Cart',
-              runCart: 'Run Cart',
+              runCart: 'Open Cart',
               export: 'Export',
               import: 'Import',
               purge: 'Purge',
@@ -5892,7 +5685,7 @@
               },
               mega: {
                 home: 'Open mission control with shortcuts and status.',
-                catalog: 'Work in the curriculum tri-pane workspace.',
+                catalog: 'Manage the curriculum and lecture workspace.',
                 tasks: 'Monitor running jobs and manage the Task Cart.',
                 storage: 'Inspect storage usage and bulk export or purge.',
                 system: 'Configure themes, hardware, and automation.',
@@ -5904,7 +5697,7 @@
                 bulkUpload: 'Upload multiple recordings, folders, or slide decks.',
                 bulkDownload: 'Download selected items as a single archive.',
                 addToCart: 'Place the current selection into the Task Cart.',
-                runCart: 'Start executing the queued tasks in the cart.',
+                runCart: 'Open the Task Cart to review queued work.',
                 export: 'Export the current selection to a ZIP file.',
                 import: 'Import lectures or assets from an archive.',
                 purge: 'Remove processed audio that already has transcripts.',
@@ -5912,39 +5705,36 @@
                 debug: 'Toggle the live debug console on or off.',
               },
               cart: {
-                run: 'Execute queued actions in order.',
+                run: 'Submit the queue for background processing.',
                 pause: 'Pause the queue without clearing tasks.',
                 save: 'Save the current queue as a preset.',
                 dryRun: 'Validate requirements without running tasks.',
                 parallelism: 'Choose how many tasks run simultaneously.',
                 onComplete: 'Select what happens after the queue finishes.',
                 drag: 'Drag to reorder tasks.',
-                runSingle: 'Run only this task now.',
                 moveUp: 'Move task earlier in the queue.',
                 moveDown: 'Move task later in the queue.',
                 removeItem: 'Remove this task from the cart.',
                 resetPresets: 'Remove all custom presets.',
                 loadPreset: 'Load this preset into the cart.',
-                runPreset: 'Load and run this preset immediately.',
                 deletePreset: 'Delete this preset.',
                 toggle: 'Show or hide the Task Cart.',
               },
             },
             catalog: {
               curriculum: 'Curriculum tree',
-              curriculumHint: 'Everything is visible—select items to multi-edit and queue work.',
+              curriculumHint: 'Browse classes, modules, and lectures—select one to edit.',
               actions: {
                 createClass: 'Create class',
                 createModule: 'Create module',
                 createLecture: 'Create lecture',
-                bulkUpload: 'Bulk upload',
-                bulkEdit: 'Bulk edit',
+                addLecture: 'Add lecture',
               },
             },
             cart: {
               title: 'Task Cart',
               empty: 'Cart is empty.',
-              run: 'Run',
+              run: 'Submit queue',
               pause: 'Pause',
               resume: 'Resume',
               savePreset: 'Save as Preset',
@@ -5965,8 +5755,8 @@
               added: 'Added “{{title}}” to Task Cart.',
               pausedNotice: 'Task Cart paused. Tap Resume to continue.',
               resumed: 'Task Cart resumed.',
-              runningStatus: 'Running Task Cart…',
-              completedStatus: 'Task Cart completed.',
+              runningStatus: 'Submitting Task Cart…',
+              completedStatus: 'Task Cart submitted.',
               unsupported: 'This task type is not supported yet.',
               dryRunPending: 'Dry run will validate the queue soon.',
               dryRunSuccess: "Dry run passed for {{count}} task{{count === 1 ? '' : 's'}}.",
@@ -5978,7 +5768,6 @@
               savedPreset: 'Preset “{{name}}” saved.',
               presetDeleted: 'Preset “{{name}}” removed.',
               presetLoaded: 'Preset “{{name}}” loaded into the cart.',
-              presetRunning: 'Preset “{{name}}” is running.',
               presetQueued: 'Preset “{{name}}” is ready to run.',
               presets: {
                 aria: 'Task cart presets',
@@ -5986,7 +5775,6 @@
                 reset: 'Reset presets',
                 empty: 'No presets available yet.',
                 load: 'Load',
-                run: 'Load & Run',
                 delete: 'Delete',
                 saveTitle: 'Save preset',
                 saveMessage: 'Name this preset to reuse the current queue.',
@@ -6024,7 +5812,7 @@
               onCompleteChanged: 'Completion preference updated to {{label}}.',
               queueAccepted: 'Task batch queued successfully.',
               queueUnsupported: "{{count}} task{{count === 1 ? '' : 's'}} will stay in the cart.",
-              queueFallback: 'Running locally because batch queue failed ({{message}}).',
+              queueUnsupportedEmpty: 'No supported tasks are ready to submit.',
               statuses: {
                 pending: 'Pending',
                 running: 'Running',
@@ -6047,18 +5835,18 @@
               subtitle: 'Every control is visible—tap anything to learn more.',
               close: 'Got it',
               tree: 'Curriculum Tree',
-              treeHint: 'Browse, multi-select, and reorder lectures.',
+              treeHint: 'Browse classes, modules, and lectures.',
               details: 'Details + Editor',
-              detailsHint: 'Inspect and edit metadata inline.',
-              assets: 'Assets & Actions',
-              assetsHint: 'Upload, process, and cart assets confidently.',
+              detailsHint: 'Open a lecture to edit its information.',
+              assets: 'Lecture assets',
+              assetsHint: 'Review linked files and their current status.',
               cart: 'Task Cart',
-              cartHint: 'Queue, reorder, and automate complex batches.',
+              cartHint: 'Submit work sequentially and monitor progress.',
             },
             details: {
               title: 'Lecture details',
               subtitle: 'Select a lecture to inspect metadata and linked assets.',
-              deleteLecture: 'Delete lecture',
+              back: 'Back to curriculum',
               editToggle: 'Edit lecture',
               exitEdit: 'Finish editing',
               editModeBanner: 'Editing lecture details. Changes apply after saving.',
@@ -6073,6 +5861,10 @@
             },
             assets: {
               title: 'Assets',
+              overview: {
+                title: 'Lecture assets',
+                subtitle: 'Review linked materials for the selected lecture.',
+              },
               panel: {
                 title: 'Assets & actions',
                 subtitle: 'Upload, queue processing, or batch assets straight into the Task Cart.',
@@ -6486,6 +6278,7 @@
             curriculum: {
               addClass: 'Add class',
               addModule: 'Add module',
+              addLecture: 'Add lecture',
               manageHeading: 'Manage syllabus',
               classMeta: '{{moduleCount}} {{moduleWord}} • {{lectureCount}} {{lectureWord}}',
               moduleMeta: '{{lectureCount}} {{lectureWord}}',
@@ -6666,9 +6459,9 @@
                 openSettings: '系统设置',
               },
             },
-            mega: {
-              home: '主页',
-              catalog: '目录',
+              mega: {
+                home: '主页',
+                catalog: '目录',
               tasks: '任务',
               storage: '存储',
               system: '系统',
@@ -6680,7 +6473,7 @@
               bulkUpload: '批量上传',
               bulkDownload: '批量下载',
               addToCart: '加入任务车',
-              runCart: '运行任务车',
+              runCart: '打开任务车',
               export: '导出',
               import: '导入',
               purge: '清理',
@@ -6701,7 +6494,7 @@
               },
               mega: {
                 home: '进入总控台，快速查看状态与快捷操作。',
-                catalog: '进入三栏工作区管理课程结构。',
+                catalog: '在课程与讲座工作区中进行管理。',
                 tasks: '监控运行中的任务并管理任务车。',
                 storage: '查看存储使用情况并执行批量导出或清理。',
                 system: '配置主题、硬件偏好和自动化。',
@@ -6713,7 +6506,7 @@
                 bulkUpload: '批量上传录音、文件夹或课件。',
                 bulkDownload: '将所选内容打包成单个归档下载。',
                 addToCart: '把当前选中项目加入任务车。',
-                runCart: '开始执行任务车中的所有任务。',
+                runCart: '打开任务车查看待处理任务。',
                 export: '导出当前选中内容为 ZIP。',
                 import: '从归档中导入课程或资源。',
                 purge: '清理已有转录的处理后音频。',
@@ -6721,39 +6514,36 @@
                 debug: '切换实时调试面板。',
               },
               cart: {
-                run: '按顺序执行任务车中的任务。',
+                run: '将队列提交到后台依次处理。',
                 pause: '暂停队列但保留任务。',
                 save: '将当前队列保存为预设。',
                 dryRun: '验证资源与空间，不真正执行。',
                 parallelism: '设置同时运行的任务数量。',
                 onComplete: '选择队列完成后的动作。',
                 drag: '拖拽以重新排序任务。',
-                runSingle: '仅立即执行此任务。',
                 moveUp: '将任务上移。',
                 moveDown: '将任务下移。',
                 removeItem: '从任务车中移除此任务。',
                 resetPresets: '清除所有自定义预设。',
                 loadPreset: '将此预设加载到任务车。',
-                runPreset: '立即加载并执行此预设。',
                 deletePreset: '删除此预设。',
                 toggle: '显示或隐藏任务车。',
               },
             },
             catalog: {
               curriculum: '课程树',
-              curriculumHint: '所有控件一目了然——选择条目即可批量编辑并排队处理。',
+              curriculumHint: '浏览课程、模块与讲座，选择后即可编辑。',
               actions: {
                 createClass: '创建课程',
                 createModule: '创建模块',
                 createLecture: '创建讲座',
-                bulkUpload: '批量上传',
-                bulkEdit: '批量编辑',
+                addLecture: '添加讲座',
               },
             },
             cart: {
               title: '任务车',
               empty: '任务车为空。',
-              run: '运行',
+              run: '提交队列',
               pause: '暂停',
               resume: '继续',
               savePreset: '保存为预设',
@@ -6774,8 +6564,8 @@
               added: '已将“{{title}}”加入任务车。',
               pausedNotice: '任务车已暂停。点击“继续”恢复。',
               resumed: '任务车已恢复。',
-              runningStatus: '任务车正在运行…',
-              completedStatus: '任务车已完成。',
+              runningStatus: '任务车正在提交…',
+              completedStatus: '任务车已提交。',
               unsupported: '该任务类型暂不支持。',
               dryRunPending: '试运行即将验证队列。',
               dryRunSuccess: '试运行已验证 {{count}} 个任务。',
@@ -6787,7 +6577,6 @@
               savedPreset: '预设“{{name}}”已保存。',
               presetDeleted: '预设“{{name}}”已删除。',
               presetLoaded: '预设“{{name}}”已载入任务车。',
-              presetRunning: '预设“{{name}}”正在执行。',
               presetQueued: '预设“{{name}}”已准备运行。',
               presets: {
                 aria: '任务车预设',
@@ -6795,7 +6584,6 @@
                 reset: '重置预设',
                 empty: '暂时没有可用预设。',
                 load: '加载',
-                run: '加载并运行',
                 delete: '删除',
                 saveTitle: '保存预设',
                 saveMessage: '为当前队列命名以便重复使用。',
@@ -6833,7 +6621,7 @@
               onCompleteChanged: '完成后操作已更新为 {{label}}。',
               queueAccepted: '任务批次已成功入队。',
               queueUnsupported: '{{count}} 个任务将保留在任务车中。',
-              queueFallback: '由于远程队列失败（{{message}}），改为在本地执行。',
+              queueUnsupportedEmpty: '没有可提交的受支持任务。',
               statuses: {
                 pending: '待处理',
                 running: '进行中',
@@ -6856,18 +6644,18 @@
               subtitle: '所有控件一目了然——点按即可了解用途。',
               close: '知道了',
               tree: '课程树',
-              treeHint: '浏览、批量选择并重新排序讲座。',
+              treeHint: '浏览课程、模块与讲座。',
               details: '详情与编辑',
-              detailsHint: '直接在右侧编辑元数据。',
-              assets: '资源与操作',
-              assetsHint: '放心上传、处理并加入任务车。',
+              detailsHint: '打开讲座即可编辑信息。',
+              assets: '讲座资源',
+              assetsHint: '查看讲座已关联的资料与状态。',
               cart: '任务车',
-              cartHint: '排队、重排并自动化批量操作。',
+              cartHint: '顺序提交任务并跟踪进度。',
             },
             details: {
               title: '讲座详情',
               subtitle: '选择一个讲座即可查看元数据与关联资源。',
-              deleteLecture: '删除讲座',
+              back: '返回课程树',
               editToggle: '编辑讲座',
               exitEdit: '完成编辑',
               editModeBanner: '正在编辑讲座详情，保存后生效。',
@@ -6882,6 +6670,10 @@
             },
             assets: {
               title: '资源',
+              overview: {
+                title: '讲座资源',
+                subtitle: '查看所选讲座关联的全部资料。',
+              },
               panel: {
                 title: '资源与操作',
                 subtitle: '放心上传、排队处理或一次性加入任务车。',
@@ -7287,6 +7079,7 @@
             curriculum: {
               addClass: '添加课程',
               addModule: '添加模块',
+              addLecture: '添加讲座',
               manageHeading: '管理课程大纲',
               classMeta: '{{moduleCount}} 个{{moduleWord}} • {{lectureCount}} 个{{lectureWord}}',
               moduleMeta: '{{lectureCount}} 个{{lectureWord}}',
@@ -7480,7 +7273,7 @@
               bulkUpload: 'Subida masiva',
               bulkDownload: 'Descarga masiva',
               addToCart: 'Añadir al carro',
-              runCart: 'Ejecutar carro',
+              runCart: 'Abrir carrito',
               export: 'Exportar',
               import: 'Importar',
               purge: 'Purgar',
@@ -7501,7 +7294,7 @@
               },
               mega: {
                 home: 'Abre la consola principal con accesos y estado.',
-                catalog: 'Trabaja en el espacio de trabajo de tres paneles.',
+                catalog: 'Gestiona el espacio curricular y de lecciones.',
                 tasks: 'Supervisa tareas en ejecución y el carro.',
                 storage: 'Inspecciona almacenamiento y realiza exportaciones o purgas.',
                 system: 'Configura temas, hardware y automatizaciones.',
@@ -7513,7 +7306,7 @@
                 bulkUpload: 'Sube varias grabaciones, carpetas o diapositivas a la vez.',
                 bulkDownload: 'Descarga los elementos seleccionados en un solo archivo.',
                 addToCart: 'Añade la selección actual al carro de tareas.',
-                runCart: 'Inicia la ejecución de las tareas en el carro.',
+                runCart: 'Abre el carro de tareas para revisarlo.',
                 export: 'Exporta la selección actual a un ZIP.',
                 import: 'Importa clases o recursos desde un archivo.',
                 purge: 'Elimina audio procesado que ya tiene transcripción.',
@@ -7521,39 +7314,36 @@
                 debug: 'Activa o desactiva la consola de depuración.',
               },
               cart: {
-                run: 'Ejecuta las acciones en cola en orden.',
+                run: 'Envía la cola para procesarla en segundo plano.',
                 pause: 'Pausa la cola sin borrar las tareas.',
                 save: 'Guarda la cola actual como preajuste.',
                 dryRun: 'Valida requisitos sin ejecutar tareas.',
                 parallelism: 'Define cuántas tareas se ejecutan a la vez.',
                 onComplete: 'Elige qué ocurre al terminar la cola.',
                 drag: 'Arrastra para reordenar las tareas.',
-                runSingle: 'Ejecuta solo esta tarea ahora.',
                 moveUp: 'Mueve la tarea hacia arriba en la cola.',
                 moveDown: 'Mueve la tarea hacia abajo en la cola.',
                 removeItem: 'Elimina esta tarea del carro.',
                 resetPresets: 'Elimina todos los preajustes personalizados.',
                 loadPreset: 'Carga este preajuste en el carro.',
-                runPreset: 'Carga y ejecuta este preajuste de inmediato.',
                 deletePreset: 'Elimina este preajuste.',
                 toggle: 'Mostrar u ocultar el carro.',
               },
             },
             catalog: {
               curriculum: 'Árbol curricular',
-              curriculumHint: 'Todo es visible: selecciona elementos para editar en lote y ponerlos en cola.',
+              curriculumHint: 'Explora clases, módulos y lecciones; selecciónalas para editarlas.',
               actions: {
                 createClass: 'Crear clase',
                 createModule: 'Crear módulo',
                 createLecture: 'Crear lección',
-                bulkUpload: 'Carga masiva',
-                bulkEdit: 'Edición masiva',
+                addLecture: 'Añadir lección',
               },
             },
             cart: {
               title: 'Carro de tareas',
               empty: 'El carro está vacío.',
-              run: 'Ejecutar',
+              run: 'Enviar cola',
               pause: 'Pausar',
               resume: 'Reanudar',
               savePreset: 'Guardar como preajuste',
@@ -7574,8 +7364,8 @@
               added: 'Se añadió “{{title}}” al carro de tareas.',
               pausedNotice: 'El carro se pausó. Pulsa Reanudar para continuar.',
               resumed: 'El carro se reanudó.',
-              runningStatus: 'Ejecutando el carro de tareas…',
-              completedStatus: 'El carro de tareas finalizó.',
+              runningStatus: 'Enviando el carro de tareas…',
+              completedStatus: 'El carro de tareas se envió.',
               unsupported: 'Este tipo de tarea aún no es compatible.',
               dryRunPending: 'La simulación validará la cola en breve.',
               dryRunSuccess: "La simulación validó {{count}} tarea{{count === 1 ? '' : 's'}}.",
@@ -7587,7 +7377,6 @@
               savedPreset: 'Preajuste “{{name}}” guardado.',
               presetDeleted: 'Preajuste “{{name}}” eliminado.',
               presetLoaded: 'Preajuste “{{name}}” cargado en el carro.',
-              presetRunning: 'Preajuste “{{name}}” en ejecución.',
               presetQueued: 'Preajuste “{{name}}” listo para ejecutar.',
               presets: {
                 aria: 'Preajustes del carro de tareas',
@@ -7595,7 +7384,6 @@
                 reset: 'Restablecer preajustes',
                 empty: 'Todavía no hay preajustes disponibles.',
                 load: 'Cargar',
-                run: 'Cargar y ejecutar',
                 delete: 'Eliminar',
                 saveTitle: 'Guardar preajuste',
                 saveMessage: 'Ponle nombre para reutilizar esta cola.',
@@ -7635,7 +7423,7 @@
               onCompleteChanged: 'Acción al finalizar actualizada a {{label}}.',
               queueAccepted: 'Lote de tareas enviado correctamente.',
               queueUnsupported: "{{count}} tarea{{count === 1 ? '' : 's'}} permanecerá en el carro.",
-              queueFallback: 'Se ejecuta localmente porque la cola remota falló ({{message}}).',
+              queueUnsupportedEmpty: 'No hay tareas compatibles listas para enviarse.',
               statuses: {
                 pending: 'Pendiente',
                 running: 'En progreso',
@@ -7658,18 +7446,18 @@
               subtitle: 'Todo es visible: toca cada área para conocer su función.',
               close: 'Entendido',
               tree: 'Árbol curricular',
-              treeHint: 'Explora, selecciona en lote y reordena clases.',
+              treeHint: 'Explora clases, módulos y lecciones.',
               details: 'Detalles y edición',
-              detailsHint: 'Edita metadatos en línea sin modales.',
-              assets: 'Recursos y acciones',
-              assetsHint: 'Sube, procesa y añade al carro con confianza.',
+              detailsHint: 'Abre una lección para editar su información.',
+              assets: 'Recursos de la lección',
+              assetsHint: 'Consulta los archivos vinculados y su estado.',
               cart: 'Carro de tareas',
-              cartHint: 'Programa, reordena y automatiza lotes completos.',
+              cartHint: 'Envía tareas en orden y sigue el progreso.',
             },
             details: {
               title: 'Detalles de la clase',
               subtitle: 'Selecciona una lección para revisar metadatos y recursos vinculados.',
-              deleteLecture: 'Eliminar clase',
+              back: 'Volver al árbol curricular',
               editToggle: 'Editar lección',
               exitEdit: 'Finalizar edición',
               editModeBanner: 'Editando detalles de la lección. Los cambios se aplican al guardar.',
@@ -7684,6 +7472,10 @@
             },
             assets: {
               title: 'Recursos',
+              overview: {
+                title: 'Recursos de la lección',
+                subtitle: 'Revisa el material vinculado a la lección seleccionada.',
+              },
               panel: {
                 title: 'Recursos y acciones',
                 subtitle: 'Sube, programa procesamientos o manda recursos al carrito en lote.',
@@ -8099,6 +7891,7 @@
             curriculum: {
               addClass: 'Agregar curso',
               addModule: 'Agregar módulo',
+              addLecture: 'Agregar lección',
               manageHeading: 'Administrar programa',
               classMeta: '{{moduleCount}} {{moduleWord}} • {{lectureCount}} {{lectureWord}}',
               moduleMeta: '{{lectureCount}} {{lectureWord}}',
@@ -8293,7 +8086,7 @@
               bulkUpload: 'Import massif',
               bulkDownload: 'Export massif',
               addToCart: 'Ajouter au panier',
-              runCart: 'Lancer le panier',
+              runCart: 'Ouvrir le panier',
               export: 'Exporter',
               import: 'Importer',
               purge: 'Purger',
@@ -8314,7 +8107,7 @@
               },
               mega: {
                 home: 'Ouvrir la console principale avec raccourcis et indicateurs.',
-                catalog: 'Travailler dans l’espace de travail à trois volets du catalogue.',
+                catalog: 'Gérer l’espace des cours et des séances.',
                 tasks: 'Surveiller les tâches en cours et le panier de tâches.',
                 storage: 'Inspecter le stockage et lancer exports ou purges.',
                 system: 'Configurer thèmes, matériel et automatisations.',
@@ -8326,7 +8119,7 @@
                 bulkUpload: 'Importer plusieurs enregistrements, dossiers ou diapositives.',
                 bulkDownload: 'Télécharger les éléments sélectionnés en une archive.',
                 addToCart: 'Ajouter la sélection actuelle au panier de tâches.',
-                runCart: 'Lancer l’exécution des tâches du panier.',
+                runCart: 'Ouvrir le panier de tâches pour le consulter.',
                 export: 'Exporter la sélection actuelle en archive ZIP.',
                 import: 'Importer cours ou ressources depuis une archive.',
                 purge: 'Supprimer l’audio traité déjà transcrit.',
@@ -8334,20 +8127,18 @@
                 debug: 'Activer ou désactiver la console de debug en direct.',
               },
               cart: {
-                run: 'Exécuter les actions de la file dans l’ordre.',
+                run: 'Soumettre la file pour un traitement en arrière-plan.',
                 pause: 'Mettre la file en pause sans la vider.',
                 save: 'Enregistrer la file actuelle comme preset.',
                 dryRun: 'Vérifier les prérequis sans exécuter les tâches.',
                 parallelism: 'Choisir le nombre de tâches en parallèle.',
                 onComplete: 'Choisir l’action à effectuer après la fin du panier.',
                 drag: 'Faites glisser pour réorganiser les tâches.',
-                runSingle: 'Exécuter uniquement cette tâche maintenant.',
                 moveUp: 'Déplacer la tâche vers le haut de la file.',
                 moveDown: 'Déplacer la tâche vers le bas de la file.',
                 removeItem: 'Retirer cette tâche du panier.',
                 resetPresets: 'Supprimer tous les presets personnalisés.',
                 loadPreset: 'Charger ce preset dans le panier.',
-                runPreset: 'Charger et exécuter ce preset immédiatement.',
                 deletePreset: 'Supprimer ce preset.',
                 toggle: 'Afficher ou masquer le panier de tâches.',
               },
@@ -8366,7 +8157,7 @@
             cart: {
               title: 'Panier de tâches',
               empty: 'Le panier est vide.',
-              run: 'Lancer',
+              run: 'Soumettre la file',
               pause: 'Pause',
               resume: 'Reprendre',
               savePreset: 'Enregistrer comme preset',
@@ -8387,8 +8178,8 @@
               added: '« {{title}} » a été ajouté au panier de tâches.',
               pausedNotice: 'Le panier est en pause. Appuyez sur Reprendre pour continuer.',
               resumed: 'Le panier a repris.',
-              runningStatus: 'Panier de tâches en cours d’exécution…',
-              completedStatus: 'Le panier de tâches est terminé.',
+              runningStatus: 'Soumission du panier de tâches…',
+              completedStatus: 'Panier de tâches soumis.',
               unsupported: 'Ce type de tâche n’est pas encore pris en charge.',
               dryRunPending: 'La simulation va valider la file dans un instant.',
               dryRunSuccess: "La simulation a validé {{count}} tâche{{count === 1 ? '' : 's'}}.",
@@ -8400,7 +8191,6 @@
               savedPreset: 'Preset « {{name}} » enregistré.',
               presetDeleted: 'Preset « {{name}} » supprimé.',
               presetLoaded: 'Preset « {{name}} » chargé dans le panier.',
-              presetRunning: 'Preset « {{name}} » en cours d’exécution.',
               presetQueued: 'Preset « {{name}} » prêt à être exécuté.',
               presets: {
                 aria: 'Presets du panier de tâches',
@@ -8408,7 +8198,6 @@
                 reset: 'Réinitialiser les presets',
                 empty: 'Aucun preset disponible pour le moment.',
                 load: 'Charger',
-                run: 'Charger et exécuter',
                 delete: 'Supprimer',
                 saveTitle: 'Enregistrer un preset',
                 saveMessage: 'Nommez ce preset pour réutiliser la file.',
@@ -8448,7 +8237,7 @@
               onCompleteChanged: 'Action en fin de file mise à jour sur {{label}}.',
               queueAccepted: 'Lot de tâches mis en file avec succès.',
               queueUnsupported: "{{count}} tâche{{count === 1 ? '' : 's'}} restera dans le panier.",
-              queueFallback: 'Exécution locale car la file distante a échoué ({{message}}).',
+              queueUnsupportedEmpty: 'Aucune tâche compatible prête à être soumise.',
               statuses: {
                 pending: 'En attente',
                 running: 'En cours',
@@ -8471,18 +8260,18 @@
               subtitle: 'Tout est visible : survolez chaque zone pour découvrir son rôle.',
               close: 'Compris',
               tree: 'Arbre des cours',
-              treeHint: 'Explorer, sélectionner en masse et réorganiser les cours.',
+              treeHint: 'Explorer cours, modules et séances.',
               details: 'Détails et édition',
-              detailsHint: 'Modifier les métadonnées directement dans le panneau central.',
-              assets: 'Ressources et actions',
-              assetsHint: 'Téléversez, traitez et ajoutez au panier en toute confiance.',
+              detailsHint: 'Ouvrez une séance pour modifier ses informations.',
+              assets: 'Ressources de la séance',
+              assetsHint: 'Consultez les éléments liés et leur état actuel.',
               cart: 'Panier de tâches',
-              cartHint: 'Planifier, réordonner et automatiser vos lots.',
+              cartHint: 'Soumettre les tâches en séquence et suivre la progression.',
             },
             details: {
               title: 'Détails du cours',
               subtitle: 'Sélectionnez une séance pour consulter les métadonnées et les ressources liées.',
-              deleteLecture: 'Supprimer le cours',
+              back: 'Revenir à l’arborescence',
               editToggle: 'Modifier la séance',
               exitEdit: 'Terminer l’édition',
               editModeBanner:
@@ -8498,6 +8287,10 @@
             },
             assets: {
               title: 'Ressources',
+              overview: {
+                title: 'Ressources de la séance',
+                subtitle: 'Consultez les éléments associés à la séance sélectionnée.',
+              },
               panel: {
                 title: 'Ressources et actions',
                 subtitle: 'Importez, mettez en file ou envoyez les ressources au panier en une fois.',
@@ -8902,6 +8695,7 @@
             curriculum: {
               addClass: 'Ajouter un cours',
               addModule: 'Ajouter un module',
+              addLecture: 'Ajouter une séance',
               manageHeading: 'Gérer le plan de cours',
               classMeta: '{{moduleCount}} {{moduleWord}} • {{lectureCount}} {{lectureWord}}',
               moduleMeta: '{{lectureCount}} {{lectureWord}}',
@@ -9100,6 +8894,7 @@
           let currentElement = null;
           let showTimer = null;
           let hideTimer = null;
+          let pointerAnchor = null;
 
           function clearTimers() {
             if (showTimer) {
@@ -9128,17 +8923,55 @@
             return text ? text.trim() : '';
           }
 
-          function positionBubble(element) {
+          function positionBubble(element, pointer = pointerAnchor) {
             if (!element) {
               return;
             }
             const rect = element.getBoundingClientRect();
-            const centerX = rect.left + rect.width / 2;
-            const preferredTop = rect.top - 12;
-            const left = Math.min(window.innerWidth - 12, Math.max(12, centerX));
-            const top = Math.max(12, preferredTop);
+            const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+            const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+            const margin = 12;
+            const offset = 16;
+            const bubbleWidth = bubble.offsetWidth;
+            const bubbleHeight = bubble.offsetHeight;
+            const anchorX =
+              pointer && typeof pointer.x === 'number'
+                ? pointer.x
+                : rect.left + rect.width / 2;
+            const anchorY =
+              pointer && typeof pointer.y === 'number'
+                ? pointer.y
+                : rect.top + rect.height / 2;
+            const preferredSide = anchorX < viewportWidth / 2 ? 'right' : 'left';
+            const fitsRight = rect.right + offset + bubbleWidth + margin <= viewportWidth;
+            const fitsLeft = rect.left - offset - bubbleWidth >= margin;
+            let side = preferredSide;
+            if (side === 'right' && !fitsRight && fitsLeft) {
+              side = 'left';
+            } else if (side === 'left' && !fitsLeft && fitsRight) {
+              side = 'right';
+            }
+            let left;
+
+            if (side === 'right') {
+              left = rect.right + offset;
+              if (left + bubbleWidth + margin > viewportWidth) {
+                left = Math.max(margin, viewportWidth - bubbleWidth - margin);
+              }
+            } else {
+              left = rect.left - offset - bubbleWidth;
+              if (left < margin) {
+                left = Math.max(margin, rect.left + (rect.width - bubbleWidth) / 2);
+              }
+            }
+
+            const clampedAnchorY = Math.max(rect.top, Math.min(rect.bottom, anchorY));
+            let top = clampedAnchorY - bubbleHeight / 2;
+            top = Math.max(margin, Math.min(viewportHeight - bubbleHeight - margin, top));
+
             bubble.style.left = `${left}px`;
             bubble.style.top = `${top}px`;
+            bubble.dataset.side = side;
           }
 
           function show(element, delay = 250) {
@@ -9178,7 +9011,9 @@
             const finalize = () => {
               bubble.hidden = true;
               bubble.dataset.visible = 'false';
+              delete bubble.dataset.side;
               currentElement = null;
+              pointerAnchor = null;
             };
             if (immediate) {
               finalize();
@@ -9196,6 +9031,7 @@
             element.addEventListener('pointerenter', (event) => {
               const target = event.currentTarget;
               if (target instanceof HTMLElement) {
+                pointerAnchor = { x: event.clientX, y: event.clientY };
                 show(target, 250);
               }
             });
@@ -9208,14 +9044,26 @@
             element.addEventListener('pointerdown', (event) => {
               const target = event.currentTarget;
               if (event.pointerType === 'touch' && target instanceof HTMLElement) {
+                pointerAnchor = { x: event.clientX, y: event.clientY };
                 show(target, 0);
                 clearTimers();
                 hideTimer = window.setTimeout(() => hide(true), 1800);
               }
             });
+            element.addEventListener('pointermove', (event) => {
+              const target = event.currentTarget;
+              if (!(target instanceof HTMLElement)) {
+                return;
+              }
+              pointerAnchor = { x: event.clientX, y: event.clientY };
+              if (currentElement === target && bubble.dataset.visible === 'true') {
+                positionBubble(currentElement);
+              }
+            });
             element.addEventListener('focus', (event) => {
               const target = event.currentTarget;
               if (target instanceof HTMLElement) {
+                pointerAnchor = null;
                 show(target, 250);
               }
             });
@@ -9511,7 +9359,7 @@
             open: false,
             items: [],
             presets: [],
-            parallelism: 'auto',
+            parallelism: '1',
             onComplete: 'notify',
             running: false,
             paused: false,
@@ -9711,8 +9559,8 @@
           editName: document.getElementById('edit-lecture-name'),
           editModule: document.getElementById('edit-lecture-module'),
           editDescription: document.getElementById('edit-lecture-description'),
-          deleteButton: document.getElementById('delete-lecture'),
           detailsEditToggle: document.getElementById('details-edit-toggle'),
+          catalogBack: document.getElementById('catalog-back'),
           editBanner: document.getElementById('edit-mode-banner'),
           assetSection: document.getElementById('asset-section'),
           assetList: document.getElementById('asset-list'),
@@ -9728,11 +9576,6 @@
             storage: document.getElementById('view-storage'),
             settings: document.getElementById('view-settings'),
           },
-          assetTranscribe: document.getElementById('asset-transcribe'),
-          assetTranscribeModel: document.getElementById('asset-transcribe-model'),
-          assetProcessSlides: document.getElementById('asset-process-slides'),
-          assetOpenCart: document.getElementById('asset-open-cart'),
-          assetAddAllCart: document.getElementById('asset-add-all-cart'),
           sidebarOverview: document.getElementById('sidebar-overview'),
           settingsForm: document.getElementById('settings-form'),
           settingsTheme: document.getElementById('settings-theme'),
@@ -12361,15 +12204,6 @@
             loadButton.setAttribute('data-tooltip-key', 'tooltips.cart.loadPreset');
             actions.appendChild(loadButton);
 
-            const runButton = document.createElement('button');
-            runButton.type = 'button';
-            runButton.className = 'primary';
-            runButton.dataset.presetAction = 'run';
-            runButton.dataset.presetId = preset.id;
-            runButton.textContent = t('cart.presets.run');
-            runButton.setAttribute('data-tooltip-key', 'tooltips.cart.runPreset');
-            actions.appendChild(runButton);
-
             if (!preset.builtin) {
               const deleteButton = document.createElement('button');
               deleteButton.type = 'button';
@@ -12458,7 +12292,7 @@
           return [];
         }
 
-        async function applyTaskCartPreset(presetId, { runImmediately = false } = {}) {
+        async function applyTaskCartPreset(presetId) {
           const preset = state.taskCart.presets.find((entry) => entry.id === presetId);
           if (!preset) {
             showStatus(t('cart.presets.missing'), 'error', { record: false });
@@ -12477,14 +12311,9 @@
           openTaskCart();
           state.taskCart.activePresetId = preset.id;
           addTimelineEntry(t('cart.presetLoaded', { name: getPresetLabel(preset, 'name', '') }), 'info');
-          if (runImmediately) {
-            addTimelineEntry(t('cart.presetRunning', { name: getPresetLabel(preset, 'name', '') }), 'info');
-            await runTaskCart();
-          } else {
-            showStatus(t('cart.presetQueued', { name: getPresetLabel(preset, 'name', '') }), 'success', {
-              record: false,
-            });
-          }
+          showStatus(t('cart.presetQueued', { name: getPresetLabel(preset, 'name', '') }), 'success', {
+            record: false,
+          });
         }
 
         async function saveTaskCartPreset() {
@@ -12758,27 +12587,6 @@
             const controls = document.createElement('div');
             controls.className = 'task-cart-item-controls';
 
-            const runButton = document.createElement('button');
-            runButton.type = 'button';
-            runButton.dataset.cartItemId = item.id || '';
-            runButton.textContent = t('cart.run');
-            runButton.setAttribute('data-tooltip-key', 'tooltips.cart.runSingle');
-            runButton.addEventListener('click', async () => {
-              try {
-                setTaskCartItemStatus(item.id, 'running');
-                renderTaskCart();
-                await runCartItemWithRetry(item);
-                removeTaskCartItem(item.id, { silent: true });
-                renderTaskCart();
-              } catch (error) {
-                const message = error instanceof Error ? error.message : String(error);
-                setTaskCartItemStatus(item.id, 'failed', message);
-                renderTaskCart();
-                showStatus(message, 'error', { record: false });
-              }
-            });
-            controls.appendChild(runButton);
-
             const moveUpButton = document.createElement('button');
             moveUpButton.type = 'button';
             moveUpButton.className = 'text';
@@ -13011,7 +12819,7 @@
           }
         }
 
-        async function runTaskCart({ forceLocal = false } = {}) {
+        async function runTaskCart() {
           if (!state.taskCart.items.length) {
             showStatus(t('cart.empty'), 'info', { record: false });
             return;
@@ -13037,144 +12845,39 @@
           addTimelineEntry(t('cart.runningStatus'), 'info');
 
           const spec = buildTaskCartQueueSpec();
-          if (!forceLocal && spec.payload.items.length) {
-            try {
-              await request('/api/tasks/batch', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...spec.payload, dry_run: false }),
-              });
-              showStatus(t('cart.queueAccepted'), 'success', { record: false });
-              addTimelineEntry(t('cart.queueAccepted'), 'success');
-              state.taskCart.items = spec.unsupported.slice();
-              state.taskCart.running = false;
-              renderTaskCart();
-              updateTaskCartControls();
-              if (spec.unsupported.length) {
-                showStatus(t('cart.queueUnsupported', { count: spec.unsupported.length }), 'info', {
-                  record: false,
-                });
-              }
-              await refreshProgressQueue({ force: true, silent: true });
-              return;
-            } catch (error) {
-              const message = error instanceof Error ? error.message : String(error);
-              addTimelineEntry(message, 'warning');
-              showStatus(t('cart.queueFallback', { message }), 'info', { record: false });
-            }
-          }
-
-          await runTaskCartSequential();
-        }
-
-        async function runTaskCartSequential() {
-          const queue = state.taskCart.items.map((item) => item.id);
-          for (const itemId of queue) {
-            if (state.taskCart.paused) {
-              break;
-            }
-            const item = state.taskCart.items.find((entry) => entry.id === itemId);
-            if (!item) {
-              continue;
-            }
-            try {
-              await runCartItemWithRetry(item);
-              removeTaskCartItem(item.id, { silent: true });
-              renderTaskCart();
-            } catch (error) {
-              const message = error instanceof Error ? error.message : String(error);
-              setTaskCartItemStatus(item.id, 'failed', message);
-              renderTaskCart();
-              showStatus(message, 'error', { record: false });
-              addTimelineEntry(message, 'error');
-              state.taskCart.running = false;
-              updateTaskCartControls();
-              return;
-            }
-          }
-
-          const completed = !state.taskCart.paused && state.taskCart.items.length === 0;
-          state.taskCart.running = false;
-          updateTaskCartControls();
-          if (completed) {
-            showStatus(t('cart.completedStatus'), 'success', { record: false });
-            addTimelineEntry(t('cart.completedStatus'), 'success');
-          }
-        }
-
-        async function runCartItemWithRetry(item) {
-          const maxAttempts = Math.max(1, Number(item.maxAttempts) || TASK_CART_MAX_ATTEMPTS);
-          let attempt = 0;
-          while (attempt < maxAttempts && !state.taskCart.paused) {
-            attempt += 1;
-            item.attempts = attempt;
-            setTaskCartItemStatus(item.id, 'running', t('cart.logs.attempt', { attempt }));
-            renderTaskCart();
-            try {
-              await executeCartItem(item);
-              setTaskCartItemStatus(item.id, 'completed', t('cart.logs.completed'));
-              return;
-            } catch (error) {
-              const message = error instanceof Error ? error.message : String(error);
-              if (attempt >= maxAttempts) {
-                setTaskCartItemStatus(item.id, 'failed', message);
-                throw error;
-              }
-              setTaskCartItemStatus(item.id, 'pending', message);
-              renderTaskCart();
-              await wait(TASK_CART_BACKOFF_BASE_MS * 2 ** (attempt - 1));
-            }
-          }
-        }
-
-        async function executeCartItem(item) {
-          if (!item || !item.type) {
-            return;
-          }
-          if (item.type === 'transcribe' && item.lectureId) {
-            const model = normalizeWhisperModel(item.payload?.model || getTranscribeModelValue());
-            startTranscriptionProgress(item.lectureId);
-            showStatus(t('status.transcriptionPreparing'), 'info', { persist: true });
-            addTaskCartLog(item.id, t('cart.logs.transcribeQueued'));
-            try {
-              await request(`/api/lectures/${item.lectureId}/transcribe`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ model }),
-              });
-              stopTranscriptionProgress();
-              showStatus(t('status.transcriptionCompleted'), 'success');
-              await refreshData();
-              if (state.selectedLectureId === item.lectureId) {
-                await selectLecture(item.lectureId);
-              }
-            } catch (error) {
-              stopTranscriptionProgress();
-              throw error;
-            }
+          if (!spec.payload.items.length) {
+            showStatus(t('cart.queueUnsupportedEmpty'), 'info', { record: false });
+            state.taskCart.running = false;
+            updateTaskCartControls();
             return;
           }
 
-          if (item.type === 'custom' && typeof item.payload?.run === 'function') {
-            await item.payload.run();
-            addTaskCartLog(item.id, t('cart.logs.completed'));
-            return;
-          }
-
-          const queueSpec = serializeCartItemForQueue(item);
-          if (queueSpec) {
+          try {
             await request('/api/tasks/batch', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ items: [queueSpec], parallelism: '1', on_complete: 'notify' }),
+              body: JSON.stringify({ ...spec.payload, dry_run: false }),
             });
-            addTaskCartLog(item.id, t('cart.logs.queuedRemote'));
-            return;
+            showStatus(t('cart.queueAccepted'), 'success', { record: false });
+            addTimelineEntry(t('cart.queueAccepted'), 'success');
+            state.taskCart.items = spec.unsupported.slice();
+            state.taskCart.running = false;
+            renderTaskCart();
+            updateTaskCartControls();
+            if (spec.unsupported.length) {
+              showStatus(t('cart.queueUnsupported', { count: spec.unsupported.length }), 'info', {
+                record: false,
+              });
+            }
+            await refreshProgressQueue({ force: true, silent: true });
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            state.taskCart.running = false;
+            updateTaskCartControls();
+            renderTaskCart();
+            showStatus(message, 'error', { record: false });
+            addTimelineEntry(message, 'error');
           }
-
-          showStatus(t('cart.unsupported'), 'info', { record: false });
-          addTimelineEntry(t('cart.unsupported'), 'warning');
-          throw new Error(t('cart.unsupported'));
         }
 
         const assetDefinitions = [
@@ -17234,13 +16937,30 @@
           if (dom.editForm) {
             dom.editForm.reset();
           }
-          dom.assetSection.hidden = true;
-          dom.assetList.innerHTML = '';
+          if (dom.assetSection) {
+            dom.assetSection.hidden = true;
+          }
+          if (dom.assetList) {
+            dom.assetList.innerHTML = '';
+          }
           setTranscribeControls(null, null, null);
           setTranscribeButtonDisabled(true);
           state.selectedLectureDetail = null;
           state.detailsEditing = false;
           updateDetailsEditingUI();
+          updateCatalogMode();
+        }
+
+        function updateCatalogMode() {
+          const catalogSection = dom.sections?.catalog;
+          if (!catalogSection) {
+            return;
+          }
+          let mode = 'browse';
+          if (state.activeView === 'create' || state.selectedLectureId) {
+            mode = 'lecture';
+          }
+          catalogSection.dataset.catalogMode = mode;
         }
 
         function updateDetailsEditingUI() {
@@ -17263,12 +16983,6 @@
 
           if (dom.editForm) {
             dom.editForm.hidden = !editing;
-          }
-
-          if (dom.deleteButton) {
-            const canDelete = hasSelection && editing;
-            dom.deleteButton.disabled = !canDelete;
-            dom.deleteButton.setAttribute('aria-disabled', canDelete ? 'false' : 'true');
           }
         }
 
@@ -17325,6 +17039,7 @@
           const fallbackSection = state.primarySection || 'catalog';
           const nextSection = sectionMap[view] || fallbackSection;
           setPrimaryNavigation(nextSection);
+          updateCatalogMode();
         }
 
         function setPrimaryNavigation(section) {
@@ -17417,7 +17132,6 @@
             case 'run-cart':
               navigatePrimary('tasks');
               openTaskCart();
-              void runTaskCart();
               break;
             case 'export':
               navigatePrimary('import');
@@ -18091,14 +17805,6 @@
             });
             actions.appendChild(addModuleButton);
 
-            const deleteClassButton = createIconButton(t('common.actions.delete'), '×', 'danger');
-            deleteClassButton.addEventListener('click', (event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              handleDeleteClass(entry);
-            });
-            actions.appendChild(deleteClassButton);
-
             summary.appendChild(actions);
 
             classDetails.appendChild(summary);
@@ -18171,17 +17877,13 @@
                 const moduleActions = document.createElement('div');
                 moduleActions.className = 'syllabus-actions';
 
-                const deleteModuleButton = createIconButton(
-                  t('common.actions.delete'),
-                  '×',
-                  'danger',
-                );
-                deleteModuleButton.addEventListener('click', (event) => {
+                const addLectureButton = createIconButton(t('curriculum.addLecture'), '+');
+                addLectureButton.addEventListener('click', (event) => {
                   event.preventDefault();
                   event.stopPropagation();
-                  handleDeleteModule(moduleEntry, entry.class);
+                  handleAddLecture(moduleEntry.module, entry.class);
                 });
-                moduleActions.appendChild(deleteModuleButton);
+                moduleActions.appendChild(addLectureButton);
 
                 moduleSummary.appendChild(moduleActions);
 
@@ -18218,32 +17920,11 @@
                     lectureItem.appendChild(button);
                     state.buttonMap.set(lecture.id, button);
 
-                    lectureItem.draggable = true;
-                    lectureItem.addEventListener('dragstart', (event) => {
-                      startLectureDrag(event, lecture, moduleEntry.module.id);
-                    });
-                    lectureItem.addEventListener('dragend', clearLectureDrag);
-
-                    const deleteLectureButton = createIconButton(
-                      t('common.actions.delete'),
-                      '×',
-                      'danger',
-                    );
-                    deleteLectureButton.addEventListener('click', (event) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-                      handleDeleteLecture(lecture, moduleEntry.module, entry.class);
-                    });
-                    lectureItem.appendChild(deleteLectureButton);
+                    lectureItem.draggable = false;
 
                     lectureList.appendChild(lectureItem);
                   });
                 }
-
-                const dropHandler = (event) => handleLectureDrop(event, moduleEntry.module.id);
-                lectureList.addEventListener('dragover', handleLectureDragOver);
-                lectureList.addEventListener('dragleave', handleLectureDragLeave);
-                lectureList.addEventListener('drop', dropHandler);
 
                 moduleContent.appendChild(lectureList);
 
@@ -18478,97 +18159,6 @@
           }
         }
 
-        async function handleDeleteClass(classEntry) {
-          const moduleCount = classEntry.modules.length;
-          const lectureCount = classEntry.modules.reduce(
-            (total, moduleEntry) => total + (moduleEntry.lectures?.length || 0),
-            0,
-          );
-          const moduleWord = pluralize(currentLanguage, 'counts.module', moduleCount);
-          const lectureWord = pluralize(currentLanguage, 'counts.lecture', lectureCount);
-          let message = t('dialogs.deleteClass.message', { className: classEntry.class.name });
-          if (moduleCount || lectureCount) {
-            message += `\n\n${t('dialogs.deleteClass.summary', {
-              moduleCount,
-              moduleWord,
-              lectureCount,
-              lectureWord,
-            })}`;
-          }
-          const confirmed = await confirmDialog({
-            title: t('dialogs.deleteClass.title'),
-            message,
-            confirmText: t('common.actions.delete'),
-            cancelText: t('dialogs.deleteClass.cancel'),
-            variant: 'danger',
-          });
-          if (!confirmed) {
-            return;
-          }
-          try {
-            await request(`/api/classes/${classEntry.class.id}`, { method: 'DELETE' });
-            if (state.selectedLectureId) {
-              const removed = classEntry.modules.some((moduleEntry) =>
-                (moduleEntry.lectures || []).some(
-                  (lecture) => lecture.id === state.selectedLectureId,
-                ),
-              );
-              if (removed) {
-                state.selectedLectureId = null;
-                clearDetailPanel();
-              }
-            }
-            showStatus(t('status.classRemoved'), 'success');
-            await refreshData();
-          } catch (error) {
-            showStatus(error.message, 'error');
-          }
-        }
-
-        async function handleDeleteModule(moduleEntry, classRecord) {
-          const lectureCount = moduleEntry.lectures.length;
-          const classContext = classRecord
-            ? t('dialogs.deleteModule.classContext', { className: classRecord.name })
-            : '';
-          let message = t('dialogs.deleteModule.message', {
-            moduleName: moduleEntry.module.name,
-            classContext,
-          });
-          if (lectureCount) {
-            const lectureWord = pluralize(currentLanguage, 'counts.lecture', lectureCount);
-            message += `\n\n${t('dialogs.deleteModule.summary', {
-              lectureCount,
-              lectureWord,
-            })}`;
-          }
-          const confirmed = await confirmDialog({
-            title: t('dialogs.deleteModule.title'),
-            message,
-            confirmText: t('common.actions.delete'),
-            cancelText: t('dialogs.deleteModule.cancel'),
-            variant: 'danger',
-          });
-          if (!confirmed) {
-            return;
-          }
-          try {
-            await request(`/api/modules/${moduleEntry.module.id}`, { method: 'DELETE' });
-            if (state.selectedLectureId) {
-              const removed = (moduleEntry.lectures || []).some(
-                (lecture) => lecture.id === state.selectedLectureId,
-              );
-              if (removed) {
-                state.selectedLectureId = null;
-                clearDetailPanel();
-              }
-            }
-            showStatus(t('status.moduleRemoved'), 'success');
-            await refreshData();
-          } catch (error) {
-            showStatus(error.message, 'error');
-          }
-        }
-
         async function handleAddLecture(moduleRecord, classRecord) {
           const contextParts = classRecord
             ? [classRecord.name, moduleRecord.name]
@@ -18613,38 +18203,6 @@
           }
         }
 
-        async function handleDeleteLecture(lecture, moduleRecord, classRecord) {
-          const contextParts = [lecture.name];
-          if (moduleRecord) {
-            contextParts.push(moduleRecord.name);
-          }
-          if (classRecord) {
-            contextParts.push(classRecord.name);
-          }
-          const context = contextParts.join(' • ');
-          const confirmed = await confirmDialog({
-            title: t('dialogs.deleteLecture.title'),
-            message: t('dialogs.deleteLecture.message', { context }),
-            confirmText: t('common.actions.delete'),
-            cancelText: t('dialogs.deleteLecture.cancel'),
-            variant: 'danger',
-          });
-          if (!confirmed) {
-            return;
-          }
-          try {
-            await request(`/api/lectures/${lecture.id}`, { method: 'DELETE' });
-            if (state.selectedLectureId === lecture.id) {
-              state.selectedLectureId = null;
-              clearDetailPanel();
-            }
-            showStatus(t('status.lectureRemoved'), 'success');
-            await refreshData();
-          } catch (error) {
-            showStatus(error.message, 'error');
-          }
-        }
-
         function applyTheme(theme) {
           const target = theme || 'system';
           document.body.dataset.theme = target;
@@ -18664,11 +18222,13 @@
         }
 
         function renderAssets(lecture) {
+          if (!dom.assetList || !dom.assetSection) {
+            return;
+          }
           dom.assetList.innerHTML = '';
           setTranscribeControls(null, null, null);
-          let audioAvailable = false;
-          let slidesAvailable = false;
-          let slidesProcessing = false;
+          let visibleCount = 0;
+
           assetDefinitions.forEach((definition) => {
             const value = lecture[definition.key];
             if (
@@ -18677,8 +18237,10 @@
             ) {
               return;
             }
+
             const item = document.createElement('li');
             item.className = 'asset-item';
+
             const header = document.createElement('div');
             header.className = 'asset-header';
             header.textContent = t(definition.labelKey);
@@ -18706,93 +18268,11 @@
             status.textContent = statusText;
             item.appendChild(status);
 
-            const actions = document.createElement('div');
-            actions.className = 'asset-actions';
-
-            if (definition.accept) {
-              const uploadButton = document.createElement('button');
-              uploadButton.type = 'button';
-              uploadButton.className = 'secondary';
-              uploadButton.textContent = t('assets.actions.upload');
-              uploadButton.addEventListener('click', () => {
-                handleAssetUpload(definition);
-              });
-              actions.appendChild(uploadButton);
-            }
-
-            if (definition.type === 'audio') {
-              audioAvailable = Boolean(value);
-            }
-
-            const downloadButton = document.createElement('button');
-            downloadButton.type = 'button';
-            downloadButton.className = 'secondary';
-            downloadButton.textContent = t('assets.actions.download');
-            downloadButton.disabled = !value;
-            downloadButton.addEventListener('click', () => {
-              if (!value) {
-                return;
-              }
-              const downloadUrl = buildStorageURL(value);
-              const fallbackName = definition.type ? `${definition.type}.bin` : 'asset.bin';
-              const fileName = value.split('/').pop() || fallbackName;
-              const anchor = document.createElement('a');
-              anchor.href = downloadUrl;
-              anchor.download = fileName;
-              anchor.rel = 'noopener';
-              anchor.style.display = 'none';
-              document.body.appendChild(anchor);
-              anchor.click();
-              anchor.remove();
-            });
-
-            if (definition.type === 'slides') {
-              const isProcessing = state.processingProgressLectureId === lecture.id;
-              slidesAvailable = Boolean(value);
-              slidesProcessing = slidesProcessing || isProcessing;
-            }
-
-            actions.appendChild(downloadButton);
-
-            const removeButton = document.createElement('button');
-            removeButton.type = 'button';
-            removeButton.className = 'danger';
-            removeButton.textContent = t('assets.actions.remove');
-            removeButton.disabled = !value;
-            removeButton.addEventListener('click', () => {
-              if (!value) {
-                return;
-              }
-              handleAssetRemoval(definition);
-            });
-            actions.appendChild(removeButton);
-
-            item.appendChild(actions);
             dom.assetList.appendChild(item);
+            visibleCount += 1;
           });
 
-          let gpuOption = null;
-          if (dom.assetTranscribeModel instanceof HTMLSelectElement) {
-            gpuOption = ensureTranscribeModelOptions(dom.assetTranscribeModel);
-            dom.assetTranscribeModel.disabled = !audioAvailable;
-          }
-          if (dom.assetTranscribe instanceof HTMLButtonElement) {
-            dom.assetTranscribe.disabled = !audioAvailable;
-          }
-          setTranscribeControls(
-            audioAvailable ? dom.assetTranscribe : null,
-            audioAvailable ? dom.assetTranscribeModel : null,
-            gpuOption,
-          );
-          const canProcessSlides = slidesAvailable && !slidesProcessing;
-          if (dom.assetProcessSlides instanceof HTMLButtonElement) {
-            dom.assetProcessSlides.disabled = !canProcessSlides;
-            dom.assetProcessSlides.setAttribute('aria-busy', slidesProcessing ? 'true' : 'false');
-          }
-          if (dom.assetAddAllCart instanceof HTMLButtonElement) {
-            dom.assetAddAllCart.disabled =
-              !state.selectedLectureId || (!audioAvailable && !canProcessSlides);
-          }
+          dom.assetSection.hidden = visibleCount === 0;
 
           if (tooltipManager) {
             tooltipManager.refresh(dom.assetList);
@@ -18862,6 +18342,7 @@
         async function selectLecture(lectureId) {
           state.selectedLectureId = lectureId;
           state.selectedLectureDetail = null;
+          updateCatalogMode();
           const expanded = ensureLectureExpansion(lectureId);
           if (expanded) {
             renderCurriculum();
@@ -18875,7 +18356,9 @@
             }
             state.selectedLectureDetail = detail;
             renderSummary(detail);
-            dom.assetSection.hidden = false;
+            if (dom.assetSection) {
+              dom.assetSection.hidden = false;
+            }
 
             dom.editName.value = detail.lecture.name;
             dom.editDescription.value = detail.lecture.description || '';
@@ -19221,6 +18704,17 @@
           });
         }
 
+        if (dom.catalogBack instanceof HTMLButtonElement) {
+          dom.catalogBack.addEventListener('click', () => {
+            state.selectedLectureId = null;
+            state.selectedLectureDetail = null;
+            state.detailsEditing = false;
+            clearDetailPanel();
+            highlightSelected();
+            setActiveView('details');
+          });
+        }
+
         if (dom.curriculumCreateClass) {
           dom.curriculumCreateClass.addEventListener('click', () => {
             void handleAddClass();
@@ -19335,29 +18829,6 @@
           });
         }
 
-        const slidesAssetDefinition = assetDefinitions.find(
-          (definition) => definition.type === 'slides',
-        );
-
-        if (dom.assetProcessSlides instanceof HTMLButtonElement && slidesAssetDefinition) {
-          dom.assetProcessSlides.addEventListener('click', () => {
-            void handleSlideProcessing(slidesAssetDefinition);
-          });
-        }
-
-        if (dom.assetOpenCart instanceof HTMLButtonElement) {
-          dom.assetOpenCart.addEventListener('click', () => {
-            navigatePrimary('tasks');
-            openTaskCart();
-          });
-        }
-
-        if (dom.assetAddAllCart instanceof HTMLButtonElement) {
-          dom.assetAddAllCart.addEventListener('click', () => {
-            handleAddAllAssetsToCart();
-          });
-        }
-
         if (dom.taskCartClose instanceof HTMLButtonElement) {
           dom.taskCartClose.addEventListener('click', () => {
             closeTaskCart();
@@ -19412,9 +18883,7 @@
               return;
             }
             if (action === 'load') {
-              void applyTaskCartPreset(presetId, { runImmediately: false });
-            } else if (action === 'run') {
-              void applyTaskCartPreset(presetId, { runImmediately: true });
+              void applyTaskCartPreset(presetId);
             } else if (action === 'delete') {
               void deleteTaskCartPreset(presetId);
             }
@@ -19428,13 +18897,9 @@
         }
 
         if (dom.taskCartParallelism instanceof HTMLSelectElement) {
-          dom.taskCartParallelism.addEventListener('change', (event) => {
-            const select = event.target instanceof HTMLSelectElement ? event.target : null;
-            const value = select ? select.value || 'auto' : 'auto';
-            state.taskCart.parallelism = value;
-            updateTaskCartControls();
-            const label = select?.selectedOptions?.[0]?.textContent?.trim() || value;
-            addTimelineEntry(t('cart.parallelismChanged', { label }), 'info');
+          dom.taskCartParallelism.value = '1';
+          dom.taskCartParallelism.addEventListener('change', () => {
+            dom.taskCartParallelism.value = '1';
           });
         }
 
@@ -19487,42 +18952,6 @@
             showStatus(t('status.lectureUpdated'), 'success');
             await refreshData();
             await selectLecture(state.selectedLectureId);
-          } catch (error) {
-            showStatus(error.message, 'error');
-          }
-        });
-
-        dom.deleteButton.addEventListener('click', async () => {
-          if (!state.selectedLectureId || !state.detailsEditing) {
-            return;
-          }
-          const lectureName = dom.editName.value.trim() || dom.editName.placeholder || '';
-          const confirmed = await confirmDialog({
-            title: t('dialogs.deleteLecture.title'),
-            message: t('dialogs.deleteLecture.message', { context: lectureName }),
-            confirmText: t('common.actions.delete'),
-            cancelText: t('dialogs.deleteLecture.cancel'),
-            variant: 'danger',
-          });
-          if (!confirmed) {
-            return;
-          }
-          const secondCheck = await confirmDialog({
-            title: t('dialogs.confirmDeletion.title'),
-            message: t('dialogs.confirmDeletion.message'),
-            confirmText: t('dialogs.confirmDeletion.confirm'),
-            cancelText: t('dialog.cancel'),
-            variant: 'danger',
-          });
-          if (!secondCheck) {
-            return;
-          }
-          try {
-            await request(`/api/lectures/${state.selectedLectureId}`, { method: 'DELETE' });
-            showStatus(t('status.lectureRemoved'), 'success');
-            state.selectedLectureId = null;
-            clearDetailPanel();
-            await refreshData();
           } catch (error) {
             showStatus(error.message, 'error');
           }
