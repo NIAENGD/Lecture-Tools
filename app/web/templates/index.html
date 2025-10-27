@@ -6494,6 +6494,62 @@
           : '';
         const FILTERED_DEBUG_EMPTY_TEXT = 'No log entries match the current filters.';
 
+        const assetDefinitions = [
+          {
+            key: 'audio_path',
+            labelKey: 'assets.labels.audio',
+            accept: 'audio/*,.wav,.mp3,.m4a,.aac,.flac,.ogg,.oga,.opus',
+            type: 'audio',
+          },
+          {
+            key: 'processed_audio_path',
+            labelKey: 'assets.labels.masteredAudio',
+            accept: null,
+            type: 'processed_audio',
+          },
+          {
+            key: 'slide_path',
+            labelKey: 'assets.labels.slides',
+            accept: 'application/pdf',
+            type: 'slides',
+          },
+          {
+            key: 'transcript_path',
+            labelKey: 'assets.labels.transcript',
+            accept: '.txt,.md,text/plain',
+            type: 'transcript',
+          },
+          {
+            key: 'notes_path',
+            labelKey: 'assets.labels.notes',
+            accept:
+              '.txt,.md,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            type: 'notes',
+          },
+          {
+            key: 'slide_image_dir',
+            labelKey: 'assets.labels.slideBundle',
+            accept: null,
+            type: 'slide_bundle',
+          },
+        ];
+
+        const uploadableAssetDefinitions = assetDefinitions.filter(
+          (definition) =>
+            definition && typeof definition.accept === 'string' && definition.accept.trim().length > 0,
+        );
+
+        const bulkUploadAccept = Array.from(
+          new Set(
+            uploadableAssetDefinitions.flatMap((definition) =>
+              definition.accept
+                .split(',')
+                .map((value) => value.trim())
+                .filter(Boolean),
+            ),
+          ),
+        ).join(',');
+
         if (dom.tasks) {
           if (dom.tasks.bulkInput && bulkUploadAccept) {
             dom.tasks.bulkInput.setAttribute('accept', bulkUploadAccept);
@@ -8033,62 +8089,6 @@
           }
           resetStatusProgress();
         }
-
-        const assetDefinitions = [
-          {
-            key: 'audio_path',
-            labelKey: 'assets.labels.audio',
-            accept: 'audio/*,.wav,.mp3,.m4a,.aac,.flac,.ogg,.oga,.opus',
-            type: 'audio',
-          },
-          {
-            key: 'processed_audio_path',
-            labelKey: 'assets.labels.masteredAudio',
-            accept: null,
-            type: 'processed_audio',
-          },
-          {
-            key: 'slide_path',
-            labelKey: 'assets.labels.slides',
-            accept: 'application/pdf',
-            type: 'slides',
-          },
-          {
-            key: 'transcript_path',
-            labelKey: 'assets.labels.transcript',
-            accept: '.txt,.md,text/plain',
-            type: 'transcript',
-          },
-          {
-            key: 'notes_path',
-            labelKey: 'assets.labels.notes',
-            accept:
-              '.txt,.md,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            type: 'notes',
-          },
-          {
-            key: 'slide_image_dir',
-            labelKey: 'assets.labels.slideBundle',
-            accept: null,
-            type: 'slide_bundle',
-          },
-        ];
-
-        const uploadableAssetDefinitions = assetDefinitions.filter(
-          (definition) =>
-            definition && typeof definition.accept === 'string' && definition.accept.trim().length > 0,
-        );
-
-        const bulkUploadAccept = Array.from(
-          new Set(
-            uploadableAssetDefinitions.flatMap((definition) =>
-              definition.accept
-                .split(',')
-                .map((value) => value.trim())
-                .filter(Boolean),
-            ),
-          ),
-        ).join(',');
 
         function showStatus(message, variant = 'info', options = {}) {
           if (!dom.status) {
