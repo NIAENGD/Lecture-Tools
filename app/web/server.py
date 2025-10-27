@@ -1557,10 +1557,34 @@ class ClassCreatePayload(BaseModel):
     description: str = ""
 
 
+class ClassUpdatePayload(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+
+
+class ClassReorderPayload(BaseModel):
+    class_ids: List[int] = Field(default_factory=list)
+
+
 class ModuleCreatePayload(BaseModel):
     class_id: int
     name: str = Field(..., min_length=1)
     description: str = ""
+
+
+class ModuleUpdatePayload(BaseModel):
+    class_id: Optional[int] = None
+    name: Optional[str] = None
+    description: Optional[str] = None
+
+
+class ModuleReorderEntry(BaseModel):
+    class_id: int
+    module_ids: List[int] = Field(default_factory=list)
+
+
+class ModuleReorderPayload(BaseModel):
+    classes: List[ModuleReorderEntry] = Field(default_factory=list)
 
 
 class SettingsPayload(BaseModel):
@@ -3007,6 +3031,32 @@ def create_app(
         _log_event("Created class", class_id=class_id)
         return {"class": _serialize_class(repository, record)}
 
+    @app.put("/api/classes/{class_id}")
+    async def update_class(class_id: int, payload: ClassUpdatePayload) -> Dict[str, Any]:
+        record = repository.get_class(class_id)
+        if record is None:
+            raise HTTPException(status_code=404, detail="Class not found")
+
+        updates: Dict[str, Any] = {}
+        if payload.name is not None:
+            name = payload.name.strip()
+            if not name:
+                raise HTTPException(status_code=400, detail="Class name is required")
+            updates["name"] = name
+        if payload.description is not None:
+            updates["description"] = payload.description.strip()
+
+        if updates:
+            _log_event("Updating class", class_id=class_id)
+            repository.update_class(class_id, **updates)
+
+        updated = repository.get_class(class_id)
+        if updated is None:
+            raise HTTPException(status_code=500, detail="Class update failed")
+
+        _log_event("Updated class", class_id=class_id)
+        return {"class": _serialize_class(repository, updated)}
+
     @app.delete(
         "/api/classes/{class_id}",
         status_code=status.HTTP_204_NO_CONTENT,
@@ -3031,6 +3081,33 @@ def create_app(
         repository.remove_class(class_id)
         _log_event("Deleted class", class_id=class_id, module_count=len(modules))
         return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    @app.post("/api/classes/reorder")
+    async def reorder_classes(payload: ClassReorderPayload) -> Dict[str, Any]:
+        if not payload.class_ids:
+            return {"classes": []}
+
+        identifiers = payload.class_ids
+        if len(identifiers) != len(set(identifiers)):
+            raise HTTPException(status_code=400, detail="Duplicate class identifier provided")
+
+        records: List[ClassRecord] = []
+        for class_id in identifiers:
+            record = repository.get_class(class_id)
+            if record is None:
+                raise HTTPException(status_code=404, detail="Class not found")
+            records.append(record)
+
+        _log_event("Reordering classes", class_count=len(identifiers))
+        repository.reorder_classes(identifiers)
+
+        updated_classes: List[Dict[str, Any]] = []
+        for class_id in identifiers:
+            refreshed = repository.get_class(class_id)
+            if refreshed is not None:
+                updated_classes.append(_serialize_class(repository, refreshed))
+
+        return {"classes": updated_classes}
 
     @app.post("/api/modules", status_code=status.HTTP_201_CREATED)
     async def create_module(payload: ModuleCreatePayload) -> Dict[str, Any]:
@@ -3059,6 +3136,37 @@ def create_app(
         _log_event("Created module", module_id=module_id, class_id=payload.class_id)
         return {"module": _serialize_module(repository, record)}
 
+    @app.put("/api/modules/{module_id}")
+    async def update_module(module_id: int, payload: ModuleUpdatePayload) -> Dict[str, Any]:
+        record = repository.get_module(module_id)
+        if record is None:
+            raise HTTPException(status_code=404, detail="Module not found")
+
+        updates: Dict[str, Any] = {}
+        if payload.class_id is not None:
+            class_record = repository.get_class(payload.class_id)
+            if class_record is None:
+                raise HTTPException(status_code=404, detail="Class not found")
+            updates["class_id"] = payload.class_id
+        if payload.name is not None:
+            name = payload.name.strip()
+            if not name:
+                raise HTTPException(status_code=400, detail="Module name is required")
+            updates["name"] = name
+        if payload.description is not None:
+            updates["description"] = payload.description.strip()
+
+        if updates:
+            _log_event("Updating module", module_id=module_id)
+            repository.update_module(module_id, **updates)
+
+        updated = repository.get_module(module_id)
+        if updated is None:
+            raise HTTPException(status_code=500, detail="Module update failed")
+
+        _log_event("Updated module", module_id=module_id, class_id=updated.class_id)
+        return {"module": _serialize_module(repository, updated)}
+
     @app.delete(
         "/api/modules/{module_id}",
         status_code=status.HTTP_204_NO_CONTENT,
@@ -3082,6 +3190,46 @@ def create_app(
         repository.remove_module(module_id)
         _log_event("Deleted module", module_id=module_id, class_id=record.class_id)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    @app.post("/api/modules/reorder")
+    async def reorder_modules(payload: ModuleReorderPayload) -> Dict[str, Any]:
+        if not payload.classes:
+            return {"classes": []}
+
+        class_orders: Dict[int, List[int]] = {}
+        seen_modules: Set[int] = set()
+
+        for entry in payload.classes:
+            class_record = repository.get_class(entry.class_id)
+            if class_record is None:
+                raise HTTPException(status_code=404, detail="Class not found")
+
+            module_ids: List[int] = []
+            for module_id in entry.module_ids:
+                if module_id in seen_modules:
+                    raise HTTPException(status_code=400, detail="Duplicate module identifier provided")
+                module = repository.get_module(module_id)
+                if module is None:
+                    raise HTTPException(status_code=404, detail="Module not found")
+                seen_modules.add(module_id)
+                module_ids.append(module_id)
+
+            class_orders[entry.class_id] = module_ids
+
+        _log_event(
+            "Reordering modules",
+            class_count=len(class_orders),
+            module_count=sum(len(ids) for ids in class_orders.values()),
+        )
+        repository.reorder_modules(class_orders)
+
+        updated_classes: List[Dict[str, Any]] = []
+        for class_id in class_orders:
+            refreshed = repository.get_class(class_id)
+            if refreshed is not None:
+                updated_classes.append(_serialize_class(repository, refreshed))
+
+        return {"classes": updated_classes}
 
     @app.post("/api/lectures", status_code=status.HTTP_201_CREATED)
     async def create_lecture(payload: LectureCreatePayload) -> Dict[str, Any]:

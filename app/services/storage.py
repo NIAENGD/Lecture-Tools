@@ -232,6 +232,55 @@ class LectureRepository:
                 )
                 return int(cursor.lastrowid)
 
+    def update_class(
+        self,
+        class_id: int,
+        *,
+        name: str | object = _MISSING,
+        description: str | object = _MISSING,
+        position: int | object = _MISSING,
+    ) -> None:
+        assignments: List[str] = []
+        parameters: List[object] = []
+
+        if name is not _MISSING:
+            assignments.append("name = ?")
+            parameters.append(name)
+        if description is not _MISSING:
+            assignments.append("description = ?")
+            parameters.append(description)
+        if position is not _MISSING:
+            assignments.append("position = ?")
+            parameters.append(position)
+
+        if not assignments:
+            LOGGER.debug("No class fields updated for id=%s", class_id)
+            return
+
+        parameters.append(class_id)
+
+        LOGGER.debug(
+            "Updating class id=%s with fields: %s",
+            class_id,
+            ", ".join(assignments),
+        )
+        with self._track_db_event(
+            "update_class",
+            table="classes",
+            class_id=class_id,
+            changes=len(assignments),
+        ) as event:
+            with self._connect() as connection:
+                cursor = self._execute(
+                    connection,
+                    f"UPDATE classes SET {', '.join(assignments)} WHERE id = ?",
+                    parameters,
+                    action="classes.update",
+                    table="classes",
+                )
+                affected = cursor.rowcount if cursor.rowcount and cursor.rowcount > 0 else 0
+                event.update({"rowcount": int(affected)})
+
     def find_class_by_name(self, name: str) -> Optional[ClassRecord]:
         LOGGER.debug("Looking up class by name '%s'", name)
         with self._track_db_event("find_class_by_name", table="classes", name=name) as event:
@@ -298,6 +347,59 @@ class LectureRepository:
                     class_id,
                 )
                 return int(cursor.lastrowid)
+
+    def update_module(
+        self,
+        module_id: int,
+        *,
+        class_id: int | object = _MISSING,
+        name: str | object = _MISSING,
+        description: str | object = _MISSING,
+        position: int | object = _MISSING,
+    ) -> None:
+        assignments: List[str] = []
+        parameters: List[object] = []
+
+        if class_id is not _MISSING:
+            assignments.append("class_id = ?")
+            parameters.append(class_id)
+        if name is not _MISSING:
+            assignments.append("name = ?")
+            parameters.append(name)
+        if description is not _MISSING:
+            assignments.append("description = ?")
+            parameters.append(description)
+        if position is not _MISSING:
+            assignments.append("position = ?")
+            parameters.append(position)
+
+        if not assignments:
+            LOGGER.debug("No module fields updated for id=%s", module_id)
+            return
+
+        parameters.append(module_id)
+
+        LOGGER.debug(
+            "Updating module id=%s with fields: %s",
+            module_id,
+            ", ".join(assignments),
+        )
+        with self._track_db_event(
+            "update_module",
+            table="modules",
+            module_id=module_id,
+            changes=len(assignments),
+        ) as event:
+            with self._connect() as connection:
+                cursor = self._execute(
+                    connection,
+                    f"UPDATE modules SET {', '.join(assignments)} WHERE id = ?",
+                    parameters,
+                    action="modules.update",
+                    table="modules",
+                )
+                affected = cursor.rowcount if cursor.rowcount and cursor.rowcount > 0 else 0
+                event.update({"rowcount": int(affected)})
 
     def find_module_by_name(self, class_id: int, name: str) -> Optional[ModuleRecord]:
         LOGGER.debug("Looking up module '%s' for class_id=%s", name, class_id)
@@ -872,6 +974,66 @@ class LectureRepository:
                 affected = cursor.rowcount if cursor.rowcount and cursor.rowcount > 0 else 0
                 LOGGER.debug("Lecture id=%s removed", lecture_id)
                 event.update({"result": "deleted", "rowcount": int(affected)})
+
+    def reorder_classes(self, class_ids: Sequence[int]) -> None:
+        if not class_ids:
+            LOGGER.debug("No class reordering requested")
+            with self._track_db_event("reorder_classes", changes=0) as event:
+                event["result"] = "no_changes"
+            return
+
+        LOGGER.debug("Reordering %d classes", len(class_ids))
+        with self._track_db_event(
+            "reorder_classes", classes=len(class_ids), changes=len(class_ids)
+        ) as event:
+            with self._connect() as connection:
+                for index, class_id in enumerate(class_ids):
+                    self._execute(
+                        connection,
+                        "UPDATE classes SET position = ? WHERE id = ?",
+                        (index, class_id),
+                        action="classes.reorder",
+                        table="classes",
+                    )
+                    LOGGER.debug("Class id=%s assigned position=%s", class_id, index)
+            event.update({"result": "reordered", "rowcount": len(class_ids)})
+
+    def reorder_modules(self, class_orders: Dict[int, Sequence[int]]) -> None:
+        if not class_orders:
+            LOGGER.debug("No module reordering requested")
+            with self._track_db_event("reorder_modules", changes=0) as event:
+                event["result"] = "no_changes"
+            return
+
+        total_updates = sum(len(order) for order in class_orders.values())
+        LOGGER.debug(
+            "Reordering modules across %d classes (changes=%d)",
+            len(class_orders),
+            total_updates,
+        )
+        with self._track_db_event(
+            "reorder_modules", classes=len(class_orders), changes=total_updates
+        ) as event:
+            with self._connect() as connection:
+                for class_id, module_ids in class_orders.items():
+                    LOGGER.debug(
+                        "Assigning %d modules to class_id=%s", len(module_ids), class_id
+                    )
+                    for position, module_id in enumerate(module_ids):
+                        self._execute(
+                            connection,
+                            "UPDATE modules SET class_id = ?, position = ? WHERE id = ?",
+                            (class_id, position, module_id),
+                            action="modules.reorder",
+                            table="modules",
+                        )
+                        LOGGER.debug(
+                            "Module id=%s assigned class_id=%s position=%s",
+                            module_id,
+                            class_id,
+                            position,
+                        )
+            event.update({"result": "reordered", "rowcount": total_updates})
 
     def reorder_lectures(self, module_orders: Dict[int, List[int]]) -> None:
         if not module_orders:
