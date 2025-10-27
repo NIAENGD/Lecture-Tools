@@ -5923,6 +5923,7 @@
           draggingLectureId: null,
           draggingSourceModuleId: null,
           draggedElement: null,
+          curriculumEditorIdMap: createCurriculumEditorIdMap(),
           gpuWhisper: {
             supported: false,
             checked: false,
@@ -12412,6 +12413,25 @@
           return null;
         }
 
+        function createCurriculumEditorIdMap() {
+          return {
+            class: new Map(),
+            module: new Map(),
+            lecture: new Map(),
+          };
+        }
+
+        function resolveCurriculumEditorIdentifier(type, identifier) {
+          if (identifier === null) {
+            return null;
+          }
+          const map = state.curriculumEditorIdMap?.[type];
+          if (map instanceof Map && map.has(identifier)) {
+            return map.get(identifier);
+          }
+          return null;
+        }
+
         function createIdTag(identifier) {
           const value = normalizeIdentifier(identifier);
           if (value === null) {
@@ -12442,26 +12462,42 @@
 
         function buildCurriculumEditorText() {
           const lines = [];
+          const idMap = createCurriculumEditorIdMap();
+          let nextIdentifier = 1;
+
+          const getNextIdentifier = () => {
+            const current = nextIdentifier;
+            nextIdentifier += 1;
+            return current;
+          };
+
           state.classes.forEach((klass) => {
             if (!klass || typeof klass !== 'object') {
               return;
             }
-            lines.push(formatCurriculumLine('class', klass.id, klass.name));
+            const classIdentifier = getNextIdentifier();
+            idMap.class.set(classIdentifier, normalizeIdentifier(klass.id));
+            lines.push(formatCurriculumLine('class', classIdentifier, klass.name));
             const modules = Array.isArray(klass.modules) ? klass.modules : [];
             modules.forEach((module) => {
               if (!module || typeof module !== 'object') {
                 return;
               }
-              lines.push(formatCurriculumLine('module', module.id, module.name));
+              const moduleIdentifier = getNextIdentifier();
+              idMap.module.set(moduleIdentifier, normalizeIdentifier(module.id));
+              lines.push(formatCurriculumLine('module', moduleIdentifier, module.name));
               const lectures = Array.isArray(module.lectures) ? module.lectures : [];
               lectures.forEach((lecture) => {
                 if (!lecture || typeof lecture !== 'object') {
                   return;
                 }
-                lines.push(formatCurriculumLine('lecture', lecture.id, lecture.name));
+                const lectureIdentifier = getNextIdentifier();
+                idMap.lecture.set(lectureIdentifier, normalizeIdentifier(lecture.id));
+                lines.push(formatCurriculumLine('lecture', lectureIdentifier, lecture.name));
               });
             });
           });
+          state.curriculumEditorIdMap = idMap;
           return lines.join('\n');
         }
 
@@ -12525,10 +12561,22 @@
           let currentClass = null;
           let currentModule = null;
 
-          const seenIds = {
+          const seenDisplayIds = {
             class: new Set(),
             module: new Set(),
             lecture: new Set(),
+          };
+
+          const seenResolvedIds = {
+            class: new Set(),
+            module: new Set(),
+            lecture: new Set(),
+          };
+
+          const duplicateKeys = {
+            class: 'duplicateClass',
+            module: 'duplicateModule',
+            lecture: 'duplicateLecture',
           };
 
           const lineError = (lineNumber, key, params = {}) =>
@@ -12565,6 +12613,10 @@
 
             const name = working.trim();
             const lineNumber = index + 1;
+            const duplicateKey = duplicateKeys[type];
+            const resolvedId = resolveCurriculumEditorIdentifier(type, identifier);
+            const displaySet = seenDisplayIds[type];
+            const resolvedSet = seenResolvedIds[type];
 
             if (!name) {
               errors.push(lineError(lineNumber, 'nameRequired'));
@@ -12573,13 +12625,20 @@
 
             if (type === 'class') {
               if (identifier !== null) {
-                if (seenIds.class.has(identifier)) {
-                  errors.push(lineError(lineNumber, 'duplicateClass', { id: identifier }));
+                if (displaySet.has(identifier)) {
+                  errors.push(lineError(lineNumber, duplicateKey, { id: identifier }));
                   continue;
                 }
-                seenIds.class.add(identifier);
+                displaySet.add(identifier);
               }
-              const classNode = { id: identifier, name, line: lineNumber, modules: [] };
+              if (resolvedId !== null) {
+                if (resolvedSet.has(resolvedId)) {
+                  errors.push(lineError(lineNumber, duplicateKey, { id: resolvedId }));
+                  continue;
+                }
+                resolvedSet.add(resolvedId);
+              }
+              const classNode = { id: resolvedId, name, line: lineNumber, modules: [] };
               classes.push(classNode);
               currentClass = classNode;
               currentModule = null;
@@ -12589,13 +12648,20 @@
                 continue;
               }
               if (identifier !== null) {
-                if (seenIds.module.has(identifier)) {
-                  errors.push(lineError(lineNumber, 'duplicateModule', { id: identifier }));
+                if (displaySet.has(identifier)) {
+                  errors.push(lineError(lineNumber, duplicateKey, { id: identifier }));
                   continue;
                 }
-                seenIds.module.add(identifier);
+                displaySet.add(identifier);
               }
-              const moduleNode = { id: identifier, name, line: lineNumber, lectures: [] };
+              if (resolvedId !== null) {
+                if (resolvedSet.has(resolvedId)) {
+                  errors.push(lineError(lineNumber, duplicateKey, { id: resolvedId }));
+                  continue;
+                }
+                resolvedSet.add(resolvedId);
+              }
+              const moduleNode = { id: resolvedId, name, line: lineNumber, lectures: [] };
               currentClass.modules.push(moduleNode);
               currentModule = moduleNode;
             } else {
@@ -12604,13 +12670,20 @@
                 continue;
               }
               if (identifier !== null) {
-                if (seenIds.lecture.has(identifier)) {
-                  errors.push(lineError(lineNumber, 'duplicateLecture', { id: identifier }));
+                if (displaySet.has(identifier)) {
+                  errors.push(lineError(lineNumber, duplicateKey, { id: identifier }));
                   continue;
                 }
-                seenIds.lecture.add(identifier);
+                displaySet.add(identifier);
               }
-              const lectureNode = { id: identifier, name, line: lineNumber };
+              if (resolvedId !== null) {
+                if (resolvedSet.has(resolvedId)) {
+                  errors.push(lineError(lineNumber, duplicateKey, { id: resolvedId }));
+                  continue;
+                }
+                resolvedSet.add(resolvedId);
+              }
+              const lectureNode = { id: resolvedId, name, line: lineNumber };
               currentModule.lectures.push(lectureNode);
             }
           }
@@ -13031,10 +13104,6 @@
 
             const classHeader = document.createElement('div');
             classHeader.className = 'syllabus-summary-header';
-            const classTag = createIdTag(entry.class.id);
-            if (classTag) {
-              classHeader.appendChild(classTag);
-            }
 
             const title = document.createElement('span');
             title.className = 'syllabus-title';
@@ -13132,10 +13201,6 @@
 
                 const moduleHeader = document.createElement('div');
                 moduleHeader.className = 'syllabus-summary-header';
-                const moduleTag = createIdTag(moduleEntry.module?.id);
-                if (moduleTag) {
-                  moduleHeader.appendChild(moduleTag);
-                }
 
                 const moduleTitle = document.createElement('span');
                 moduleTitle.className = 'syllabus-title';
@@ -13203,10 +13268,6 @@
                     const button = document.createElement('button');
                     button.type = 'button';
                     button.className = 'lecture-button';
-                    const lectureTag = createIdTag(lecture.id);
-                    if (lectureTag) {
-                      button.appendChild(lectureTag);
-                    }
                     const lectureTitle = document.createElement('span');
                     lectureTitle.className = 'lecture-title';
                     lectureTitle.textContent = lecture.name;
