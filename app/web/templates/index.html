@@ -1718,31 +1718,31 @@
         display: block;
       }
 
-      .progress-panel {
+      .tasks-panel {
         display: flex;
         flex-direction: column;
         gap: 16px;
       }
 
-      .progress-header {
+      .tasks-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
         gap: 12px;
       }
 
-      .progress-description {
+      .tasks-description {
         color: var(--muted);
         font-size: 0.95rem;
         margin: 0;
       }
 
-      .progress-empty {
+      .tasks-empty {
         color: var(--muted);
         font-style: italic;
       }
 
-      .progress-list {
+      .tasks-list {
         list-style: none;
         margin: 0;
         padding: 0;
@@ -1751,7 +1751,7 @@
         gap: 12px;
       }
 
-      .progress-entry {
+      .task-entry {
         border: 1px solid var(--panel-border);
         border-radius: 8px;
         padding: 14px 16px;
@@ -1762,11 +1762,11 @@
         gap: 12px;
       }
 
-      .progress-entry[data-status='error'] {
+      .task-entry[data-status='error'] {
         border-color: var(--danger);
       }
 
-      .progress-entry-title {
+      .task-entry-title {
         display: flex;
         flex-wrap: wrap;
         align-items: baseline;
@@ -1774,25 +1774,25 @@
         gap: 8px;
       }
 
-      .progress-entry-title h3 {
+      .task-entry-title h3 {
         margin: 0;
       }
 
-      .progress-entry-status {
+      .task-entry-status {
         font-size: 0.85rem;
         font-weight: 600;
         color: var(--muted);
       }
 
-      .progress-entry[data-status='error'] .progress-entry-status {
+      .task-entry[data-status='error'] .task-entry-status {
         color: var(--status-error-text);
       }
 
-      .progress-entry[data-status='finished'] .progress-entry-status {
+      .task-entry[data-status='finished'] .task-entry-status {
         color: var(--status-success-text);
       }
 
-      .progress-entry-meta {
+      .task-entry-meta {
         color: var(--muted);
         font-size: 0.85rem;
         display: flex;
@@ -1800,32 +1800,76 @@
         gap: 12px;
       }
 
-      .progress-entry-message {
+      .task-entry-message {
         margin: 0;
         font-size: 0.95rem;
       }
 
-      .progress-entry-actions {
+      .task-entry-actions {
         display: flex;
         flex-wrap: wrap;
         gap: 8px;
       }
 
-      .progress-entry-actions button {
+      .task-entry-actions button {
         padding: 6px 12px;
         font-size: 0.85rem;
       }
 
-      .progress-entry-actions button.text {
+      .task-entry-actions button.text {
         background: transparent;
         border-color: transparent;
         color: var(--accent);
         padding: 0;
       }
 
-      .progress-entry-actions button.text:hover {
+      .task-entry-actions button.text:hover {
         text-decoration: underline;
         opacity: 1;
+      }
+
+      .task-form {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .task-form-grid {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        align-items: end;
+      }
+
+      .task-field,
+      .task-field-inline {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--muted);
+      }
+
+      .task-field select,
+      .task-field-inline input {
+        width: 100%;
+      }
+
+      .task-slide-options {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+
+      .task-slide-options.hidden {
+        display: none;
+      }
+
+      .task-form-actions {
+        display: flex;
+        justify-content: flex-end;
+        align-items: flex-end;
       }
 
       .edit-banner {
@@ -2647,11 +2691,11 @@
               <button
                 type="button"
                 class="ghost"
-                data-view="progress"
+                data-view="tasks"
                 aria-pressed="false"
-                data-i18n="topBar.progress"
+                data-i18n="topBar.tasks"
               >
-                Progress
+                Tasks
               </button>
               <button
                 type="button"
@@ -2730,21 +2774,55 @@
               <ul id="asset-list" class="asset-list"></ul>
             </section>
           </div>
-          <div id="view-progress" class="view" data-view="progress" hidden>
-            <section class="panel progress-panel">
-              <div class="progress-header">
-                <h2 data-i18n="progress.title">Processing queue</h2>
-                <button id="progress-refresh" type="button" class="ghost" data-i18n="progress.refresh">
+          <div id="view-tasks" class="view" data-view="tasks" hidden>
+            <section class="panel tasks-panel">
+              <div class="tasks-header">
+                <h2 data-i18n="tasks.title">Tasks</h2>
+                <button id="tasks-refresh" type="button" class="ghost" data-i18n="tasks.refresh">
                   Refresh
                 </button>
               </div>
-              <p id="progress-description" class="progress-description" data-i18n="progress.description">
-                Track conversions, mastering, and transcriptions as they run.
+              <p id="tasks-description" class="tasks-description" data-i18n="tasks.description">
+                Queue audio mastering and slide processing jobs to run in order.
               </p>
-              <div id="progress-empty" class="progress-empty" data-i18n="progress.empty">
-                No active tasks.
+              <form id="task-create-form" class="task-form">
+                <div class="task-form-grid">
+                  <label class="task-field">
+                    <span data-i18n="tasks.form.lectureLabel">Lecture</span>
+                    <select id="task-lecture" required></select>
+                  </label>
+                  <label class="task-field">
+                    <span data-i18n="tasks.form.operationLabel">Action</span>
+                    <select id="task-operation" required>
+                      <option value="audio_mastering" data-i18n="tasks.form.operation.audioMastering">
+                        Process audio
+                      </option>
+                      <option value="slide_bundle" data-i18n="tasks.form.operation.slideBundle">
+                        Process slides
+                      </option>
+                    </select>
+                  </label>
+                  <div id="task-slide-options" class="task-slide-options hidden">
+                    <label class="task-field-inline">
+                      <span data-i18n="tasks.form.pageStartLabel">Start page</span>
+                      <input id="task-page-start" type="number" min="1" />
+                    </label>
+                    <label class="task-field-inline">
+                      <span data-i18n="tasks.form.pageEndLabel">End page</span>
+                      <input id="task-page-end" type="number" min="1" />
+                    </label>
+                  </div>
+                  <div class="task-form-actions">
+                    <button id="task-submit" type="submit" class="secondary" data-i18n="tasks.form.submit">
+                      Add task
+                    </button>
+                  </div>
+                </div>
+              </form>
+              <div id="tasks-empty" class="tasks-empty" data-i18n="tasks.empty">
+                No tasks in the queue.
               </div>
-              <ul id="progress-list" class="progress-list" aria-live="polite" aria-busy="false"></ul>
+              <ul id="tasks-list" class="tasks-list" aria-live="polite" aria-busy="false"></ul>
             </section>
           </div>
           <div id="view-create" class="view" data-view="create" hidden>
@@ -3417,7 +3495,7 @@
               details: 'Details',
               enableEdit: 'Enable edit mode',
               exitEdit: 'Exit edit mode',
-              progress: 'Progress',
+              tasks: 'Tasks',
               create: 'Create',
               storage: 'Storage',
               settings: 'Settings',
@@ -3472,27 +3550,49 @@
                 remove: 'Remove',
               },
             },
-            progress: {
-              title: 'Processing queue',
-              description: 'Track conversions, mastering, and transcriptions as they run.',
-              empty: 'No active tasks.',
+            tasks: {
+              title: 'Tasks',
+              description: 'Queue audio mastering and slide processing jobs to run in order.',
+              empty: 'No tasks in the queue.',
               refresh: 'Refresh',
-              retry: 'Retry',
-              dismiss: 'Dismiss',
-              openLecture: 'Open lecture',
+              actions: {
+                open: 'Open lecture',
+                retry: 'Retry',
+                dismiss: 'Dismiss',
+              },
               status: {
+                pending: 'Pending',
                 running: 'In progress',
                 finished: 'Completed',
-                error: 'Needs attention',
+                failed: 'Failed',
               },
               labels: {
                 transcription: 'Transcription',
                 slideBundle: 'Slide bundle generation',
                 audioMastering: 'Audio mastering',
-                processing: 'Processing task',
+                generic: 'Task',
                 untitled: 'Untitled lecture',
               },
+              messages: {
+                pending: 'Waiting for available resources…',
+                completed: 'Completed successfully.',
+              },
               retryUnavailable: 'Retry is not available for this task.',
+              form: {
+                lectureLabel: 'Lecture',
+                placeholder: 'Select a lecture',
+                operationLabel: 'Action',
+                operation: {
+                  audioMastering: 'Process audio',
+                  slideBundle: 'Process slides',
+                },
+                pageStartLabel: 'Start page',
+                pageEndLabel: 'End page',
+                submit: 'Add task',
+              },
+              notifications: {
+                queued: 'Task added to the queue.',
+              },
             },
             create: {
               title: 'Create lecture',
@@ -3905,7 +4005,7 @@
               details: '详情',
               enableEdit: '开启编辑模式',
               exitEdit: '退出编辑模式',
-              progress: '进度',
+              tasks: '任务',
               create: '新建',
               storage: '存储',
               settings: '设置',
@@ -3959,27 +4059,49 @@
                 remove: '移除',
               },
             },
-            progress: {
-              title: '处理队列',
-              description: '实时跟踪转换、音频优化和转录进度。',
-              empty: '当前没有任务。',
+            tasks: {
+              title: '任务',
+              description: '按顺序排队处理音频优化和课件转换。',
+              empty: '当前没有排队任务。',
               refresh: '刷新',
-              retry: '重试',
-              dismiss: '忽略',
-              openLecture: '打开课次',
+              actions: {
+                open: '打开课次',
+                retry: '重试',
+                dismiss: '忽略',
+              },
               status: {
+                pending: '等待中',
                 running: '处理中',
                 finished: '已完成',
-                error: '需要关注',
+                failed: '失败',
               },
               labels: {
                 transcription: '音频转录',
                 slideBundle: '课件资源打包',
                 audioMastering: '音频优化',
-                processing: '处理任务',
+                generic: '任务',
                 untitled: '未命名讲座',
               },
+              messages: {
+                pending: '正在等待资源…',
+                completed: '已成功完成。',
+              },
               retryUnavailable: '此任务无法重试。',
+              form: {
+                lectureLabel: '讲座',
+                placeholder: '选择讲座',
+                operationLabel: '操作',
+                operation: {
+                  audioMastering: '处理音频',
+                  slideBundle: '处理课件',
+                },
+                pageStartLabel: '起始页码',
+                pageEndLabel: '结束页码',
+                submit: '添加任务',
+              },
+              notifications: {
+                queued: '任务已加入队列。',
+              },
             },
             create: {
               title: '创建讲座',
@@ -4384,7 +4506,7 @@
               details: 'Detalles',
               enableEdit: 'Activar modo edición',
               exitEdit: 'Salir del modo edición',
-              progress: 'Progreso',
+              tasks: 'Tareas',
               create: 'Crear',
               storage: 'Almacenamiento',
               settings: 'Configuración',
@@ -4438,27 +4560,49 @@
                 remove: 'Eliminar',
               },
             },
-            progress: {
-              title: 'Cola de procesamiento',
-              description: 'Supervisa las conversiones, masterizaciones y transcripciones en ejecución.',
-              empty: 'No hay tareas activas.',
+            tasks: {
+              title: 'Tareas',
+              description: 'Programa trabajos de masterización de audio y procesamiento de diapositivas en secuencia.',
+              empty: 'No hay tareas en la cola.',
               refresh: 'Actualizar',
-              retry: 'Reintentar',
-              dismiss: 'Descartar',
-              openLecture: 'Abrir clase',
+              actions: {
+                open: 'Abrir clase',
+                retry: 'Reintentar',
+                dismiss: 'Descartar',
+              },
               status: {
+                pending: 'Pendiente',
                 running: 'En progreso',
                 finished: 'Completado',
-                error: 'Requiere atención',
+                failed: 'Fallido',
               },
               labels: {
                 transcription: 'Transcripción',
                 slideBundle: 'Paquete de diapositivas',
                 audioMastering: 'Masterización de audio',
-                processing: 'Tarea de procesamiento',
+                generic: 'Tarea',
                 untitled: 'Clase sin título',
               },
+              messages: {
+                pending: 'Esperando recursos disponibles…',
+                completed: 'Completado correctamente.',
+              },
               retryUnavailable: 'No es posible reintentar esta tarea.',
+              form: {
+                lectureLabel: 'Clase',
+                placeholder: 'Selecciona una clase',
+                operationLabel: 'Acción',
+                operation: {
+                  audioMastering: 'Procesar audio',
+                  slideBundle: 'Procesar diapositivas',
+                },
+                pageStartLabel: 'Página inicial',
+                pageEndLabel: 'Página final',
+                submit: 'Agregar tarea',
+              },
+              notifications: {
+                queued: 'Tarea agregada a la cola.',
+              },
             },
             create: {
               title: 'Crear clase',
@@ -4873,7 +5017,7 @@
               details: 'Détails',
               enableEdit: 'Activer le mode édition',
               exitEdit: 'Quitter le mode édition',
-              progress: 'Progression',
+              tasks: 'Tâches',
               create: 'Créer',
               storage: 'Stockage',
               settings: 'Paramètres',
@@ -4928,27 +5072,50 @@
                 remove: 'Supprimer',
               },
             },
-            progress: {
-              title: 'File de traitement',
-              description: 'Suivez les conversions, la masterisation et les transcriptions en cours.',
-              empty: 'Aucune tâche en cours.',
+            tasks: {
+              title: 'Tâches',
+              description:
+                'Planifiez les traitements audio et les conversions de diapositives à exécuter l’un après l’autre.',
+              empty: 'Aucune tâche dans la file.',
               refresh: 'Actualiser',
-              retry: 'Réessayer',
-              dismiss: 'Ignorer',
-              openLecture: 'Ouvrir la leçon',
+              actions: {
+                open: 'Ouvrir la leçon',
+                retry: 'Réessayer',
+                dismiss: 'Ignorer',
+              },
               status: {
+                pending: 'En attente',
                 running: 'En cours',
                 finished: 'Terminé',
-                error: 'Nécessite une attention',
+                failed: 'Échoué',
               },
               labels: {
                 transcription: 'Transcription',
                 slideBundle: 'Archive de diapositives',
                 audioMastering: 'Masterisation audio',
-                processing: 'Tâche de traitement',
+                generic: 'Tâche',
                 untitled: 'Leçon sans titre',
               },
+              messages: {
+                pending: 'En attente de ressources disponibles…',
+                completed: 'Terminé avec succès.',
+              },
               retryUnavailable: 'Impossible de relancer cette tâche.',
+              form: {
+                lectureLabel: 'Leçon',
+                placeholder: 'Sélectionnez une leçon',
+                operationLabel: 'Action',
+                operation: {
+                  audioMastering: 'Traiter l’audio',
+                  slideBundle: 'Traiter les diapositives',
+                },
+                pageStartLabel: 'Page de début',
+                pageEndLabel: 'Page de fin',
+                submit: 'Ajouter la tâche',
+              },
+              notifications: {
+                queued: 'Tâche ajoutée à la file.',
+              },
             },
             create: {
               title: 'Créer un cours',
@@ -5528,11 +5695,12 @@
             activeSlideRangeDialog.updateRangeSummary();
           }
 
-          renderProgressQueue();
+          renderTasks();
           renderSystemUpdate();
           if (state.selectedLectureDetail) {
             renderAssets(state.selectedLectureDetail.lecture);
           }
+          updateTaskLectureOptions();
         }
 
         const WHISPER_MODEL_CHOICES = new Set([
@@ -5629,8 +5797,9 @@
               selected: new Set(),
             },
           },
-          progress: {
-            entries: [],
+          tasks: {
+            queue: [],
+            active: [],
             loading: false,
             timer: null,
           },
@@ -5766,7 +5935,7 @@
           viewButtons: Array.from(document.querySelectorAll('.top-bar [data-view]')),
           views: {
             details: document.getElementById('view-details'),
-            progress: document.getElementById('view-progress'),
+            tasks: document.getElementById('view-tasks'),
             create: document.getElementById('view-create'),
             storage: document.getElementById('view-storage'),
             settings: document.getElementById('view-settings'),
@@ -5834,12 +6003,19 @@
               selectAll: document.getElementById('storage-select-all'),
             },
           },
-          progress: {
-            container: document.getElementById('view-progress'),
-            list: document.getElementById('progress-list'),
-            empty: document.getElementById('progress-empty'),
-            refresh: document.getElementById('progress-refresh'),
-            description: document.getElementById('progress-description'),
+          tasks: {
+            container: document.getElementById('view-tasks'),
+            list: document.getElementById('tasks-list'),
+            empty: document.getElementById('tasks-empty'),
+            refresh: document.getElementById('tasks-refresh'),
+            description: document.getElementById('tasks-description'),
+            form: document.getElementById('task-create-form'),
+            lecture: document.getElementById('task-lecture'),
+            operation: document.getElementById('task-operation'),
+            slideOptions: document.getElementById('task-slide-options'),
+            pageStart: document.getElementById('task-page-start'),
+            pageEnd: document.getElementById('task-page-end'),
+            submit: document.getElementById('task-submit'),
           },
           dialog: {
             root: document.getElementById('dialog-root'),
@@ -6968,86 +7144,220 @@
           }
         }
 
-        function resolveProgressOperationLabel(entry) {
+        function resolveTaskOperationLabel(entry) {
           if (!entry) {
             return '';
           }
-          if (entry.type === 'transcription') {
-            return t('progress.labels.transcription');
-          }
-          const operation = entry?.context?.operation || entry?.context?.type || '';
+          const operation =
+            entry.operation || entry?.context?.operation || entry?.context?.type || entry?.type || '';
           if (operation === 'slide_bundle') {
-            return t('progress.labels.slideBundle');
+            return t('tasks.labels.slideBundle');
           }
           if (operation === 'audio_mastering') {
-            return t('progress.labels.audioMastering');
+            return t('tasks.labels.audioMastering');
           }
-          return t('progress.labels.processing');
+          if (operation === 'transcription') {
+            return t('tasks.labels.transcription');
+          }
+          return t('tasks.labels.generic');
         }
 
-        function renderProgressQueue() {
-          if (!dom.progress || !dom.progress.list) {
+        function renderTasks() {
+          if (!dom.tasks || !dom.tasks.list) {
             return;
           }
-          const entries = Array.isArray(state.progress.entries)
-            ? state.progress.entries
-            : [];
-          dom.progress.list.innerHTML = '';
-          const isLoading = Boolean(state.progress.loading);
-          if (dom.progress.container) {
-            dom.progress.container.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+          dom.tasks.list.innerHTML = '';
+          const isLoading = Boolean(state.tasks.loading);
+          if (dom.tasks.container) {
+            dom.tasks.container.setAttribute('aria-busy', isLoading ? 'true' : 'false');
           }
-          if (!entries.length) {
-            if (dom.progress.empty) {
-              dom.progress.empty.classList.remove('hidden');
+
+          const queueEntries = Array.isArray(state.tasks.queue) ? state.tasks.queue : [];
+          const activeEntries = Array.isArray(state.tasks.active) ? state.tasks.active : [];
+          const items = [];
+
+          queueEntries.forEach((task) => {
+            if (!task || typeof task !== 'object') {
+              return;
+            }
+            if (task.status === 'running') {
+              return;
+            }
+            items.push({ kind: 'queue', task });
+          });
+
+          activeEntries.forEach((entry) => {
+            if (!entry || typeof entry !== 'object') {
+              return;
+            }
+            items.push({ kind: 'active', entry });
+          });
+
+          queueEntries.forEach((task) => {
+            if (!task || typeof task !== 'object') {
+              return;
+            }
+            if (task.status === 'pending' || task.status === 'running') {
+              return;
+            }
+            items.push({ kind: 'history', task });
+          });
+
+          if (!items.length) {
+            if (dom.tasks.empty) {
+              dom.tasks.empty.classList.remove('hidden');
             }
             return;
           }
-          if (dom.progress.empty) {
-            dom.progress.empty.classList.add('hidden');
+
+          if (dom.tasks.empty) {
+            dom.tasks.empty.classList.add('hidden');
           }
-          entries.forEach((entry) => {
-            const lectureId = Number(entry?.lecture_id);
+
+          items.forEach((item) => {
+            if (item.kind === 'active') {
+              const entry = item.entry;
+              const lectureId = Number(entry?.lecture_id);
+              const listItem = document.createElement('li');
+              listItem.className = 'task-entry';
+              const statusKey = entry?.error
+                ? 'failed'
+                : entry?.finished
+                ? 'finished'
+                : entry?.active
+                ? 'running'
+                : 'pending';
+              listItem.dataset.status = entry?.error
+                ? 'error'
+                : entry?.finished
+                ? 'finished'
+                : 'running';
+              listItem.dataset.taskType = entry?.type || '';
+              listItem.dataset.lectureId = Number.isFinite(lectureId) ? String(lectureId) : '';
+
+              const title = document.createElement('div');
+              title.className = 'task-entry-title';
+              const heading = document.createElement('h3');
+              const lectureName = entry?.lecture?.name || t('tasks.labels.untitled');
+              heading.textContent = lectureName;
+              const statusLabel = document.createElement('span');
+              statusLabel.className = 'task-entry-status';
+              statusLabel.textContent = t(`tasks.status.${statusKey}`);
+              title.appendChild(heading);
+              title.appendChild(statusLabel);
+              listItem.appendChild(title);
+
+              const meta = document.createElement('div');
+              meta.className = 'task-entry-meta';
+              const typeLabel = document.createElement('span');
+              typeLabel.textContent = resolveTaskOperationLabel(entry);
+              meta.appendChild(typeLabel);
+              const locationParts = [];
+              if (entry?.lecture?.class) {
+                locationParts.push(entry.lecture.class);
+              }
+              if (entry?.lecture?.module) {
+                locationParts.push(entry.lecture.module);
+              }
+              if (locationParts.length > 0) {
+                const location = document.createElement('span');
+                location.textContent = locationParts.join(' • ');
+                meta.appendChild(location);
+              }
+              listItem.appendChild(meta);
+
+              const messageText = entry?.message || '';
+              if (messageText) {
+                const message = document.createElement('p');
+                message.className = 'task-entry-message';
+                message.textContent = messageText;
+                listItem.appendChild(message);
+              }
+
+              const actions = document.createElement('div');
+              actions.className = 'task-entry-actions';
+              if (Number.isFinite(lectureId)) {
+                const openButton = document.createElement('button');
+                openButton.type = 'button';
+                openButton.className = 'text';
+                openButton.dataset.taskAction = 'open';
+                openButton.dataset.lectureId = String(lectureId);
+                openButton.textContent = t('tasks.actions.open');
+                actions.appendChild(openButton);
+              }
+
+              if (entry?.error && Number.isFinite(lectureId)) {
+                const retryButton = document.createElement('button');
+                retryButton.type = 'button';
+                retryButton.dataset.taskAction = 'retry';
+                retryButton.dataset.lectureId = String(lectureId);
+                retryButton.dataset.taskType = entry?.type || '';
+                retryButton.textContent = t('tasks.actions.retry');
+                actions.appendChild(retryButton);
+
+                const dismissButton = document.createElement('button');
+                dismissButton.type = 'button';
+                dismissButton.dataset.taskAction = 'dismiss';
+                dismissButton.dataset.lectureId = String(lectureId);
+                dismissButton.dataset.taskType = entry?.type || '';
+                dismissButton.textContent = t('tasks.actions.dismiss');
+                actions.appendChild(dismissButton);
+              } else if (entry?.finished && Number.isFinite(lectureId)) {
+                const dismissButton = document.createElement('button');
+                dismissButton.type = 'button';
+                dismissButton.dataset.taskAction = 'dismiss';
+                dismissButton.dataset.lectureId = String(lectureId);
+                dismissButton.dataset.taskType = entry?.type || '';
+                dismissButton.textContent = t('tasks.actions.dismiss');
+                actions.appendChild(dismissButton);
+              }
+
+              listItem.appendChild(actions);
+              dom.tasks.list.appendChild(listItem);
+              return;
+            }
+
+            const task = item.task;
+            const lectureId = Number(task?.lecture_id);
             const listItem = document.createElement('li');
-            listItem.className = 'progress-entry';
-            listItem.dataset.status = entry?.error
-              ? 'error'
-              : entry?.finished
-              ? 'finished'
-              : 'running';
-            listItem.dataset.progressType = entry?.type || '';
-            listItem.dataset.lectureId = Number.isFinite(lectureId)
-              ? String(lectureId)
-              : '';
+            listItem.className = 'task-entry';
+            listItem.dataset.taskSource = item.kind;
+            listItem.dataset.lectureId = Number.isFinite(lectureId) ? String(lectureId) : '';
+            listItem.dataset.status =
+              task.status === 'failed'
+                ? 'error'
+                : task.status === 'succeeded'
+                ? 'finished'
+                : 'pending';
 
             const title = document.createElement('div');
-            title.className = 'progress-entry-title';
+            title.className = 'task-entry-title';
             const heading = document.createElement('h3');
-            const lectureName = entry?.lecture?.name || t('progress.labels.untitled');
-            heading.textContent = lectureName;
-            const statusKey = entry?.error
-              ? 'error'
-              : entry?.finished
-              ? 'finished'
-              : 'running';
+            heading.textContent = task?.lecture?.name || t('tasks.labels.untitled');
             const statusLabel = document.createElement('span');
-            statusLabel.className = 'progress-entry-status';
-            statusLabel.textContent = t(`progress.status.${statusKey}`);
+            statusLabel.className = 'task-entry-status';
+            const statusKey =
+              task.status === 'failed'
+                ? 'failed'
+                : task.status === 'succeeded'
+                ? 'finished'
+                : 'pending';
+            statusLabel.textContent = t(`tasks.status.${statusKey}`);
             title.appendChild(heading);
             title.appendChild(statusLabel);
             listItem.appendChild(title);
 
             const meta = document.createElement('div');
-            meta.className = 'progress-entry-meta';
+            meta.className = 'task-entry-meta';
             const typeLabel = document.createElement('span');
-            typeLabel.textContent = resolveProgressOperationLabel(entry);
+            typeLabel.textContent = resolveTaskOperationLabel(task);
             meta.appendChild(typeLabel);
             const locationParts = [];
-            if (entry?.lecture?.class) {
-              locationParts.push(entry.lecture.class);
+            if (task?.lecture?.class) {
+              locationParts.push(task.lecture.class);
             }
-            if (entry?.lecture?.module) {
-              locationParts.push(entry.lecture.module);
+            if (task?.lecture?.module) {
+              locationParts.push(task.lecture.module);
             }
             if (locationParts.length > 0) {
               const location = document.createElement('span');
@@ -7056,105 +7366,69 @@
             }
             listItem.appendChild(meta);
 
-            const messageText = entry?.message || '';
-            if (messageText) {
-              const message = document.createElement('p');
-              message.className = 'progress-entry-message';
-              message.textContent = messageText;
-              listItem.appendChild(message);
+            const message = document.createElement('p');
+            message.className = 'task-entry-message';
+            if (task.status === 'failed' && task.error) {
+              message.textContent = String(task.error);
+            } else if (task.status === 'succeeded') {
+              message.textContent = t('tasks.messages.completed');
+            } else {
+              message.textContent = t('tasks.messages.pending');
             }
-
-            const ratio = Number.isFinite(entry?.ratio) ? Number(entry.ratio) : null;
-            if (ratio !== null) {
-              const percent = Math.max(0, Math.min(1, ratio)) * 100;
-              const bar = document.createElement('div');
-              bar.className = 'status-progress';
-              const track = document.createElement('div');
-              track.className = 'status-progress-track';
-              const fill = document.createElement('div');
-              fill.className = 'status-progress-fill';
-              fill.style.width = `${percent}%`;
-              track.appendChild(fill);
-              const percentLabel = document.createElement('span');
-              percentLabel.className = 'status-progress-text';
-              percentLabel.textContent = `${Math.round(percent)}%`;
-              bar.appendChild(track);
-              bar.appendChild(percentLabel);
-              listItem.appendChild(bar);
-            }
+            listItem.appendChild(message);
 
             const actions = document.createElement('div');
-            actions.className = 'progress-entry-actions';
-            if (entry?.retryable) {
-              const retryButton = document.createElement('button');
-              retryButton.type = 'button';
-              retryButton.dataset.progressAction = 'retry';
-              retryButton.dataset.progressType = entry?.type || '';
-              retryButton.dataset.lectureId = listItem.dataset.lectureId || '';
-              retryButton.textContent = t('progress.retry');
-              actions.appendChild(retryButton);
-            }
-            if (entry?.lecture && Number.isFinite(lectureId)) {
+            actions.className = 'task-entry-actions';
+            if (Number.isFinite(lectureId)) {
               const openButton = document.createElement('button');
               openButton.type = 'button';
               openButton.className = 'text';
-              openButton.dataset.progressAction = 'open';
-              openButton.dataset.progressType = entry?.type || '';
-              openButton.dataset.lectureId = listItem.dataset.lectureId || '';
-              openButton.textContent = t('progress.openLecture');
+              openButton.dataset.taskAction = 'open';
+              openButton.dataset.lectureId = String(lectureId);
+              openButton.textContent = t('tasks.actions.open');
               actions.appendChild(openButton);
             }
-            const dismissButton = document.createElement('button');
-            dismissButton.type = 'button';
-            dismissButton.className = 'text';
-            dismissButton.dataset.progressAction = 'dismiss';
-            dismissButton.dataset.progressType = entry?.type || '';
-            dismissButton.dataset.lectureId = listItem.dataset.lectureId || '';
-            dismissButton.textContent = t('progress.dismiss');
-            actions.appendChild(dismissButton);
             listItem.appendChild(actions);
-
-            dom.progress.list.appendChild(listItem);
+            dom.tasks.list.appendChild(listItem);
           });
         }
 
-        async function refreshProgressQueue({ force = false, silent = false } = {}) {
-          if (state.progress.loading && !force) {
+        async function refreshTasks({ force = false, silent = false } = {}) {
+          if (state.tasks.loading && !force) {
             return;
           }
-          if (!dom.progress) {
+          if (!dom.tasks) {
             return;
           }
-          state.progress.loading = true;
+          state.tasks.loading = true;
           if (!silent) {
-            renderProgressQueue();
+            renderTasks();
           }
           try {
-            const payload = await request('/api/progress');
-            state.progress.entries = Array.isArray(payload?.entries)
-              ? payload.entries
-              : [];
+            const payload = await request('/api/tasks');
+            state.tasks.queue = Array.isArray(payload?.queue) ? payload.queue : [];
+            state.tasks.active = Array.isArray(payload?.active) ? payload.active : [];
           } catch (error) {
             const detail = error instanceof Error ? error.message : String(error);
             if (!silent && detail) {
               showStatus(detail, 'error');
             }
           } finally {
-            state.progress.loading = false;
-            renderProgressQueue();
+            state.tasks.loading = false;
+            renderTasks();
           }
         }
 
-        function stopProgressPolling() {
-          if (state.progress.timer !== null) {
-            window.clearInterval(state.progress.timer);
+        function stopTaskPolling() {
+          if (state.tasks.timer !== null) {
+            window.clearInterval(state.tasks.timer);
           }
-          state.progress.timer = null;
+          state.tasks.timer = null;
         }
 
-        function startProgressPolling() {
-          stopProgressPolling();
-          if (!dom.progress || !dom.progress.container) {
+        function startTaskPolling() {
+          stopTaskPolling();
+          if (!dom.tasks || !dom.tasks.container) {
             return;
           }
           let polling = false;
@@ -7164,18 +7438,18 @@
             }
             polling = true;
             try {
-              await refreshProgressQueue({ silent: true });
+              await refreshTasks({ silent: true });
             } finally {
               polling = false;
             }
           };
           void poll();
-          state.progress.timer = window.setInterval(() => {
+          state.tasks.timer = window.setInterval(() => {
             void poll();
           }, 2500);
         }
 
-        async function dismissProgressEntry(entry) {
+        async function dismissTaskEntry(entry) {
           if (!entry) {
             return;
           }
@@ -7186,18 +7460,17 @@
           const type = entry.type ? `?type=${encodeURIComponent(entry.type)}` : '';
           try {
             await request(`/api/progress/${lectureId}${type}`, { method: 'DELETE' });
-            state.progress.entries = state.progress.entries.filter(
-              (item) =>
-                !(Number(item?.lecture_id) === lectureId && item?.type === entry.type),
+            state.tasks.active = state.tasks.active.filter(
+              (item) => !(Number(item?.lecture_id) === lectureId && item?.type === entry.type),
             );
-            renderProgressQueue();
+            renderTasks();
           } catch (error) {
             const detail = error instanceof Error ? error.message : String(error);
             showStatus(detail || t('status.processing'), 'error');
           }
         }
 
-        async function retryProgressEntry(entry) {
+        async function retryTaskEntry(entry) {
           if (!entry) {
             return;
           }
@@ -7234,40 +7507,38 @@
                 });
                 startProcessingProgress(lectureId);
               } else {
-                showStatus(t('progress.retryUnavailable'), 'info');
+                showStatus(t('tasks.retryUnavailable'), 'info');
                 return;
               }
             }
-            await refreshProgressQueue({ force: true, silent: true });
+            await refreshTasks({ force: true, silent: true });
           } catch (error) {
             const detail = error instanceof Error ? error.message : String(error);
             showStatus(detail || t('status.processing'), 'error');
           }
         }
 
-        async function handleProgressAction(event) {
+        async function handleTaskAction(event) {
           const target = event.target instanceof HTMLElement ? event.target : null;
           if (!target) {
             return;
           }
-          const button = target.closest('button[data-progress-action]');
+          const button = target.closest('button[data-task-action]');
           if (!button) {
             return;
           }
-          const action = button.dataset.progressAction || '';
+          const action = button.dataset.taskAction || '';
           const lectureId = Number(button.dataset.lectureId);
-          const type = button.dataset.progressType || '';
-          const entry = state.progress.entries.find(
-            (item) =>
-              Number(item?.lecture_id) === lectureId &&
-              (type ? item?.type === type : true),
+          const type = button.dataset.taskType || '';
+          const entry = state.tasks.active.find(
+            (item) => Number(item?.lecture_id) === lectureId && (type ? item?.type === type : true),
           );
           if (action === 'retry') {
-            await retryProgressEntry(entry);
+            await retryTaskEntry(entry);
             return;
           }
           if (action === 'dismiss') {
-            await dismissProgressEntry(entry);
+            await dismissTaskEntry(entry);
             return;
           }
           if (action === 'open' && Number.isFinite(lectureId)) {
@@ -7314,8 +7585,8 @@
         applyTranslations(DEFAULT_LANGUAGE);
         renderStorage();
         renderSystemUpdate();
-        renderProgressQueue();
-        void refreshProgressQueue({ silent: true });
+        renderTasks();
+        void refreshTasks({ silent: true });
 
         const STATUS_DEFAULT_TIMEOUT = 5000;
 
@@ -11246,7 +11517,7 @@
               stopTranscriptionProgress({ preserveMessage: true });
             }
           }
-          await refreshProgressQueue({ silent: true });
+            await refreshTasks({ silent: true });
         }
 
         function startTranscriptionProgress(lectureId) {
@@ -11371,12 +11642,13 @@
             } else {
               renderStorage();
             }
-            stopProgressPolling();
-          } else if (view === 'progress') {
-            void refreshProgressQueue({ force: true });
-            startProgressPolling();
+            stopTaskPolling();
+          } else if (view === 'tasks') {
+            updateTaskLectureOptions();
+            void refreshTasks({ force: true });
+            startTaskPolling();
           } else {
-            stopProgressPolling();
+            stopTaskPolling();
           }
         }
 
@@ -11404,6 +11676,162 @@
             block.appendChild(data);
             dom.stats.appendChild(block);
           });
+        }
+
+        function updateTaskLectureOptions() {
+          if (!dom.tasks || !dom.tasks.lecture) {
+            return;
+          }
+          const select = dom.tasks.lecture;
+          const previousValue = select.value;
+          select.innerHTML = '';
+
+          const placeholder = document.createElement('option');
+          placeholder.value = '';
+          placeholder.textContent = t('tasks.form.placeholder');
+          placeholder.disabled = true;
+          select.appendChild(placeholder);
+
+          const lectures = [];
+          state.classes.forEach((klass) => {
+            (klass.modules || []).forEach((module) => {
+              (module.lectures || []).forEach((lecture) => {
+                lectures.push({
+                  id: lecture.id,
+                  name: lecture.name,
+                  className: klass.name,
+                  moduleName: module.name,
+                });
+              });
+            });
+          });
+
+          lectures.forEach((item) => {
+            if (!item || !Number.isFinite(Number(item.id))) {
+              return;
+            }
+            const option = document.createElement('option');
+            option.value = String(item.id);
+            const contextParts = [];
+            if (item.className) {
+              contextParts.push(item.className);
+            }
+            if (item.moduleName) {
+              contextParts.push(item.moduleName);
+            }
+            const contextLabel = contextParts.length ? ` — ${contextParts.join(' • ')}` : '';
+            option.textContent = `${item.name}${contextLabel}`;
+            select.appendChild(option);
+          });
+
+          const hasPreviousSelection = lectures.some((item) => String(item.id) === previousValue);
+          if (hasPreviousSelection) {
+            select.value = previousValue;
+            placeholder.selected = false;
+          } else {
+            placeholder.selected = true;
+          }
+
+          select.disabled = lectures.length === 0;
+
+          if (dom.tasks.submit) {
+            dom.tasks.submit.disabled = lectures.length === 0;
+          }
+
+          if (dom.tasks.operation) {
+            const audioOption = dom.tasks.operation.querySelector('option[value="audio_mastering"]');
+            const audioEnabled = state.settings?.audio_mastering_enabled !== false;
+            if (audioOption) {
+              audioOption.disabled = !audioEnabled;
+            }
+            if (!audioEnabled && dom.tasks.operation.value === 'audio_mastering') {
+              dom.tasks.operation.value = 'slide_bundle';
+            }
+          }
+
+          toggleTaskSlideOptions();
+        }
+
+        function toggleTaskSlideOptions() {
+          if (!dom.tasks || !dom.tasks.operation || !dom.tasks.slideOptions) {
+            return;
+          }
+          const value = dom.tasks.operation.value;
+          dom.tasks.slideOptions.classList.toggle('hidden', value !== 'slide_bundle');
+        }
+
+        async function handleTaskFormSubmit(event) {
+          event.preventDefault();
+          if (!dom.tasks || !dom.tasks.form || !dom.tasks.lecture || !dom.tasks.operation) {
+            return;
+          }
+
+          if (typeof dom.tasks.form.reportValidity === 'function') {
+            const valid = dom.tasks.form.reportValidity();
+            if (!valid) {
+              return;
+            }
+          }
+
+          const lectureId = Number(dom.tasks.lecture.value);
+          const operation = dom.tasks.operation.value;
+          if (!Number.isFinite(lectureId) || lectureId <= 0 || !operation) {
+            return;
+          }
+
+          const definition = { lecture_id: lectureId, operation };
+          if (operation === 'slide_bundle') {
+            const options = {};
+            const startRaw = dom.tasks.pageStart ? dom.tasks.pageStart.value.trim() : '';
+            const endRaw = dom.tasks.pageEnd ? dom.tasks.pageEnd.value.trim() : '';
+            const startNumber = Number.parseInt(startRaw, 10);
+            const endNumber = Number.parseInt(endRaw, 10);
+            if (Number.isFinite(startNumber) && startNumber > 0) {
+              options.page_start = startNumber;
+            }
+            if (Number.isFinite(endNumber) && endNumber > 0) {
+              options.page_end = endNumber;
+            }
+            if (Object.keys(options).length > 0) {
+              definition.options = options;
+            }
+          }
+
+          if (dom.tasks.form) {
+            dom.tasks.form.setAttribute('aria-busy', 'true');
+          }
+          let previousSubmitDisabled = false;
+          if (dom.tasks.submit) {
+            previousSubmitDisabled = dom.tasks.submit.disabled;
+            dom.tasks.submit.disabled = true;
+          }
+
+          try {
+            await request('/api/tasks', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ tasks: [definition] }),
+            });
+            showStatus(t('tasks.notifications.queued'), 'success');
+            if (dom.tasks.pageStart) {
+              dom.tasks.pageStart.value = '';
+            }
+            if (dom.tasks.pageEnd) {
+              dom.tasks.pageEnd.value = '';
+            }
+            await refreshTasks({ force: true });
+          } catch (error) {
+            const detail = error instanceof Error ? error.message : String(error);
+            showStatus(detail || t('status.processing'), 'error');
+          } finally {
+            if (dom.tasks.form) {
+              dom.tasks.form.setAttribute('aria-busy', 'false');
+            }
+            if (dom.tasks.submit) {
+              dom.tasks.submit.disabled = previousSubmitDisabled;
+            }
+            updateTaskLectureOptions();
+          }
         }
 
         function updateModuleOptions() {
@@ -12601,6 +13029,7 @@
           } catch (error) {
             showStatus(error.message, 'error');
           }
+          updateTaskLectureOptions();
         }
 
         async function selectLecture(lectureId) {
@@ -12926,17 +13355,32 @@
           });
         }
 
-        if (dom.progress && dom.progress.refresh) {
-          dom.progress.refresh.addEventListener('click', () => {
-            void refreshProgressQueue({ force: true });
+        if (dom.tasks && dom.tasks.refresh) {
+          dom.tasks.refresh.addEventListener('click', () => {
+            void refreshTasks({ force: true });
           });
         }
 
-        if (dom.progress && dom.progress.list) {
-          dom.progress.list.addEventListener('click', (event) => {
-            void handleProgressAction(event);
+        if (dom.tasks && dom.tasks.list) {
+          dom.tasks.list.addEventListener('click', (event) => {
+            void handleTaskAction(event);
           });
         }
+
+        if (dom.tasks && dom.tasks.form) {
+          dom.tasks.form.addEventListener('submit', (event) => {
+            void handleTaskFormSubmit(event);
+          });
+        }
+
+        if (dom.tasks && dom.tasks.operation) {
+          dom.tasks.operation.addEventListener('change', () => {
+            toggleTaskSlideOptions();
+          });
+        }
+
+        updateTaskLectureOptions();
+
 
         dom.viewButtons.forEach((button) => {
           button.addEventListener('click', () => {
