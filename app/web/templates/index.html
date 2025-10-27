@@ -2230,6 +2230,27 @@
         min-width: 0;
       }
 
+      .syllabus-summary-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .syllabus-id-tag {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 6px;
+        border-radius: 999px;
+        background: rgba(37, 99, 235, 0.12);
+        color: var(--accent);
+        font-size: 0.75rem;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: 0.02em;
+      }
+
       .syllabus-title {
         font-size: 1rem;
       }
@@ -2327,6 +2348,14 @@
         font-size: 0.95rem;
         color: inherit;
         transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .lecture-button .lecture-title {
+        flex: 1;
+        min-width: 0;
       }
 
       .lecture-button:hover,
@@ -12367,14 +12396,48 @@
           }
         }
 
+        function normalizeIdentifier(value) {
+          if (typeof value === 'number' && Number.isInteger(value) && value > 0) {
+            return value;
+          }
+          if (typeof value === 'string') {
+            const trimmed = value.trim();
+            if (/^\d+$/.test(trimmed)) {
+              const parsed = Number.parseInt(trimmed, 10);
+              if (Number.isFinite(parsed) && parsed > 0) {
+                return parsed;
+              }
+            }
+          }
+          return null;
+        }
+
+        function createIdTag(identifier) {
+          const value = normalizeIdentifier(identifier);
+          if (value === null) {
+            return null;
+          }
+          const tag = document.createElement('span');
+          tag.className = 'syllabus-id-tag';
+          tag.textContent = `[${value}]`;
+          return tag;
+        }
+
         function formatCurriculumLine(type, id, name) {
-          const identifier = Number.isFinite(Number(id)) ? Number(id) : null;
+          const identifier = normalizeIdentifier(id);
           const normalizedName = typeof name === 'string' ? name.trim() : String(name ?? '').trim();
-          const idPart = identifier !== null ? `[${identifier}] ` : '';
-          const prefix =
-            type === 'module' ? '-' : type === 'lecture' ? '--' : '';
-          const namePart = normalizedName ? ` ${normalizedName}` : '';
-          return `${idPart}${prefix}${namePart}`.trimEnd();
+          const prefix = type === 'module' ? '-' : type === 'lecture' ? '--' : '';
+          const segments = [];
+          if (identifier !== null) {
+            segments.push(`[${identifier}]`);
+          }
+          if (prefix) {
+            segments.push(prefix);
+          }
+          if (normalizedName) {
+            segments.push(normalizedName);
+          }
+          return segments.join(' ').trim();
         }
 
         function buildCurriculumEditorText() {
@@ -12966,10 +13029,18 @@
             const summaryText = document.createElement('div');
             summaryText.className = 'syllabus-summary-text';
 
+            const classHeader = document.createElement('div');
+            classHeader.className = 'syllabus-summary-header';
+            const classTag = createIdTag(entry.class.id);
+            if (classTag) {
+              classHeader.appendChild(classTag);
+            }
+
             const title = document.createElement('span');
             title.className = 'syllabus-title';
             title.textContent = entry.class.name;
-            summaryText.appendChild(title);
+            classHeader.appendChild(title);
+            summaryText.appendChild(classHeader);
 
             const moduleCount = entry.modules.length;
             const lectureCount = entry.modules.reduce(
@@ -13059,10 +13130,18 @@
                 const moduleSummaryText = document.createElement('div');
                 moduleSummaryText.className = 'syllabus-summary-text';
 
+                const moduleHeader = document.createElement('div');
+                moduleHeader.className = 'syllabus-summary-header';
+                const moduleTag = createIdTag(moduleEntry.module?.id);
+                if (moduleTag) {
+                  moduleHeader.appendChild(moduleTag);
+                }
+
                 const moduleTitle = document.createElement('span');
                 moduleTitle.className = 'syllabus-title';
                 moduleTitle.textContent = moduleEntry.module.name;
-                moduleSummaryText.appendChild(moduleTitle);
+                moduleHeader.appendChild(moduleTitle);
+                moduleSummaryText.appendChild(moduleHeader);
 
                 const moduleLectureCount = moduleEntry.lectures.length;
                 const moduleLectureWord = pluralize(
@@ -13124,7 +13203,14 @@
                     const button = document.createElement('button');
                     button.type = 'button';
                     button.className = 'lecture-button';
-                    button.textContent = lecture.name;
+                    const lectureTag = createIdTag(lecture.id);
+                    if (lectureTag) {
+                      button.appendChild(lectureTag);
+                    }
+                    const lectureTitle = document.createElement('span');
+                    lectureTitle.className = 'lecture-title';
+                    lectureTitle.textContent = lecture.name;
+                    button.appendChild(lectureTitle);
                     button.addEventListener('click', (event) => {
                       event.preventDefault();
                       selectLecture(lecture.id);
