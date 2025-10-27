@@ -2093,9 +2093,70 @@
         font-size: 0.95rem;
       }
 
+      .curriculum.curriculum-editor-active {
+        display: flex;
+        flex-direction: column;
+      }
+
       .curriculum.placeholder {
         color: var(--placeholder);
         font-style: italic;
+      }
+
+      .curriculum-editor {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        min-height: 320px;
+      }
+
+      .curriculum.curriculum-editor-active .curriculum-editor {
+        flex: 1;
+      }
+
+      .curriculum-editor-header {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .curriculum-editor-header h3 {
+        margin: 0;
+        font-size: 1rem;
+        color: var(--muted);
+      }
+
+      .curriculum-editor-header p {
+        margin: 0;
+        color: var(--placeholder);
+        font-size: 0.85rem;
+        line-height: 1.4;
+      }
+
+      .curriculum-editor-textarea {
+        width: 100%;
+        flex: 1;
+        min-height: 260px;
+        border: 1px solid var(--panel-border);
+        border-radius: 10px;
+        padding: 12px 14px;
+        background: var(--background);
+        color: var(--text);
+        font-family: 'JetBrains Mono', 'Fira Code', 'SFMono-Regular', Menlo, Consolas,
+          monospace;
+        font-size: 0.9rem;
+        line-height: 1.5;
+        resize: vertical;
+        white-space: pre;
+      }
+
+      .curriculum.curriculum-editor-active .curriculum-editor-textarea {
+        min-height: 0;
+      }
+
+      .curriculum-editor-textarea:focus {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
       }
 
       .curriculum-toolbar {
@@ -3493,8 +3554,8 @@
             },
             topBar: {
               details: 'Details',
-              enableEdit: 'Enable edit mode',
-              exitEdit: 'Exit edit mode',
+              enableEdit: 'Edit syllabus',
+              exitEdit: 'Save syllabus',
               tasks: 'Tasks',
               create: 'Create',
               storage: 'Storage',
@@ -3916,6 +3977,21 @@
               manageHeading: 'Manage syllabus',
               classMeta: '{{moduleCount}} {{moduleWord}} • {{lectureCount}} {{lectureWord}}',
               moduleMeta: '{{lectureCount}} {{lectureWord}}',
+              editorHeading: 'Edit syllabus structure',
+              editorHint:
+                'Each line represents a class, module, or lecture. Use “-” for modules and “--” for lectures. Include IDs in square brackets to keep existing items.',
+              editorLineError: 'Line {{line}}: {{message}}',
+              editorErrors: {
+                missingClass: 'Modules must appear after a class.',
+                missingModule: 'Lectures must appear after a module.',
+                unknownClass: 'Class ID {{id}} was not found.',
+                unknownModule: 'Module ID {{id}} was not found.',
+                unknownLecture: 'Lecture ID {{id}} was not found.',
+                duplicateClass: 'Class ID {{id}} appears more than once.',
+                duplicateModule: 'Module ID {{id}} appears more than once.',
+                duplicateLecture: 'Lecture ID {{id}} appears more than once.',
+                nameRequired: 'A name is required.',
+              },
             },
             common: {
               actions: {
@@ -3933,6 +4009,8 @@
             status: {
               requireEdit: 'Enable edit mode to manage the curriculum.',
               requireEditLecture: 'Enable edit mode to update lecture details.',
+              curriculumSaved: 'Syllabus updated.',
+              curriculumSaveFailed: 'Unable to update the syllabus.',
               classCreated: 'Class created.',
               classRemoved: 'Class removed.',
               moduleCreated: 'Module created.',
@@ -4003,8 +4081,8 @@
             },
             topBar: {
               details: '详情',
-              enableEdit: '开启编辑模式',
-              exitEdit: '退出编辑模式',
+              enableEdit: '编辑课程大纲',
+              exitEdit: '保存课程大纲',
               tasks: '任务',
               create: '新建',
               storage: '存储',
@@ -4417,6 +4495,21 @@
               manageHeading: '管理课程大纲',
               classMeta: '{{moduleCount}} 个{{moduleWord}} • {{lectureCount}} 个{{lectureWord}}',
               moduleMeta: '{{lectureCount}} 个{{lectureWord}}',
+              editorHeading: 'Edit syllabus structure',
+              editorHint:
+                'Each line represents a class, module, or lecture. Use “-” for modules and “--” for lectures. Include IDs in square brackets to keep existing items.',
+              editorLineError: 'Line {{line}}: {{message}}',
+              editorErrors: {
+                missingClass: 'Modules must appear after a class.',
+                missingModule: 'Lectures must appear after a module.',
+                unknownClass: 'Class ID {{id}} was not found.',
+                unknownModule: 'Module ID {{id}} was not found.',
+                unknownLecture: 'Lecture ID {{id}} was not found.',
+                duplicateClass: 'Class ID {{id}} appears more than once.',
+                duplicateModule: 'Module ID {{id}} appears more than once.',
+                duplicateLecture: 'Lecture ID {{id}} appears more than once.',
+                nameRequired: 'A name is required.',
+              },
             },
             common: {
               actions: {
@@ -4434,6 +4527,8 @@
             status: {
               requireEdit: '开启编辑模式以管理课程表。',
               requireEditLecture: '开启编辑模式以更新讲座详情。',
+              curriculumSaved: 'Syllabus updated.',
+              curriculumSaveFailed: 'Unable to update the syllabus.',
               classCreated: '课程已创建。',
               classRemoved: '课程已删除。',
               moduleCreated: '模块已创建。',
@@ -4504,8 +4599,8 @@
             },
             topBar: {
               details: 'Detalles',
-              enableEdit: 'Activar modo edición',
-              exitEdit: 'Salir del modo edición',
+              enableEdit: 'Editar programa',
+              exitEdit: 'Guardar programa',
               tasks: 'Tareas',
               create: 'Crear',
               storage: 'Almacenamiento',
@@ -4928,6 +5023,21 @@
               manageHeading: 'Administrar programa',
               classMeta: '{{moduleCount}} {{moduleWord}} • {{lectureCount}} {{lectureWord}}',
               moduleMeta: '{{lectureCount}} {{lectureWord}}',
+              editorHeading: 'Edit syllabus structure',
+              editorHint:
+                'Each line represents a class, module, or lecture. Use “-” for modules and “--” for lectures. Include IDs in square brackets to keep existing items.',
+              editorLineError: 'Line {{line}}: {{message}}',
+              editorErrors: {
+                missingClass: 'Modules must appear after a class.',
+                missingModule: 'Lectures must appear after a module.',
+                unknownClass: 'Class ID {{id}} was not found.',
+                unknownModule: 'Module ID {{id}} was not found.',
+                unknownLecture: 'Lecture ID {{id}} was not found.',
+                duplicateClass: 'Class ID {{id}} appears more than once.',
+                duplicateModule: 'Module ID {{id}} appears more than once.',
+                duplicateLecture: 'Lecture ID {{id}} appears more than once.',
+                nameRequired: 'A name is required.',
+              },
             },
             common: {
               actions: {
@@ -4945,6 +5055,8 @@
             status: {
               requireEdit: 'Activa el modo edición para gestionar el plan de estudios.',
               requireEditLecture: 'Activa el modo edición para actualizar los detalles.',
+              curriculumSaved: 'Syllabus updated.',
+              curriculumSaveFailed: 'Unable to update the syllabus.',
               classCreated: 'Curso creado.',
               classRemoved: 'Curso eliminado.',
               moduleCreated: 'Módulo creado.',
@@ -5015,8 +5127,8 @@
             },
             topBar: {
               details: 'Détails',
-              enableEdit: 'Activer le mode édition',
-              exitEdit: 'Quitter le mode édition',
+              enableEdit: 'Modifier le programme',
+              exitEdit: 'Enregistrer le programme',
               tasks: 'Tâches',
               create: 'Créer',
               storage: 'Stockage',
@@ -5441,6 +5553,21 @@
               manageHeading: 'Gérer le plan de cours',
               classMeta: '{{moduleCount}} {{moduleWord}} • {{lectureCount}} {{lectureWord}}',
               moduleMeta: '{{lectureCount}} {{lectureWord}}',
+              editorHeading: 'Edit syllabus structure',
+              editorHint:
+                'Each line represents a class, module, or lecture. Use “-” for modules and “--” for lectures. Include IDs in square brackets to keep existing items.',
+              editorLineError: 'Line {{line}}: {{message}}',
+              editorErrors: {
+                missingClass: 'Modules must appear after a class.',
+                missingModule: 'Lectures must appear after a module.',
+                unknownClass: 'Class ID {{id}} was not found.',
+                unknownModule: 'Module ID {{id}} was not found.',
+                unknownLecture: 'Lecture ID {{id}} was not found.',
+                duplicateClass: 'Class ID {{id}} appears more than once.',
+                duplicateModule: 'Module ID {{id}} appears more than once.',
+                duplicateLecture: 'Lecture ID {{id}} appears more than once.',
+                nameRequired: 'A name is required.',
+              },
             },
             common: {
               actions: {
@@ -5458,6 +5585,8 @@
             status: {
               requireEdit: 'Activez le mode édition pour gérer le programme.',
               requireEditLecture: 'Activez le mode édition pour mettre à jour les détails.',
+              curriculumSaved: 'Syllabus updated.',
+              curriculumSaveFailed: 'Unable to update the syllabus.',
               classCreated: 'Cours créé.',
               classRemoved: 'Cours supprimé.',
               moduleCreated: 'Module créé.',
@@ -5916,6 +6045,7 @@
           statusProgressText: document.getElementById('status-bar-progress-text'),
           stats: document.getElementById('stats'),
           curriculum: document.getElementById('curriculum'),
+          curriculumEditor: null,
           search: document.getElementById('search-input'),
           summary: document.getElementById('lecture-summary'),
           editForm: document.getElementById('lecture-edit-form'),
@@ -12237,32 +12367,559 @@
           }
         }
 
+        function formatCurriculumLine(type, id, name) {
+          const identifier = Number.isFinite(Number(id)) ? Number(id) : null;
+          const normalizedName = typeof name === 'string' ? name.trim() : String(name ?? '').trim();
+          const idPart = identifier !== null ? `[${identifier}] ` : '';
+          const prefix =
+            type === 'module' ? '-' : type === 'lecture' ? '--' : '';
+          const namePart = normalizedName ? ` ${normalizedName}` : '';
+          return `${idPart}${prefix}${namePart}`.trimEnd();
+        }
+
+        function buildCurriculumEditorText() {
+          const lines = [];
+          state.classes.forEach((klass) => {
+            if (!klass || typeof klass !== 'object') {
+              return;
+            }
+            lines.push(formatCurriculumLine('class', klass.id, klass.name));
+            const modules = Array.isArray(klass.modules) ? klass.modules : [];
+            modules.forEach((module) => {
+              if (!module || typeof module !== 'object') {
+                return;
+              }
+              lines.push(formatCurriculumLine('module', module.id, module.name));
+              const lectures = Array.isArray(module.lectures) ? module.lectures : [];
+              lectures.forEach((lecture) => {
+                if (!lecture || typeof lecture !== 'object') {
+                  return;
+                }
+                lines.push(formatCurriculumLine('lecture', lecture.id, lecture.name));
+              });
+            });
+          });
+          return lines.join('\n');
+        }
+
+        function ensureCurriculumEditorElement() {
+          if (!dom.curriculumEditor) {
+            const textarea = document.createElement('textarea');
+            textarea.id = 'curriculum-editor';
+            textarea.className = 'curriculum-editor-textarea';
+            textarea.setAttribute('spellcheck', 'false');
+            textarea.setAttribute('autocapitalize', 'none');
+            textarea.autocomplete = 'off';
+            textarea.addEventListener('input', () => {
+              textarea.dataset.dirty = 'true';
+            });
+            dom.curriculumEditor = textarea;
+          }
+          const editor = dom.curriculumEditor;
+          editor.setAttribute('aria-label', t('curriculum.editorHeading'));
+          if (!editor.dataset.bound) {
+            editor.addEventListener('input', () => {
+              editor.dataset.dirty = 'true';
+            });
+            editor.dataset.bound = 'true';
+          }
+          return editor;
+        }
+
+        function renderCurriculumEditor() {
+          const container = document.createElement('div');
+          container.className = 'curriculum-editor';
+
+          const header = document.createElement('div');
+          header.className = 'curriculum-editor-header';
+
+          const heading = document.createElement('h3');
+          heading.textContent = t('curriculum.editorHeading');
+          header.appendChild(heading);
+
+          const hint = document.createElement('p');
+          hint.textContent = t('curriculum.editorHint');
+          header.appendChild(hint);
+
+          container.appendChild(header);
+
+          const editor = ensureCurriculumEditorElement();
+          if (editor.dataset.dirty !== 'true') {
+            editor.value = buildCurriculumEditorText();
+            editor.dataset.dirty = 'false';
+          }
+          container.appendChild(editor);
+
+          dom.curriculum.appendChild(container);
+        }
+
+        function parseCurriculumEditorValue(value) {
+          const text = typeof value === 'string' ? value : String(value ?? '');
+          const lines = text.split(/\r?\n/);
+          const classes = [];
+          const errors = [];
+
+          let currentClass = null;
+          let currentModule = null;
+
+          const seenIds = {
+            class: new Set(),
+            module: new Set(),
+            lecture: new Set(),
+          };
+
+          const lineError = (lineNumber, key, params = {}) =>
+            t('curriculum.editorLineError', {
+              line: lineNumber,
+              message: t(`curriculum.editorErrors.${key}`, params),
+            });
+
+          for (let index = 0; index < lines.length; index += 1) {
+            const rawLine = lines[index] ?? '';
+            const trimmedLine = rawLine.trim();
+            if (!trimmedLine) {
+              continue;
+            }
+
+            let working = trimmedLine;
+            let identifier = null;
+            const idMatch = working.match(/^\[(\d+)\]\s*/);
+            if (idMatch) {
+              identifier = Number(idMatch[1]);
+              working = working.slice(idMatch[0].length);
+            }
+
+            let type = 'class';
+            if (working.startsWith('--')) {
+              type = 'lecture';
+              working = working.slice(2).trim();
+            } else if (working.startsWith('-')) {
+              type = 'module';
+              working = working.slice(1).trim();
+            } else {
+              working = working.trim();
+            }
+
+            const name = working.trim();
+            const lineNumber = index + 1;
+
+            if (!name) {
+              errors.push(lineError(lineNumber, 'nameRequired'));
+              continue;
+            }
+
+            if (type === 'class') {
+              if (identifier !== null) {
+                if (seenIds.class.has(identifier)) {
+                  errors.push(lineError(lineNumber, 'duplicateClass', { id: identifier }));
+                  continue;
+                }
+                seenIds.class.add(identifier);
+              }
+              const classNode = { id: identifier, name, line: lineNumber, modules: [] };
+              classes.push(classNode);
+              currentClass = classNode;
+              currentModule = null;
+            } else if (type === 'module') {
+              if (!currentClass) {
+                errors.push(lineError(lineNumber, 'missingClass'));
+                continue;
+              }
+              if (identifier !== null) {
+                if (seenIds.module.has(identifier)) {
+                  errors.push(lineError(lineNumber, 'duplicateModule', { id: identifier }));
+                  continue;
+                }
+                seenIds.module.add(identifier);
+              }
+              const moduleNode = { id: identifier, name, line: lineNumber, lectures: [] };
+              currentClass.modules.push(moduleNode);
+              currentModule = moduleNode;
+            } else {
+              if (!currentModule) {
+                errors.push(lineError(lineNumber, 'missingModule'));
+                continue;
+              }
+              if (identifier !== null) {
+                if (seenIds.lecture.has(identifier)) {
+                  errors.push(lineError(lineNumber, 'duplicateLecture', { id: identifier }));
+                  continue;
+                }
+                seenIds.lecture.add(identifier);
+              }
+              const lectureNode = { id: identifier, name, line: lineNumber };
+              currentModule.lectures.push(lectureNode);
+            }
+          }
+
+          return { classes, errors };
+        }
+
+        function getCurriculumMaps() {
+          const classMap = new Map();
+          const moduleMap = new Map();
+          const lectureMap = new Map();
+
+          state.classes.forEach((klass) => {
+            if (!klass || typeof klass !== 'object') {
+              return;
+            }
+            const classId = Number(klass.id);
+            if (Number.isFinite(classId)) {
+              classMap.set(classId, klass);
+            }
+            const modules = Array.isArray(klass.modules) ? klass.modules : [];
+            modules.forEach((module) => {
+              if (!module || typeof module !== 'object') {
+                return;
+              }
+              const moduleId = Number(module.id);
+              if (Number.isFinite(moduleId)) {
+                moduleMap.set(moduleId, { module, classId: classId });
+              }
+              const lectures = Array.isArray(module.lectures) ? module.lectures : [];
+              lectures.forEach((lecture) => {
+                if (!lecture || typeof lecture !== 'object') {
+                  return;
+                }
+                const lectureId = Number(lecture.id);
+                if (Number.isFinite(lectureId)) {
+                  lectureMap.set(lectureId, {
+                    lecture,
+                    moduleId: moduleId,
+                    classId: classId,
+                  });
+                }
+              });
+            });
+          });
+
+          return { classMap, moduleMap, lectureMap };
+        }
+
+        function validateCurriculumStructure(parsedClasses) {
+          const { classMap, moduleMap, lectureMap } = getCurriculumMaps();
+          const errors = [];
+
+          parsedClasses.forEach((classNode) => {
+            if (classNode.id !== null && !classMap.has(classNode.id)) {
+              errors.push(
+                t('curriculum.editorLineError', {
+                  line: classNode.line,
+                  message: t('curriculum.editorErrors.unknownClass', { id: classNode.id }),
+                }),
+              );
+            }
+            classNode.modules.forEach((moduleNode) => {
+              if (moduleNode.id !== null && !moduleMap.has(moduleNode.id)) {
+                errors.push(
+                  t('curriculum.editorLineError', {
+                    line: moduleNode.line,
+                    message: t('curriculum.editorErrors.unknownModule', { id: moduleNode.id }),
+                  }),
+                );
+              }
+              moduleNode.lectures.forEach((lectureNode) => {
+                if (lectureNode.id !== null && !lectureMap.has(lectureNode.id)) {
+                  errors.push(
+                    t('curriculum.editorLineError', {
+                      line: lectureNode.line,
+                      message: t('curriculum.editorErrors.unknownLecture', {
+                        id: lectureNode.id,
+                      }),
+                    }),
+                  );
+                }
+              });
+            });
+          });
+
+          return { errors, maps: { classMap, moduleMap, lectureMap } };
+        }
+
+        async function applyCurriculumChanges(parsedClasses, existingMaps) {
+          const maps = existingMaps ?? getCurriculumMaps();
+          const classMap = maps.classMap;
+          const moduleMap = maps.moduleMap;
+          const lectureMap = maps.lectureMap;
+
+          const parsedClassIds = new Set();
+          const parsedModuleIds = new Set();
+          const parsedLectureIds = new Set();
+
+          parsedClasses.forEach((classNode) => {
+            if (classNode.id !== null) {
+              parsedClassIds.add(classNode.id);
+            }
+            classNode.modules.forEach((moduleNode) => {
+              if (moduleNode.id !== null) {
+                parsedModuleIds.add(moduleNode.id);
+              }
+              moduleNode.lectures.forEach((lectureNode) => {
+                if (lectureNode.id !== null) {
+                  parsedLectureIds.add(lectureNode.id);
+                }
+              });
+            });
+          });
+
+          const classesToDelete = [];
+          classMap.forEach((_, classId) => {
+            if (!parsedClassIds.has(classId)) {
+              classesToDelete.push(classId);
+            }
+          });
+
+          const classesToDeleteSet = new Set(classesToDelete);
+          const modulesToDelete = [];
+          moduleMap.forEach((info, moduleId) => {
+            if (!parsedModuleIds.has(moduleId) && !classesToDeleteSet.has(info.classId)) {
+              modulesToDelete.push(moduleId);
+            }
+          });
+          const modulesToDeleteSet = new Set(modulesToDelete);
+
+          const lecturesToDelete = [];
+          lectureMap.forEach((info, lectureId) => {
+            if (
+              !parsedLectureIds.has(lectureId) &&
+              !modulesToDeleteSet.has(info.moduleId) &&
+              !classesToDeleteSet.has(info.classId)
+            ) {
+              lecturesToDelete.push(lectureId);
+            }
+          });
+
+          for (const lectureId of lecturesToDelete) {
+            await request(`/api/lectures/${lectureId}`, { method: 'DELETE' });
+          }
+          for (const moduleId of modulesToDelete) {
+            await request(`/api/modules/${moduleId}`, { method: 'DELETE' });
+          }
+          for (const classId of classesToDelete) {
+            await request(`/api/classes/${classId}`, { method: 'DELETE' });
+          }
+
+          for (const classNode of parsedClasses) {
+            if (classNode.id === null) {
+              const payload = await request('/api/classes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: classNode.name }),
+              });
+              const newId = payload?.class?.id;
+              if (!Number.isFinite(newId)) {
+                throw new Error(t('status.curriculumSaveFailed'));
+              }
+              classNode.id = Number(newId);
+            } else {
+              const existing = classMap.get(classNode.id);
+              if (existing && existing.name !== classNode.name) {
+                await request(`/api/classes/${classNode.id}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ name: classNode.name }),
+                });
+              }
+            }
+          }
+
+          const moduleOrders = new Map();
+          const lectureOrders = new Map();
+
+          for (const classNode of parsedClasses) {
+            const classId = classNode.id;
+            if (!Number.isFinite(classId)) {
+              throw new Error(t('status.curriculumSaveFailed'));
+            }
+            const moduleOrder = [];
+
+            for (const moduleNode of classNode.modules) {
+              if (moduleNode.id === null) {
+                const payload = await request('/api/modules', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ class_id: classId, name: moduleNode.name }),
+                });
+                const newId = payload?.module?.id;
+                if (!Number.isFinite(newId)) {
+                  throw new Error(t('status.curriculumSaveFailed'));
+                }
+                moduleNode.id = Number(newId);
+              } else {
+                const existingModule = moduleMap.get(moduleNode.id);
+                if (existingModule) {
+                  const updates = {};
+                  if (existingModule.module?.name !== moduleNode.name) {
+                    updates.name = moduleNode.name;
+                  }
+                  if (existingModule.classId !== classId) {
+                    updates.class_id = classId;
+                  }
+                  if (Object.keys(updates).length > 0) {
+                    await request(`/api/modules/${moduleNode.id}`, {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify(updates),
+                    });
+                    if (Object.prototype.hasOwnProperty.call(updates, 'class_id')) {
+                      existingModule.classId = classId;
+                    }
+                    if (existingModule.module) {
+                      if (Object.prototype.hasOwnProperty.call(updates, 'name')) {
+                        existingModule.module.name = moduleNode.name;
+                      }
+                      if (Object.prototype.hasOwnProperty.call(updates, 'class_id')) {
+                        existingModule.module.class_id = classId;
+                      }
+                    }
+                  }
+                }
+              }
+
+              const moduleId = moduleNode.id;
+              if (!Number.isFinite(moduleId)) {
+                throw new Error(t('status.curriculumSaveFailed'));
+              }
+              moduleOrder.push(moduleId);
+
+              const lectureOrder = [];
+              for (const lectureNode of moduleNode.lectures) {
+                if (lectureNode.id === null) {
+                  const payload = await request('/api/lectures', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      module_id: moduleId,
+                      name: lectureNode.name,
+                      description: '',
+                    }),
+                  });
+                  const newId = payload?.lecture?.id;
+                  if (!Number.isFinite(newId)) {
+                    throw new Error(t('status.curriculumSaveFailed'));
+                  }
+                  lectureNode.id = Number(newId);
+                } else {
+                  const existingLecture = lectureMap.get(lectureNode.id);
+                  if (existingLecture) {
+                    const updates = {};
+                    if (existingLecture.lecture?.name !== lectureNode.name) {
+                      updates.name = lectureNode.name;
+                    }
+                    if (existingLecture.moduleId !== moduleId) {
+                      updates.module_id = moduleId;
+                    }
+                    if (Object.keys(updates).length > 0) {
+                      await request(`/api/lectures/${lectureNode.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(updates),
+                      });
+                      if (Object.prototype.hasOwnProperty.call(updates, 'module_id')) {
+                        existingLecture.moduleId = moduleId;
+                      }
+                      if (existingLecture.lecture) {
+                        if (Object.prototype.hasOwnProperty.call(updates, 'name')) {
+                          existingLecture.lecture.name = lectureNode.name;
+                        }
+                        if (Object.prototype.hasOwnProperty.call(updates, 'module_id')) {
+                          existingLecture.lecture.module_id = moduleId;
+                        }
+                      }
+                    }
+                  }
+                }
+                if (!Number.isFinite(lectureNode.id)) {
+                  throw new Error(t('status.curriculumSaveFailed'));
+                }
+                lectureOrder.push(lectureNode.id);
+              }
+              lectureOrders.set(moduleId, lectureOrder);
+            }
+
+            moduleOrders.set(classId, moduleOrder);
+          }
+
+          const classOrder = parsedClasses.map((classNode) => classNode.id);
+          if (classOrder.length > 0) {
+            await request('/api/classes/reorder', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ class_ids: classOrder }),
+            });
+          }
+
+          const modulePayload = Array.from(moduleOrders.entries())
+            .filter(([, modules]) => modules.length > 0)
+            .map(([classId, modules]) => ({ class_id: classId, module_ids: modules }));
+          if (modulePayload.length > 0) {
+            await request('/api/modules/reorder', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ classes: modulePayload }),
+            });
+          }
+
+          const lecturePayload = Array.from(lectureOrders.entries())
+            .filter(([, lectures]) => lectures.length > 0)
+            .map(([moduleId, lectures]) => ({ module_id: moduleId, lecture_ids: lectures }));
+          if (lecturePayload.length > 0) {
+            await request('/api/lectures/reorder', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ modules: lecturePayload }),
+            });
+          }
+        }
+
+        async function saveCurriculumFromEditor() {
+          const editor = dom.curriculumEditor;
+          const editorValue = editor ? editor.value : '';
+          const parsed = parseCurriculumEditorValue(editorValue);
+          if (parsed.errors.length > 0) {
+            showStatus(parsed.errors[0], 'error');
+            if (editor) {
+              editor.focus();
+            }
+            return false;
+          }
+
+          const validation = validateCurriculumStructure(parsed.classes);
+          if (validation.errors.length > 0) {
+            showStatus(validation.errors[0], 'error');
+            if (editor) {
+              editor.focus();
+            }
+            return false;
+          }
+
+          try {
+            if (editor) {
+              editor.dataset.dirty = 'false';
+            }
+            await applyCurriculumChanges(parsed.classes, validation.maps);
+            await refreshData();
+            showStatus(t('status.curriculumSaved'), 'success');
+            return true;
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error ?? '');
+            showStatus(message || t('status.curriculumSaveFailed'), 'error');
+            return false;
+          }
+        }
+
         function renderCurriculum() {
           state.buttonMap.clear();
-          const filtered = computeFilteredClasses();
           dom.curriculum.innerHTML = '';
+          dom.curriculum.classList.toggle('curriculum-editor-active', state.editMode);
 
           if (state.editMode) {
-            const toolbar = document.createElement('div');
-            toolbar.className = 'curriculum-toolbar';
-
-            const heading = document.createElement('h3');
-            heading.textContent = t('curriculum.manageHeading');
-            toolbar.appendChild(heading);
-
-            const actions = document.createElement('div');
-            actions.className = 'curriculum-toolbar-actions';
-
-            const addClassButton = createIconButton(t('curriculum.addClass'), '+');
-            addClassButton.addEventListener('click', (event) => {
-              event.preventDefault();
-              handleAddClass();
-            });
-            actions.appendChild(addClassButton);
-
-            toolbar.appendChild(actions);
-            dom.curriculum.appendChild(toolbar);
+            renderCurriculumEditor();
+            return;
           }
+
+          const filtered = computeFilteredClasses();
 
           if (filtered.length === 0) {
             const message = document.createElement('div');
@@ -13398,12 +14055,32 @@
         });
 
         if (dom.editToggle) {
-          dom.editToggle.addEventListener('click', () => {
-            state.editMode = !state.editMode;
+          dom.editToggle.addEventListener('click', async () => {
+            if (state.editMode) {
+              dom.editToggle.disabled = true;
+              try {
+                const saved = await saveCurriculumFromEditor();
+                if (!saved) {
+                  return;
+                }
+                state.editMode = false;
+                updateEditModeUI();
+              } finally {
+                dom.editToggle.disabled = false;
+              }
+              return;
+            }
+
+            if (dom.curriculumEditor) {
+              dom.curriculumEditor.dataset.dirty = 'false';
+            }
+            state.editMode = true;
             updateEditModeUI();
-            if (state.editMode && state.selectedLectureId) {
-              setActiveView('details');
-              dom.editName.focus();
+            const editor = dom.curriculumEditor;
+            if (editor) {
+              const length = editor.value.length;
+              editor.setSelectionRange(length, length);
+              editor.focus();
             }
           });
         }
