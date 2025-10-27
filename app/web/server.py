@@ -25,15 +25,164 @@ import uuid
 import zipfile
 from collections import deque
 from collections.abc import Mapping, Sequence, Set as AbstractSet
-from dataclasses import asdict
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Any, Callable, Deque, Dict, Iterable, List, Literal, Optional, Set, Tuple, TypeVar
+from typing import (
+    Any,
+    Awaitable,
+    Callable,
+    Deque,
+    Dict,
+    Iterable,
+    List,
+    Literal,
+    Optional,
+    Set,
+    Tuple,
+    TypeVar,
+)
 
 from concurrent.futures import Future, ThreadPoolExecutor
 
 T = TypeVar("T")
+
+TaskOperation = Literal["audio_mastering", "slide_bundle"]
+
+
+@dataclass
+class QueuedTask:
+    """Represents a background task scheduled by the task queue."""
+
+    id: str
+    lecture_id: int
+    operation: TaskOperation
+    options: Dict[str, Any] = field(default_factory=dict)
+    status: Literal["pending", "running", "succeeded", "failed"] = "pending"
+    created_at: float = field(default_factory=time.time)
+    started_at: Optional[float] = None
+    completed_at: Optional[float] = None
+    error: Optional[str] = None
+
+    def mark_running(self) -> None:
+        self.status = "running"
+        self.started_at = time.time()
+        self.error = None
+
+    def mark_finished(self) -> None:
+        self.status = "succeeded"
+        self.completed_at = time.time()
+
+    def mark_failed(self, message: str) -> None:
+        self.status = "failed"
+        self.completed_at = time.time()
+        self.error = message
+
+
+class TaskQueue:
+    """Simple FIFO queue that executes tasks sequentially."""
+
+    def __init__(self, processor: Callable[[QueuedTask], Awaitable[None]]) -> None:
+        self._processor = processor
+        self._pending: Deque[QueuedTask] = deque()
+        self._tasks: Deque[QueuedTask] = deque()
+        self._index: Dict[str, QueuedTask] = {}
+        self._lock = asyncio.Lock()
+        self._pending_event = asyncio.Event()
+        self._worker: Optional[asyncio.Task[None]] = None
+        self._history_limit = 200
+        self._stopping = False
+
+    async def start(self) -> None:
+        async with self._lock:
+            if self._worker is None or self._worker.done():
+                self._stopping = False
+                loop = asyncio.get_running_loop()
+                self._worker = loop.create_task(self._run(), name="task-queue-worker")
+
+    async def stop(self) -> None:
+        async with self._lock:
+            self._stopping = True
+            self._pending_event.set()
+            worker = self._worker
+            self._worker = None
+        if worker is not None:
+            worker.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await worker
+
+    async def enqueue(
+        self, lecture_id: int, operation: TaskOperation, options: Optional[Dict[str, Any]] = None
+    ) -> QueuedTask:
+        entry = QueuedTask(
+            id=_new_correlation_id(),
+            lecture_id=lecture_id,
+            operation=operation,
+            options=dict(options or {}),
+        )
+        async with self._lock:
+            self._pending.append(entry)
+            self._tasks.append(entry)
+            self._index[entry.id] = entry
+            self._pending_event.set()
+            self._prune_history_locked()
+        await self.start()
+        return entry
+
+    async def list(self) -> List[QueuedTask]:
+        async with self._lock:
+            return [task for task in self._tasks]
+
+    async def _wait_for_task(self) -> None:
+        while True:
+            async with self._lock:
+                if self._pending or self._stopping:
+                    return
+                self._pending_event.clear()
+            await self._pending_event.wait()
+
+    async def _acquire_next(self) -> Optional[QueuedTask]:
+        async with self._lock:
+            if self._pending:
+                task = self._pending.popleft()
+                task.mark_running()
+                return task
+            return None
+
+    async def _run(self) -> None:
+        try:
+            while True:
+                await self._wait_for_task()
+                if self._stopping:
+                    return
+                task = await self._acquire_next()
+                if task is None:
+                    continue
+                try:
+                    await self._processor(task)
+                except Exception as error:  # noqa: BLE001 - surface task failure
+                    message = str(error)
+                    task.mark_failed(message or "Task failed")
+                    LOGGER.exception(
+                        "Background task %s failed for lecture %s", task.operation, task.lecture_id
+                    )
+                else:
+                    task.mark_finished()
+                finally:
+                    async with self._lock:
+                        self._prune_history_locked()
+        except asyncio.CancelledError:  # pragma: no cover - cooperative cancellation
+            raise
+
+    def _prune_history_locked(self) -> None:
+        while len(self._tasks) > self._history_limit:
+            oldest = self._tasks[0]
+            if oldest.status in {"succeeded", "failed"}:
+                self._tasks.popleft()
+                self._index.pop(oldest.id, None)
+            else:
+                break
 
 from fastapi import (
     FastAPI,
@@ -1425,6 +1574,16 @@ class SettingsPayload(BaseModel):
     debug_enabled: bool = False
 
 
+class TaskDefinition(BaseModel):
+    lecture_id: int = Field(..., ge=1)
+    operation: TaskOperation
+    options: Optional[Dict[str, Any]] = None
+
+
+class TaskBatchRequest(BaseModel):
+    tasks: List[TaskDefinition] = Field(default_factory=list)
+
+
 class ForwardedRootPathMiddleware:
     """Apply proxy-provided root path information to incoming requests."""
 
@@ -1904,6 +2063,30 @@ def create_app(
             "task": descriptor,
         }
 
+    def _serialize_task_entry(task: QueuedTask) -> Dict[str, Any]:
+        lecture = _summarize_lecture(task.lecture_id)
+        return {
+            "id": task.id,
+            "lecture_id": task.lecture_id,
+            "operation": task.operation,
+            "status": task.status,
+            "options": task.options,
+            "created_at": task.created_at,
+            "started_at": task.started_at,
+            "completed_at": task.completed_at,
+            "error": task.error,
+            "lecture": lecture,
+        }
+
+    def _collect_progress_entries() -> List[Dict[str, Any]]:
+        entries: List[Dict[str, Any]] = []
+        for state in progress_tracker.all().values():
+            entries.append(_progress_entry("transcription", state))
+        for state in processing_tracker.all().values():
+            entries.append(_progress_entry("processing", state))
+        entries.sort(key=lambda entry: entry.get("timestamp") or 0, reverse=True)
+        return entries
+
     def _update_debug_state(enabled: bool) -> None:
         target_level = logging.DEBUG if enabled else logging.INFO
         if root_logger.level != target_level:
@@ -2358,6 +2541,398 @@ def create_app(
         bundle_relative = result.bundle_path.relative_to(root_path).as_posix()
         markdown_relative = result.markdown_path.relative_to(root_path).as_posix()
         return bundle_relative, markdown_relative
+
+
+    async def _run_audio_mastering_task(task: QueuedTask) -> None:
+        lecture_id = task.lecture_id
+        lecture = repository.get_lecture(lecture_id)
+        if lecture is None:
+            raise RuntimeError("Lecture not found")
+        audio_relative = lecture.audio_path or lecture.processed_audio_path
+        if not audio_relative:
+            raise RuntimeError("Upload an audio file first")
+
+        class_record, module = _require_hierarchy(lecture)
+        storage_root = _require_storage_root()
+        try:
+            source_audio = _resolve_storage_path(storage_root, audio_relative)
+        except Exception as error:  # pragma: no cover - defensive
+            raise RuntimeError("Audio file not found") from error
+        if not source_audio.exists():
+            raise RuntimeError("Audio file not found")
+
+        lecture_paths = LecturePaths.build(
+            storage_root,
+            class_record.name,
+            module.name,
+            lecture.name,
+        )
+        lecture_paths.ensure()
+
+        context = {
+            "operation": "audio_mastering",
+            "task_id": task.id,
+        }
+        start_message = "====> Preparing audio mastering…"
+        progress_label = "====> Analysing uploaded audio…"
+        completion_message = "====> Audio mastering completed."
+        total_steps = float(AUDIO_MASTERING_TOTAL_STEPS)
+
+        job_id = _new_correlation_id()
+        job_token = _JOB_ID_VAR.set(job_id)
+        processing_tracker.start(lecture_id, start_message, context=context)
+        try:
+            if not ffmpeg_available():
+                message = (
+                    "Audio mastering requires FFmpeg to be installed on the server. "
+                    "Install FFmpeg or disable audio mastering."
+                )
+                processing_tracker.fail(lecture_id, f"====> {message}", context=context)
+                raise RuntimeError(message)
+
+            def _perform_audio_mastering(source: Path) -> Tuple[Path, str]:
+                timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+                base_stem = Path(source.name).stem or build_asset_stem(
+                    class_record.name,
+                    module.name,
+                    lecture.name,
+                    "audio",
+                )
+                processing_tracker.update(
+                    lecture_id,
+                    0.0,
+                    total_steps,
+                    format_progress_message(start_message, 0.0, total_steps),
+                    context=context,
+                )
+                wav_path, _ = ensure_wav(
+                    source,
+                    output_dir=lecture_paths.raw_dir,
+                    stem=base_stem,
+                    timestamp=timestamp,
+                )
+                completed_steps = 1.0
+                processing_tracker.update(
+                    lecture_id,
+                    completed_steps,
+                    total_steps,
+                    format_progress_message(progress_label, completed_steps, total_steps),
+                    context=context,
+                )
+                samples, sample_rate = load_wav_file(wav_path)
+
+                completed_steps += 1.0
+                (
+                    stage_message,
+                    stage_description,
+                    stage_index,
+                    total_stage_count,
+                ) = build_mastering_stage_progress_message(completed_steps, total_steps)
+                processing_tracker.update(
+                    lecture_id,
+                    completed_steps,
+                    total_steps,
+                    stage_message,
+                    context=context,
+                )
+
+                stage_base = completed_steps
+
+                def _handle_mastering_substage(
+                    step_index: int,
+                    step_count: int,
+                    detail: str,
+                    finished: bool,
+                ) -> None:
+                    if step_count <= 0:
+                        return
+                    if finished:
+                        fraction = float(step_index) / float(step_count)
+                    else:
+                        fraction = float(step_index - 1) / float(step_count)
+                    fraction = max(0.0, min(fraction, 1.0))
+                    progress_value = min(stage_base + fraction, total_steps)
+                    message_detail = detail.strip() or stage_description.summary
+                    if stage_index is not None and total_stage_count is not None:
+                        label = f"====> Stage {stage_index}/{total_stage_count} – {message_detail}"
+                    else:
+                        label = f"====> {message_detail}"
+                    processing_tracker.update(
+                        lecture_id,
+                        progress_value,
+                        total_steps,
+                        format_progress_message(label, progress_value, total_steps),
+                        context=context,
+                    )
+
+                processed_audio = preprocess_audio(
+                    samples,
+                    sample_rate,
+                    progress_callback=_handle_mastering_substage,
+                )
+
+                completed_steps += 1.0
+                processing_tracker.update(
+                    lecture_id,
+                    completed_steps,
+                    total_steps,
+                    format_progress_message(
+                        "====> Rendering mastered waveform…",
+                        completed_steps,
+                        total_steps,
+                    ),
+                    context=context,
+                )
+
+                lecture_paths.processed_audio_dir.mkdir(parents=True, exist_ok=True)
+                processed_name = f"{base_stem}-master.wav"
+                processed_target = lecture_paths.processed_audio_dir / processed_name
+                if processed_target.exists():
+                    processed_name = build_timestamped_name(
+                        f"{base_stem}-master",
+                        timestamp=timestamp,
+                        extension=".wav",
+                    )
+                    processed_target = lecture_paths.processed_audio_dir / processed_name
+
+                save_preprocessed_wav(processed_target, processed_audio, sample_rate)
+
+                completion = format_progress_message(
+                    completion_message,
+                    total_steps,
+                    total_steps,
+                )
+                processing_tracker.update(
+                    lecture_id,
+                    total_steps,
+                    total_steps,
+                    completion,
+                    context=context,
+                )
+                return processed_target, completion
+
+            mastered_path, completion = await _run_serialized_background_task(
+                lambda: _perform_audio_mastering(source_audio),
+                context_label="audio mastering",
+                queued_callback=lambda: processing_tracker.note(
+                    lecture_id,
+                    "====> Waiting for other tasks to finish…",
+                    context=context,
+                ),
+                job_id=job_id,
+            )
+        except HTTPException as error:
+            detail = getattr(error, "detail", str(error))
+            processing_tracker.fail(
+                lecture_id,
+                f"====> {detail}",
+                context=context,
+                exception=error,
+            )
+            raise RuntimeError(detail) from error
+        except Exception as error:  # noqa: BLE001 - defensive
+            processing_tracker.fail(
+                lecture_id,
+                f"====> {error}",
+                context=context,
+                exception=error,
+            )
+            raise
+        else:
+            processed_relative = mastered_path.relative_to(storage_root).as_posix()
+            repository.update_lecture_assets(
+                lecture_id,
+                processed_audio_path=processed_relative,
+            )
+            processing_tracker.finish(lecture_id, completion, context=context)
+            _log_event(
+                "Audio mastering task completed",
+                lecture_id=lecture_id,
+                processed_audio_path=processed_relative,
+                task_id=task.id,
+            )
+        finally:
+            _JOB_ID_VAR.reset(job_token)
+
+
+    async def _run_slide_bundle_task(task: QueuedTask) -> None:
+        lecture_id = task.lecture_id
+        lecture = repository.get_lecture(lecture_id)
+        if lecture is None:
+            raise RuntimeError("Lecture not found")
+        if not lecture.slide_path:
+            raise RuntimeError("Upload a PDF before processing slides.")
+
+        class_record, module = _require_hierarchy(lecture)
+        storage_root = _require_storage_root()
+        try:
+            slide_source = _resolve_storage_path(storage_root, lecture.slide_path)
+        except Exception as error:  # pragma: no cover - defensive
+            raise RuntimeError("Slide file not found") from error
+        if not slide_source.exists():
+            raise RuntimeError("Slide file not found")
+
+        lecture_paths = LecturePaths.build(
+            storage_root,
+            class_record.name,
+            module.name,
+            lecture.name,
+        )
+        lecture_paths.ensure()
+
+        options = task.options or {}
+        page_range: Optional[Tuple[int, int]] = None
+        start_value = options.get("page_start")
+        end_value = options.get("page_end")
+        try:
+            start_number = int(start_value) if start_value is not None else None
+            end_number = int(end_value) if end_value is not None else None
+        except (TypeError, ValueError):
+            start_number = None
+            end_number = None
+        if start_number is not None or end_number is not None:
+            start_page = start_number if start_number and start_number > 0 else 1
+            end_page = end_number if end_number and end_number > 0 else start_page
+            if end_page < start_page:
+                start_page, end_page = end_page, start_page
+            page_range = (start_page, end_page)
+
+        context = {
+            "operation": "slide_bundle",
+            "task_id": task.id,
+            "page_range": {
+                "start": page_range[0],
+                "end": page_range[1],
+            }
+            if page_range
+            else None,
+        }
+        start_message = "====> Preparing slide bundle…"
+        progress_label = "====> Extracting slide images and text…"
+        completion_label = "====> Slide bundle completed."
+
+        job_id = _new_correlation_id()
+        job_token = _JOB_ID_VAR.set(job_id)
+        processing_tracker.start(lecture_id, start_message, context=context)
+        progress_total: Optional[float] = None
+
+        def _handle_slide_progress(processed: int, total: Optional[int]) -> None:
+            nonlocal progress_total
+            if total and total > 0:
+                progress_total = float(total)
+                current = float(max(0, min(processed, total)))
+                message = format_progress_message(progress_label, current, progress_total)
+                processing_tracker.update(
+                    lecture_id,
+                    current,
+                    progress_total,
+                    message,
+                    context=context,
+                )
+            else:
+                processing_tracker.note(lecture_id, progress_label, context=context)
+
+        generator = globals().get("_generate_slide_bundle", _generate_slide_bundle)
+
+        try:
+            slide_bundle_relative, notes_relative = await _run_serialized_background_task(
+                lambda: generator(
+                    slide_source,
+                    lecture_paths,
+                    _make_slide_converter(),
+                    page_range=page_range,
+                    progress_callback=_handle_slide_progress,
+                ),
+                context_label="slide bundle",
+                queued_callback=lambda: processing_tracker.note(
+                    lecture_id,
+                    "====> Waiting for other tasks to finish…",
+                    context=context,
+                ),
+                job_id=job_id,
+            )
+        except HTTPException as error:
+            detail = getattr(error, "detail", str(error))
+            processing_tracker.fail(
+                lecture_id,
+                f"====> {detail}",
+                context=context,
+                exception=error,
+            )
+            raise RuntimeError(detail) from error
+        except SlideConversionDependencyError as error:
+            processing_tracker.fail(
+                lecture_id,
+                f"====> {error}",
+                context=context,
+                exception=error,
+            )
+            raise RuntimeError(str(error)) from error
+        except SlideConversionError as error:
+            processing_tracker.fail(
+                lecture_id,
+                f"====> {error}",
+                context=context,
+                exception=error,
+            )
+            raise RuntimeError(str(error)) from error
+        except Exception as error:  # noqa: BLE001 - defensive
+            processing_tracker.fail(
+                lecture_id,
+                f"====> {error}",
+                context=context,
+                exception=error,
+            )
+            raise
+        else:
+            if progress_total and progress_total > 0:
+                completion_message = format_progress_message(
+                    completion_label,
+                    progress_total,
+                    progress_total,
+                )
+            else:
+                completion_message = completion_label
+            update_kwargs: Dict[str, Optional[str]] = {"slide_path": lecture.slide_path}
+            if slide_bundle_relative is not None:
+                update_kwargs["slide_image_dir"] = slide_bundle_relative
+            if notes_relative is not None:
+                update_kwargs["notes_path"] = notes_relative
+            repository.update_lecture_assets(lecture_id, **update_kwargs)
+            processing_tracker.finish(lecture_id, completion_message, context=context)
+            _log_event(
+                "Slide bundle task completed",
+                lecture_id=lecture_id,
+                slide_path=lecture.slide_path,
+                slide_image_dir=slide_bundle_relative,
+                notes_path=notes_relative,
+                task_id=task.id,
+            )
+        finally:
+            _JOB_ID_VAR.reset(job_token)
+
+
+    async def _execute_task_queue_entry(task: QueuedTask) -> None:
+        if task.operation == "audio_mastering":
+            await _run_audio_mastering_task(task)
+            return
+        if task.operation == "slide_bundle":
+            await _run_slide_bundle_task(task)
+            return
+        raise RuntimeError(f"Unsupported task operation: {task.operation}")
+
+
+    task_queue = TaskQueue(_execute_task_queue_entry)
+    app.state.task_queue = task_queue
+
+    async def _start_task_queue() -> None:
+        await task_queue.start()
+
+    async def _stop_task_queue() -> None:
+        await task_queue.stop()
+
+    app.add_event_handler("startup", _start_task_queue)
+    app.add_event_handler("shutdown", _stop_task_queue)
 
 
     @app.get("/", response_class=HTMLResponse)
@@ -3221,14 +3796,52 @@ def create_app(
         progress = processing_tracker.get(lecture_id)
         return {"progress": progress}
 
+    @app.get("/api/tasks")
+    async def list_tasks() -> Dict[str, Any]:
+        queue_entries = await task_queue.list()
+        queue_payload = [_serialize_task_entry(entry) for entry in queue_entries]
+        active_entries = _collect_progress_entries()
+        return {"queue": queue_payload, "active": active_entries}
+
+    @app.post("/api/tasks", status_code=status.HTTP_201_CREATED)
+    async def create_tasks(payload: TaskBatchRequest) -> Dict[str, Any]:
+        definitions = payload.tasks or []
+        if not definitions:
+            raise HTTPException(status_code=400, detail="No tasks provided")
+
+        enqueued: List[QueuedTask] = []
+        for definition in definitions:
+            lecture_id = definition.lecture_id
+            lecture = repository.get_lecture(lecture_id)
+            if lecture is None:
+                raise HTTPException(status_code=404, detail="Lecture not found")
+            operation = definition.operation
+            if operation == "audio_mastering":
+                if not (lecture.audio_path or lecture.processed_audio_path):
+                    raise HTTPException(status_code=400, detail="Upload an audio file first")
+            elif operation == "slide_bundle":
+                if not lecture.slide_path:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Upload a PDF before processing slides.",
+                    )
+            else:
+                raise HTTPException(status_code=400, detail="Unsupported task operation")
+
+            entry = await task_queue.enqueue(lecture_id, operation, definition.options or {})
+            enqueued.append(entry)
+            _log_event(
+                "Queued background task",
+                lecture_id=lecture_id,
+                operation=operation,
+                task_id=entry.id,
+            )
+
+        return {"tasks": [_serialize_task_entry(task) for task in enqueued]}
+
     @app.get("/api/progress")
     async def list_progress_entries() -> Dict[str, Any]:
-        entries: List[Dict[str, Any]] = []
-        for state in progress_tracker.all().values():
-            entries.append(_progress_entry("transcription", state))
-        for state in processing_tracker.all().values():
-            entries.append(_progress_entry("processing", state))
-        entries.sort(key=lambda entry: entry.get("timestamp") or 0, reverse=True)
+        entries = _collect_progress_entries()
         if entries:
             _log_event("Enumerated active tasks", count=len(entries))
         else:
@@ -4034,9 +4647,11 @@ def create_app(
             slide_bundle_relative: Optional[str] = None
             notes_relative: Optional[str] = None
 
+            generator = globals().get("_generate_slide_bundle", _generate_slide_bundle)
+
             try:
                 slide_bundle_relative, notes_relative = await _run_serialized_background_task(
-                    lambda: _generate_slide_bundle(
+                    lambda: generator(
                         slide_destination,
                         lecture_paths,
                         _make_slide_converter(),
@@ -4507,6 +5122,8 @@ def create_app(
 
         _log_event("SPA fallback resolved", path=requested_path)
         return HTMLResponse(_render_index_html(request))
+
+    globals()["_generate_slide_bundle"] = _generate_slide_bundle
 
     initial_settings = _load_ui_settings()
     _update_debug_state(initial_settings.debug_enabled)
