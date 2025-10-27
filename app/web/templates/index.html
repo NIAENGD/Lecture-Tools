@@ -871,6 +871,92 @@
         display: none !important;
       }
 
+      .bulk-upload-window {
+        width: min(460px, 100%);
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .bulk-upload-window .dialog-header {
+        margin-bottom: -4px;
+      }
+
+      .bulk-upload-file {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 12px 14px;
+        border-radius: 10px;
+        border: 1px dashed var(--panel-border);
+        background: rgba(148, 163, 184, 0.08);
+      }
+
+      .bulk-upload-file-name {
+        font-weight: 600;
+        word-break: break-word;
+      }
+
+      .bulk-upload-file-size {
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      .bulk-upload-field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .bulk-upload-field select {
+        padding: 10px 12px;
+        border-radius: 8px;
+        border: 1px solid var(--panel-border);
+        background: var(--panel-bg);
+        color: var(--text);
+        font-size: 0.95rem;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .bulk-upload-field select:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+      }
+
+      .bulk-upload-status {
+        min-height: 20px;
+        font-size: 0.9rem;
+        color: var(--muted);
+      }
+
+      .bulk-upload-status.success {
+        color: var(--status-success-text);
+      }
+
+      .bulk-upload-status.error {
+        color: var(--status-error-text);
+      }
+
+      .bulk-upload-status.info {
+        color: var(--status-info-text);
+      }
+
+      .bulk-upload-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .bulk-upload-actions-group {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+
       .dialog-pending-window {
         width: min(360px, calc(100vw - 48px));
         align-items: center;
@@ -1870,6 +1956,8 @@
         display: flex;
         justify-content: flex-end;
         align-items: flex-end;
+        gap: 12px;
+        flex-wrap: wrap;
       }
 
       .edit-banner {
@@ -2903,12 +2991,21 @@
                     </label>
                   </div>
                   <div class="task-form-actions">
+                    <button
+                      id="task-bulk-upload"
+                      type="button"
+                      class="secondary"
+                      data-i18n="tasks.bulkUpload.button"
+                    >
+                      Bulk upload
+                    </button>
                     <button id="task-submit" type="submit" class="secondary" data-i18n="tasks.form.submit">
                       Add task
                     </button>
                   </div>
                 </div>
               </form>
+              <input id="task-bulk-input" class="sr-only" type="file" multiple />
               <div id="tasks-empty" class="tasks-empty" data-i18n="tasks.empty">
                 No tasks in the queue.
               </div>
@@ -3565,6 +3662,45 @@
         </div>
       </div>
     </div>
+    <div id="bulk-upload-dialog" class="dialog hidden" aria-hidden="true" tabindex="-1">
+      <div id="bulk-upload-backdrop" class="dialog-backdrop"></div>
+      <div
+        id="bulk-upload-window"
+        class="dialog-window bulk-upload-window"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="bulk-upload-title"
+        aria-describedby="bulk-upload-subtitle"
+      >
+        <div class="dialog-header">
+          <h2 id="bulk-upload-title" class="dialog-title"></h2>
+          <p id="bulk-upload-subtitle" class="dialog-message"></p>
+        </div>
+        <div class="bulk-upload-file">
+          <div id="bulk-upload-file-name" class="bulk-upload-file-name"></div>
+          <div id="bulk-upload-file-size" class="bulk-upload-file-size"></div>
+        </div>
+        <label class="bulk-upload-field" for="bulk-upload-lecture">
+          <span id="bulk-upload-lecture-label"></span>
+          <select id="bulk-upload-lecture"></select>
+        </label>
+        <label class="bulk-upload-field" for="bulk-upload-type">
+          <span id="bulk-upload-type-label"></span>
+          <select id="bulk-upload-type"></select>
+        </label>
+        <div id="bulk-upload-status" class="bulk-upload-status" role="status"></div>
+        <div class="bulk-upload-actions">
+          <div class="bulk-upload-actions-group">
+            <button id="bulk-upload-dispose" type="button" class="dialog-button secondary"></button>
+            <button id="bulk-upload-dispose-all" type="button" class="dialog-button danger"></button>
+          </div>
+          <div class="bulk-upload-actions-group">
+            <button id="bulk-upload-cancel" type="button" class="dialog-button secondary"></button>
+            <button id="bulk-upload-next" type="button" class="dialog-button primary"></button>
+          </div>
+        </div>
+      </div>
+    </div>
     <script>
       (async function () {
         const translations = {
@@ -3649,6 +3785,27 @@
                 open: 'Open lecture',
                 retry: 'Retry',
                 dismiss: 'Dismiss',
+              },
+              bulkUpload: {
+                button: 'Bulk upload',
+                title: 'Bulk upload',
+                fileProgress: 'File {{current}} of {{total}}',
+                lectureLabel: 'Lecture',
+                typeLabel: 'File type',
+                selectLecture: 'Select a lecture',
+                selectType: 'Select file type',
+                next: 'Upload & next',
+                complete: 'Upload & complete',
+                skip: 'Dispose',
+                skipAll: 'Dispose all',
+                cancel: 'Cancel',
+                uploading: 'Uploading {{name}}…',
+                success: 'Uploaded {{name}}.',
+                failure: 'Failed to upload {{name}}.',
+                disposed: 'Skipped {{name}}.',
+                finished: 'Bulk upload complete: {{uploaded}} uploaded, {{skipped}} skipped.',
+                noLectures: 'Add a lecture before starting a bulk upload.',
+                noTypes: 'No uploadable asset types are available.',
               },
               status: {
                 pending: 'Pending',
@@ -4176,6 +4333,27 @@
                 retry: '重试',
                 dismiss: '忽略',
               },
+              bulkUpload: {
+                button: '批量上传',
+                title: '批量上传',
+                fileProgress: '第 {{current}} 个文件，共 {{total}} 个',
+                lectureLabel: '讲座',
+                typeLabel: '文件类型',
+                selectLecture: '请选择讲座',
+                selectType: '请选择文件类型',
+                next: '上传并继续',
+                complete: '上传并完成',
+                skip: '丢弃',
+                skipAll: '全部丢弃',
+                cancel: '取消',
+                uploading: '正在上传 {{name}}…',
+                success: '已上传 {{name}}。',
+                failure: '上传 {{name}} 失败。',
+                disposed: '已跳过 {{name}}。',
+                finished: '批量上传完成：已上传 {{uploaded}} 个，已跳过 {{skipped}} 个。',
+                noLectures: '开始批量上传前请先添加讲座。',
+                noTypes: '没有可用的上传类型。',
+              },
               status: {
                 pending: '等待中',
                 running: '处理中',
@@ -4693,6 +4871,27 @@
                 open: 'Abrir clase',
                 retry: 'Reintentar',
                 dismiss: 'Descartar',
+              },
+              bulkUpload: {
+                button: 'Carga masiva',
+                title: 'Carga masiva',
+                fileProgress: 'Archivo {{current}} de {{total}}',
+                lectureLabel: 'Clase',
+                typeLabel: 'Tipo de archivo',
+                selectLecture: 'Seleccione una clase',
+                selectType: 'Seleccione un tipo de archivo',
+                next: 'Subir y continuar',
+                complete: 'Subir y finalizar',
+                skip: 'Descartar',
+                skipAll: 'Descartar todo',
+                cancel: 'Cancelar',
+                uploading: 'Subiendo {{name}}…',
+                success: '{{name}} subido.',
+                failure: 'Error al subir {{name}}.',
+                disposed: 'Se omitió {{name}}.',
+                finished: 'Carga masiva completada: {{uploaded}} subidos, {{skipped}} omitidos.',
+                noLectures: 'Agregue una clase antes de iniciar la carga masiva.',
+                noTypes: 'No hay tipos de archivo disponibles para subir.',
               },
               status: {
                 pending: 'Pendiente',
@@ -5223,6 +5422,28 @@
                 open: 'Ouvrir la leçon',
                 retry: 'Réessayer',
                 dismiss: 'Ignorer',
+              },
+              bulkUpload: {
+                button: 'Téléversement groupé',
+                title: 'Téléversement groupé',
+                fileProgress: 'Fichier {{current}} sur {{total}}',
+                lectureLabel: 'Cours',
+                typeLabel: 'Type de fichier',
+                selectLecture: 'Sélectionnez un cours',
+                selectType: 'Sélectionnez un type de fichier',
+                next: 'Téléverser et suivant',
+                complete: 'Téléverser et terminer',
+                skip: 'Ignorer',
+                skipAll: 'Tout ignorer',
+                cancel: 'Annuler',
+                uploading: 'Téléversement de {{name}}…',
+                success: '{{name}} téléversé.',
+                failure: 'Échec du téléversement de {{name}}.',
+                disposed: '{{name}} ignoré.',
+                finished:
+                  'Téléversement groupé terminé : {{uploaded}} téléversés, {{skipped}} ignorés.',
+                noLectures: 'Ajoutez un cours avant de lancer un téléversement groupé.',
+                noTypes: 'Aucun type de fichier téléversable n’est disponible.',
               },
               status: {
                 pending: 'En attente',
@@ -5962,6 +6183,10 @@
             loading: false,
             timer: null,
           },
+          bulkUpload: {
+            lastLectureId: null,
+            lastType: null,
+          },
           systemUpdate: {
             running: false,
             startedAt: null,
@@ -6176,6 +6401,8 @@
             pageStart: document.getElementById('task-page-start'),
             pageEnd: document.getElementById('task-page-end'),
             submit: document.getElementById('task-submit'),
+            bulkUpload: document.getElementById('task-bulk-upload'),
+            bulkInput: document.getElementById('task-bulk-input'),
           },
           dialog: {
             root: document.getElementById('dialog-root'),
@@ -6242,12 +6469,39 @@
             cancel: document.getElementById('upload-cancel'),
             confirm: document.getElementById('upload-confirm'),
           },
+          bulkUploadDialog: {
+            root: document.getElementById('bulk-upload-dialog'),
+            backdrop: document.getElementById('bulk-upload-backdrop'),
+            window: document.getElementById('bulk-upload-window'),
+            title: document.getElementById('bulk-upload-title'),
+            subtitle: document.getElementById('bulk-upload-subtitle'),
+            fileName: document.getElementById('bulk-upload-file-name'),
+            fileSize: document.getElementById('bulk-upload-file-size'),
+            lectureLabel: document.getElementById('bulk-upload-lecture-label'),
+            lecture: document.getElementById('bulk-upload-lecture'),
+            typeLabel: document.getElementById('bulk-upload-type-label'),
+            type: document.getElementById('bulk-upload-type'),
+            status: document.getElementById('bulk-upload-status'),
+            dispose: document.getElementById('bulk-upload-dispose'),
+            disposeAll: document.getElementById('bulk-upload-dispose-all'),
+            cancel: document.getElementById('bulk-upload-cancel'),
+            next: document.getElementById('bulk-upload-next'),
+          },
         };
 
         const DEFAULT_DEBUG_EMPTY_TEXT = dom.debugEmpty
           ? dom.debugEmpty.textContent || ''
           : '';
         const FILTERED_DEBUG_EMPTY_TEXT = 'No log entries match the current filters.';
+
+        if (dom.tasks) {
+          if (dom.tasks.bulkInput && bulkUploadAccept) {
+            dom.tasks.bulkInput.setAttribute('accept', bulkUploadAccept);
+          }
+          if (dom.tasks.bulkUpload) {
+            dom.tasks.bulkUpload.disabled = true;
+          }
+        }
 
         if (dom.debugLog) {
           dom.debugLog.addEventListener('scroll', () => {
@@ -7820,6 +8074,22 @@
           },
         ];
 
+        const uploadableAssetDefinitions = assetDefinitions.filter(
+          (definition) =>
+            definition && typeof definition.accept === 'string' && definition.accept.trim().length > 0,
+        );
+
+        const bulkUploadAccept = Array.from(
+          new Set(
+            uploadableAssetDefinitions.flatMap((definition) =>
+              definition.accept
+                .split(',')
+                .map((value) => value.trim())
+                .filter(Boolean),
+            ),
+          ),
+        ).join(',');
+
         function showStatus(message, variant = 'info', options = {}) {
           if (!dom.status) {
             return;
@@ -9302,7 +9572,7 @@
           }
         }
 
-        const dialogState = { active: false, uploadActive: false };
+        const dialogState = { active: false, uploadActive: false, bulkActive: false };
 
         let pdfjsLibPromise = null;
 
@@ -9545,7 +9815,12 @@
         } = {}) {
           return new Promise((resolve) => {
             const dialog = dom.dialog;
-            if (!dialog.root || dialogState.active || dialogState.uploadActive) {
+            if (
+              !dialog.root ||
+              dialogState.active ||
+              dialogState.uploadActive ||
+              dialogState.bulkActive
+            ) {
               resolve({ confirmed: false, value: null });
               return;
             }
@@ -9709,7 +9984,7 @@
         async function showUploadDialog(options = {}) {
           return new Promise((resolve) => {
             const dialog = dom.uploadDialog;
-            if (!dialog || !dialog.root || dialogState.uploadActive) {
+            if (!dialog || !dialog.root || dialogState.uploadActive || dialogState.bulkActive) {
               resolve({ confirmed: false, uploaded: false, file: null, result: null, meta: null });
               return;
             }
@@ -11838,6 +12113,38 @@
           });
         }
 
+        function getLectureOptionList() {
+          const lectures = [];
+          state.classes.forEach((klass) => {
+            (klass.modules || []).forEach((module) => {
+              (module.lectures || []).forEach((lecture) => {
+                lectures.push({
+                  id: lecture.id,
+                  name: lecture.name,
+                  className: klass.name,
+                  moduleName: module.name,
+                });
+              });
+            });
+          });
+          return lectures;
+        }
+
+        function formatLectureOptionLabel(item) {
+          if (!item) {
+            return '';
+          }
+          const contextParts = [];
+          if (item.className) {
+            contextParts.push(item.className);
+          }
+          if (item.moduleName) {
+            contextParts.push(item.moduleName);
+          }
+          const contextLabel = contextParts.length ? ` — ${contextParts.join(' • ')}` : '';
+          return `${item.name}${contextLabel}`;
+        }
+
         function updateTaskLectureOptions() {
           if (!dom.tasks || !dom.tasks.lecture) {
             return;
@@ -11852,19 +12159,7 @@
           placeholder.disabled = true;
           select.appendChild(placeholder);
 
-          const lectures = [];
-          state.classes.forEach((klass) => {
-            (klass.modules || []).forEach((module) => {
-              (module.lectures || []).forEach((lecture) => {
-                lectures.push({
-                  id: lecture.id,
-                  name: lecture.name,
-                  className: klass.name,
-                  moduleName: module.name,
-                });
-              });
-            });
-          });
+          const lectures = getLectureOptionList();
 
           lectures.forEach((item) => {
             if (!item || !Number.isFinite(Number(item.id))) {
@@ -11872,15 +12167,7 @@
             }
             const option = document.createElement('option');
             option.value = String(item.id);
-            const contextParts = [];
-            if (item.className) {
-              contextParts.push(item.className);
-            }
-            if (item.moduleName) {
-              contextParts.push(item.moduleName);
-            }
-            const contextLabel = contextParts.length ? ` — ${contextParts.join(' • ')}` : '';
-            option.textContent = `${item.name}${contextLabel}`;
+            option.textContent = formatLectureOptionLabel(item);
             select.appendChild(option);
           });
 
@@ -11896,6 +12183,10 @@
 
           if (dom.tasks.submit) {
             dom.tasks.submit.disabled = lectures.length === 0;
+          }
+
+          if (dom.tasks.bulkUpload) {
+            dom.tasks.bulkUpload.disabled = lectures.length === 0;
           }
 
           if (dom.tasks.operation) {
@@ -11918,6 +12209,478 @@
           }
           const value = dom.tasks.operation.value;
           dom.tasks.slideOptions.classList.toggle('hidden', value !== 'slide_bundle');
+        }
+
+        function guessBulkAssetType(file) {
+          if (!file) {
+            return null;
+          }
+          const name = typeof file.name === 'string' ? file.name.toLowerCase() : '';
+          const type = typeof file.type === 'string' ? file.type.toLowerCase() : '';
+          const extension = name.includes('.') ? name.slice(name.lastIndexOf('.') + 1) : '';
+          const audioExtensions = new Set(['wav', 'mp3', 'm4a', 'aac', 'flac', 'ogg', 'oga', 'opus']);
+          if (type.startsWith('audio/') || audioExtensions.has(extension)) {
+            return 'audio';
+          }
+          if (type === 'application/pdf' || extension === 'pdf') {
+            return 'slides';
+          }
+          if (type === 'text/plain' || extension === 'txt') {
+            return 'transcript';
+          }
+          if (type.includes('markdown') || ['md', 'markdown'].includes(extension)) {
+            return 'notes';
+          }
+          if (
+            ['application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'].includes(
+              type,
+            ) ||
+            ['doc', 'docx'].includes(extension)
+          ) {
+            return 'notes';
+          }
+          return null;
+        }
+
+        async function uploadLectureAssetWithProgress(lectureId, definition, file, onProgress) {
+          if (!definition) {
+            throw new Error('Unsupported asset type.');
+          }
+          const formData = new FormData();
+          formData.append('file', file);
+          const endpoint = `/api/lectures/${lectureId}/assets/${definition.type}`;
+          return uploadWithProgress(endpoint, {
+            method: 'POST',
+            body: formData,
+            onProgress: (ratio) => {
+              if (typeof onProgress === 'function') {
+                onProgress(Number.isFinite(ratio) ? ratio : 0);
+              }
+            },
+          });
+        }
+
+        async function showBulkUploadStep(options) {
+          return new Promise((resolve) => {
+            const dialog = dom.bulkUploadDialog;
+            if (
+              !dialog ||
+              !dialog.root ||
+              dialogState.bulkActive ||
+              dialogState.uploadActive ||
+              dialogState.active
+            ) {
+              resolve({ action: 'cancel' });
+              return;
+            }
+
+            dialogState.bulkActive = true;
+            const previousActive =
+              document.activeElement instanceof HTMLElement ? document.activeElement : null;
+            let settled = false;
+            let busy = false;
+
+            const file = options?.file || null;
+            const lectures = Array.isArray(options?.lectures) ? options.lectures : [];
+            const total = Number.isFinite(Number(options?.total)) ? Number(options.total) : 1;
+            const index = Number.isFinite(Number(options?.index)) ? Number(options.index) : 0;
+            const currentNumber = Math.min(total, index + 1);
+            const isLast = currentNumber === total;
+            const defaultLectureId = Number(options?.defaultLectureId) || null;
+            const defaultType = typeof options?.defaultType === 'string' ? options.defaultType : null;
+
+            const availableDefinitions = uploadableAssetDefinitions.slice();
+
+            function setStatusMessage(message, variant = '') {
+              if (!dialog.status) {
+                return;
+              }
+              dialog.status.textContent = message || '';
+              dialog.status.classList.remove('success', 'error', 'info');
+              if (variant) {
+                dialog.status.classList.add(variant);
+              }
+            }
+
+            function setBusyState(value) {
+              busy = Boolean(value);
+              const disabled = Boolean(value);
+              const controls = [dialog.lecture, dialog.type, dialog.dispose, dialog.disposeAll, dialog.cancel, dialog.next];
+              controls.forEach((control) => {
+                if (control) {
+                  control.disabled = disabled;
+                }
+              });
+            }
+
+            function cleanup(result) {
+              if (settled) {
+                return;
+              }
+              settled = true;
+              dialog.next.removeEventListener('click', handleConfirm);
+              if (dialog.dispose) {
+                dialog.dispose.removeEventListener('click', handleDispose);
+              }
+              if (dialog.disposeAll) {
+                dialog.disposeAll.removeEventListener('click', handleDisposeAll);
+              }
+              if (dialog.cancel) {
+                dialog.cancel.removeEventListener('click', handleCancel);
+              }
+              if (dialog.backdrop) {
+                dialog.backdrop.removeEventListener('click', handleCancel);
+              }
+              if (dialog.window) {
+                dialog.window.removeEventListener('keydown', handleKeyDown);
+              }
+              dialog.root.classList.add('hidden');
+              dialog.root.setAttribute('aria-hidden', 'true');
+              document.body.classList.remove('dialog-open');
+              setStatusMessage('', '');
+              if (dialog.lecture) {
+                dialog.lecture.innerHTML = '';
+              }
+              if (dialog.type) {
+                dialog.type.innerHTML = '';
+              }
+              dialogState.bulkActive = false;
+              if (previousActive) {
+                previousActive.focus({ preventScroll: true });
+              }
+              resolve(result);
+            }
+
+            function handleDispose(event) {
+              event.preventDefault();
+              cleanup({ action: 'dispose' });
+            }
+
+            function handleDisposeAll(event) {
+              event.preventDefault();
+              cleanup({ action: 'dispose_all' });
+            }
+
+            function handleCancel(event) {
+              event.preventDefault();
+              cleanup({ action: 'cancel' });
+            }
+
+            function handleKeyDown(event) {
+              if (event.key === 'Escape') {
+                event.preventDefault();
+                handleCancel(event);
+                return;
+              }
+              if (event.key === 'Enter') {
+                if (document.activeElement === dialog.dispose) {
+                  handleDispose(event);
+                  return;
+                }
+                if (document.activeElement === dialog.disposeAll) {
+                  handleDisposeAll(event);
+                  return;
+                }
+                if (document.activeElement === dialog.cancel) {
+                  handleCancel(event);
+                  return;
+                }
+                handleConfirm(event);
+                return;
+              }
+              if (event.key === 'Tab') {
+                const focusable = [
+                  dialog.lecture,
+                  dialog.type,
+                  dialog.dispose,
+                  dialog.disposeAll,
+                  dialog.cancel,
+                  dialog.next,
+                ].filter((element) => element instanceof HTMLElement && !element.disabled);
+                if (!focusable.length) {
+                  return;
+                }
+                const currentIndex = focusable.indexOf(document.activeElement);
+                if (event.shiftKey) {
+                  const previousIndex = currentIndex <= 0 ? focusable.length - 1 : currentIndex - 1;
+                  focusable[previousIndex].focus({ preventScroll: true });
+                } else {
+                  const nextIndex = currentIndex === focusable.length - 1 ? 0 : currentIndex + 1;
+                  focusable[nextIndex].focus({ preventScroll: true });
+                }
+                event.preventDefault();
+              }
+            }
+
+            async function handleConfirm(event) {
+              event.preventDefault();
+              if (busy) {
+                return;
+              }
+              const lectureId = Number(dialog.lecture?.value || '');
+              if (!Number.isFinite(lectureId) || lectureId <= 0) {
+                setStatusMessage(t('tasks.bulkUpload.selectLecture'), 'error');
+                dialog.lecture?.focus({ preventScroll: true });
+                return;
+              }
+              const assetType = dialog.type?.value || '';
+              if (!assetType) {
+                setStatusMessage(t('tasks.bulkUpload.selectType'), 'error');
+                dialog.type?.focus({ preventScroll: true });
+                return;
+              }
+              const definition = availableDefinitions.find((item) => item.type === assetType);
+              if (!definition) {
+                setStatusMessage(t('tasks.bulkUpload.noTypes'), 'error');
+                return;
+              }
+
+              const displayName = file?.name || t('tasks.bulkUpload.title');
+              setBusyState(true);
+              setStatusMessage(t('tasks.bulkUpload.uploading', { name: displayName }), 'info');
+
+              try {
+                await uploadLectureAssetWithProgress(lectureId, definition, file, (ratio) => {
+                  const percentage = Math.max(0, Math.min(100, Math.round(ratio * 100)));
+                  setStatusMessage(
+                    `${t('tasks.bulkUpload.uploading', { name: displayName })} (${percentage}%)`,
+                    'info',
+                  );
+                });
+                cleanup({ action: 'uploaded', lectureId, assetType: definition.type });
+              } catch (error) {
+                const message = error instanceof Error ? error.message : String(error);
+                const fallback = t('tasks.bulkUpload.failure', { name: displayName });
+                setStatusMessage(message || fallback, 'error');
+                setBusyState(false);
+              }
+            }
+
+            if (dialog.title) {
+              dialog.title.textContent = t('tasks.bulkUpload.title');
+            }
+            if (dialog.subtitle) {
+              dialog.subtitle.textContent = t('tasks.bulkUpload.fileProgress', {
+                current: currentNumber,
+                total,
+              });
+            }
+            if (dialog.fileName) {
+              dialog.fileName.textContent = file?.name || t('tasks.bulkUpload.title');
+            }
+            if (dialog.fileSize) {
+              dialog.fileSize.textContent =
+                typeof file?.size === 'number' && !Number.isNaN(file.size)
+                  ? formatBytes(file.size)
+                  : '';
+            }
+            if (dialog.lectureLabel) {
+              dialog.lectureLabel.textContent = t('tasks.bulkUpload.lectureLabel');
+            }
+            if (dialog.typeLabel) {
+              dialog.typeLabel.textContent = t('tasks.bulkUpload.typeLabel');
+            }
+
+            if (dialog.lecture) {
+              dialog.lecture.innerHTML = '';
+              const lecturePlaceholder = document.createElement('option');
+              lecturePlaceholder.value = '';
+              lecturePlaceholder.disabled = true;
+              lecturePlaceholder.textContent = t('tasks.bulkUpload.selectLecture');
+              dialog.lecture.appendChild(lecturePlaceholder);
+
+              lectures.forEach((item) => {
+                if (!item || !Number.isFinite(Number(item.id))) {
+                  return;
+                }
+                const option = document.createElement('option');
+                option.value = String(item.id);
+                option.textContent = formatLectureOptionLabel(item);
+                dialog.lecture.appendChild(option);
+              });
+
+              if (defaultLectureId && lectures.some((item) => Number(item.id) === defaultLectureId)) {
+                dialog.lecture.value = String(defaultLectureId);
+                lecturePlaceholder.selected = false;
+              } else {
+                lecturePlaceholder.selected = true;
+              }
+            }
+
+            if (dialog.type) {
+              dialog.type.innerHTML = '';
+              const typePlaceholder = document.createElement('option');
+              typePlaceholder.value = '';
+              typePlaceholder.disabled = true;
+              typePlaceholder.textContent = t('tasks.bulkUpload.selectType');
+              dialog.type.appendChild(typePlaceholder);
+
+              availableDefinitions.forEach((definition) => {
+                if (!definition) {
+                  return;
+                }
+                const option = document.createElement('option');
+                option.value = definition.type;
+                option.textContent = t(definition.labelKey);
+                dialog.type.appendChild(option);
+              });
+
+              if (defaultType && availableDefinitions.some((definition) => definition.type === defaultType)) {
+                dialog.type.value = defaultType;
+                typePlaceholder.selected = false;
+              } else {
+                typePlaceholder.selected = true;
+              }
+            }
+
+            if (dialog.dispose) {
+              dialog.dispose.textContent = t('tasks.bulkUpload.skip');
+              dialog.dispose.disabled = false;
+              dialog.dispose.addEventListener('click', handleDispose);
+            }
+            if (dialog.disposeAll) {
+              dialog.disposeAll.textContent = t('tasks.bulkUpload.skipAll');
+              dialog.disposeAll.disabled = false;
+              dialog.disposeAll.addEventListener('click', handleDisposeAll);
+            }
+            if (dialog.cancel) {
+              dialog.cancel.textContent = t('tasks.bulkUpload.cancel');
+              dialog.cancel.disabled = false;
+              dialog.cancel.addEventListener('click', handleCancel);
+            }
+            if (dialog.next) {
+              dialog.next.textContent = isLast
+                ? t('tasks.bulkUpload.complete')
+                : t('tasks.bulkUpload.next');
+              dialog.next.disabled = false;
+              dialog.next.addEventListener('click', handleConfirm);
+            }
+            if (dialog.backdrop) {
+              dialog.backdrop.addEventListener('click', handleCancel);
+            }
+            if (dialog.window) {
+              dialog.window.addEventListener('keydown', handleKeyDown);
+            }
+
+            dialog.root.classList.remove('hidden');
+            dialog.root.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('dialog-open');
+            setStatusMessage('', '');
+            setBusyState(false);
+
+            const initialFocusTarget = (() => {
+              if (dialog.lecture && dialog.lecture.value) {
+                if (dialog.type && dialog.type.value) {
+                  return dialog.next;
+                }
+                return dialog.type;
+              }
+              return dialog.lecture;
+            })();
+
+            window.requestAnimationFrame(() => {
+              if (initialFocusTarget instanceof HTMLElement) {
+                initialFocusTarget.focus({ preventScroll: true });
+              }
+            });
+          });
+        }
+
+        async function startBulkUploadQueue(files) {
+          if (dialogState.bulkActive || dialogState.uploadActive) {
+            return;
+          }
+          const queue = Array.isArray(files)
+            ? files.filter((file) => file && typeof file.name === 'string')
+            : [];
+          if (!queue.length) {
+            return;
+          }
+
+          const lectures = getLectureOptionList();
+          if (!lectures.length) {
+            showStatus(t('tasks.bulkUpload.noLectures'), 'info');
+            return;
+          }
+          if (!uploadableAssetDefinitions.length) {
+            showStatus(t('tasks.bulkUpload.noTypes'), 'error');
+            return;
+          }
+
+          let uploaded = 0;
+          let skipped = 0;
+          let abort = false;
+
+          for (let index = 0; index < queue.length; index += 1) {
+            if (abort) {
+              break;
+            }
+            const file = queue[index];
+            if (!file) {
+              continue;
+            }
+            const lectureOptions = getLectureOptionList();
+            if (!lectureOptions.length) {
+              showStatus(t('tasks.bulkUpload.noLectures'), 'info');
+              break;
+            }
+
+            const guessedType = guessBulkAssetType(file) || state.bulkUpload.lastType;
+            const stepResult = await showBulkUploadStep({
+              file,
+              index,
+              total: queue.length,
+              lectures: lectureOptions,
+              defaultLectureId: state.bulkUpload.lastLectureId,
+              defaultType: guessedType,
+            });
+
+            if (!stepResult) {
+              break;
+            }
+
+            if (stepResult.action === 'uploaded') {
+              uploaded += 1;
+              if (Number.isFinite(Number(stepResult.lectureId))) {
+                state.bulkUpload.lastLectureId = Number(stepResult.lectureId);
+              }
+              if (typeof stepResult.assetType === 'string' && stepResult.assetType) {
+                state.bulkUpload.lastType = stepResult.assetType;
+              }
+              const successMessage = t('tasks.bulkUpload.success', { name: file.name });
+              showStatus(successMessage, 'success');
+            } else if (stepResult.action === 'dispose') {
+              skipped += 1;
+              showStatus(t('tasks.bulkUpload.disposed', { name: file.name }), 'info');
+            } else if (stepResult.action === 'dispose_all') {
+              skipped += queue.length - index;
+              abort = true;
+            } else if (stepResult.action === 'cancel') {
+              abort = true;
+            }
+          }
+
+          if (uploaded > 0) {
+            await refreshData();
+          }
+
+          if (uploaded > 0 || skipped > 0) {
+            const summary = t('tasks.bulkUpload.finished', { uploaded, skipped });
+            const variant = uploaded > 0 ? 'success' : 'info';
+            showStatus(summary, variant);
+          }
+        }
+
+        async function handleBulkUploadInput(event) {
+          const input = event?.target;
+          const files = input?.files ? Array.from(input.files) : [];
+          if (input) {
+            input.value = '';
+          }
+          if (!files.length) {
+            return;
+          }
+          await startBulkUploadQueue(files);
         }
 
         async function handleTaskFormSubmit(event) {
@@ -14180,6 +14943,18 @@
         if (dom.tasks && dom.tasks.operation) {
           dom.tasks.operation.addEventListener('change', () => {
             toggleTaskSlideOptions();
+          });
+        }
+
+        if (dom.tasks && dom.tasks.bulkUpload && dom.tasks.bulkInput) {
+          dom.tasks.bulkUpload.addEventListener('click', () => {
+            dom.tasks.bulkInput.click();
+          });
+        }
+
+        if (dom.tasks && dom.tasks.bulkInput) {
+          dom.tasks.bulkInput.addEventListener('change', (event) => {
+            void handleBulkUploadInput(event);
           });
         }
 
