@@ -133,7 +133,18 @@ ensure_debian() {
 }
 
 ensure_packages() {
-  local packages=(python3.11 python3.11-venv python3-pip git ffmpeg libportaudio2 build-essential)
+  local packages=(
+    python3.11
+    python3.11-venv
+    python3-pip
+    git
+    ffmpeg
+    libportaudio2
+    build-essential
+    tesseract-ocr
+    libtesseract-dev
+    libgl1
+  )
   local missing_packages=()
 
   for pkg in "${packages[@]}"; do
@@ -153,7 +164,18 @@ ensure_packages() {
 }
 
 purge_packages() {
-  local packages=(python3.11 python3.11-venv python3-pip git ffmpeg libportaudio2 build-essential)
+  local packages=(
+    python3.11
+    python3.11-venv
+    python3-pip
+    git
+    ffmpeg
+    libportaudio2
+    build-essential
+    tesseract-ocr
+    libtesseract-dev
+    libgl1
+  )
   local installed=()
 
   for pkg in "${packages[@]}"; do
