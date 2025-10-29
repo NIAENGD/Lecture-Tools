@@ -982,6 +982,259 @@
         align-items: center;
       }
 
+      .bulk-process-window {
+        width: min(960px, 100%);
+        max-height: min(90vh, 780px);
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .bulk-process-header {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      @media (min-width: 720px) {
+        .bulk-process-header {
+          flex-direction: row;
+          align-items: flex-start;
+          justify-content: space-between;
+        }
+      }
+
+      .bulk-process-heading {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .bulk-process-toolbar {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: flex-start;
+      }
+
+      .bulk-process-toolbar .dialog-button {
+        white-space: nowrap;
+      }
+
+      .bulk-process-content {
+        flex: 1;
+        min-height: 240px;
+        max-height: calc(90vh - 260px);
+        overflow: auto;
+        border: 1px solid var(--panel-border);
+        border-radius: 10px;
+        padding: 12px;
+        background: var(--background);
+      }
+
+      .bulk-process-empty {
+        margin: 0;
+        color: var(--placeholder);
+        font-style: italic;
+      }
+
+      .bulk-process-status-message {
+        min-height: 20px;
+        font-size: 0.9rem;
+      }
+
+      .bulk-process-status-message.error {
+        color: var(--status-error-text);
+      }
+
+      .bulk-process-status-message.success {
+        color: var(--status-success-text);
+      }
+
+      .bulk-process-summary {
+        font-size: 0.9rem;
+        color: var(--muted);
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .bulk-process-tree {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .bulk-process-tree details {
+        border: 1px solid var(--panel-border);
+        border-radius: 8px;
+        background: var(--panel-bg);
+        overflow: hidden;
+      }
+
+      .bulk-process-tree summary {
+        list-style: none;
+        cursor: pointer;
+        padding: 12px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        font-weight: 600;
+      }
+
+      .bulk-process-tree summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .bulk-process-tree summary:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      .bulk-process-tree .bulk-process-module summary {
+        font-weight: 500;
+        font-size: 0.95rem;
+        background: rgba(148, 163, 184, 0.1);
+      }
+
+      .bulk-process-tree .bulk-process-lectures {
+        margin: 0;
+        padding: 12px 16px 16px;
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .bulk-process-lecture {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .bulk-process-lecture-header {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .bulk-process-lecture-title {
+        font-weight: 600;
+        color: var(--text);
+      }
+
+      .bulk-process-lecture-meta {
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      .bulk-process-checkbox-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .bulk-process-checkbox {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid transparent;
+        background: rgba(148, 163, 184, 0.12);
+        cursor: pointer;
+        transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, opacity 0.2s ease;
+        font-size: 0.85rem;
+      }
+
+      .bulk-process-checkbox input {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        cursor: pointer;
+      }
+
+      .bulk-process-checkbox .bulk-process-indicator {
+        width: 18px;
+        height: 18px;
+        border-radius: 6px;
+        border: 2px solid var(--panel-border);
+        background: var(--panel-bg);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s ease, border-color 0.2s ease;
+      }
+
+      .bulk-process-checkbox .bulk-process-indicator::after {
+        content: '';
+        width: 10px;
+        height: 6px;
+        border-left: 2px solid transparent;
+        border-bottom: 2px solid transparent;
+        transform: rotate(-45deg);
+        transition: border-color 0.2s ease;
+      }
+
+      .bulk-process-checkbox .bulk-process-status-label {
+        font-size: 0.75rem;
+        color: var(--muted);
+      }
+
+      .bulk-process-checkbox[data-state='unavailable'] {
+        background: rgba(148, 163, 184, 0.08);
+        color: var(--muted);
+        cursor: not-allowed;
+        opacity: 0.6;
+      }
+
+      .bulk-process-checkbox[data-state='unavailable'] .bulk-process-indicator {
+        border-color: rgba(148, 163, 184, 0.5);
+      }
+
+      .bulk-process-checkbox[data-state='empty'] {
+        border-color: transparent;
+      }
+
+      .bulk-process-checkbox[data-state='completed'] {
+        border-color: var(--accent);
+        background: var(--accent-muted);
+        color: var(--accent);
+      }
+
+      .bulk-process-checkbox[data-state='completed'] .bulk-process-indicator {
+        border-color: var(--accent);
+        background: rgba(56, 189, 248, 0.12);
+      }
+
+      .bulk-process-checkbox[data-state='selected'] {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: var(--accent-contrast);
+      }
+
+      .bulk-process-checkbox[data-state='selected'] .bulk-process-indicator {
+        border-color: var(--accent-contrast);
+        background: var(--accent-contrast);
+      }
+
+      .bulk-process-checkbox[data-state='selected'] .bulk-process-indicator::after {
+        border-left-color: var(--accent);
+        border-bottom-color: var(--accent);
+      }
+
+      .bulk-process-checkbox[data-state='selected'] .bulk-process-status-label,
+      .bulk-process-checkbox[data-state='completed'] .bulk-process-status-label {
+        color: inherit;
+      }
+
+      .bulk-process-checkbox:focus-within {
+        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
+      }
+
       .dialog-pending-window {
         width: min(360px, calc(100vw - 48px));
         align-items: center;
@@ -3017,6 +3270,14 @@
                   </div>
                   <div class="task-form-actions">
                     <button
+                      id="task-bulk-process"
+                      type="button"
+                      class="secondary"
+                      data-i18n="tasks.bulkProcess.button"
+                    >
+                      Bulk process
+                    </button>
+                    <button
                       id="task-bulk-upload"
                       type="button"
                       class="secondary"
@@ -3729,6 +3990,74 @@
         </div>
       </div>
     </div>
+    <div id="bulk-process-dialog" class="dialog hidden" aria-hidden="true" tabindex="-1">
+      <div id="bulk-process-backdrop" class="dialog-backdrop"></div>
+      <div
+        id="bulk-process-window"
+        class="dialog-window bulk-process-window"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="bulk-process-title"
+        aria-describedby="bulk-process-subtitle"
+      >
+        <div class="dialog-header bulk-process-header">
+          <div class="bulk-process-heading">
+            <h2
+              id="bulk-process-title"
+              class="dialog-title"
+              data-i18n="tasks.bulkProcess.title"
+            ></h2>
+            <p
+              id="bulk-process-subtitle"
+              class="dialog-message"
+              data-i18n="tasks.bulkProcess.subtitle"
+            ></p>
+          </div>
+          <div class="bulk-process-toolbar">
+            <button
+              id="bulk-process-select-all"
+              type="button"
+              class="dialog-button secondary"
+              data-i18n="tasks.bulkProcess.selectAll"
+            ></button>
+            <button
+              id="bulk-process-clear"
+              type="button"
+              class="dialog-button secondary"
+              data-i18n="tasks.bulkProcess.clear"
+            ></button>
+          </div>
+        </div>
+        <div id="bulk-process-content" class="bulk-process-content"></div>
+        <p
+          id="bulk-process-empty"
+          class="bulk-process-empty hidden"
+          data-i18n="tasks.bulkProcess.empty"
+        ></p>
+        <div
+          id="bulk-process-status"
+          class="bulk-process-status-message"
+          role="status"
+          aria-live="polite"
+        ></div>
+        <div id="bulk-process-summary" class="bulk-process-summary"></div>
+        <div class="dialog-actions">
+          <button
+            id="bulk-process-cancel"
+            type="button"
+            class="dialog-button secondary"
+            data-i18n="tasks.bulkProcess.cancel"
+          ></button>
+          <button
+            id="bulk-process-submit"
+            type="button"
+            class="dialog-button primary"
+            data-i18n="tasks.bulkProcess.submit"
+            disabled
+          ></button>
+        </div>
+      </div>
+    </div>
     <script>
       (async function () {
         const translations = {
@@ -3813,6 +4142,25 @@
                 open: 'Open lecture',
                 retry: 'Retry',
                 dismiss: 'Dismiss',
+              },
+              bulkProcess: {
+                button: 'Bulk process',
+                title: 'Bulk process lectures',
+                subtitle: 'Select lectures and assets to add to the processing queue.',
+                selectAll: 'Select all',
+                clear: 'Clear selections',
+                empty: 'No lectures available for processing.',
+                cancel: 'Cancel',
+                submit: 'Queue tasks',
+                summaryEmpty: 'No tasks selected.',
+                summarySelected: '{{count}} {{taskWord}} selected.',
+                summaryBreakdown: 'Process audio: {{audio}} • Process slides: {{slides}}.',
+                status: {
+                  unavailable: 'Upload required',
+                  empty: 'Not selected',
+                  completed: 'Already processed',
+                  selected: 'Queued for processing',
+                },
               },
               bulkUpload: {
                 button: 'Bulk upload',
@@ -4278,6 +4626,7 @@
             counts: {
               module: { one: 'module', other: 'modules' },
               lecture: { one: 'lecture', other: 'lectures' },
+              task: { one: 'task', other: 'tasks' },
             },
           },
           zh: {
@@ -4360,6 +4709,25 @@
                 open: '打开课次',
                 retry: '重试',
                 dismiss: '忽略',
+              },
+              bulkProcess: {
+                button: '批量处理',
+                title: '批量处理任务',
+                subtitle: '选择要加入处理队列的讲座与项目。',
+                selectAll: '全选',
+                clear: '清除选择',
+                empty: '没有可供处理的讲座。',
+                cancel: '取消',
+                submit: '加入队列',
+                summaryEmpty: '未选择任何任务。',
+                summarySelected: '已选择 {{count}} 个{{taskWord}}。',
+                summaryBreakdown: '处理音频：{{audio}} • 处理课件：{{slides}}。',
+                status: {
+                  unavailable: '需要先上传源文件',
+                  empty: '未选择',
+                  completed: '已处理',
+                  selected: '将重新处理',
+                },
               },
               bulkUpload: {
                 button: '批量上传',
@@ -4817,6 +5185,7 @@
             counts: {
               module: { one: '模块', other: '模块' },
               lecture: { one: '讲座', other: '讲座' },
+              task: { one: '任务', other: '任务' },
             },
           },
           es: {
@@ -4899,6 +5268,25 @@
                 open: 'Abrir clase',
                 retry: 'Reintentar',
                 dismiss: 'Descartar',
+              },
+              bulkProcess: {
+                button: 'Procesar en lote',
+                title: 'Procesar en lote',
+                subtitle: 'Selecciona clases y recursos para añadir a la cola de procesamiento.',
+                selectAll: 'Seleccionar todo',
+                clear: 'Limpiar selección',
+                empty: 'No hay clases disponibles para procesar.',
+                cancel: 'Cancelar',
+                submit: 'Añadir a la cola',
+                summaryEmpty: 'No hay tareas seleccionadas.',
+                summarySelected: '{{count}} {{taskWord}} seleccionadas.',
+                summaryBreakdown: 'Procesar audio: {{audio}} • Procesar diapositivas: {{slides}}.',
+                status: {
+                  unavailable: 'Se requiere subir el archivo',
+                  empty: 'No seleccionado',
+                  completed: 'Ya procesado',
+                  selected: 'Se volverá a procesar',
+                },
               },
               bulkUpload: {
                 button: 'Carga masiva',
@@ -5366,6 +5754,7 @@
             counts: {
               module: { one: 'módulo', other: 'módulos' },
               lecture: { one: 'clase', other: 'clases' },
+              task: { one: 'tarea', other: 'tareas' },
             },
           },
           fr: {
@@ -5450,6 +5839,26 @@
                 open: 'Ouvrir la leçon',
                 retry: 'Réessayer',
                 dismiss: 'Ignorer',
+              },
+              bulkProcess: {
+                button: 'Traitement groupé',
+                title: 'Traitement groupé',
+                subtitle: 'Sélectionnez les cours et éléments à ajouter à la file de traitement.',
+                selectAll: 'Tout sélectionner',
+                clear: 'Effacer la sélection',
+                empty: 'Aucun cours disponible pour le traitement.',
+                cancel: 'Annuler',
+                submit: 'Ajouter à la file',
+                summaryEmpty: 'Aucune tâche sélectionnée.',
+                summarySelected: '{{count}} {{taskWord}} sélectionnée(s).',
+                summaryBreakdown:
+                  'Traitement audio : {{audio}} • Traitement des diapositives : {{slides}}.',
+                status: {
+                  unavailable: 'Téléversement requis',
+                  empty: 'Non sélectionné',
+                  completed: 'Déjà traité',
+                  selected: 'Sera retraité',
+                },
               },
               bulkUpload: {
                 button: 'Téléversement groupé',
@@ -5918,6 +6327,7 @@
             counts: {
               module: { one: 'module', other: 'modules' },
               lecture: { one: 'leçon', other: 'leçons' },
+              task: { one: 'tâche', other: 'tâches' },
             },
           },
         };
@@ -6129,6 +6539,35 @@
         const SERVER_LOG_CATEGORY = 'server';
         const UPDATE_POLL_INTERVAL_MS = 3000;
 
+        const BULK_PROCESS_OPERATIONS = [
+          {
+            key: 'audio',
+            operation: 'audio_mastering',
+            labelKey: 'tasks.form.operation.audioMastering',
+            isAvailable(lecture, settings) {
+              if (!lecture || typeof lecture !== 'object') {
+                return false;
+              }
+              const enabled = settings?.audio_mastering_enabled !== false;
+              return Boolean(enabled && (lecture.audio_path || lecture.processed_audio_path));
+            },
+            isCompleted(lecture) {
+              return Boolean(lecture?.processed_audio_path);
+            },
+          },
+          {
+            key: 'slides',
+            operation: 'slide_bundle',
+            labelKey: 'tasks.form.operation.slideBundle',
+            isAvailable(lecture) {
+              return Boolean(lecture?.slide_path);
+            },
+            isCompleted(lecture) {
+              return Boolean(lecture?.slide_image_dir);
+            },
+          },
+        ];
+
         function normalizeWhisperModel(value) {
           const candidate =
             typeof value === 'string' ? value.trim() : String(value ?? '');
@@ -6214,6 +6653,15 @@
           bulkUpload: {
             lastLectureId: null,
             lastType: null,
+          },
+          bulkProcess: {
+            selections: new Map(),
+            meta: new Map(),
+            checkboxMap: new Map(),
+            expandedClasses: new Map(),
+            expandedModules: new Map(),
+            availableCount: 0,
+            lectureCount: 0,
           },
           systemUpdate: {
             running: false,
@@ -6430,6 +6878,7 @@
             pageStart: document.getElementById('task-page-start'),
             pageEnd: document.getElementById('task-page-end'),
             submit: document.getElementById('task-submit'),
+            bulkProcess: document.getElementById('task-bulk-process'),
             bulkUpload: document.getElementById('task-bulk-upload'),
             bulkInput: document.getElementById('task-bulk-input'),
           },
@@ -6516,6 +6965,21 @@
             cancel: document.getElementById('bulk-upload-cancel'),
             next: document.getElementById('bulk-upload-next'),
           },
+          bulkProcessDialog: {
+            root: document.getElementById('bulk-process-dialog'),
+            backdrop: document.getElementById('bulk-process-backdrop'),
+            window: document.getElementById('bulk-process-window'),
+            title: document.getElementById('bulk-process-title'),
+            subtitle: document.getElementById('bulk-process-subtitle'),
+            content: document.getElementById('bulk-process-content'),
+            empty: document.getElementById('bulk-process-empty'),
+            status: document.getElementById('bulk-process-status'),
+            summary: document.getElementById('bulk-process-summary'),
+            selectAll: document.getElementById('bulk-process-select-all'),
+            clear: document.getElementById('bulk-process-clear'),
+            cancel: document.getElementById('bulk-process-cancel'),
+            submit: document.getElementById('bulk-process-submit'),
+          },
         };
 
         const DEFAULT_DEBUG_EMPTY_TEXT = dom.debugEmpty
@@ -6582,6 +7046,9 @@
         if (dom.tasks) {
           if (dom.tasks.bulkInput && bulkUploadAccept) {
             dom.tasks.bulkInput.setAttribute('accept', bulkUploadAccept);
+          }
+          if (dom.tasks.bulkProcess) {
+            dom.tasks.bulkProcess.disabled = true;
           }
           if (dom.tasks.bulkUpload) {
             dom.tasks.bulkUpload.disabled = true;
@@ -7933,6 +8400,676 @@
             listItem.appendChild(actions);
             dom.tasks.list.appendChild(listItem);
           });
+        }
+
+        function getBulkProcessKey(lectureId, operation) {
+          return `${lectureId}:${operation}`;
+        }
+
+        function collectBulkProcessMeta() {
+          const meta = state.bulkProcess.meta;
+          meta.clear();
+          let availableCount = 0;
+          let lectureCount = 0;
+
+          state.classes.forEach((klass) => {
+            if (!klass || typeof klass !== 'object') {
+              return;
+            }
+            const classId = Number(klass.id);
+            const className =
+              typeof klass.name === 'string' && klass.name
+                ? klass.name
+                : t('storage.unnamedClass');
+            const modules = Array.isArray(klass.modules) ? klass.modules : [];
+            modules.forEach((module) => {
+              if (!module || typeof module !== 'object') {
+                return;
+              }
+              const moduleId = Number(module.id);
+              const moduleName =
+                typeof module.name === 'string' && module.name
+                  ? module.name
+                  : t('storage.unnamedModule');
+              const lectures = Array.isArray(module.lectures) ? module.lectures : [];
+              lectures.forEach((lecture) => {
+                if (!lecture || typeof lecture !== 'object') {
+                  return;
+                }
+                const lectureId = Number(lecture.id);
+                if (!Number.isFinite(lectureId) || lectureId <= 0) {
+                  return;
+                }
+                lectureCount += 1;
+                const lectureName =
+                  typeof lecture.name === 'string' && lecture.name
+                    ? lecture.name
+                    : t('tasks.labels.untitled');
+                BULK_PROCESS_OPERATIONS.forEach((definition) => {
+                  const key = getBulkProcessKey(lectureId, definition.operation);
+                  const available = Boolean(definition.isAvailable(lecture, state.settings));
+                  const completed = available && Boolean(definition.isCompleted(lecture));
+                  meta.set(key, {
+                    key,
+                    lectureId,
+                    lectureName,
+                    moduleId,
+                    moduleName,
+                    classId,
+                    className,
+                    operation: definition.operation,
+                    labelKey: definition.labelKey,
+                    available,
+                    completed,
+                  });
+                  if (!available) {
+                    state.bulkProcess.selections.delete(key);
+                  } else {
+                    availableCount += 1;
+                  }
+                });
+              });
+            });
+          });
+
+          state.bulkProcess.selections.forEach((_, key) => {
+            if (!meta.has(key)) {
+              state.bulkProcess.selections.delete(key);
+            }
+          });
+
+          state.bulkProcess.availableCount = availableCount;
+          state.bulkProcess.lectureCount = lectureCount;
+          return { availableCount, lectureCount };
+        }
+
+        function renderBulkProcessTree() {
+          if (!dom.bulkProcessDialog || !dom.bulkProcessDialog.content) {
+            return;
+          }
+          const container = dom.bulkProcessDialog.content;
+          container.innerHTML = '';
+          state.bulkProcess.checkboxMap.clear();
+
+          const tree = document.createElement('div');
+          tree.className = 'bulk-process-tree';
+          let lectureRendered = 0;
+
+          state.classes.forEach((klass) => {
+            if (!klass || typeof klass !== 'object') {
+              return;
+            }
+            const rawModules = Array.isArray(klass.modules) ? klass.modules : [];
+            const moduleEntries = rawModules
+              .map((module) => {
+                if (!module || typeof module !== 'object') {
+                  return null;
+                }
+                const lectures = Array.isArray(module.lectures) ? module.lectures : [];
+                const validLectures = lectures.filter((lecture) => {
+                  const lectureId = Number(lecture?.id);
+                  return Number.isFinite(lectureId) && lectureId > 0;
+                });
+                return validLectures.length > 0 ? { module, lectures: validLectures } : null;
+              })
+              .filter(Boolean);
+
+            if (!moduleEntries.length) {
+              return;
+            }
+
+            const classDetails = document.createElement('details');
+            classDetails.className = 'bulk-process-class';
+            const classId = Number(klass.id);
+            const classKey = Number.isFinite(classId) ? String(classId) : null;
+            let classOpen = true;
+            if (classKey) {
+              const stored = state.bulkProcess.expandedClasses.get(classKey);
+              if (typeof stored === 'boolean') {
+                classOpen = stored;
+              }
+            }
+            classDetails.open = classOpen;
+            if (classKey) {
+              classDetails.dataset.classId = classKey;
+              classDetails.addEventListener('toggle', () => {
+                state.bulkProcess.expandedClasses.set(classKey, classDetails.open);
+              });
+            }
+
+            const classSummary = document.createElement('summary');
+            const classTitle = document.createElement('span');
+            classTitle.className = 'bulk-process-summary-title';
+            classTitle.textContent = klass.name || t('storage.unnamedClass');
+            classSummary.appendChild(classTitle);
+
+            const moduleCount = moduleEntries.length;
+            const lectureCount = moduleEntries.reduce(
+              (total, entry) => total + entry.lectures.length,
+              0,
+            );
+            const moduleWord = pluralize(currentLanguage, 'counts.module', moduleCount);
+            const lectureWord = pluralize(currentLanguage, 'counts.lecture', lectureCount);
+            const classMeta = document.createElement('span');
+            classMeta.className = 'bulk-process-summary-meta';
+            classMeta.textContent = t('curriculum.classMeta', {
+              moduleCount,
+              moduleWord,
+              lectureCount,
+              lectureWord,
+            });
+            classSummary.appendChild(classMeta);
+            classDetails.appendChild(classSummary);
+
+            moduleEntries.forEach((entry) => {
+              const moduleDetails = document.createElement('details');
+              moduleDetails.className = 'bulk-process-module';
+              const moduleId = Number(entry.module?.id);
+              const moduleKey =
+                classKey && Number.isFinite(moduleId) ? `${classKey}:${moduleId}` : null;
+              let moduleOpen = true;
+              if (moduleKey) {
+                const stored = state.bulkProcess.expandedModules.get(moduleKey);
+                if (typeof stored === 'boolean') {
+                  moduleOpen = stored;
+                }
+              }
+              moduleDetails.open = moduleOpen;
+              if (moduleKey) {
+                moduleDetails.dataset.classId = classKey;
+                moduleDetails.dataset.moduleId = String(moduleId);
+                moduleDetails.addEventListener('toggle', () => {
+                  state.bulkProcess.expandedModules.set(moduleKey, moduleDetails.open);
+                });
+              }
+
+              const moduleSummary = document.createElement('summary');
+              const moduleTitle = document.createElement('span');
+              moduleTitle.className = 'bulk-process-summary-title';
+              moduleTitle.textContent = entry.module?.name || t('storage.unnamedModule');
+              moduleSummary.appendChild(moduleTitle);
+
+              const moduleLectureCount = entry.lectures.length;
+              const moduleLectureWord = pluralize(
+                currentLanguage,
+                'counts.lecture',
+                moduleLectureCount,
+              );
+              const moduleMeta = document.createElement('span');
+              moduleMeta.className = 'bulk-process-summary-meta';
+              moduleMeta.textContent = t('curriculum.moduleMeta', {
+                lectureCount: moduleLectureCount,
+                lectureWord: moduleLectureWord,
+              });
+              moduleSummary.appendChild(moduleMeta);
+              moduleDetails.appendChild(moduleSummary);
+
+              const lectureList = document.createElement('ul');
+              lectureList.className = 'bulk-process-lectures';
+
+              entry.lectures.forEach((lecture) => {
+                const lectureId = Number(lecture.id);
+                if (!Number.isFinite(lectureId) || lectureId <= 0) {
+                  return;
+                }
+                lectureRendered += 1;
+
+                const lectureItem = document.createElement('li');
+                lectureItem.className = 'bulk-process-lecture';
+
+                const header = document.createElement('div');
+                header.className = 'bulk-process-lecture-header';
+
+                const title = document.createElement('div');
+                title.className = 'bulk-process-lecture-title';
+                title.textContent = lecture.name || t('tasks.labels.untitled');
+                header.appendChild(title);
+
+                const metaLine = document.createElement('div');
+                metaLine.className = 'bulk-process-lecture-meta';
+                metaLine.textContent = `${klass.name || t('storage.unnamedClass')} • ${
+                  entry.module?.name || t('storage.unnamedModule')
+                }`;
+                header.appendChild(metaLine);
+
+                lectureItem.appendChild(header);
+
+                const checkboxGroup = document.createElement('div');
+                checkboxGroup.className = 'bulk-process-checkbox-group';
+
+                BULK_PROCESS_OPERATIONS.forEach((definition) => {
+                  const key = getBulkProcessKey(lectureId, definition.operation);
+                  const meta = state.bulkProcess.meta.get(key);
+                  if (!meta) {
+                    return;
+                  }
+
+                  const checkbox = document.createElement('label');
+                  checkbox.className = 'bulk-process-checkbox';
+                  checkbox.dataset.lectureId = String(lectureId);
+                  checkbox.dataset.operation = definition.operation;
+
+                  const input = document.createElement('input');
+                  input.type = 'checkbox';
+                  input.setAttribute('aria-label', t(definition.labelKey));
+                  const statusId = `bulk-process-status-${lectureId}-${definition.key}`;
+                  input.setAttribute('aria-describedby', statusId);
+                  input.addEventListener('change', (event) => {
+                    event.stopPropagation();
+                    setBulkProcessStatus('');
+                    handleBulkProcessCheckboxChange(key, event.target.checked);
+                  });
+                  checkbox.appendChild(input);
+
+                  const indicator = document.createElement('span');
+                  indicator.className = 'bulk-process-indicator';
+                  indicator.setAttribute('aria-hidden', 'true');
+                  checkbox.appendChild(indicator);
+
+                  const text = document.createElement('span');
+                  text.className = 'bulk-process-checkbox-text';
+
+                  const action = document.createElement('span');
+                  action.className = 'bulk-process-checkbox-title';
+                  text.appendChild(action);
+
+                  const status = document.createElement('span');
+                  status.id = statusId;
+                  status.className = 'bulk-process-status-label';
+                  text.appendChild(status);
+
+                  checkbox.appendChild(text);
+
+                  state.bulkProcess.checkboxMap.set(key, {
+                    container: checkbox,
+                    input,
+                    status,
+                    action,
+                  });
+
+                  updateBulkProcessCheckboxState(key);
+
+                  checkboxGroup.appendChild(checkbox);
+                });
+
+                lectureItem.appendChild(checkboxGroup);
+                lectureList.appendChild(lectureItem);
+              });
+
+              moduleDetails.appendChild(lectureList);
+              classDetails.appendChild(moduleDetails);
+            });
+
+            tree.appendChild(classDetails);
+          });
+
+          if (dom.bulkProcessDialog.empty) {
+            dom.bulkProcessDialog.empty.hidden = lectureRendered > 0;
+          }
+          if (lectureRendered > 0) {
+            container.appendChild(tree);
+          } else {
+            container.innerHTML = '';
+          }
+        }
+
+        function updateBulkProcessCheckboxState(key) {
+          const entry = state.bulkProcess.checkboxMap.get(key);
+          const meta = state.bulkProcess.meta.get(key);
+          if (!entry || !meta) {
+            return;
+          }
+          const { container, input, status, action } = entry;
+          if (action) {
+            action.textContent = t(meta.labelKey);
+          }
+
+          const available = Boolean(meta.available);
+          const completed = Boolean(meta.completed);
+          const selected = available && state.bulkProcess.selections.has(key);
+
+          let stateValue = 'empty';
+          if (!available) {
+            stateValue = 'unavailable';
+          } else if (selected) {
+            stateValue = 'selected';
+          } else if (completed) {
+            stateValue = 'completed';
+          }
+
+          container.dataset.state = stateValue;
+          input.disabled = !available;
+          input.checked = selected;
+
+          if (status) {
+            status.textContent = t(`tasks.bulkProcess.status.${stateValue}`);
+          }
+        }
+
+        function refreshBulkProcessCheckboxes() {
+          state.bulkProcess.checkboxMap.forEach((_, key) => {
+            updateBulkProcessCheckboxState(key);
+          });
+        }
+
+        function updateBulkProcessSummary() {
+          if (!dom.bulkProcessDialog) {
+            return;
+          }
+          const summary = dom.bulkProcessDialog.summary;
+          const selectAllButton = dom.bulkProcessDialog.selectAll;
+          const clearButton = dom.bulkProcessDialog.clear;
+          const submitButton = dom.bulkProcessDialog.submit;
+
+          const selectedEntries = [];
+          state.bulkProcess.selections.forEach((_, key) => {
+            const meta = state.bulkProcess.meta.get(key);
+            if (meta && meta.available) {
+              selectedEntries.push(meta);
+            } else {
+              state.bulkProcess.selections.delete(key);
+            }
+          });
+
+          const selectedCount = selectedEntries.length;
+          const audioCount = selectedEntries.filter(
+            (entry) => entry.operation === 'audio_mastering',
+          ).length;
+          const slideCount = selectedEntries.filter(
+            (entry) => entry.operation === 'slide_bundle',
+          ).length;
+
+          if (summary) {
+            summary.innerHTML = '';
+            if (selectedCount === 0) {
+              summary.textContent = t('tasks.bulkProcess.summaryEmpty');
+            } else {
+              const taskWord = pluralize(currentLanguage, 'counts.task', selectedCount);
+              const totalLine = document.createElement('span');
+              totalLine.textContent = t('tasks.bulkProcess.summarySelected', {
+                count: selectedCount,
+                taskWord,
+              });
+              summary.appendChild(totalLine);
+
+              const breakdown = document.createElement('span');
+              breakdown.textContent = t('tasks.bulkProcess.summaryBreakdown', {
+                audio: audioCount,
+                slides: slideCount,
+              });
+              summary.appendChild(breakdown);
+            }
+          }
+
+          if (selectAllButton) {
+            selectAllButton.disabled = state.bulkProcess.availableCount === 0;
+          }
+          if (clearButton) {
+            clearButton.disabled = selectedCount === 0;
+          }
+          if (submitButton) {
+            submitButton.disabled = selectedCount === 0;
+          }
+        }
+
+        function setBulkProcessStatus(message = '', variant = '') {
+          if (!dom.bulkProcessDialog || !dom.bulkProcessDialog.status) {
+            return;
+          }
+          const element = dom.bulkProcessDialog.status;
+          element.classList.remove('error', 'success');
+          if (variant) {
+            element.classList.add(variant);
+          }
+          element.textContent = message || '';
+        }
+
+        function selectAllBulkProcess() {
+          state.bulkProcess.meta.forEach((meta, key) => {
+            if (!meta.available) {
+              state.bulkProcess.selections.delete(key);
+              return;
+            }
+            if (meta.completed) {
+              state.bulkProcess.selections.delete(key);
+              return;
+            }
+            state.bulkProcess.selections.set(key, true);
+          });
+          refreshBulkProcessCheckboxes();
+          updateBulkProcessSummary();
+        }
+
+        function clearBulkProcessSelections() {
+          if (state.bulkProcess.selections.size > 0) {
+            state.bulkProcess.selections.clear();
+          }
+          refreshBulkProcessCheckboxes();
+          updateBulkProcessSummary();
+        }
+
+        function handleBulkProcessCheckboxChange(key, checked) {
+          const meta = state.bulkProcess.meta.get(key);
+          if (!meta || !meta.available) {
+            state.bulkProcess.selections.delete(key);
+            updateBulkProcessCheckboxState(key);
+            updateBulkProcessSummary();
+            return;
+          }
+          if (checked) {
+            state.bulkProcess.selections.set(key, true);
+          } else {
+            state.bulkProcess.selections.delete(key);
+          }
+          updateBulkProcessCheckboxState(key);
+          updateBulkProcessSummary();
+        }
+
+        let bulkProcessDialogCleanup = null;
+        let bulkProcessPreviousFocus = null;
+
+        function closeBulkProcessDialog(options = {}) {
+          if (typeof bulkProcessDialogCleanup === 'function') {
+            const cleanup = bulkProcessDialogCleanup;
+            bulkProcessDialogCleanup = null;
+            cleanup(options);
+          }
+        }
+
+        async function handleBulkProcessSubmit(event) {
+          event?.preventDefault?.();
+          if (!dialogState.bulkProcessActive) {
+            return;
+          }
+          const tasks = [];
+          state.bulkProcess.selections.forEach((_, key) => {
+            const meta = state.bulkProcess.meta.get(key);
+            if (meta && meta.available) {
+              tasks.push({ lecture_id: meta.lectureId, operation: meta.operation });
+            }
+          });
+          if (!tasks.length) {
+            updateBulkProcessSummary();
+            return;
+          }
+          const submitButton = dom.bulkProcessDialog?.submit;
+          let previousDisabled = false;
+          if (submitButton) {
+            previousDisabled = submitButton.disabled;
+            submitButton.disabled = true;
+          }
+          setBulkProcessStatus('');
+          try {
+            await request('/api/tasks', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ tasks }),
+            });
+            state.bulkProcess.selections.clear();
+            closeBulkProcessDialog();
+            showStatus(t('tasks.notifications.queued'), 'success');
+            await refreshTasks({ force: true });
+          } catch (error) {
+            const detail = error instanceof Error ? error.message : String(error || '');
+            setBulkProcessStatus(detail || t('status.processing'), 'error');
+          } finally {
+            if (dialogState.bulkProcessActive) {
+              if (submitButton) {
+                submitButton.disabled = previousDisabled;
+              }
+              refreshBulkProcessCheckboxes();
+              updateBulkProcessSummary();
+            }
+          }
+        }
+
+        function openBulkProcessDialog() {
+          if (
+            dialogState.bulkProcessActive ||
+            dialogState.active ||
+            dialogState.uploadActive ||
+            dialogState.bulkUploadActive
+          ) {
+            return;
+          }
+          if (!dom.bulkProcessDialog || !dom.bulkProcessDialog.root) {
+            return;
+          }
+
+          collectBulkProcessMeta();
+          renderBulkProcessTree();
+          refreshBulkProcessCheckboxes();
+          updateBulkProcessSummary();
+          setBulkProcessStatus('');
+
+          const root = dom.bulkProcessDialog.root;
+          root.classList.remove('hidden');
+          root.setAttribute('aria-hidden', 'false');
+          document.body.classList.add('dialog-open');
+          dialogState.bulkProcessActive = true;
+
+          bulkProcessPreviousFocus =
+            document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+          const focusTargets = [
+            dom.bulkProcessDialog.selectAll,
+            dom.bulkProcessDialog.clear,
+            dom.bulkProcessDialog.submit,
+            dom.bulkProcessDialog.cancel,
+          ].filter((element) => element instanceof HTMLElement && !element.disabled);
+          if (focusTargets.length > 0) {
+            focusTargets[0].focus({ preventScroll: true });
+          }
+
+          function handleSelectAll(event) {
+            event?.preventDefault?.();
+            setBulkProcessStatus('');
+            selectAllBulkProcess();
+          }
+
+          function handleClear(event) {
+            event?.preventDefault?.();
+            setBulkProcessStatus('');
+            clearBulkProcessSelections();
+          }
+
+          function handleCancel(event) {
+            event?.preventDefault?.();
+            closeBulkProcessDialog();
+          }
+
+          function handleBackdrop(event) {
+            event?.preventDefault?.();
+            closeBulkProcessDialog();
+          }
+
+          function handleKeyDown(event) {
+            if (event.key === 'Escape') {
+              event.preventDefault();
+              closeBulkProcessDialog();
+              return;
+            }
+            if (event.key === 'Tab') {
+              const focusable = [
+                dom.bulkProcessDialog.selectAll,
+                dom.bulkProcessDialog.clear,
+                dom.bulkProcessDialog.submit,
+                dom.bulkProcessDialog.cancel,
+              ].filter((element) => element instanceof HTMLElement && !element.disabled);
+              if (!focusable.length) {
+                return;
+              }
+              const currentIndex = focusable.indexOf(document.activeElement);
+              const nextIndex = event.shiftKey
+                ? currentIndex <= 0
+                  ? focusable.length - 1
+                  : currentIndex - 1
+                : currentIndex === focusable.length - 1
+                ? 0
+                : currentIndex + 1;
+              focusable[nextIndex].focus({ preventScroll: true });
+              event.preventDefault();
+            }
+          }
+
+          if (dom.bulkProcessDialog.selectAll) {
+            dom.bulkProcessDialog.selectAll.addEventListener('click', handleSelectAll);
+          }
+          if (dom.bulkProcessDialog.clear) {
+            dom.bulkProcessDialog.clear.addEventListener('click', handleClear);
+          }
+          if (dom.bulkProcessDialog.cancel) {
+            dom.bulkProcessDialog.cancel.addEventListener('click', handleCancel);
+          }
+          if (dom.bulkProcessDialog.backdrop) {
+            dom.bulkProcessDialog.backdrop.addEventListener('click', handleBackdrop);
+          }
+          if (dom.bulkProcessDialog.submit) {
+            dom.bulkProcessDialog.submit.addEventListener('click', handleBulkProcessSubmit);
+          }
+          if (dom.bulkProcessDialog.window) {
+            dom.bulkProcessDialog.window.addEventListener('keydown', handleKeyDown);
+          }
+
+          bulkProcessDialogCleanup = (options = {}) => {
+            const { restoreFocus = true } = options;
+            if (dom.bulkProcessDialog.selectAll) {
+              dom.bulkProcessDialog.selectAll.removeEventListener('click', handleSelectAll);
+            }
+            if (dom.bulkProcessDialog.clear) {
+              dom.bulkProcessDialog.clear.removeEventListener('click', handleClear);
+            }
+            if (dom.bulkProcessDialog.cancel) {
+              dom.bulkProcessDialog.cancel.removeEventListener('click', handleCancel);
+            }
+            if (dom.bulkProcessDialog.backdrop) {
+              dom.bulkProcessDialog.backdrop.removeEventListener('click', handleBackdrop);
+            }
+            if (dom.bulkProcessDialog.submit) {
+              dom.bulkProcessDialog.submit.removeEventListener('click', handleBulkProcessSubmit);
+            }
+            if (dom.bulkProcessDialog.window) {
+              dom.bulkProcessDialog.window.removeEventListener('keydown', handleKeyDown);
+            }
+
+            root.classList.add('hidden');
+            root.setAttribute('aria-hidden', 'true');
+            dialogState.bulkProcessActive = false;
+            state.bulkProcess.checkboxMap.clear();
+            if (
+              !dialogState.active &&
+              !dialogState.uploadActive &&
+              !dialogState.bulkUploadActive
+            ) {
+              document.body.classList.remove('dialog-open');
+            }
+            if (restoreFocus && bulkProcessPreviousFocus) {
+              bulkProcessPreviousFocus.focus({ preventScroll: true });
+            }
+            bulkProcessPreviousFocus = null;
+            setBulkProcessStatus('');
+            updateBulkProcessSummary();
+          };
         }
 
         async function refreshTasks({ force = false, silent = false } = {}) {
@@ -9644,7 +10781,12 @@
           }
         }
 
-        const dialogState = { active: false, uploadActive: false, bulkActive: false };
+        const dialogState = {
+          active: false,
+          uploadActive: false,
+          bulkUploadActive: false,
+          bulkProcessActive: false,
+        };
 
         let pdfjsLibPromise = null;
 
@@ -9891,7 +11033,8 @@
               !dialog.root ||
               dialogState.active ||
               dialogState.uploadActive ||
-              dialogState.bulkActive
+              dialogState.bulkUploadActive ||
+              dialogState.bulkProcessActive
             ) {
               resolve({ confirmed: false, value: null });
               return;
@@ -10056,7 +11199,13 @@
         async function showUploadDialog(options = {}) {
           return new Promise((resolve) => {
             const dialog = dom.uploadDialog;
-            if (!dialog || !dialog.root || dialogState.uploadActive || dialogState.bulkActive) {
+            if (
+              !dialog ||
+              !dialog.root ||
+              dialogState.uploadActive ||
+              dialogState.bulkUploadActive ||
+              dialogState.bulkProcessActive
+            ) {
               resolve({ confirmed: false, uploaded: false, file: null, result: null, meta: null });
               return;
             }
@@ -12261,6 +13410,17 @@
             dom.tasks.bulkUpload.disabled = lectures.length === 0;
           }
 
+          const { availableCount } = collectBulkProcessMeta();
+          if (dom.tasks.bulkProcess) {
+            dom.tasks.bulkProcess.disabled = availableCount === 0;
+          }
+
+          if (dialogState.bulkProcessActive) {
+            renderBulkProcessTree();
+            updateBulkProcessSummary();
+            setBulkProcessStatus('');
+          }
+
           if (dom.tasks.operation) {
             const audioOption = dom.tasks.operation.querySelector('option[value="audio_mastering"]');
             const audioEnabled = state.settings?.audio_mastering_enabled !== false;
@@ -12338,7 +13498,7 @@
             if (
               !dialog ||
               !dialog.root ||
-              dialogState.bulkActive ||
+              dialogState.bulkUploadActive ||
               dialogState.uploadActive ||
               dialogState.active
             ) {
@@ -12346,7 +13506,7 @@
               return;
             }
 
-            dialogState.bulkActive = true;
+            dialogState.bulkUploadActive = true;
             const previousActive =
               document.activeElement instanceof HTMLElement ? document.activeElement : null;
             let settled = false;
@@ -12416,7 +13576,7 @@
               if (dialog.type) {
                 dialog.type.innerHTML = '';
               }
-              dialogState.bulkActive = false;
+              dialogState.bulkUploadActive = false;
               if (previousActive) {
                 previousActive.focus({ preventScroll: true });
               }
@@ -12659,7 +13819,7 @@
         }
 
         async function startBulkUploadQueue(files) {
-          if (dialogState.bulkActive || dialogState.uploadActive) {
+          if (dialogState.bulkUploadActive || dialogState.uploadActive) {
             return;
           }
           const queue = Array.isArray(files)
@@ -15015,6 +16175,12 @@
         if (dom.tasks && dom.tasks.operation) {
           dom.tasks.operation.addEventListener('change', () => {
             toggleTaskSlideOptions();
+          });
+        }
+
+        if (dom.tasks && dom.tasks.bulkProcess) {
+          dom.tasks.bulkProcess.addEventListener('click', () => {
+            openBulkProcessDialog();
           });
         }
 
