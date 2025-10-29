@@ -106,6 +106,23 @@ class DummyPage:
         return self._drawings
 
 
+class DummyTextPage:
+    """Test helper that mimics PyMuPDF's text extraction API."""
+
+    def __init__(self, text_result: str, rawdict_result: Dict[str, Any] | None) -> None:
+        self._text_result = text_result
+        self._rawdict_result = rawdict_result
+
+    def get_text(self, mode: str):  # pragma: no cover - simple shim
+        if mode == "text":
+            return self._text_result
+        if mode == "rawdict":
+            if self._rawdict_result is None:
+                raise ValueError("rawdict not available")
+            return self._rawdict_result
+        raise ValueError(f"Unsupported mode: {mode}")
+
+
 def test_detect_visual_regions_from_image_blocks():
     converter = PyMuPDFSlideConverter(dpi=72)
     page = DummyPage(
@@ -225,3 +242,46 @@ def test_prepare_engine_raises_when_no_backends(monkeypatch):
 
     with pytest.raises(SlideConversionDependencyError):
         converter._prepare_ocr_engine()
+
+
+def test_extract_text_candidates_prefers_direct_text():
+    converter = PyMuPDFSlideConverter(dpi=72)
+    page = DummyTextPage(" First line\nSecond line \n  \nThird line", None)
+
+    result = converter._extract_text_candidates(page)
+
+    assert result.lines == ["First line", "Second line", "Third line"]
+    assert result.had_text_layer is True
+
+
+def test_extract_text_candidates_falls_back_to_rawdict():
+    converter = PyMuPDFSlideConverter(dpi=72)
+    rawdict = {
+        "blocks": [
+            {
+                "type": 0,
+                "lines": [
+                    {"spans": [{"text": "Hello"}, {"text": "world"}]},
+                    {"spans": [{"text": ""}, {"text": "Again"}]},
+                ],
+            },
+            {"type": 1, "lines": [{"spans": [{"text": "Ignored"}]}]},
+        ]
+    }
+    page = DummyTextPage("", rawdict)
+
+    result = converter._extract_text_candidates(page)
+
+    assert result.lines == ["Hello world", "Again"]
+    assert result.had_text_layer is True
+
+
+def test_extract_text_candidates_reports_absent_text_layer():
+    converter = PyMuPDFSlideConverter(dpi=72)
+    rawdict = {"blocks": [{"type": 1, "bbox": [0, 0, 100, 100]}]}
+    page = DummyTextPage("", rawdict)
+
+    result = converter._extract_text_candidates(page)
+
+    assert result.lines == []
+    assert result.had_text_layer is False

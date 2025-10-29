@@ -2,17 +2,30 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import shutil
+import sys
+import time
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable, Iterable, List, Mapping, Optional, Tuple, Union
+from statistics import fmean
+from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Union
 from zipfile import ZIP_DEFLATED, ZipFile
 
 from ..services.ingestion import SlideConversionResult, SlideConverter
 
 
 LOGGER = logging.getLogger(__name__)
+
+
+@dataclass
+class TextExtractionResult:
+    """Container describing text recovered directly from a PDF page."""
+
+    lines: List[str]
+    had_text_layer: bool
 
 
 class SlideConversionError(RuntimeError):
@@ -101,6 +114,19 @@ class _PaddleOCREngine:
             LOGGER.exception("Failed to initialise PaddleOCR: %s", error)
             raise SlideConversionError(f"Failed to initialise PaddleOCR: {error}") from error
 
+        module_name = getattr(PaddleOCR, "__module__", "")
+        version_value: Optional[str] = None
+        if module_name:
+            root_module = module_name.split(".")[0]
+            candidate = sys.modules.get(root_module) or sys.modules.get(module_name)
+            if candidate is not None:
+                version_attr = getattr(candidate, "__version__", None)
+                if version_attr:
+                    version_value = str(version_attr)
+
+        self.name = f"PaddleOCR {version_value}" if version_value else "PaddleOCR"
+        self.version = version_value
+
     def ocr(self, image: Any) -> Any:
         return self._engine.ocr(image)
 
@@ -136,7 +162,7 @@ class _TesseractOCREngine:
             ) from exc
 
         try:
-            get_version()
+            version_info = get_version()
         except tesseract_missing_error as exc:  # pragma: no cover - runtime check
             raise SlideConversionDependencyError(
                 "Tesseract OCR is not installed or not available in PATH"
@@ -145,6 +171,9 @@ class _TesseractOCREngine:
         self._pytesseract = pytesseract
         self._language = language
         self._output_dict = output_config
+        version_value = str(version_info)
+        self.version = version_value
+        self.name = f"Tesseract {version_value}".strip()
 
     def ocr(self, image: Any) -> List[Mapping[str, Any]]:
         try:
@@ -219,6 +248,8 @@ class PyMuPDFSlideConverter(SlideConverter):
         self._dpi = dpi
         self._ocr_language = ocr_language
         self._ocr_engine: Any | None = None
+        self._ocr_engine_label: str = "unknown"
+        self._ocr_engine_version: Optional[str] = None
         LOGGER.debug(
             "PyMuPDFSlideConverter initialised with dpi=%s, ocr_language=%s",
             dpi,
@@ -227,6 +258,16 @@ class PyMuPDFSlideConverter(SlideConverter):
 
     def _prepare_ocr_engine(self) -> Any:
         if self._ocr_engine is not None:
+            if self._ocr_engine_label == "unknown":
+                self._ocr_engine_label = getattr(
+                    self._ocr_engine,
+                    "name",
+                    self._ocr_engine.__class__.__name__,
+                )
+            if self._ocr_engine_version is None:
+                version_value = getattr(self._ocr_engine, "version", None)
+                if version_value is not None:
+                    self._ocr_engine_version = str(version_value)
             return self._ocr_engine
 
         if self._ocr_engine is not None:
@@ -242,6 +283,9 @@ class PyMuPDFSlideConverter(SlideConverter):
         else:
             LOGGER.info("Using PaddleOCR backend for slide OCR")
             self._ocr_engine = engine
+            self._ocr_engine_label = getattr(engine, "name", "PaddleOCR")
+            version_value = getattr(engine, "version", None)
+            self._ocr_engine_version = str(version_value) if version_value is not None else None
             return engine
 
         if paddle_error is not None:
@@ -260,6 +304,9 @@ class PyMuPDFSlideConverter(SlideConverter):
         else:
             LOGGER.info("Using Tesseract OCR backend for slide OCR")
             self._ocr_engine = engine
+            self._ocr_engine_label = getattr(engine, "name", "Tesseract")
+            version_value = getattr(engine, "version", None)
+            self._ocr_engine_version = str(version_value) if version_value is not None else None
             return engine
 
     def convert(
@@ -300,6 +347,19 @@ class PyMuPDFSlideConverter(SlideConverter):
             ) from exc
 
         engine = self._prepare_ocr_engine()
+        ocr_engine_label = getattr(
+            engine,
+            "name",
+            self._ocr_engine_label or engine.__class__.__name__,
+        )
+        self._ocr_engine_label = ocr_engine_label
+        version_value = getattr(engine, "version", self._ocr_engine_version)
+        self._ocr_engine_version = str(version_value) if version_value is not None else None
+        LOGGER.debug(
+            "Slide OCR engine resolved to %s (version=%s)",
+            self._ocr_engine_label,
+            self._ocr_engine_version or "unknown",
+        )
 
         bundle_dir.mkdir(parents=True, exist_ok=True)
         notes_dir.mkdir(parents=True, exist_ok=True)
@@ -456,18 +516,36 @@ class PyMuPDFSlideConverter(SlideConverter):
                 full_image = Image.frombytes("RGB", [full_pix.width, full_pix.height], full_pix.samples)
 
                 array = np.asarray(full_image)
+                image_array_filename: Optional[str] = None
+                image_array_path = asset_dir / f"slide-{page_number + 1:03d}-image.npy"
+                try:
+                    np.save(image_array_path, array)
+                except Exception:  # pragma: no cover - debug persistence best effort
+                    LOGGER.exception(
+                        "Failed to persist OCR pixel array for slide %s",
+                        page_number + 1,
+                    )
+                else:
+                    image_array_filename = image_array_path.name
+
+                ocr_started = time.perf_counter()
                 try:
                     recognition = engine.ocr(array)
                 except Exception as error:  # noqa: BLE001 - OCR may raise arbitrary errors
-                    message = f"Slide text extraction failed: {error}"
-                    LOGGER.exception(message)
+                    elapsed = time.perf_counter() - ocr_started
+                    message = f"Slide text extraction failed using {self._ocr_engine_label}: {error}"
+                    LOGGER.exception(
+                        "Slide %s OCR failed after %.3fs with engine=%s",
+                        page_number + 1,
+                        elapsed,
+                        self._ocr_engine_label,
+                    )
                     raise SlideConversionError(message) from error
+                ocr_elapsed = time.perf_counter() - ocr_started
 
-                fallback_lines = [
-                    line.strip()
-                    for line in page.get_text("text").splitlines()
-                    if line.strip()
-                ]
+                fallback_result = self._extract_text_candidates(page)
+                fallback_lines = fallback_result.lines
+                had_text_layer = fallback_result.had_text_layer
 
                 parsed_entries: List[Tuple[List[Any], str, float]] = []
                 for raw in recognition or []:
@@ -477,6 +555,7 @@ class PyMuPDFSlideConverter(SlideConverter):
 
                 parsed_entries.sort(key=lambda item: _sort_key(item[0]))
 
+                debug_entries: List[Dict[str, Any]] = []
                 groups: List[Tuple[float, List[str]]] = []
                 threshold = 24.0
                 for box, text, confidence in parsed_entries:
@@ -489,6 +568,21 @@ class PyMuPDFSlideConverter(SlideConverter):
                     sanitized = " ".join(part for part in text.splitlines()).strip()
                     if not sanitized:
                         continue
+                    normalized_box: List[List[float]] = []
+                    for point in box or []:
+                        if isinstance(point, Iterable) and len(point) >= 2:
+                            try:
+                                normalized_box.append([float(point[0]), float(point[1])])
+                            except (TypeError, ValueError):
+                                continue
+                    debug_entries.append(
+                        {
+                            "text": sanitized,
+                            "confidence": float(confidence),
+                            "center_y": center_y,
+                            "box": normalized_box,
+                        }
+                    )
                     if not groups:
                         groups.append((center_y, [sanitized]))
                     else:
@@ -498,20 +592,52 @@ class PyMuPDFSlideConverter(SlideConverter):
                         else:
                             groups.append((center_y, [sanitized]))
 
+                no_text_reason: Optional[str] = None
+                ocr_status = "text-detected"
                 entries: List[str] = []
                 if not groups:
                     if fallback_lines:
+                        no_text_reason = "used-text-layer-fallback"
+                        ocr_status = "fallback-text-layer"
                         for fallback in fallback_lines:
                             sanitized_fallback = fallback.strip()
                             if sanitized_fallback:
                                 entries.append(f"- {sanitized_fallback}")
                     else:
-                        entries.append("_No text detected._")
+                        if had_text_layer:
+                            no_text_reason = "text-layer-empty"
+                            ocr_status = "text-layer-empty"
+                            entries.append(
+                                "_No text detected (text layer contained no extractable content)._"
+                            )
+                        else:
+                            no_text_reason = "ocr-empty-image-page"
+                            ocr_status = "ocr-empty-image-page"
+                            entries.append(
+                                "_No text detected (OCR produced no text for image-based page)._"
+                            )
                 else:
                     for _center, parts in groups:
                         line = " ".join(parts).strip()
                         if line:
                             entries.append(f"- {line}")
+
+                accepted_confidences = [item["confidence"] for item in debug_entries]
+                if accepted_confidences:
+                    confidence_stats = {
+                        "min": round(min(accepted_confidences), 6),
+                        "max": round(max(accepted_confidences), 6),
+                        "mean": round(fmean(accepted_confidences), 6),
+                    }
+                else:
+                    confidence_stats = {"min": None, "max": None, "mean": None}
+
+                ocr_text_lines = [item["text"] for item in debug_entries]
+                raw_preview: List[str] = []
+                for index, raw_item in enumerate(recognition or []):
+                    if index >= 5:
+                        break
+                    raw_preview.append(str(raw_item))
 
                 has_textual_entries = any(line.startswith("- ") for line in entries)
                 has_text_content = bool(fallback_lines) or has_textual_entries
@@ -522,6 +648,84 @@ class PyMuPDFSlideConverter(SlideConverter):
                     has_vector_drawings=bool(page_drawings),
                     has_visual_regions=bool(visual_regions),
                 )
+
+                debug_entries_payload = [
+                    {
+                        "text": item["text"],
+                        "confidence": round(item["confidence"], 6),
+                        "center_y": round(item["center_y"], 3),
+                        "box": [
+                            [round(point[0], 3), round(point[1], 3)]
+                            for point in item["box"]
+                        ],
+                    }
+                    for item in debug_entries
+                ]
+
+                debug_payload = {
+                    "page": page_number + 1,
+                    "ocr_engine": self._ocr_engine_label,
+                    "ocr_engine_version": self._ocr_engine_version,
+                    "ocr_duration_ms": round(ocr_elapsed * 1000, 3),
+                    "ocr_status": ocr_status,
+                    "raw_recognition_count": len(recognition or []),
+                    "accepted_entry_count": len(debug_entries),
+                    "group_count": len(groups),
+                    "confidence": confidence_stats,
+                    "ocr_entries": debug_entries_payload,
+                    "ocr_text": ocr_text_lines,
+                    "fallback_line_count": len(fallback_lines),
+                    "fallback_lines": fallback_lines,
+                    "text_layer_present": had_text_layer,
+                    "no_text_reason": no_text_reason,
+                    "markdown_entries": entries,
+                    "fallback_used": bool(fallback_lines),
+                    "image_array_file": image_array_filename,
+                    "image_size": {"width": full_image.width, "height": full_image.height},
+                    "raw_recognition_preview": raw_preview,
+                    "include_image": include_image,
+                    "has_raster_images": bool(page_images),
+                    "has_vector_drawings": bool(page_drawings),
+                    "visual_region_count": len(visual_regions),
+                }
+
+                debug_path = asset_dir / f"slide-{page_number + 1:03d}-ocr.json"
+                try:
+                    debug_path.write_text(
+                        json.dumps(debug_payload, indent=2, ensure_ascii=False),
+                        encoding="utf-8",
+                    )
+                except Exception:  # pragma: no cover - debug persistence best effort
+                    LOGGER.exception(
+                        "Failed to persist OCR debug payload for slide %s",
+                        page_number + 1,
+                    )
+                else:
+                    summary_payload = {
+                        key: debug_payload[key]
+                        for key in (
+                            "page",
+                            "ocr_engine",
+                            "ocr_engine_version",
+                            "ocr_duration_ms",
+                            "ocr_status",
+                            "raw_recognition_count",
+                            "accepted_entry_count",
+                            "fallback_line_count",
+                            "text_layer_present",
+                            "no_text_reason",
+                        )
+                    }
+                    LOGGER.debug(
+                        "Slide %s OCR debug summary: %s",
+                        page_number + 1,
+                        json.dumps(summary_payload, ensure_ascii=False),
+                    )
+                    LOGGER.debug(
+                        "Slide %s OCR debug stored at %s",
+                        page_number + 1,
+                        debug_path,
+                    )
 
                 section_lines = [
                     f"## Slide {page_number + 1}",
@@ -588,10 +792,13 @@ class PyMuPDFSlideConverter(SlideConverter):
             "generator: Lecture Tools Slide Converter",
             f"generated_at: {generated_at}",
             f"render_dpi: {render_dpi}",
+            f"ocr_engine: {self._ocr_engine_label}",
             f"source_pdf: {slide_path.name}",
             f"page_range: {page_range_label}",
             f"pages_processed: {processed_pages}",
         ]
+        if self._ocr_engine_version:
+            metadata_lines.append(f"ocr_engine_version: {self._ocr_engine_version}")
         if document_page_count is not None:
             metadata_lines.append(f"document_pages: {document_page_count}")
         metadata_lines.append("---")
@@ -617,6 +824,73 @@ class PyMuPDFSlideConverter(SlideConverter):
                 archive.write(image_file, arcname=arcname.as_posix())
 
         return SlideConversionResult(bundle_path=bundle_path, markdown_path=markdown_path)
+
+    @staticmethod
+    def _extract_text_candidates(page: Any) -> TextExtractionResult:
+        """Return text lines extracted directly from a PDF page."""
+
+        lines: List[str] = []
+        had_text_layer = False
+
+        try:
+            raw_text = page.get_text("text")
+        except Exception:  # pragma: no cover - defensive fallback
+            raw_text = ""
+
+        if isinstance(raw_text, str):
+            for line in raw_text.splitlines():
+                sanitized = line.strip()
+                if sanitized:
+                    lines.append(sanitized)
+            if raw_text.strip():
+                had_text_layer = True
+
+        if lines:
+            return TextExtractionResult(lines=lines, had_text_layer=True)
+
+        try:
+            raw_dict = page.get_text("rawdict")
+        except Exception:  # pragma: no cover - defensive fallback
+            raw_dict = None
+
+        if not isinstance(raw_dict, Mapping):
+            return TextExtractionResult(lines=lines, had_text_layer=had_text_layer)
+
+        blocks = raw_dict.get("blocks")
+        if not isinstance(blocks, Iterable):
+            return TextExtractionResult(lines=lines, had_text_layer=had_text_layer)
+
+        for block in blocks:
+            if not isinstance(block, Mapping):
+                continue
+            if block.get("type") != 0:
+                continue
+
+            had_text_layer = True
+
+            for line in block.get("lines", []) or []:
+                if not isinstance(line, Mapping):
+                    continue
+                spans = line.get("spans", [])
+                if not isinstance(spans, Iterable):
+                    continue
+
+                words: List[str] = []
+                for span in spans:
+                    if not isinstance(span, Mapping):
+                        continue
+                    text = span.get("text")
+                    if not isinstance(text, str):
+                        continue
+                    sanitized = text.strip()
+                    if sanitized:
+                        words.append(sanitized)
+
+                combined = " ".join(words).strip()
+                if combined:
+                    lines.append(combined)
+
+        return TextExtractionResult(lines=lines, had_text_layer=had_text_layer)
 
     @staticmethod
     def _prepare_destination(output_dir: Path, stem: str) -> Path:
