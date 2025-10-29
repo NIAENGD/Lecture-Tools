@@ -3528,6 +3528,7 @@ def create_app(
             "transcript": ("transcript_path",),
             "notes": ("notes_path",),
             "slide_images": ("slide_image_dir",),
+            "slide_bundle": ("slide_image_dir",),
         }
 
         if asset_key not in removal_map:

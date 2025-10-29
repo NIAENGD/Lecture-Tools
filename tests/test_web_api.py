@@ -816,6 +816,27 @@ def test_delete_asset_clears_path_and_file(temp_config):
     assert not target_file.exists()
 
 
+def test_delete_slide_bundle_asset_clears_archive(temp_config):
+    repository, lecture_id, _module_id = _create_sample_data(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    archive_file = temp_config.storage_root / "slides" / "lecture-bundle.zip"
+    archive_file.parent.mkdir(parents=True, exist_ok=True)
+    archive_file.write_bytes(b"zip")
+    relative_path = archive_file.relative_to(temp_config.storage_root).as_posix()
+
+    repository.update_lecture_assets(lecture_id, slide_image_dir=relative_path)
+
+    response = client.delete(f"/api/lectures/{lecture_id}/assets/slide_bundle")
+
+    assert response.status_code == 200
+    updated = repository.get_lecture(lecture_id)
+    assert updated is not None
+    assert updated.slide_image_dir is None
+    assert not archive_file.exists()
+
+
 def test_delete_audio_asset_removes_processed_audio(temp_config):
     repository, lecture_id, _module_id = _create_sample_data(temp_config)
     app = create_app(repository, config=temp_config)
