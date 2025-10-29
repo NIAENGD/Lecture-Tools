@@ -6,12 +6,53 @@ import json
 import logging
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Dict, Literal, Tuple
 
 from ..config import AppConfig
 
 
-ThemeName = Literal["dark", "light", "system"]
+ThemeName = Literal[
+    "system",
+    "bright-vibrant",
+    "bright-kawaii",
+    "bright-serene",
+    "dark-cool",
+    "dark-aurora",
+    "dark-midnight",
+]
+THEME_OPTIONS: Tuple[ThemeName, ...] = (
+    "system",
+    "bright-vibrant",
+    "bright-kawaii",
+    "bright-serene",
+    "dark-cool",
+    "dark-aurora",
+    "dark-midnight",
+)
+DEFAULT_THEME: ThemeName = "system"
+_THEME_ALIASES: Dict[str, ThemeName] = {
+    "light": "bright-vibrant",
+    "dark": "dark-cool",
+}
+
+
+def normalize_theme(value: object) -> ThemeName:
+    """Coerce arbitrary input to a supported theme choice."""
+
+    if isinstance(value, str):
+        candidate = value.strip().lower()
+    else:
+        candidate = ""
+
+    for option in THEME_OPTIONS:
+        if candidate == option:
+            return option
+
+    alias = _THEME_ALIASES.get(candidate)
+    if alias:
+        return alias
+
+    return DEFAULT_THEME
 LanguageCode = Literal["en", "zh", "es", "fr"]
 
 
@@ -22,7 +63,7 @@ LOGGER = logging.getLogger(__name__)
 class UISettings:
     """Container for customisable UI options."""
 
-    theme: ThemeName = "system"
+    theme: ThemeName = DEFAULT_THEME
     language: LanguageCode = "en"
     whisper_model: str = "base"
     whisper_compute_type: str = "int8"
@@ -59,13 +100,22 @@ class SettingsStore:
             if hasattr(settings, field):
                 setattr(settings, field, value)
                 LOGGER.debug("Loaded UI setting %s=%s", field, value)
+        settings.theme = normalize_theme(getattr(settings, "theme", DEFAULT_THEME))
         return settings
 
     def save(self, settings: UISettings) -> None:
         self._path.parent.mkdir(parents=True, exist_ok=True)
         data = asdict(settings)
+        data["theme"] = normalize_theme(data.get("theme"))
         self._path.write_text(json.dumps(data, indent=2), encoding="utf-8")
         LOGGER.debug("Persisted UI settings to %s", self._path)
 
 
-__all__ = ["SettingsStore", "ThemeName", "UISettings"]
+__all__ = [
+    "DEFAULT_THEME",
+    "SettingsStore",
+    "THEME_OPTIONS",
+    "ThemeName",
+    "UISettings",
+    "normalize_theme",
+]

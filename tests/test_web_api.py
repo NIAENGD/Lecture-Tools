@@ -1699,7 +1699,7 @@ def test_update_settings_rejects_gpu_without_support(monkeypatch, temp_config):
     response = client.put(
         "/api/settings",
         json={
-            "theme": "light",
+            "theme": "bright-vibrant",
             "language": "en",
             "whisper_model": "gpu",
             "whisper_compute_type": "float16",
@@ -1786,6 +1786,7 @@ def test_get_settings_coerces_invalid_choices(temp_config):
     response = client.get("/api/settings")
     assert response.status_code == 200
     payload = response.json()["settings"]
+    assert payload["theme"] == "dark-cool"
     assert payload["whisper_model"] == "base"
     assert payload["slide_dpi"] == 200
     assert payload["language"] == "en"
@@ -1798,7 +1799,7 @@ def test_update_settings_enforces_choices(temp_config):
     client = TestClient(app)
 
     valid_payload = {
-        "theme": "light",
+        "theme": "bright-vibrant",
         "language": "fr",
         "whisper_model": "small",
         "whisper_compute_type": "float16",
@@ -1809,6 +1810,7 @@ def test_update_settings_enforces_choices(temp_config):
     response = client.put("/api/settings", json=valid_payload)
     assert response.status_code == 200
     payload = response.json()["settings"]
+    assert payload["theme"] == "bright-vibrant"
     assert payload["whisper_model"] == "small"
     assert payload["slide_dpi"] == 300
     assert payload["language"] == "fr"
