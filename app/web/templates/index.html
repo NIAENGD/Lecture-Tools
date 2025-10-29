@@ -317,6 +317,31 @@
         color: #f8fafc;
       }
 
+      .debug-download-button {
+        padding: 6px 12px;
+        margin-left: auto;
+        border-radius: 6px;
+        border: 1px solid rgba(94, 117, 148, 0.4);
+        background: rgba(15, 23, 42, 0.45);
+        color: rgba(226, 232, 240, 0.92);
+        font-size: 0.8rem;
+        letter-spacing: 0.02em;
+        cursor: pointer;
+        transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+      }
+
+      .debug-download-button:hover,
+      .debug-download-button:focus-visible {
+        background: rgba(59, 130, 246, 0.2);
+        border-color: rgba(148, 163, 184, 0.8);
+        color: #f8fafc;
+      }
+
+      .debug-download-button:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+      }
+
       .debug-heartbeat {
         display: flex;
         align-items: center;
@@ -3427,6 +3452,9 @@
         <button id="debug-filter-clear" type="button" class="debug-filter-clear">
           Clear
         </button>
+        <button id="debug-download-log" type="button" class="debug-download-button">
+          Download log
+        </button>
       </div>
       <div
         id="debug-log-window"
@@ -6364,6 +6392,7 @@
           debugFilterTask: document.getElementById('debug-filter-task'),
           debugFilterQuery: document.getElementById('debug-filter-query'),
           debugFilterClear: document.getElementById('debug-filter-clear'),
+          debugDownloadLog: document.getElementById('debug-download-log'),
           storage: {
             container: document.getElementById('view-storage'),
             path: document.getElementById('storage-path'),
@@ -6629,6 +6658,49 @@
               dom.debugFilterQuery.value = '';
             }
             renderDebugLogs();
+          });
+        }
+
+        if (dom.debugDownloadLog) {
+          dom.debugDownloadLog.addEventListener('click', async () => {
+            if (dom.debugDownloadLog.disabled) {
+              return;
+            }
+            dom.debugDownloadLog.disabled = true;
+            updateDebugStatus('Preparing log download…');
+            try {
+              const response = await fetch('/api/debug/logs/download', { cache: 'no-store' });
+              if (!response.ok) {
+                throw new Error(`Request failed with status ${response.status}`);
+              }
+              const blob = await response.blob();
+              const disposition = response.headers.get('Content-Disposition') || '';
+              let filename = '';
+              const match = disposition.match(/filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i);
+              if (match) {
+                filename = decodeURIComponent(match[1] || match[2] || '').replace(/\r|\n/g, '');
+              }
+              if (!filename) {
+                filename = `debug-${new Date().toISOString().replace(/[:.]/g, '-')}.log`;
+              }
+              const downloadUrl = URL.createObjectURL(blob);
+              const link = document.createElement('a');
+              link.href = downloadUrl;
+              link.download = filename;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              window.setTimeout(() => {
+                URL.revokeObjectURL(downloadUrl);
+              }, 1000);
+              updateDebugStatus('Debug log download ready');
+              window.setTimeout(() => updateDebugStatus(''), 2500);
+            } catch (error) {
+              console.error('Failed to download debug log', error);
+              updateDebugStatus('Unable to download debug log');
+            } finally {
+              dom.debugDownloadLog.disabled = false;
+            }
           });
         }
 

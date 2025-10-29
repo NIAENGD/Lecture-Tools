@@ -196,7 +196,7 @@ from fastapi import (
 )
 from fastapi import status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from starlette.formparsers import MultiPartParser
@@ -562,6 +562,7 @@ class DebugLogHandler(logging.Handler):
         self._lock = threading.Lock()
         self._last_id = 0
         self.setFormatter(logging.Formatter(DEFAULT_LOG_FORMAT))
+        self._started_at = datetime.now(timezone.utc)
 
     def _extract_duration(self, record: logging.LogRecord) -> Optional[float]:
         candidate = getattr(record, "debug_duration_ms", None)
@@ -844,6 +845,70 @@ class DebugLogHandler(logging.Handler):
             return []
         sliced = data[-limit:]
         return [self._serialize_entry(entry) for entry in sliced]
+
+    def export_text(self) -> str:
+        with self._lock:
+            entries = [self._serialize_entry(entry) for entry in self._entries]
+        if not entries:
+            return "# Debug log is currently empty.\n"
+
+        lines: List[str] = []
+        for entry in entries:
+            timestamp = (
+                entry.get("timestamp")
+                or entry.get("last_seen")
+                or entry.get("first_seen")
+                or ""
+            )
+            level = str(entry.get("level", "")).upper()
+            event_type = str(entry.get("event_type", ""))
+            message = str(entry.get("message", ""))
+            severity = entry.get("severity")
+            duration = (
+                entry.get("last_duration_ms")
+                or entry.get("average_duration_ms")
+                or entry.get("total_duration_ms")
+            )
+            context = entry.get("context") if isinstance(entry.get("context"), Mapping) else None
+            payload = entry.get("payload") if isinstance(entry.get("payload"), Mapping) else None
+            correlation = {
+                key: entry.get(key)
+                for key in ("request_id", "job_id", "actor")
+                if entry.get(key)
+            }
+
+            base = f"[{timestamp}] {level:<7} {event_type}: {message}".strip()
+            detail_parts: List[str] = []
+            if severity:
+                detail_parts.append(f"severity={severity}")
+            if duration:
+                try:
+                    detail_parts.append(f"duration_ms={float(duration):.3f}")
+                except (TypeError, ValueError):
+                    detail_parts.append(f"duration_ms={duration}")
+            if context:
+                detail_parts.append(
+                    "context=" + json.dumps(context, ensure_ascii=False, sort_keys=True)
+                )
+            if payload:
+                detail_parts.append(
+                    "payload=" + json.dumps(payload, ensure_ascii=False, sort_keys=True)
+                )
+            if correlation:
+                detail_parts.append(
+                    "correlation="
+                    + json.dumps(correlation, ensure_ascii=False, sort_keys=True)
+                )
+            line = base
+            if detail_parts:
+                line = f"{base} | " + " | ".join(detail_parts)
+            lines.append(line)
+
+        return "\n".join(lines) + "\n"
+
+    @property
+    def started_at(self) -> datetime:
+        return self._started_at
 
     @property
     def last_id(self) -> int:
@@ -3621,6 +3686,33 @@ def create_app(
             )
         next_marker = handler.last_id if entries else (after_id or handler.last_id)
         return {"logs": entries, "next": next_marker, "enabled": enabled}
+
+    @app.get("/api/debug/logs/download")
+    async def download_debug_logs() -> Response:
+        handler = getattr(app.state, "debug_log_handler", None)
+        if handler is None:
+            raise HTTPException(status_code=404, detail="Debug logging is not available.")
+
+        content = handler.export_text()
+        now = datetime.now(timezone.utc)
+        started = getattr(handler, "started_at", None)
+        if isinstance(started, datetime):
+            start_label = started.astimezone(timezone.utc).strftime("%Y%m%d-%H%M%S")
+        else:
+            start_label = "session"
+        end_label = now.strftime("%Y%m%d-%H%M%S")
+        filename = f"{start_label}_to_{end_label}.log" if start_label != "session" else f"{end_label}.log"
+        body = content if content.strip() else "# Debug log is currently empty.\n"
+        LOGGER.debug(
+            "Preparing debug log download (%s bytes, filename=%s)",
+            len(body.encode("utf-8")),
+            filename,
+        )
+        return Response(
+            content=body,
+            media_type="text/plain; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
 
     @app.put("/api/settings")
     async def update_settings(payload: SettingsPayload) -> Dict[str, Any]:
