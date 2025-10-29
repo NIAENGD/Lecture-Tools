@@ -11,29 +11,74 @@ from typing import Dict, Literal, Tuple
 from ..config import AppConfig
 
 
+DisplayModeName = Literal["system", "bright", "dark"]
 ThemeName = Literal[
-    "system",
-    "bright-vibrant",
-    "bright-kawaii",
-    "bright-serene",
-    "dark-cool",
-    "dark-aurora",
-    "dark-midnight",
+    "vibrant",
+    "serene",
+    "noir",
+    "solar",
+    "cyber",
+    "pastel",
+    "obsidian",
+    "ethereal",
 ]
+EffectsLevelName = Literal["low", "mid", "high"]
+DISPLAY_MODE_OPTIONS: Tuple[DisplayModeName, ...] = ("system", "bright", "dark")
 THEME_OPTIONS: Tuple[ThemeName, ...] = (
-    "system",
-    "bright-vibrant",
-    "bright-kawaii",
-    "bright-serene",
-    "dark-cool",
-    "dark-aurora",
-    "dark-midnight",
+    "vibrant",
+    "serene",
+    "noir",
+    "solar",
+    "cyber",
+    "pastel",
+    "obsidian",
+    "ethereal",
 )
-DEFAULT_THEME: ThemeName = "system"
+EFFECTS_LEVEL_OPTIONS: Tuple[EffectsLevelName, ...] = ("low", "mid", "high")
+DEFAULT_DISPLAY_MODE: DisplayModeName = "system"
+DEFAULT_THEME: ThemeName = "vibrant"
+DEFAULT_VISUAL_EFFECTS: EffectsLevelName = "mid"
 _THEME_ALIASES: Dict[str, ThemeName] = {
-    "light": "bright-vibrant",
-    "dark": "dark-cool",
+    "bright-vibrant": "vibrant",
+    "bright-serene": "serene",
+    "bright-kawaii": "pastel",
+    "dark-cool": "vibrant",
+    "dark-aurora": "serene",
+    "dark-midnight": "obsidian",
+    "light": "vibrant",
+    "dark": "obsidian",
 }
+_LEGACY_THEME_MAP: Dict[str, Tuple[DisplayModeName, ThemeName]] = {
+    "system": ("system", "vibrant"),
+    "bright-vibrant": ("bright", "vibrant"),
+    "bright-serene": ("bright", "serene"),
+    "bright-kawaii": ("bright", "pastel"),
+    "dark-cool": ("dark", "vibrant"),
+    "dark-aurora": ("dark", "serene"),
+    "dark-midnight": ("dark", "obsidian"),
+    "light": ("bright", "vibrant"),
+    "dark": ("dark", "obsidian"),
+}
+
+
+def normalize_display_mode(value: object) -> DisplayModeName:
+    """Coerce arbitrary input to a supported display mode."""
+
+    if isinstance(value, str):
+        candidate = value.strip().lower()
+    else:
+        candidate = ""
+
+    for option in DISPLAY_MODE_OPTIONS:
+        if candidate == option:
+            return option
+
+    if candidate in {"light", "bright"}:
+        return "bright"
+    if candidate in {"dark", "night"}:
+        return "dark"
+
+    return DEFAULT_DISPLAY_MODE
 
 
 def normalize_theme(value: object) -> ThemeName:
@@ -49,10 +94,62 @@ def normalize_theme(value: object) -> ThemeName:
             return option
 
     alias = _THEME_ALIASES.get(candidate)
-    if alias:
+    if alias is not None:
         return alias
 
     return DEFAULT_THEME
+
+
+def normalize_visual_effects(value: object) -> EffectsLevelName:
+    """Coerce arbitrary input to a supported visual effects intensity."""
+
+    if isinstance(value, str):
+        candidate = value.strip().lower()
+    else:
+        candidate = ""
+
+    for option in EFFECTS_LEVEL_OPTIONS:
+        if candidate == option:
+            return option
+
+    if candidate in {"medium", "default"}:
+        return "mid"
+
+    return DEFAULT_VISUAL_EFFECTS
+
+
+def resolve_theme_preferences(
+    theme_value: object, display_mode_value: object
+) -> Tuple[DisplayModeName, ThemeName]:
+    """Normalise theme and display mode selections, migrating legacy options."""
+
+    inferred_display: DisplayModeName = DEFAULT_DISPLAY_MODE
+    inferred_theme: ThemeName = DEFAULT_THEME
+    legacy_mapping: Tuple[DisplayModeName, ThemeName] | None = None
+
+    if isinstance(theme_value, str):
+        trimmed = theme_value.strip().lower()
+        legacy_mapping = _LEGACY_THEME_MAP.get(trimmed)
+        if legacy_mapping is not None:
+            inferred_display, inferred_theme = legacy_mapping
+        else:
+            inferred_theme = normalize_theme(trimmed)
+    else:
+        inferred_theme = DEFAULT_THEME
+
+    explicit_display: DisplayModeName | None = None
+    if display_mode_value is not None:
+        explicit_display = normalize_display_mode(display_mode_value)
+
+    if explicit_display and explicit_display != DEFAULT_DISPLAY_MODE:
+        inferred_display = explicit_display
+    elif explicit_display == DEFAULT_DISPLAY_MODE:
+        if legacy_mapping is not None and legacy_mapping[0] != DEFAULT_DISPLAY_MODE:
+            inferred_display = legacy_mapping[0]
+        else:
+            inferred_display = explicit_display
+
+    return inferred_display, normalize_theme(inferred_theme)
 LanguageCode = Literal["en", "zh", "es", "fr"]
 
 
@@ -63,7 +160,9 @@ LOGGER = logging.getLogger(__name__)
 class UISettings:
     """Container for customisable UI options."""
 
+    display_mode: DisplayModeName = DEFAULT_DISPLAY_MODE
     theme: ThemeName = DEFAULT_THEME
+    visual_effects: EffectsLevelName = DEFAULT_VISUAL_EFFECTS
     language: LanguageCode = "en"
     whisper_model: str = "base"
     whisper_compute_type: str = "int8"
@@ -100,22 +199,40 @@ class SettingsStore:
             if hasattr(settings, field):
                 setattr(settings, field, value)
                 LOGGER.debug("Loaded UI setting %s=%s", field, value)
-        settings.theme = normalize_theme(getattr(settings, "theme", DEFAULT_THEME))
+        display_mode, theme = resolve_theme_preferences(
+            payload.get("theme", settings.theme), payload.get("display_mode", settings.display_mode)
+        )
+        settings.display_mode = display_mode
+        settings.theme = theme
+        settings.visual_effects = normalize_visual_effects(
+            payload.get("visual_effects", settings.visual_effects)
+        )
         return settings
 
     def save(self, settings: UISettings) -> None:
         self._path.parent.mkdir(parents=True, exist_ok=True)
         data = asdict(settings)
+        data["display_mode"] = normalize_display_mode(data.get("display_mode"))
         data["theme"] = normalize_theme(data.get("theme"))
+        data["visual_effects"] = normalize_visual_effects(data.get("visual_effects"))
         self._path.write_text(json.dumps(data, indent=2), encoding="utf-8")
         LOGGER.debug("Persisted UI settings to %s", self._path)
 
 
 __all__ = [
+    "DEFAULT_DISPLAY_MODE",
     "DEFAULT_THEME",
+    "DEFAULT_VISUAL_EFFECTS",
+    "DISPLAY_MODE_OPTIONS",
+    "EFFECTS_LEVEL_OPTIONS",
     "SettingsStore",
     "THEME_OPTIONS",
+    "EffectsLevelName",
+    "DisplayModeName",
     "ThemeName",
     "UISettings",
+    "normalize_display_mode",
     "normalize_theme",
+    "normalize_visual_effects",
+    "resolve_theme_preferences",
 ]

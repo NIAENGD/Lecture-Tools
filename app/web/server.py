@@ -232,11 +232,18 @@ from ..services.progress import (
     format_progress_message,
 )
 from ..services.settings import (
+    DEFAULT_DISPLAY_MODE,
     DEFAULT_THEME,
+    DEFAULT_VISUAL_EFFECTS,
+    DISPLAY_MODE_OPTIONS,
+    EFFECTS_LEVEL_OPTIONS,
     SettingsStore,
     THEME_OPTIONS,
     UISettings,
+    normalize_display_mode,
     normalize_theme,
+    normalize_visual_effects,
+    resolve_theme_preferences,
 )
 from ..services.storage import ClassRecord, LectureRecord, LectureRepository, ModuleRecord
 from ..logging_utils import DEFAULT_LOG_FORMAT
@@ -264,7 +271,18 @@ _SLIDE_DPI_SET = set(_SLIDE_DPI_OPTIONS)
 _LANGUAGE_OPTIONS: Tuple[str, ...] = ("en", "zh", "es", "fr")
 _LANGUAGE_SET = set(_LANGUAGE_OPTIONS)
 _THEME_OPTIONS: Tuple[str, ...] = tuple(THEME_OPTIONS)
-_THEME_INPUT_OPTIONS: Tuple[str, ...] = _THEME_OPTIONS + ("light", "dark")
+_THEME_INPUT_OPTIONS: Tuple[str, ...] = _THEME_OPTIONS + (
+    "bright-vibrant",
+    "bright-serene",
+    "bright-kawaii",
+    "dark-cool",
+    "dark-aurora",
+    "dark-midnight",
+    "light",
+    "dark",
+)
+_DISPLAY_MODE_OPTIONS: Tuple[str, ...] = tuple(DISPLAY_MODE_OPTIONS)
+_VISUAL_EFFECT_OPTIONS: Tuple[str, ...] = tuple(EFFECTS_LEVEL_OPTIONS)
 _DEFAULT_UI_SETTINGS = UISettings()
 _SERVER_LOGGER_PREFIXES: Tuple[str, ...] = ("uvicorn", "gunicorn", "hypercorn", "werkzeug")
 _SLIDE_PREVIEW_DIR_NAME = ".previews"
@@ -1516,13 +1534,13 @@ class UpdateManager:
             self._exit_code = None
             self._error = None
             self._log.clear()
-            self._append_log("Update requested")
             thread = threading.Thread(
                 target=self._execute,
                 args=(commands,),
                 daemon=True,
             )
             self._thread = thread
+        self._append_log("Update requested")
         thread.start()
         return self.get_status()
 
@@ -1661,7 +1679,9 @@ class ModuleReorderPayload(BaseModel):
 
 
 class SettingsPayload(BaseModel):
+    display_mode: Literal[*_DISPLAY_MODE_OPTIONS] = DEFAULT_DISPLAY_MODE
     theme: Literal[*_THEME_INPUT_OPTIONS] = DEFAULT_THEME
+    visual_effects: Literal[*_VISUAL_EFFECT_OPTIONS] = DEFAULT_VISUAL_EFFECTS
     whisper_model: Literal[*_WHISPER_MODEL_OPTIONS] = "base"
     whisper_compute_type: str = Field("int8", min_length=1)
     whisper_beam_size: int = Field(5, ge=1, le=10)
@@ -3668,10 +3688,14 @@ def create_app(
     @app.get("/api/settings")
     async def get_settings() -> Dict[str, Any]:
         settings = _load_ui_settings()
+        settings.display_mode = normalize_display_mode(settings.display_mode)
         settings.theme = normalize_theme(settings.theme)
+        settings.visual_effects = normalize_visual_effects(settings.visual_effects)
         _log_event(
             "Loaded settings",
+            display_mode=settings.display_mode,
             theme=settings.theme,
+            visual_effects=settings.visual_effects,
             language=settings.language,
             whisper_model=settings.whisper_model,
             debug_enabled=settings.debug_enabled,
@@ -3727,7 +3751,10 @@ def create_app(
     async def update_settings(payload: SettingsPayload) -> Dict[str, Any]:
         settings = _load_ui_settings()
         _log_event("Received settings update request")
-        settings.theme = normalize_theme(payload.theme)
+        display_mode, theme = resolve_theme_preferences(payload.theme, payload.display_mode)
+        settings.display_mode = display_mode
+        settings.theme = theme
+        settings.visual_effects = normalize_visual_effects(payload.visual_effects)
         settings.language = _normalize_language(payload.language)
         desired_model = _normalize_whisper_model(payload.whisper_model)
         if desired_model == "gpu":
@@ -3753,7 +3780,9 @@ def create_app(
         _update_debug_state(settings.debug_enabled)
         _log_event(
             "Persisted settings",
+            display_mode=settings.display_mode,
             theme=settings.theme,
+            visual_effects=settings.visual_effects,
             language=settings.language,
             whisper_model=settings.whisper_model,
             debug_enabled=settings.debug_enabled,
