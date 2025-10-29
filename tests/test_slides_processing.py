@@ -1,10 +1,17 @@
 """Tests for slide processing helpers."""
 
+import sys
+from types import ModuleType
 from typing import Any, Dict, List
 
+import numpy as np
 import pytest
 
-from app.processing.slides import PyMuPDFSlideConverter
+from app.processing.slides import (
+    PyMuPDFSlideConverter,
+    SlideConversionDependencyError,
+    _TesseractOCREngine,
+)
 
 
 def test_should_include_image_when_text_only():
@@ -162,3 +169,59 @@ def test_union_rectangles(rectangles, expected):
     converter = PyMuPDFSlideConverter(dpi=72)
 
     assert converter._union_rectangles(rectangles) == expected
+
+
+def test_prepare_engine_falls_back_to_tesseract(monkeypatch):
+    converter = PyMuPDFSlideConverter(dpi=72)
+
+    missing_paddle = ModuleType("paddleocr")
+    monkeypatch.setitem(sys.modules, "paddleocr", missing_paddle)
+
+    dummy_tesseract = ModuleType("pytesseract")
+
+    class DummyOutput:
+        DICT = "dict"
+
+    class DummyTesseractError(RuntimeError):
+        pass
+
+    def fake_get_version():
+        return "5.0.0"
+
+    def fake_image_to_data(image, lang: str, output_type: str) -> Dict[str, List[str]]:
+        return {
+            "text": ["Hello", ""],
+            "conf": ["90", "-1"],
+            "left": ["1", "0"],
+            "top": ["2", "0"],
+            "width": ["20", "0"],
+            "height": ["10", "0"],
+        }
+
+    dummy_tesseract.Output = DummyOutput()
+    dummy_tesseract.TesseractNotFoundError = DummyTesseractError
+    dummy_tesseract.get_tesseract_version = fake_get_version
+    dummy_tesseract.image_to_data = fake_image_to_data
+
+    monkeypatch.setitem(sys.modules, "pytesseract", dummy_tesseract)
+
+    engine = converter._prepare_ocr_engine()
+
+    assert isinstance(engine, _TesseractOCREngine)
+
+    result = engine.ocr(np.zeros((5, 5), dtype=np.uint8))
+    assert result and result[0]["text"] == "Hello"
+    assert result[0]["score"] == pytest.approx(0.9)
+
+
+def test_prepare_engine_raises_when_no_backends(monkeypatch):
+    converter = PyMuPDFSlideConverter(dpi=72)
+
+    missing_paddle = ModuleType("paddleocr")
+    monkeypatch.setitem(sys.modules, "paddleocr", missing_paddle)
+
+    missing_tesseract = ModuleType("pytesseract")
+    monkeypatch.setitem(sys.modules, "pytesseract", missing_tesseract)
+
+    with pytest.raises(SlideConversionDependencyError):
+        converter._prepare_ocr_engine()

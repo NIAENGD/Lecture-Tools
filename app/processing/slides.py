@@ -86,6 +86,132 @@ def render_pdf_page(
             document.close()
 
 
+class _PaddleOCREngine:
+    """Adapter providing a consistent interface around PaddleOCR."""
+
+    def __init__(self, language: str) -> None:
+        try:
+            from paddleocr import PaddleOCR  # type: ignore
+        except ImportError as exc:  # pragma: no cover - import guard
+            raise SlideConversionDependencyError("PaddleOCR is not installed") from exc
+
+        try:
+            self._engine = PaddleOCR(use_angle_cls=True, lang=language)
+        except Exception as error:  # noqa: BLE001 - PaddleOCR may raise arbitrary errors
+            LOGGER.exception("Failed to initialise PaddleOCR: %s", error)
+            raise SlideConversionError(f"Failed to initialise PaddleOCR: {error}") from error
+
+    def ocr(self, image: Any) -> Any:
+        return self._engine.ocr(image)
+
+
+class _TesseractOCREngine:
+    """Adapter that mimics PaddleOCR's interface using Tesseract OCR."""
+
+    def __init__(self, language: str) -> None:
+        try:
+            import pytesseract  # type: ignore
+        except ImportError as exc:  # pragma: no cover - import guard
+            raise SlideConversionDependencyError("pytesseract is not installed") from exc
+
+        try:
+            get_version = pytesseract.get_tesseract_version
+        except AttributeError as exc:  # pragma: no cover - defensive guard
+            raise SlideConversionDependencyError(
+                "Installed pytesseract is missing get_tesseract_version()"
+            ) from exc
+
+        try:
+            tesseract_missing_error = pytesseract.TesseractNotFoundError
+        except AttributeError as exc:  # pragma: no cover - defensive guard
+            raise SlideConversionDependencyError(
+                "Installed pytesseract is missing TesseractNotFoundError"
+            ) from exc
+
+        try:
+            output_config = pytesseract.Output.DICT
+        except AttributeError as exc:  # pragma: no cover - defensive guard
+            raise SlideConversionDependencyError(
+                "Installed pytesseract is missing Output.DICT"
+            ) from exc
+
+        try:
+            get_version()
+        except tesseract_missing_error as exc:  # pragma: no cover - runtime check
+            raise SlideConversionDependencyError(
+                "Tesseract OCR is not installed or not available in PATH"
+            ) from exc
+
+        self._pytesseract = pytesseract
+        self._language = language
+        self._output_dict = output_config
+
+    def ocr(self, image: Any) -> List[Mapping[str, Any]]:
+        try:
+            import numpy as np  # type: ignore
+        except ImportError as exc:  # pragma: no cover - defensive guard
+            raise SlideConversionDependencyError("NumPy is required for Tesseract OCR") from exc
+
+        try:
+            from PIL import Image  # type: ignore
+        except ImportError as exc:  # pragma: no cover - defensive guard
+            raise SlideConversionDependencyError("Pillow is required for Tesseract OCR") from exc
+
+        pil_image = image
+        if not isinstance(image, Image.Image):
+            try:
+                pil_image = Image.fromarray(np.asarray(image))
+            except Exception as error:  # pragma: no cover - defensive fallback
+                raise SlideConversionError("Unable to convert image for Tesseract OCR") from error
+
+        data = self._pytesseract.image_to_data(
+            pil_image,
+            lang=self._language,
+            output_type=self._output_dict,
+        )
+
+        entries: List[Mapping[str, Any]] = []
+        total = len(data.get("text", []))
+        for index in range(total):
+            text = str(data.get("text", [""])[index] or "").strip()
+            if not text:
+                continue
+
+            try:
+                confidence_value = float(data.get("conf", ["-1"])[index])
+            except (TypeError, ValueError):
+                confidence_value = -1.0
+            confidence = max(0.0, confidence_value / 100.0)
+
+            def _extract_float(values: Mapping[str, List[Any]], key: str) -> float:
+                try:
+                    return float(values.get(key, [0])[index] or 0)
+                except (TypeError, ValueError):
+                    return 0.0
+
+            left = _extract_float(data, "left")
+            top = _extract_float(data, "top")
+            width = _extract_float(data, "width")
+            height = _extract_float(data, "height")
+
+            right = left + width
+            bottom = top + height
+
+            entry = {
+                "box": [
+                    [left, top],
+                    [right, top],
+                    [right, bottom],
+                    [left, bottom],
+                ],
+                "text": text,
+                "score": confidence,
+            }
+            entries.append(entry)
+
+        return entries
+
+
 class PyMuPDFSlideConverter(SlideConverter):
     """Slide converter that extracts Markdown notes and images from PDFs."""
 
@@ -103,19 +229,38 @@ class PyMuPDFSlideConverter(SlideConverter):
         if self._ocr_engine is not None:
             return self._ocr_engine
 
+        if self._ocr_engine is not None:
+            return self._ocr_engine
+
+        paddle_error: Exception | None = None
         try:
-            from paddleocr import PaddleOCR  # type: ignore
-        except ImportError as exc:  # pragma: no cover - runtime dependency check
-            raise SlideConversionDependencyError("PaddleOCR is not installed") from exc
+            engine = _PaddleOCREngine(self._ocr_language)
+        except SlideConversionError as error:
+            paddle_error = error
+        except SlideConversionDependencyError as error:
+            paddle_error = error
+        else:
+            LOGGER.info("Using PaddleOCR backend for slide OCR")
+            self._ocr_engine = engine
+            return engine
+
+        if paddle_error is not None:
+            LOGGER.warning("PaddleOCR backend unavailable: %s", paddle_error)
 
         try:
-            engine = PaddleOCR(use_angle_cls=True, lang=self._ocr_language)
-        except Exception as error:  # noqa: BLE001 - PaddleOCR may raise arbitrary errors
-            LOGGER.exception("Failed to initialise PaddleOCR: %s", error)
-            raise SlideConversionError(f"Failed to initialise PaddleOCR: {error}") from error
-
-        self._ocr_engine = engine
-        return engine
+            engine = _TesseractOCREngine(self._ocr_language)
+        except SlideConversionError:
+            raise
+        except SlideConversionDependencyError as error:
+            if paddle_error is not None:
+                raise SlideConversionDependencyError(
+                    "No OCR backend available. Install PaddleOCR or Tesseract OCR."
+                ) from error
+            raise
+        else:
+            LOGGER.info("Using Tesseract OCR backend for slide OCR")
+            self._ocr_engine = engine
+            return engine
 
     def convert(
         self,
