@@ -4573,6 +4573,7 @@
               requireEditLecture: 'Enable edit mode to update lecture details.',
               curriculumSaved: 'Syllabus updated.',
               curriculumSaveFailed: 'Unable to update the syllabus.',
+              curriculumLoadFailed: 'Unable to load the syllabus.',
               classCreated: 'Class created.',
               classRemoved: 'Class removed.',
               moduleCreated: 'Module created.',
@@ -5132,6 +5133,7 @@
               requireEditLecture: '开启编辑模式以更新讲座详情。',
               curriculumSaved: 'Syllabus updated.',
               curriculumSaveFailed: 'Unable to update the syllabus.',
+              curriculumLoadFailed: '无法加载课程大纲。',
               classCreated: '课程已创建。',
               classRemoved: '课程已删除。',
               moduleCreated: '模块已创建。',
@@ -5701,6 +5703,7 @@
               requireEditLecture: 'Activa el modo edición para actualizar los detalles.',
               curriculumSaved: 'Syllabus updated.',
               curriculumSaveFailed: 'Unable to update the syllabus.',
+              curriculumLoadFailed: 'No se pudo cargar el programa del curso.',
               classCreated: 'Curso creado.',
               classRemoved: 'Curso eliminado.',
               moduleCreated: 'Módulo creado.',
@@ -6274,6 +6277,7 @@
               requireEditLecture: 'Activez le mode édition pour mettre à jour les détails.',
               curriculumSaved: 'Syllabus updated.',
               curriculumSaveFailed: 'Unable to update the syllabus.',
+              curriculumLoadFailed: 'Impossible de charger le plan de cours.',
               classCreated: 'Cours créé.',
               classRemoved: 'Cours supprimé.',
               moduleCreated: 'Module créé.',
@@ -15826,7 +15830,15 @@
               }
             }
           } catch (error) {
-            showStatus(error.message, 'error');
+            const message = error instanceof Error ? error.message : String(error ?? '');
+            showStatus(message, 'error');
+            if (dom.curriculum) {
+              dom.curriculum.innerHTML = '';
+              const placeholder = document.createElement('div');
+              placeholder.className = 'placeholder';
+              placeholder.textContent = message || t('status.curriculumLoadFailed');
+              dom.curriculum.appendChild(placeholder);
+            }
           }
           updateTaskLectureOptions();
         }
