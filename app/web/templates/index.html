@@ -6701,6 +6701,13 @@
           },
         };
 
+        const dialogState = {
+          active: false,
+          uploadActive: false,
+          bulkUploadActive: false,
+          bulkProcessActive: false,
+        };
+
         function getTranscribeButton() {
           return state.transcribeControls.button;
         }
@@ -10784,13 +10791,6 @@
             }
           }
         }
-
-        const dialogState = {
-          active: false,
-          uploadActive: false,
-          bulkUploadActive: false,
-          bulkProcessActive: false,
-        };
 
         let pdfjsLibPromise = null;
 
