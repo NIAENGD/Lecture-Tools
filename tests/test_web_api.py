@@ -1797,6 +1797,24 @@ def test_get_settings_coerces_invalid_choices(temp_config):
     assert payload["audio_mastering_enabled"] is True
 
 
+def test_get_settings_accepts_none_effects(temp_config):
+    repository = LectureRepository(temp_config)
+    settings_path = temp_config.storage_root / "settings.json"
+    settings_path.parent.mkdir(parents=True, exist_ok=True)
+    settings_path.write_text(
+        json.dumps({"visual_effects": "off"}, indent=2),
+        encoding="utf-8",
+    )
+
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    response = client.get("/api/settings")
+    assert response.status_code == 200
+    payload = response.json()["settings"]
+    assert payload["visual_effects"] == "none"
+
+
 def test_update_settings_enforces_choices(temp_config):
     repository = LectureRepository(temp_config)
     app = create_app(repository, config=temp_config)
@@ -1822,6 +1840,14 @@ def test_update_settings_enforces_choices(temp_config):
     assert payload["whisper_model"] == "small"
     assert payload["slide_dpi"] == 300
     assert payload["language"] == "fr"
+
+    none_response = client.put(
+        "/api/settings",
+        json={**valid_payload, "visual_effects": "none"},
+    )
+    assert none_response.status_code == 200
+    none_payload = none_response.json()["settings"]
+    assert none_payload["visual_effects"] == "none"
 
     invalid_model = client.put(
         "/api/settings",

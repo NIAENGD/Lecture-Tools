@@ -628,10 +628,15 @@
         --dark-status-progress-track: rgba(220, 236, 255, 0.24);
       }
 
-      body[data-effects='low'] {
+      body[data-effects='none'] {
         --background-gradient: var(--background);
         --panel-shadow: none;
         --panel-shadow-high: none;
+        --accent-glow: rgba(0, 0, 0, 0);
+      }
+
+      body[data-effects='low'] {
+        --background-gradient: var(--background);
         --accent-glow: rgba(0, 0, 0, 0);
       }
 
@@ -4050,6 +4055,9 @@
                     Visual Effects Level
                   </label>
                   <select id="settings-visual-effects">
+                    <option value="none" data-i18n="settings.appearance.effects.none">
+                      None
+                    </option>
                     <option value="low" data-i18n="settings.appearance.effects.low">Low</option>
                     <option value="mid" data-i18n="settings.appearance.effects.mid">Medium</option>
                     <option value="high" data-i18n="settings.appearance.effects.high">High</option>
@@ -4847,6 +4855,7 @@
                 },
                 effectsLabel: 'Visual effects',
                 effects: {
+                  none: 'None',
                   low: 'Low',
                   mid: 'Medium',
                   high: 'High',
@@ -5432,6 +5441,7 @@
                 },
                 effectsLabel: '视觉效果',
                 effects: {
+                  none: '无',
                   low: '低',
                   mid: '适中',
                   high: '高',
@@ -6009,6 +6019,7 @@
                 },
                 effectsLabel: 'Nivel de efectos visuales',
                 effects: {
+                  none: 'Ninguno',
                   low: 'Bajo',
                   mid: 'Medio',
                   high: 'Alto',
@@ -6600,6 +6611,7 @@
                 },
                 effectsLabel: 'Effets visuels',
                 effects: {
+                  none: 'Aucun',
                   low: 'Faible',
                   mid: 'Moyen',
                   high: 'Élevé',
@@ -7219,10 +7231,17 @@
           ['dark', 'dark'],
           ['night', 'dark'],
         ]);
-        const EFFECTS_CHOICES = new Set(['low', 'mid', 'high']);
+        const EFFECTS_CHOICES = new Set(['none', 'low', 'mid', 'high']);
         const EFFECTS_ALIASES = new Map([
           ['medium', 'mid'],
           ['default', 'mid'],
+          ['off', 'none'],
+          ['disable', 'none'],
+          ['disabled', 'none'],
+          ['no', 'none'],
+          ['no-effects', 'none'],
+          ['zero', 'none'],
+          ['flat', 'none'],
         ]);
         const LEGACY_THEME_TO_MODE = new Map([
           ['bright-vibrant', 'bright'],

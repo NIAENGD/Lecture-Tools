@@ -22,7 +22,7 @@ ThemeName = Literal[
     "obsidian",
     "ethereal",
 ]
-EffectsLevelName = Literal["low", "mid", "high"]
+EffectsLevelName = Literal["none", "low", "mid", "high"]
 DISPLAY_MODE_OPTIONS: Tuple[DisplayModeName, ...] = ("system", "bright", "dark")
 THEME_OPTIONS: Tuple[ThemeName, ...] = (
     "vibrant",
@@ -34,7 +34,7 @@ THEME_OPTIONS: Tuple[ThemeName, ...] = (
     "obsidian",
     "ethereal",
 )
-EFFECTS_LEVEL_OPTIONS: Tuple[EffectsLevelName, ...] = ("low", "mid", "high")
+EFFECTS_LEVEL_OPTIONS: Tuple[EffectsLevelName, ...] = ("none", "low", "mid", "high")
 DEFAULT_DISPLAY_MODE: DisplayModeName = "system"
 DEFAULT_THEME: ThemeName = "vibrant"
 DEFAULT_VISUAL_EFFECTS: EffectsLevelName = "mid"
@@ -114,6 +114,8 @@ def normalize_visual_effects(value: object) -> EffectsLevelName:
 
     if candidate in {"medium", "default"}:
         return "mid"
+    if candidate in {"off", "disabled", "disable", "no", "no-effects", "zero", "flat"}:
+        return "none"
 
     return DEFAULT_VISUAL_EFFECTS
 
