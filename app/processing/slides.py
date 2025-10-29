@@ -136,8 +136,34 @@ class _PaddleOCREngine:
         self.name = f"PaddleOCR {version_value}" if version_value else "PaddleOCR"
         self.version = version_value
 
+    @staticmethod
+    def _prepare_image(image: Any) -> Any:
+        """Normalise image inputs for PaddleOCR."""
+
+        try:
+            import numpy as np
+        except Exception:  # pragma: no cover - numpy should be available but be defensive
+            np = None  # type: ignore[assignment]
+
+        if np is not None and isinstance(image, np.ndarray):
+            if image.ndim == 3 and image.shape[2] == 3:
+                return np.ascontiguousarray(image[..., ::-1])
+            return image
+
+        if np is not None:
+            try:
+                from PIL import Image as PILImage  # type: ignore
+            except Exception:  # pragma: no cover - pillow may be absent in exotic envs
+                PILImage = None  # type: ignore[assignment]
+            if PILImage is not None and isinstance(image, PILImage.Image):
+                array = np.array(image.convert("RGB"))
+                return np.ascontiguousarray(array[..., ::-1])
+
+        return image
+
     def ocr(self, image: Any) -> Any:
-        return self._engine.ocr(image)
+        candidate = self._prepare_image(image)
+        return self._engine.ocr(candidate)
 
 
 class _EasyOCREngine:

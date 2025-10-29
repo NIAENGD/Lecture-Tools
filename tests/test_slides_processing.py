@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 
 from app.processing.slides import (
+    _PaddleOCREngine,
     PyMuPDFSlideConverter,
     SlideConversionDependencyError,
     _TesseractOCREngine,
@@ -250,6 +251,40 @@ def test_prepare_backends_raises_when_no_backends(monkeypatch):
 
     with pytest.raises(SlideConversionDependencyError):
         converter._prepare_ocr_backends()
+
+
+def test_paddle_engine_converts_rgb_to_bgr(monkeypatch):
+    dummy_module = ModuleType("paddleocr")
+
+    class DummyPaddleOCR:
+        __module__ = "paddleocr.dummy"
+        last_image = None
+
+        def __init__(self, *args, **kwargs):
+            DummyPaddleOCR.last_image = None
+
+        def ocr(self, image):
+            DummyPaddleOCR.last_image = image
+            return [["dummy"]]
+
+    dummy_module.PaddleOCR = DummyPaddleOCR
+    dummy_module.__version__ = "9.9.9"
+    monkeypatch.setitem(sys.modules, "paddleocr", dummy_module)
+
+    engine = _PaddleOCREngine("en")
+
+    rgb = np.array([
+        [[1, 2, 3], [10, 11, 12]],
+        [[20, 21, 22], [30, 31, 32]],
+    ], dtype=np.uint8)
+    original = rgb.copy()
+
+    result = engine.ocr(rgb)
+
+    assert result == [["dummy"]]
+    assert DummyPaddleOCR.last_image is not None
+    assert np.array_equal(DummyPaddleOCR.last_image, original[..., ::-1])
+    assert np.array_equal(rgb, original)
 
 
 def test_extract_text_candidates_prefers_direct_text():

@@ -21,6 +21,7 @@ dependencies = [
     "jinja2>=3.1",
     "python-multipart>=0.0.9",
     "mutagen>=1.47",
+    "easyocr>=1.7",
     "paddleocr>=2.7",
     "paddlepaddle>=2.6",
     "pytesseract>=0.3.10",
