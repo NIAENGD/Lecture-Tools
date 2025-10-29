@@ -21,80 +21,220 @@
     <style>
       :root {
         color-scheme: light;
-        --background: #f5f6f8;
-        --text: #1f2933;
-        --muted: #475569;
-        --panel-bg: #ffffff;
-        --panel-border: #d2d6dc;
-        --panel-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-        --accent: #2563eb;
-        --accent-contrast: #ffffff;
-        --accent-muted: #e2e8f0;
-        --danger: #dc2626;
-        --danger-contrast: #ffffff;
-        --placeholder: #64748b;
-        --status-info-bg: #e0f2fe;
-        --status-info-text: #0369a1;
-        --status-error-bg: #fee2e2;
-        --status-error-text: #b91c1c;
-        --status-success-bg: #dcfce7;
-        --status-success-text: #166534;
-        --status-progress-track: rgba(15, 23, 42, 0.16);
+        --background: #f3edff;
+        --background-gradient: linear-gradient(135deg, #eaf4ff 0%, #eee4ff 48%, #ffe8fa 100%);
+        --text: #1e1b43;
+        --muted: #625a86;
+        --panel-bg: rgba(255, 255, 255, 0.92);
+        --panel-border: rgba(199, 186, 255, 0.65);
+        --panel-shadow: 0 18px 36px rgba(119, 103, 187, 0.18);
+        --accent: #c9afff;
+        --accent-contrast: #1f163b;
+        --accent-muted: rgba(201, 175, 255, 0.24);
+        --accent-soft: rgba(201, 175, 255, 0.18);
+        --accent-glow: rgba(201, 175, 255, 0.36);
+        --accent-strong: rgba(201, 175, 255, 0.55);
+        --danger: #ffa9b5;
+        --danger-contrast: #2c1421;
+        --placeholder: #837aa6;
+        --status-info-bg: rgba(201, 175, 255, 0.18);
+        --status-info-text: #42327a;
+        --status-error-bg: rgba(255, 169, 181, 0.22);
+        --status-error-text: #a34051;
+        --status-success-bg: rgba(156, 246, 205, 0.22);
+        --status-success-text: #1a7a58;
+        --status-progress-track: rgba(49, 34, 94, 0.16);
       }
 
-      body[data-theme='light'] {
-        color-scheme: light;
-      }
-
-      body[data-theme='dark'] {
-        color-scheme: dark;
-        --background: #0f172a;
-        --text: #f8fafc;
-        --muted: #94a3b8;
-        --panel-bg: #1e293b;
-        --panel-border: #334155;
-        --panel-shadow: 0 1px 2px rgba(2, 6, 23, 0.5);
-        --accent: #38bdf8;
-        --accent-contrast: #0f172a;
-        --accent-muted: rgba(56, 189, 248, 0.18);
-        --danger: #f87171;
-        --danger-contrast: #0f172a;
-        --placeholder: #94a3b8;
-        --status-info-bg: rgba(14, 165, 233, 0.2);
-        --status-info-text: #bae6fd;
-        --status-error-bg: rgba(248, 113, 113, 0.24);
-        --status-error-text: #fecaca;
-        --status-success-bg: rgba(74, 222, 128, 0.22);
-        --status-success-text: #bbf7d0;
-        --status-progress-track: rgba(255, 255, 255, 0.25);
-      }
-
+      body[data-theme='bright-vibrant'],
       body[data-theme='system'] {
         color-scheme: light;
+        --background: #f3edff;
+        --background-gradient: linear-gradient(135deg, #eaf4ff 0%, #eee4ff 48%, #ffe8fa 100%);
+        --text: #1e1b43;
+        --muted: #625a86;
+        --panel-bg: rgba(255, 255, 255, 0.92);
+        --panel-border: rgba(199, 186, 255, 0.65);
+        --panel-shadow: 0 18px 36px rgba(119, 103, 187, 0.18);
+        --accent: #c9afff;
+        --accent-contrast: #1f163b;
+        --accent-muted: rgba(201, 175, 255, 0.24);
+        --accent-soft: rgba(201, 175, 255, 0.18);
+        --accent-glow: rgba(201, 175, 255, 0.36);
+        --accent-strong: rgba(201, 175, 255, 0.55);
+        --danger: #ffa9b5;
+        --danger-contrast: #2c1421;
+        --placeholder: #837aa6;
+        --status-info-bg: rgba(201, 175, 255, 0.18);
+        --status-info-text: #42327a;
+        --status-error-bg: rgba(255, 169, 181, 0.22);
+        --status-error-text: #a34051;
+        --status-success-bg: rgba(156, 246, 205, 0.22);
+        --status-success-text: #1a7a58;
+        --status-progress-track: rgba(49, 34, 94, 0.16);
+      }
+
+      body[data-theme='bright-kawaii'] {
+        color-scheme: light;
+        --background: #fff4f6;
+        --background-gradient: linear-gradient(140deg, #e8fff4 0%, #ffe4ec 52%, #fffbe4 100%);
+        --text: #382438;
+        --muted: #7d5f6f;
+        --panel-bg: rgba(255, 255, 255, 0.9);
+        --panel-border: rgba(255, 210, 195, 0.6);
+        --panel-shadow: 0 20px 40px rgba(255, 173, 208, 0.22);
+        --accent: #ffa9b5;
+        --accent-contrast: #331118;
+        --accent-muted: rgba(255, 169, 181, 0.26);
+        --accent-soft: rgba(255, 169, 181, 0.18);
+        --accent-glow: rgba(255, 169, 181, 0.38);
+        --accent-strong: rgba(255, 169, 181, 0.55);
+        --danger: #ff6f91;
+        --danger-contrast: #330b13;
+        --placeholder: #b78696;
+        --status-info-bg: rgba(255, 210, 140, 0.24);
+        --status-info-text: #86532b;
+        --status-error-bg: rgba(255, 169, 181, 0.28);
+        --status-error-text: #a03653;
+        --status-success-bg: rgba(156, 246, 205, 0.24);
+        --status-success-text: #2f6e52;
+        --status-progress-track: rgba(255, 169, 181, 0.25);
+      }
+
+      body[data-theme='bright-serene'] {
+        color-scheme: light;
+        --background: #ecf7ff;
+        --background-gradient: linear-gradient(140deg, #f0e8ff 0%, #ddefff 52%, #cffff9 100%);
+        --text: #142f4c;
+        --muted: #4f6782;
+        --panel-bg: rgba(255, 255, 255, 0.94);
+        --panel-border: rgba(200, 225, 255, 0.65);
+        --panel-shadow: 0 18px 36px rgba(91, 140, 202, 0.18);
+        --accent: #5bb7ff;
+        --accent-contrast: #082133;
+        --accent-muted: rgba(91, 183, 255, 0.22);
+        --accent-soft: rgba(91, 183, 255, 0.16);
+        --accent-glow: rgba(91, 183, 255, 0.36);
+        --accent-strong: rgba(91, 183, 255, 0.5);
+        --danger: #ff9fb3;
+        --danger-contrast: #32111f;
+        --placeholder: #5c7a98;
+        --status-info-bg: rgba(189, 219, 255, 0.3);
+        --status-info-text: #225289;
+        --status-error-bg: rgba(255, 159, 179, 0.24);
+        --status-error-text: #96324b;
+        --status-success-bg: rgba(156, 246, 205, 0.24);
+        --status-success-text: #1f6f5a;
+        --status-progress-track: rgba(28, 87, 129, 0.2);
+      }
+
+      body[data-theme='dark-cool'] {
+        color-scheme: dark;
+        --background: #081321;
+        --background-gradient: linear-gradient(150deg, #071421 0%, #0f2737 48%, #13404a 100%);
+        --text: #f4fbff;
+        --muted: #8da8c1;
+        --panel-bg: rgba(15, 28, 45, 0.92);
+        --panel-border: rgba(73, 111, 149, 0.55);
+        --panel-shadow: 0 24px 46px rgba(6, 20, 32, 0.6);
+        --accent: #6fe1ff;
+        --accent-contrast: #041019;
+        --accent-muted: rgba(111, 225, 255, 0.24);
+        --accent-soft: rgba(111, 225, 255, 0.18);
+        --accent-glow: rgba(111, 225, 255, 0.32);
+        --accent-strong: rgba(111, 225, 255, 0.42);
+        --danger: #ff9aad;
+        --danger-contrast: #1f070f;
+        --placeholder: #90a9c0;
+        --status-info-bg: rgba(88, 212, 255, 0.22);
+        --status-info-text: #d6f6ff;
+        --status-error-bg: rgba(255, 154, 173, 0.22);
+        --status-error-text: #ffd9e1;
+        --status-success-bg: rgba(156, 246, 205, 0.2);
+        --status-success-text: #a8f5d7;
+        --status-progress-track: rgba(255, 255, 255, 0.22);
+      }
+
+      body[data-theme='dark-aurora'] {
+        color-scheme: dark;
+        --background: #0c111f;
+        --background-gradient: linear-gradient(155deg, #10152c 0%, #112f3c 50%, #0f4136 100%);
+        --text: #f0fff7;
+        --muted: #8fb4a8;
+        --panel-bg: rgba(14, 27, 38, 0.92);
+        --panel-border: rgba(74, 122, 115, 0.55);
+        --panel-shadow: 0 24px 46px rgba(6, 20, 24, 0.6);
+        --accent: #9cf6cd;
+        --accent-contrast: #041910;
+        --accent-muted: rgba(156, 246, 205, 0.24);
+        --accent-soft: rgba(156, 246, 205, 0.18);
+        --accent-glow: rgba(156, 246, 205, 0.32);
+        --accent-strong: rgba(156, 246, 205, 0.42);
+        --danger: #ffa9b5;
+        --danger-contrast: #1f060d;
+        --placeholder: #94b9ac;
+        --status-info-bg: rgba(156, 246, 205, 0.18);
+        --status-info-text: #dffbee;
+        --status-error-bg: rgba(255, 169, 181, 0.22);
+        --status-error-text: #ffd6de;
+        --status-success-bg: rgba(156, 246, 205, 0.26);
+        --status-success-text: #b8ffe5;
+        --status-progress-track: rgba(255, 255, 255, 0.18);
+      }
+
+      body[data-theme='dark-midnight'] {
+        color-scheme: dark;
+        --background: #120f1b;
+        --background-gradient: linear-gradient(155deg, #1a1428 0%, #261b38 48%, #331f3f 100%);
+        --text: #f9f2ff;
+        --muted: #b49fd4;
+        --panel-bg: rgba(28, 20, 46, 0.92);
+        --panel-border: rgba(122, 96, 161, 0.6);
+        --panel-shadow: 0 24px 46px rgba(19, 10, 33, 0.65);
+        --accent: #c9afff;
+        --accent-contrast: #160d26;
+        --accent-muted: rgba(201, 175, 255, 0.24);
+        --accent-soft: rgba(201, 175, 255, 0.18);
+        --accent-glow: rgba(201, 175, 255, 0.34);
+        --accent-strong: rgba(201, 175, 255, 0.46);
+        --danger: #ff7a99;
+        --danger-contrast: #26040e;
+        --placeholder: #baa6d7;
+        --status-info-bg: rgba(201, 175, 255, 0.22);
+        --status-info-text: #efe4ff;
+        --status-error-bg: rgba(255, 122, 153, 0.24);
+        --status-error-text: #ffd2dc;
+        --status-success-bg: rgba(156, 246, 205, 0.18);
+        --status-success-text: #c4ffe8;
+        --status-progress-track: rgba(255, 255, 255, 0.2);
       }
 
       @media (prefers-color-scheme: dark) {
         body[data-theme='system'] {
           color-scheme: dark;
-          --background: #0f172a;
-          --text: #f8fafc;
-          --muted: #94a3b8;
-          --panel-bg: #1e293b;
-          --panel-border: #334155;
-          --panel-shadow: 0 1px 2px rgba(2, 6, 23, 0.5);
-          --accent: #38bdf8;
-          --accent-contrast: #0f172a;
-          --accent-muted: rgba(56, 189, 248, 0.18);
-          --danger: #f87171;
-          --danger-contrast: #0f172a;
-          --placeholder: #94a3b8;
-          --status-info-bg: rgba(14, 165, 233, 0.2);
-          --status-info-text: #bae6fd;
-          --status-error-bg: rgba(248, 113, 113, 0.24);
-          --status-error-text: #fecaca;
-          --status-success-bg: rgba(74, 222, 128, 0.22);
-          --status-success-text: #bbf7d0;
-          --status-progress-track: rgba(255, 255, 255, 0.25);
+          --background: #081321;
+          --background-gradient: linear-gradient(150deg, #071421 0%, #0f2737 48%, #13404a 100%);
+          --text: #f4fbff;
+          --muted: #8da8c1;
+          --panel-bg: rgba(15, 28, 45, 0.92);
+          --panel-border: rgba(73, 111, 149, 0.55);
+          --panel-shadow: 0 24px 46px rgba(6, 20, 32, 0.6);
+          --accent: #6fe1ff;
+          --accent-contrast: #041019;
+          --accent-muted: rgba(111, 225, 255, 0.24);
+          --accent-soft: rgba(111, 225, 255, 0.18);
+          --accent-glow: rgba(111, 225, 255, 0.32);
+          --accent-strong: rgba(111, 225, 255, 0.42);
+          --danger: #ff9aad;
+          --danger-contrast: #1f070f;
+          --placeholder: #90a9c0;
+          --status-info-bg: rgba(88, 212, 255, 0.22);
+          --status-info-text: #d6f6ff;
+          --status-error-bg: rgba(255, 154, 173, 0.22);
+          --status-error-text: #ffd9e1;
+          --status-success-bg: rgba(156, 246, 205, 0.2);
+          --status-success-text: #a8f5d7;
+          --status-progress-track: rgba(255, 255, 255, 0.22);
         }
       }
 
@@ -124,6 +264,9 @@
           sans-serif;
         font-size: 15px;
         background: var(--background);
+        background-image: var(--background-gradient, none);
+        background-attachment: fixed;
+        background-size: cover;
         color: var(--text);
         transition: background 0.2s ease, color 0.2s ease;
       }
@@ -549,9 +692,9 @@
       }
 
       .debug-log-badge[data-variant='accent'] {
-        background: rgba(37, 99, 235, 0.25);
-        color: rgba(191, 219, 254, 0.95);
-        border-color: rgba(37, 99, 235, 0.55);
+        background: var(--accent-soft);
+        color: var(--text);
+        border-color: var(--accent-strong);
       }
 
       .debug-log-badge[data-variant='warning'] {
@@ -819,13 +962,13 @@
       .upload-dropzone:focus {
         outline: none;
         border-color: var(--accent);
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+        box-shadow: 0 0 0 3px var(--accent-glow);
       }
 
       .upload-dropzone.active,
       .upload-dropzone:hover {
         border-color: var(--accent);
-        background: rgba(37, 99, 235, 0.08);
+        background: var(--accent-soft);
         transform: translateY(-1px);
       }
 
@@ -946,7 +1089,7 @@
       .bulk-upload-field select:focus {
         outline: none;
         border-color: var(--accent);
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+        box-shadow: 0 0 0 3px var(--accent-glow);
       }
 
       .bulk-upload-status {
@@ -1207,7 +1350,7 @@
 
       .bulk-process-checkbox[data-state='completed'] .bulk-process-indicator {
         border-color: var(--accent);
-        background: rgba(56, 189, 248, 0.12);
+        background: var(--accent-soft);
       }
 
       .bulk-process-checkbox[data-state='selected'] {
@@ -1232,7 +1375,7 @@
       }
 
       .bulk-process-checkbox:focus-within {
-        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25);
+        box-shadow: 0 0 0 2px var(--accent-glow);
       }
 
       .dialog-pending-window {
@@ -1401,13 +1544,13 @@
 
       .slide-preview-page.selected {
         border-color: var(--accent);
-        box-shadow: 0 10px 24px rgba(37, 99, 235, 0.18);
+        box-shadow: 0 10px 24px var(--accent-soft);
         opacity: 1;
       }
 
       .slide-preview-page:focus {
         border-color: var(--accent);
-        box-shadow: 0 10px 24px rgba(37, 99, 235, 0.18);
+        box-shadow: 0 10px 24px var(--accent-soft);
         opacity: 1;
       }
 
@@ -1924,7 +2067,7 @@
       .dialog-input:focus {
         outline: none;
         border-color: var(--accent);
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+        box-shadow: 0 0 0 3px var(--accent-glow);
       }
 
       .dialog-actions {
@@ -1954,7 +2097,7 @@
 
       .dialog-button:focus {
         outline: none;
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+        box-shadow: 0 0 0 3px var(--accent-glow);
       }
 
       .dialog-button:disabled {
@@ -1972,6 +2115,7 @@
       .dialog-button.secondary:hover {
         border-color: var(--accent);
         color: var(--text);
+        background: var(--accent-soft);
       }
 
       .dialog-button.primary {
@@ -2302,7 +2446,7 @@
       select:focus {
         outline: none;
         border-color: var(--accent);
-        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+        box-shadow: 0 0 0 2px var(--accent-soft);
       }
 
       button {
@@ -2327,7 +2471,7 @@
       }
 
       button.secondary:hover {
-        background: rgba(37, 99, 235, 0.12);
+        background: var(--accent-muted);
       }
 
       button.danger {
@@ -2609,7 +2753,7 @@
         justify-content: center;
         padding: 0 6px;
         border-radius: 999px;
-        background: rgba(37, 99, 235, 0.12);
+        background: var(--accent-soft);
         color: var(--accent);
         font-size: 0.75rem;
         font-weight: 600;
@@ -2679,7 +2823,7 @@
       }
 
       .syllabus-lectures.drop-target {
-        background: rgba(37, 99, 235, 0.08);
+        background: var(--accent-soft);
         border-radius: 8px;
         padding: 6px;
       }
@@ -2733,7 +2877,7 @@
 
       .lecture-button.active {
         border-color: var(--accent);
-        background: rgba(37, 99, 235, 0.12);
+        background: var(--accent-soft);
         color: var(--accent);
       }
 
@@ -2785,7 +2929,7 @@
 
       .icon-button:focus-visible {
         outline: none;
-        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.24);
+        box-shadow: 0 0 0 2px var(--accent-glow);
       }
 
       .icon-button.danger {
@@ -3002,7 +3146,7 @@
         word-break: break-word;
       }
 
-      body[data-theme='dark'] .update-log {
+      body[data-theme^='dark-'] .update-log {
         background: rgba(148, 163, 184, 0.12);
       }
 
@@ -3451,8 +3595,42 @@
                   <label for="settings-theme" data-i18n="settings.appearance.themeLabel">Theme</label>
                   <select id="settings-theme">
                     <option value="system" data-i18n="settings.appearance.theme.system">Follow system</option>
-                    <option value="light" data-i18n="settings.appearance.theme.light">Light</option>
-                    <option value="dark" data-i18n="settings.appearance.theme.dark">Dark</option>
+                    <option
+                      value="bright-vibrant"
+                      data-i18n="settings.appearance.theme.bright-vibrant"
+                    >
+                      Bright · Vibrant
+                    </option>
+                    <option
+                      value="bright-kawaii"
+                      data-i18n="settings.appearance.theme.bright-kawaii"
+                    >
+                      Bright · Kawaii
+                    </option>
+                    <option
+                      value="bright-serene"
+                      data-i18n="settings.appearance.theme.bright-serene"
+                    >
+                      Bright · Serene
+                    </option>
+                    <option
+                      value="dark-cool"
+                      data-i18n="settings.appearance.theme.dark-cool"
+                    >
+                      Dark · Cool
+                    </option>
+                    <option
+                      value="dark-aurora"
+                      data-i18n="settings.appearance.theme.dark-aurora"
+                    >
+                      Dark · Aurora
+                    </option>
+                    <option
+                      value="dark-midnight"
+                      data-i18n="settings.appearance.theme.dark-midnight"
+                    >
+                      Dark · Midnight
+                    </option>
                   </select>
                 </div>
                 <div class="field-inline">
@@ -4231,8 +4409,12 @@
                 themeLabel: 'Theme',
                 theme: {
                   system: 'Follow system',
-                  light: 'Light',
-                  dark: 'Dark',
+                  'bright-vibrant': 'Bright · Vibrant',
+                  'bright-kawaii': 'Bright · Kawaii',
+                  'bright-serene': 'Bright · Serene',
+                  'dark-cool': 'Dark · Cool',
+                  'dark-aurora': 'Dark · Aurora',
+                  'dark-midnight': 'Dark · Midnight',
                 },
               },
               language: {
@@ -4799,8 +4981,12 @@
                 themeLabel: '主题',
                 theme: {
                   system: '跟随系统',
-                  light: '浅色',
-                  dark: '深色',
+                  'bright-vibrant': '明亮·缤纷',
+                  'bright-kawaii': '明亮·可爱',
+                  'bright-serene': '明亮·静谧',
+                  'dark-cool': '暗色·清爽',
+                  'dark-aurora': '暗色·极光',
+                  'dark-midnight': '暗色·午夜',
                 },
               },
               language: {
@@ -5359,8 +5545,12 @@
                 themeLabel: 'Tema',
                 theme: {
                   system: 'Seguir sistema',
-                  light: 'Claro',
-                  dark: 'Oscuro',
+                  'bright-vibrant': 'Claro · Vibrante',
+                  'bright-kawaii': 'Claro · Kawaii',
+                  'bright-serene': 'Claro · Sereno',
+                  'dark-cool': 'Oscuro · Fresco',
+                  'dark-aurora': 'Oscuro · Aurora',
+                  'dark-midnight': 'Oscuro · Medianoche',
                 },
               },
               language: {
@@ -5933,8 +6123,12 @@
                 themeLabel: 'Thème',
                 theme: {
                   system: 'Suivre le système',
-                  light: 'Clair',
-                  dark: 'Sombre',
+                  'bright-vibrant': 'Clair · Vibrant',
+                  'bright-kawaii': 'Clair · Kawaii',
+                  'bright-serene': 'Clair · Serein',
+                  'dark-cool': 'Sombre · Frais',
+                  'dark-aurora': 'Sombre · Aurore',
+                  'dark-midnight': 'Sombre · Minuit',
                 },
               },
               language: {
@@ -6524,6 +6718,20 @@
           updateTaskLectureOptions();
         }
 
+        const THEME_CHOICES = new Set([
+          'system',
+          'bright-vibrant',
+          'bright-kawaii',
+          'bright-serene',
+          'dark-cool',
+          'dark-aurora',
+          'dark-midnight',
+        ]);
+        const THEME_ALIASES = new Map([
+          ['light', 'bright-vibrant'],
+          ['dark', 'dark-cool'],
+        ]);
+        const DEFAULT_THEME = 'system';
         const WHISPER_MODEL_CHOICES = new Set([
           'tiny',
           'base',
@@ -6571,6 +6779,19 @@
             },
           },
         ];
+
+        function normalizeTheme(value) {
+          if (typeof value === 'string') {
+            const trimmed = value.trim().toLowerCase();
+            if (THEME_CHOICES.has(trimmed)) {
+              return trimmed;
+            }
+            if (THEME_ALIASES.has(trimmed)) {
+              return THEME_ALIASES.get(trimmed) || DEFAULT_THEME;
+            }
+          }
+          return DEFAULT_THEME;
+        }
 
         function normalizeWhisperModel(value) {
           const candidate =
@@ -10967,7 +11188,7 @@
 
 
         function syncSettingsForm(settings) {
-          const themeValue = settings?.theme ?? 'system';
+          const themeValue = normalizeTheme(settings?.theme);
           const languageValue = normalizeLanguage(settings?.language);
           const requestedModel = normalizeWhisperModel(settings?.whisper_model);
           const computeRaw = settings?.whisper_compute_type ?? 'int8';
@@ -15601,7 +15822,7 @@
         }
 
         function applyTheme(theme) {
-          const target = theme || 'system';
+          const target = normalizeTheme(theme);
           document.body.dataset.theme = target;
         }
 
@@ -16638,7 +16859,7 @@
         if (dom.settingsForm) {
           dom.settingsForm.addEventListener('submit', async (event) => {
             event.preventDefault();
-            const themeValue = dom.settingsTheme.value || 'system';
+            const themeValue = normalizeTheme(dom.settingsTheme.value);
             const languageValue = normalizeLanguage(dom.settingsLanguage.value);
             const modelValue = normalizeWhisperModel(dom.settingsWhisperModel.value);
             const computeValue = dom.settingsWhisperCompute.value.trim() || 'int8';
@@ -16695,7 +16916,7 @@
         setActiveView(state.activeView);
         updateEditModeUI();
         clearDetailPanel();
-        applyTheme('system');
+        applyTheme(DEFAULT_THEME);
         await loadGpuWhisperStatus();
         await loadSettings();
         await fetchSystemUpdateStatus();

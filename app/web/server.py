@@ -231,7 +231,13 @@ from ..services.progress import (
     build_mastering_stage_progress_message,
     format_progress_message,
 )
-from ..services.settings import SettingsStore, UISettings
+from ..services.settings import (
+    DEFAULT_THEME,
+    SettingsStore,
+    THEME_OPTIONS,
+    UISettings,
+    normalize_theme,
+)
 from ..services.storage import ClassRecord, LectureRecord, LectureRepository, ModuleRecord
 from ..logging_utils import DEFAULT_LOG_FORMAT
 
@@ -257,6 +263,8 @@ _SLIDE_DPI_OPTIONS: Tuple[int, ...] = (150, 200, 300, 400, 600)
 _SLIDE_DPI_SET = set(_SLIDE_DPI_OPTIONS)
 _LANGUAGE_OPTIONS: Tuple[str, ...] = ("en", "zh", "es", "fr")
 _LANGUAGE_SET = set(_LANGUAGE_OPTIONS)
+_THEME_OPTIONS: Tuple[str, ...] = tuple(THEME_OPTIONS)
+_THEME_INPUT_OPTIONS: Tuple[str, ...] = _THEME_OPTIONS + ("light", "dark")
 _DEFAULT_UI_SETTINGS = UISettings()
 _SERVER_LOGGER_PREFIXES: Tuple[str, ...] = ("uvicorn", "gunicorn", "hypercorn", "werkzeug")
 _SLIDE_PREVIEW_DIR_NAME = ".previews"
@@ -1653,7 +1661,7 @@ class ModuleReorderPayload(BaseModel):
 
 
 class SettingsPayload(BaseModel):
-    theme: Literal["dark", "light", "system"] = "system"
+    theme: Literal[*_THEME_INPUT_OPTIONS] = DEFAULT_THEME
     whisper_model: Literal[*_WHISPER_MODEL_OPTIONS] = "base"
     whisper_compute_type: str = Field("int8", min_length=1)
     whisper_beam_size: int = Field(5, ge=1, le=10)
@@ -3660,6 +3668,7 @@ def create_app(
     @app.get("/api/settings")
     async def get_settings() -> Dict[str, Any]:
         settings = _load_ui_settings()
+        settings.theme = normalize_theme(settings.theme)
         _log_event(
             "Loaded settings",
             theme=settings.theme,
@@ -3718,7 +3727,7 @@ def create_app(
     async def update_settings(payload: SettingsPayload) -> Dict[str, Any]:
         settings = _load_ui_settings()
         _log_event("Received settings update request")
-        settings.theme = payload.theme
+        settings.theme = normalize_theme(payload.theme)
         settings.language = _normalize_language(payload.language)
         desired_model = _normalize_whisper_model(payload.whisper_model)
         if desired_model == "gpu":
