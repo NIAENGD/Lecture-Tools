@@ -188,11 +188,14 @@ def test_union_rectangles(rectangles, expected):
     assert converter._union_rectangles(rectangles) == expected
 
 
-def test_prepare_engine_falls_back_to_tesseract(monkeypatch):
+def test_prepare_backends_falls_back_to_tesseract(monkeypatch):
     converter = PyMuPDFSlideConverter(dpi=72)
 
     missing_paddle = ModuleType("paddleocr")
     monkeypatch.setitem(sys.modules, "paddleocr", missing_paddle)
+
+    missing_easyocr = ModuleType("easyocr")
+    monkeypatch.setitem(sys.modules, "easyocr", missing_easyocr)
 
     dummy_tesseract = ModuleType("pytesseract")
 
@@ -222,26 +225,31 @@ def test_prepare_engine_falls_back_to_tesseract(monkeypatch):
 
     monkeypatch.setitem(sys.modules, "pytesseract", dummy_tesseract)
 
-    engine = converter._prepare_ocr_engine()
+    backends = converter._prepare_ocr_backends()
 
-    assert isinstance(engine, _TesseractOCREngine)
+    assert len(backends) == 1
+    backend = backends[0]
+    assert isinstance(backend.engine, _TesseractOCREngine)
 
-    result = engine.ocr(np.zeros((5, 5), dtype=np.uint8))
+    result = backend.engine.ocr(np.zeros((5, 5), dtype=np.uint8))
     assert result and result[0]["text"] == "Hello"
     assert result[0]["score"] == pytest.approx(0.9)
 
 
-def test_prepare_engine_raises_when_no_backends(monkeypatch):
+def test_prepare_backends_raises_when_no_backends(monkeypatch):
     converter = PyMuPDFSlideConverter(dpi=72)
 
     missing_paddle = ModuleType("paddleocr")
     monkeypatch.setitem(sys.modules, "paddleocr", missing_paddle)
 
+    missing_easyocr = ModuleType("easyocr")
+    monkeypatch.setitem(sys.modules, "easyocr", missing_easyocr)
+
     missing_tesseract = ModuleType("pytesseract")
     monkeypatch.setitem(sys.modules, "pytesseract", missing_tesseract)
 
     with pytest.raises(SlideConversionDependencyError):
-        converter._prepare_ocr_engine()
+        converter._prepare_ocr_backends()
 
 
 def test_extract_text_candidates_prefers_direct_text():
