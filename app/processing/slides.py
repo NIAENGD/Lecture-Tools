@@ -999,6 +999,47 @@ class PyMuPDFSlideConverter(SlideConverter):
                 if combined:
                     lines.append(combined)
 
+        if had_text_layer and not lines:
+            try:
+                words_data = page.get_text("words")
+            except Exception:  # pragma: no cover - defensive fallback
+                words_data = None
+
+            if isinstance(words_data, Iterable):
+                grouped_words: Dict[Tuple[int, int], List[str]] = {}
+                for entry in words_data:
+                    if not isinstance(entry, (list, tuple)) or len(entry) < 5:
+                        continue
+                    text = entry[4]
+                    if not isinstance(text, str):
+                        continue
+                    sanitized = text.strip()
+                    if not sanitized:
+                        continue
+
+                    block_index = 0
+                    line_index = 0
+                    if len(entry) > 5:
+                        try:
+                            block_index = int(entry[5])
+                        except (TypeError, ValueError):
+                            block_index = 0
+                    if len(entry) > 6:
+                        try:
+                            line_index = int(entry[6])
+                        except (TypeError, ValueError):
+                            line_index = 0
+
+                    grouped_words.setdefault((block_index, line_index), []).append(sanitized)
+
+                for block_line in sorted(grouped_words):
+                    combined = " ".join(grouped_words[block_line]).strip()
+                    if combined:
+                        lines.append(combined)
+
+                if lines:
+                    return TextExtractionResult(lines=lines, had_text_layer=True)
+
         return TextExtractionResult(lines=lines, had_text_layer=had_text_layer)
 
     @staticmethod
