@@ -51,8 +51,8 @@
       body {
         --bright-background: #f3edff;
         --bright-background-gradient: linear-gradient(135deg, #eaf4ff 0%, #eee4ff 48%, #ffe8fa 100%);
-        --bright-text: #1e1b43;
-        --bright-muted: #625a86;
+        --bright-text: #120f2c;
+        --bright-muted: #2d2855;
         --bright-panel-bg: rgba(255, 255, 255, 0.92);
         --bright-panel-border: rgba(199, 186, 255, 0.65);
         --bright-panel-shadow: 0 18px 36px rgba(119, 103, 187, 0.18);
@@ -75,10 +75,29 @@
         --bright-status-success-text: #1a7a58;
         --bright-status-progress-track: rgba(49, 34, 94, 0.16);
 
+        --bright-interactive-text: #120f2c;
+        --bright-interactive-subtle: #2d2855;
+        --bright-chrome-shadow: 0 28px 46px rgba(62, 36, 126, 0.18);
+        --bright-chrome-border: rgba(201, 175, 255, 0.55);
+        --bright-chrome-sheen: linear-gradient(
+          128deg,
+          rgba(255, 255, 255, 0.72) 0%,
+          rgba(201, 175, 255, 0.36) 50%,
+          rgba(186, 218, 255, 0.18) 100%
+        );
+        --bright-nav-button-bg: rgba(255, 255, 255, 0.88);
+        --bright-nav-button-hover: rgba(255, 255, 255, 0.98);
+        --bright-nav-button-active: var(--bright-accent);
+        --bright-nav-button-border: rgba(201, 175, 255, 0.6);
+        --bright-nav-button-shadow: 0 18px 38px rgba(62, 36, 126, 0.22);
+        --bright-nav-button-active-shadow: 0 24px 46px rgba(58, 28, 120, 0.32);
+        --bright-chrome-radius: 26px;
+        --bright-nav-button-radius: 18px;
+
         --dark-background: #081321;
         --dark-background-gradient: linear-gradient(150deg, #071421 0%, #0f2737 48%, #13404a 100%);
-        --dark-text: #f4fbff;
-        --dark-muted: #8da8c1;
+        --dark-text: #f5f8ff;
+        --dark-muted: #c4dbff;
         --dark-panel-bg: rgba(15, 28, 45, 0.92);
         --dark-panel-border: rgba(73, 111, 149, 0.55);
         --dark-panel-shadow: 0 24px 46px rgba(6, 20, 32, 0.6);
@@ -100,6 +119,25 @@
         --dark-status-success-bg: rgba(156, 246, 205, 0.2);
         --dark-status-success-text: #a8f5d7;
         --dark-status-progress-track: rgba(255, 255, 255, 0.22);
+
+        --dark-interactive-text: #f6f8ff;
+        --dark-interactive-subtle: #c6ddff;
+        --dark-chrome-shadow: 0 36px 60px rgba(5, 15, 35, 0.75);
+        --dark-chrome-border: rgba(111, 225, 255, 0.26);
+        --dark-chrome-sheen: linear-gradient(
+          140deg,
+          rgba(20, 36, 60, 0.8) 0%,
+          rgba(111, 225, 255, 0.3) 50%,
+          rgba(58, 144, 199, 0.18) 100%
+        );
+        --dark-nav-button-bg: rgba(18, 34, 55, 0.82);
+        --dark-nav-button-hover: rgba(26, 48, 74, 0.96);
+        --dark-nav-button-active: var(--dark-accent);
+        --dark-nav-button-border: rgba(111, 225, 255, 0.32);
+        --dark-nav-button-shadow: 0 26px 50px rgba(4, 12, 28, 0.7);
+        --dark-nav-button-active-shadow: 0 32px 58px rgba(6, 16, 36, 0.78);
+        --dark-chrome-radius: 26px;
+        --dark-nav-button-radius: 18px;
 
         --background: var(--bright-background);
         --background-gradient: var(--bright-background-gradient);
@@ -126,6 +164,46 @@
         --status-success-bg: var(--bright-status-success-bg);
         --status-success-text: var(--bright-status-success-text);
         --status-progress-track: var(--bright-status-progress-track);
+        --interactive-text: var(--bright-interactive-text, var(--bright-text));
+        --interactive-subtle: var(
+          --bright-interactive-subtle,
+          var(--bright-muted)
+        );
+        --chrome-radius: var(--bright-chrome-radius, 22px);
+        --nav-button-radius: var(--bright-nav-button-radius, 16px);
+        --nav-button-clip: var(--bright-nav-button-clip, none);
+        --chrome-shadow: var(--bright-chrome-shadow, var(--panel-shadow));
+        --chrome-border: var(--bright-chrome-border, rgba(255, 255, 255, 0.4));
+        --chrome-sheen: var(
+          --bright-chrome-sheen,
+          linear-gradient(
+            125deg,
+            rgba(255, 255, 255, 0.8) 0%,
+            rgba(255, 255, 255, 0.35) 55%,
+            transparent 100%
+          )
+        );
+        --nav-button-bg: var(
+          --bright-nav-button-bg,
+          rgba(255, 255, 255, 0.9)
+        );
+        --nav-button-hover: var(
+          --bright-nav-button-hover,
+          rgba(255, 255, 255, 1)
+        );
+        --nav-button-active: var(--bright-nav-button-active, var(--accent));
+        --nav-button-border: var(
+          --bright-nav-button-border,
+          rgba(255, 255, 255, 0.7)
+        );
+        --nav-button-shadow: var(
+          --bright-nav-button-shadow,
+          0 14px 32px rgba(20, 16, 60, 0.2)
+        );
+        --nav-button-active-shadow: var(
+          --bright-nav-button-active-shadow,
+          0 18px 38px rgba(32, 24, 82, 0.26)
+        );
       }
 
       body[data-display-mode='bright'] {
@@ -159,6 +237,46 @@
         --status-success-bg: var(--dark-status-success-bg);
         --status-success-text: var(--dark-status-success-text);
         --status-progress-track: var(--dark-status-progress-track);
+        --interactive-text: var(--dark-interactive-text, var(--dark-text));
+        --interactive-subtle: var(
+          --dark-interactive-subtle,
+          var(--dark-muted)
+        );
+        --chrome-radius: var(--dark-chrome-radius, 22px);
+        --nav-button-radius: var(--dark-nav-button-radius, 16px);
+        --nav-button-clip: var(--dark-nav-button-clip, none);
+        --chrome-shadow: var(--dark-chrome-shadow, var(--panel-shadow));
+        --chrome-border: var(--dark-chrome-border, rgba(255, 255, 255, 0.24));
+        --chrome-sheen: var(
+          --dark-chrome-sheen,
+          linear-gradient(
+            130deg,
+            rgba(12, 24, 38, 0.85) 0%,
+            rgba(40, 62, 82, 0.55) 60%,
+            transparent 100%
+          )
+        );
+        --nav-button-bg: var(
+          --dark-nav-button-bg,
+          rgba(12, 26, 45, 0.8)
+        );
+        --nav-button-hover: var(
+          --dark-nav-button-hover,
+          rgba(24, 42, 64, 0.92)
+        );
+        --nav-button-active: var(--dark-nav-button-active, var(--accent));
+        --nav-button-border: var(
+          --dark-nav-button-border,
+          rgba(255, 255, 255, 0.14)
+        );
+        --nav-button-shadow: var(
+          --dark-nav-button-shadow,
+          0 24px 48px rgba(4, 10, 24, 0.6)
+        );
+        --nav-button-active-shadow: var(
+          --dark-nav-button-active-shadow,
+          0 28px 52px rgba(6, 18, 38, 0.72)
+        );
       }
 
       body[data-display-mode='system'] {
@@ -193,14 +311,54 @@
           --status-success-bg: var(--dark-status-success-bg);
           --status-success-text: var(--dark-status-success-text);
           --status-progress-track: var(--dark-status-progress-track);
+          --interactive-text: var(--dark-interactive-text, var(--dark-text));
+          --interactive-subtle: var(
+            --dark-interactive-subtle,
+            var(--dark-muted)
+          );
+          --chrome-radius: var(--dark-chrome-radius, 22px);
+          --nav-button-radius: var(--dark-nav-button-radius, 16px);
+          --nav-button-clip: var(--dark-nav-button-clip, none);
+          --chrome-shadow: var(--dark-chrome-shadow, var(--panel-shadow));
+          --chrome-border: var(--dark-chrome-border, rgba(255, 255, 255, 0.24));
+          --chrome-sheen: var(
+            --dark-chrome-sheen,
+            linear-gradient(
+              130deg,
+              rgba(12, 24, 38, 0.85) 0%,
+              rgba(40, 62, 82, 0.55) 60%,
+              transparent 100%
+            )
+          );
+          --nav-button-bg: var(
+            --dark-nav-button-bg,
+            rgba(12, 26, 45, 0.8)
+          );
+          --nav-button-hover: var(
+            --dark-nav-button-hover,
+            rgba(24, 42, 64, 0.92)
+          );
+          --nav-button-active: var(--dark-nav-button-active, var(--accent));
+          --nav-button-border: var(
+            --dark-nav-button-border,
+            rgba(255, 255, 255, 0.14)
+          );
+          --nav-button-shadow: var(
+            --dark-nav-button-shadow,
+            0 24px 48px rgba(4, 10, 24, 0.6)
+          );
+          --nav-button-active-shadow: var(
+            --dark-nav-button-active-shadow,
+            0 28px 52px rgba(6, 18, 38, 0.72)
+          );
         }
       }
 
       body[data-theme='vibrant'] {
         --bright-background: #f3edff;
         --bright-background-gradient: linear-gradient(135deg, #eaf4ff 0%, #eee4ff 48%, #ffe8fa 100%);
-        --bright-text: #1e1b43;
-        --bright-muted: #625a86;
+        --bright-text: #120f2c;
+        --bright-muted: #2d2855;
         --bright-panel-bg: rgba(255, 255, 255, 0.92);
         --bright-panel-border: rgba(199, 186, 255, 0.65);
         --bright-panel-shadow: 0 18px 36px rgba(119, 103, 187, 0.18);
@@ -225,8 +383,8 @@
 
         --dark-background: #081321;
         --dark-background-gradient: linear-gradient(150deg, #071421 0%, #0f2737 48%, #13404a 100%);
-        --dark-text: #f4fbff;
-        --dark-muted: #8da8c1;
+        --dark-text: #f5f8ff;
+        --dark-muted: #c4dbff;
         --dark-panel-bg: rgba(15, 28, 45, 0.92);
         --dark-panel-border: rgba(73, 111, 149, 0.55);
         --dark-panel-shadow: 0 24px 46px rgba(6, 20, 32, 0.6);
@@ -253,8 +411,8 @@
       body[data-theme='serene'] {
         --bright-background: #ecf7ff;
         --bright-background-gradient: linear-gradient(140deg, #f0e8ff 0%, #ddefff 52%, #cffff9 100%);
-        --bright-text: #142f4c;
-        --bright-muted: #4f6782;
+        --bright-text: #0f2b45;
+        --bright-muted: #1f4c6f;
         --bright-panel-bg: rgba(255, 255, 255, 0.94);
         --bright-panel-border: rgba(200, 225, 255, 0.65);
         --bright-panel-shadow: 0 18px 36px rgba(91, 140, 202, 0.18);
@@ -277,10 +435,29 @@
         --bright-status-success-text: #1f7253;
         --bright-status-progress-track: rgba(91, 183, 255, 0.2);
 
+        --bright-interactive-text: #0f2b45;
+        --bright-interactive-subtle: #1f4c6f;
+        --bright-chrome-shadow: 0 26px 48px rgba(36, 92, 150, 0.2);
+        --bright-chrome-border: rgba(160, 210, 255, 0.55);
+        --bright-chrome-sheen: linear-gradient(
+          125deg,
+          rgba(255, 255, 255, 0.7) 0%,
+          rgba(120, 180, 255, 0.38) 48%,
+          rgba(200, 245, 255, 0.2) 100%
+        );
+        --bright-nav-button-bg: rgba(255, 255, 255, 0.9);
+        --bright-nav-button-hover: rgba(255, 255, 255, 1);
+        --bright-nav-button-active: var(--bright-accent);
+        --bright-nav-button-border: rgba(120, 180, 255, 0.6);
+        --bright-nav-button-shadow: 0 18px 34px rgba(36, 92, 150, 0.2);
+        --bright-nav-button-active-shadow: 0 24px 42px rgba(20, 72, 132, 0.3);
+        --bright-chrome-radius: 32px;
+        --bright-nav-button-radius: 20px;
+
         --dark-background: #0c111f;
         --dark-background-gradient: linear-gradient(155deg, #10152c 0%, #112f3c 50%, #0f4136 100%);
-        --dark-text: #f0fff7;
-        --dark-muted: #8fb4a8;
+        --dark-text: #f1fff9;
+        --dark-muted: #b9e4da;
         --dark-panel-bg: rgba(14, 27, 38, 0.92);
         --dark-panel-border: rgba(74, 122, 115, 0.55);
         --dark-panel-shadow: 0 24px 46px rgba(6, 20, 24, 0.6);
@@ -302,13 +479,32 @@
         --dark-status-success-bg: rgba(156, 246, 205, 0.26);
         --dark-status-success-text: #b8ffe5;
         --dark-status-progress-track: rgba(255, 255, 255, 0.18);
+
+        --dark-interactive-text: #f3fff9;
+        --dark-interactive-subtle: #b2e7db;
+        --dark-chrome-shadow: 0 34px 58px rgba(8, 26, 32, 0.72);
+        --dark-chrome-border: rgba(156, 246, 205, 0.28);
+        --dark-chrome-sheen: linear-gradient(
+          138deg,
+          rgba(16, 40, 42, 0.78) 0%,
+          rgba(156, 246, 205, 0.32) 50%,
+          rgba(120, 220, 210, 0.2) 100%
+        );
+        --dark-nav-button-bg: rgba(16, 40, 42, 0.82);
+        --dark-nav-button-hover: rgba(24, 56, 58, 0.94);
+        --dark-nav-button-active: var(--dark-accent);
+        --dark-nav-button-border: rgba(156, 246, 205, 0.35);
+        --dark-nav-button-shadow: 0 26px 46px rgba(6, 20, 24, 0.68);
+        --dark-nav-button-active-shadow: 0 34px 54px rgba(7, 24, 24, 0.78);
+        --dark-chrome-radius: 30px;
+        --dark-nav-button-radius: 20px;
       }
 
       body[data-theme='pastel'] {
         --bright-background: #fff4f6;
         --bright-background-gradient: linear-gradient(140deg, #e8fff4 0%, #ffe4ec 52%, #fffbe4 100%);
-        --bright-text: #382438;
-        --bright-muted: #7d5f6f;
+        --bright-text: #2d1424;
+        --bright-muted: #4b2637;
         --bright-panel-bg: rgba(255, 255, 255, 0.9);
         --bright-panel-border: rgba(255, 210, 195, 0.6);
         --bright-panel-shadow: 0 20px 40px rgba(255, 173, 208, 0.22);
@@ -331,10 +527,29 @@
         --bright-status-success-text: #2f6e52;
         --bright-status-progress-track: rgba(255, 169, 181, 0.25);
 
+        --bright-interactive-text: #2d1424;
+        --bright-interactive-subtle: #4b2637;
+        --bright-chrome-shadow: 0 26px 44px rgba(190, 90, 120, 0.22);
+        --bright-chrome-border: rgba(255, 189, 208, 0.6);
+        --bright-chrome-sheen: linear-gradient(
+          135deg,
+          rgba(255, 255, 255, 0.75) 0%,
+          rgba(255, 189, 208, 0.42) 48%,
+          rgba(255, 210, 240, 0.22) 100%
+        );
+        --bright-nav-button-bg: rgba(255, 255, 255, 0.92);
+        --bright-nav-button-hover: rgba(255, 255, 255, 1);
+        --bright-nav-button-active: var(--bright-accent);
+        --bright-nav-button-border: rgba(255, 189, 208, 0.6);
+        --bright-nav-button-shadow: 0 18px 36px rgba(190, 90, 120, 0.22);
+        --bright-nav-button-active-shadow: 0 24px 44px rgba(175, 70, 110, 0.32);
+        --bright-chrome-radius: 20px;
+        --bright-nav-button-radius: 16px;
+
         --dark-background: #1b1426;
         --dark-background-gradient: linear-gradient(155deg, #201832 0%, #261c3a 48%, #301e42 100%);
-        --dark-text: #faedff;
-        --dark-muted: #c9b9d9;
+        --dark-text: #fff4fb;
+        --dark-muted: #f2cde4;
         --dark-panel-bg: rgba(34, 24, 48, 0.92);
         --dark-panel-border: rgba(213, 171, 223, 0.55);
         --dark-panel-shadow: 0 26px 48px rgba(20, 12, 30, 0.65);
@@ -356,13 +571,32 @@
         --dark-status-success-bg: rgba(186, 255, 226, 0.22);
         --dark-status-success-text: #e9fff6;
         --dark-status-progress-track: rgba(255, 255, 255, 0.22);
+
+        --dark-interactive-text: #fff7fb;
+        --dark-interactive-subtle: #f3d6e8;
+        --dark-chrome-shadow: 0 34px 58px rgba(28, 12, 32, 0.72);
+        --dark-chrome-border: rgba(255, 189, 208, 0.32);
+        --dark-chrome-sheen: linear-gradient(
+          140deg,
+          rgba(44, 24, 56, 0.82) 0%,
+          rgba(255, 189, 208, 0.34) 52%,
+          rgba(255, 210, 240, 0.24) 100%
+        );
+        --dark-nav-button-bg: rgba(44, 24, 56, 0.82);
+        --dark-nav-button-hover: rgba(54, 28, 66, 0.95);
+        --dark-nav-button-active: var(--dark-accent);
+        --dark-nav-button-border: rgba(255, 189, 208, 0.38);
+        --dark-nav-button-shadow: 0 28px 48px rgba(20, 10, 32, 0.7);
+        --dark-nav-button-active-shadow: 0 34px 58px rgba(26, 12, 38, 0.78);
+        --dark-chrome-radius: 22px;
+        --dark-nav-button-radius: 16px;
       }
 
       body[data-theme='noir'] {
         --bright-background: #f7f7f7;
         --bright-background-gradient: linear-gradient(135deg, #fdfdfd 0%, #ececec 55%, #d9d9d9 100%);
-        --bright-text: #1c1c1c;
-        --bright-muted: #595959;
+        --bright-text: #131313;
+        --bright-muted: #2f2f2f;
         --bright-panel-bg: rgba(255, 255, 255, 0.94);
         --bright-panel-border: rgba(0, 0, 0, 0.12);
         --bright-panel-shadow: 0 18px 36px rgba(34, 34, 34, 0.12);
@@ -385,10 +619,30 @@
         --bright-status-success-text: #235223;
         --bright-status-progress-track: rgba(32, 32, 32, 0.16);
 
+        --bright-interactive-text: #131313;
+        --bright-interactive-subtle: #2f2f2f;
+        --bright-chrome-shadow: 0 28px 52px rgba(20, 20, 24, 0.24);
+        --bright-chrome-border: rgba(0, 0, 0, 0.2);
+        --bright-chrome-sheen: linear-gradient(
+          140deg,
+          rgba(255, 255, 255, 0.65) 0%,
+          rgba(180, 180, 188, 0.35) 52%,
+          rgba(240, 240, 240, 0.12) 100%
+        );
+        --bright-nav-button-bg: rgba(255, 255, 255, 0.92);
+        --bright-nav-button-hover: rgba(255, 255, 255, 1);
+        --bright-nav-button-active: var(--bright-accent);
+        --bright-nav-button-border: rgba(0, 0, 0, 0.18);
+        --bright-nav-button-shadow: 0 16px 32px rgba(20, 20, 24, 0.24);
+        --bright-nav-button-active-shadow: 0 20px 38px rgba(18, 18, 22, 0.28);
+        --bright-chrome-radius: 14px;
+        --bright-nav-button-radius: 12px;
+        --bright-nav-button-clip: inset(0 round 12px);
+
         --dark-background: #050506;
         --dark-background-gradient: linear-gradient(150deg, #050506 0%, #111112 45%, #1a1a1c 100%);
-        --dark-text: #f5f5f5;
-        --dark-muted: #9a9aa0;
+        --dark-text: #f7f7fb;
+        --dark-muted: #d0d0d8;
         --dark-panel-bg: rgba(12, 12, 14, 0.9);
         --dark-panel-border: rgba(120, 120, 126, 0.45);
         --dark-panel-shadow: 0 26px 48px rgba(0, 0, 0, 0.7);
@@ -410,13 +664,33 @@
         --dark-status-success-bg: rgba(189, 236, 189, 0.24);
         --dark-status-success-text: #e6f9e6;
         --dark-status-progress-track: rgba(255, 255, 255, 0.22);
+
+        --dark-interactive-text: #f7f7fb;
+        --dark-interactive-subtle: #d0d0d8;
+        --dark-chrome-shadow: 0 36px 64px rgba(0, 0, 0, 0.75);
+        --dark-chrome-border: rgba(255, 255, 255, 0.16);
+        --dark-chrome-sheen: linear-gradient(
+          150deg,
+          rgba(24, 24, 28, 0.8) 0%,
+          rgba(120, 120, 140, 0.32) 55%,
+          rgba(255, 255, 255, 0.18) 100%
+        );
+        --dark-nav-button-bg: rgba(24, 24, 28, 0.82);
+        --dark-nav-button-hover: rgba(34, 34, 38, 0.95);
+        --dark-nav-button-active: var(--dark-accent);
+        --dark-nav-button-border: rgba(200, 200, 220, 0.28);
+        --dark-nav-button-shadow: 0 28px 52px rgba(0, 0, 0, 0.76);
+        --dark-nav-button-active-shadow: 0 34px 58px rgba(0, 0, 0, 0.82);
+        --dark-chrome-radius: 12px;
+        --dark-nav-button-radius: 10px;
+        --dark-nav-button-clip: inset(0 round 10px);
       }
 
       body[data-theme='solar'] {
         --bright-background: #fff7e6;
         --bright-background-gradient: linear-gradient(140deg, #fff3d6 0%, #ffe4b5 48%, #ffd7a3 100%);
-        --bright-text: #3a2508;
-        --bright-muted: #8a6b3d;
+        --bright-text: #2d1804;
+        --bright-muted: #4f3610;
         --bright-panel-bg: rgba(255, 255, 255, 0.92);
         --bright-panel-border: rgba(255, 204, 153, 0.55);
         --bright-panel-shadow: 0 20px 40px rgba(227, 151, 64, 0.2);
@@ -439,10 +713,29 @@
         --bright-status-success-text: #2d5f1c;
         --bright-status-progress-track: rgba(255, 169, 77, 0.22);
 
+        --bright-interactive-text: #2d1804;
+        --bright-interactive-subtle: #4f3610;
+        --bright-chrome-shadow: 0 28px 50px rgba(200, 120, 30, 0.26);
+        --bright-chrome-border: rgba(255, 188, 120, 0.58);
+        --bright-chrome-sheen: linear-gradient(
+          132deg,
+          rgba(255, 255, 255, 0.7) 0%,
+          rgba(255, 188, 120, 0.42) 48%,
+          rgba(255, 220, 150, 0.22) 100%
+        );
+        --bright-nav-button-bg: rgba(255, 255, 255, 0.92);
+        --bright-nav-button-hover: rgba(255, 255, 255, 1);
+        --bright-nav-button-active: var(--bright-accent);
+        --bright-nav-button-border: rgba(255, 188, 120, 0.55);
+        --bright-nav-button-shadow: 0 18px 38px rgba(200, 120, 30, 0.22);
+        --bright-nav-button-active-shadow: 0 24px 46px rgba(180, 100, 20, 0.3);
+        --bright-chrome-radius: 24px;
+        --bright-nav-button-radius: 18px;
+
         --dark-background: #1f1302;
         --dark-background-gradient: linear-gradient(150deg, #301e04 0%, #2a1700 45%, #201205 100%);
-        --dark-text: #ffedd6;
-        --dark-muted: #d7b48a;
+        --dark-text: #ffebc6;
+        --dark-muted: #f4c487;
         --dark-panel-bg: rgba(36, 21, 4, 0.9);
         --dark-panel-border: rgba(180, 116, 38, 0.55);
         --dark-panel-shadow: 0 26px 48px rgba(12, 6, 1, 0.7);
@@ -464,13 +757,32 @@
         --dark-status-success-bg: rgba(206, 247, 170, 0.24);
         --dark-status-success-text: #f4ffe2;
         --dark-status-progress-track: rgba(255, 243, 213, 0.2);
+
+        --dark-interactive-text: #ffefd4;
+        --dark-interactive-subtle: #f5c98f;
+        --dark-chrome-shadow: 0 36px 60px rgba(20, 10, 2, 0.74);
+        --dark-chrome-border: rgba(255, 179, 71, 0.28);
+        --dark-chrome-sheen: linear-gradient(
+          148deg,
+          rgba(54, 30, 6, 0.82) 0%,
+          rgba(255, 179, 71, 0.34) 48%,
+          rgba(255, 210, 140, 0.22) 100%
+        );
+        --dark-nav-button-bg: rgba(54, 30, 6, 0.82);
+        --dark-nav-button-hover: rgba(64, 36, 8, 0.94);
+        --dark-nav-button-active: var(--dark-accent);
+        --dark-nav-button-border: rgba(255, 179, 71, 0.35);
+        --dark-nav-button-shadow: 0 28px 52px rgba(15, 7, 2, 0.72);
+        --dark-nav-button-active-shadow: 0 34px 58px rgba(20, 10, 2, 0.78);
+        --dark-chrome-radius: 24px;
+        --dark-nav-button-radius: 18px;
       }
 
       body[data-theme='cyber'] {
         --bright-background: #e6f6ff;
         --bright-background-gradient: linear-gradient(140deg, #e6f6ff 0%, #edf0ff 48%, #f3e8ff 100%);
-        --bright-text: #0c2138;
-        --bright-muted: #3b5c7f;
+        --bright-text: #061023;
+        --bright-muted: #12345c;
         --bright-panel-bg: rgba(255, 255, 255, 0.94);
         --bright-panel-border: rgba(126, 196, 255, 0.45);
         --bright-panel-shadow: 0 20px 42px rgba(65, 140, 214, 0.2);
@@ -493,10 +805,30 @@
         --bright-status-success-text: #126f56;
         --bright-status-progress-track: rgba(63, 215, 255, 0.2);
 
+        --bright-interactive-text: #061023;
+        --bright-interactive-subtle: #12345c;
+        --bright-chrome-shadow: 0 30px 54px rgba(18, 80, 160, 0.26);
+        --bright-chrome-border: rgba(120, 210, 255, 0.55);
+        --bright-chrome-sheen: linear-gradient(
+          134deg,
+          rgba(255, 255, 255, 0.78) 0%,
+          rgba(120, 210, 255, 0.42) 45%,
+          rgba(140, 110, 255, 0.24) 100%
+        );
+        --bright-nav-button-bg: rgba(245, 255, 255, 0.92);
+        --bright-nav-button-hover: rgba(255, 255, 255, 1);
+        --bright-nav-button-active: var(--bright-accent);
+        --bright-nav-button-border: rgba(120, 210, 255, 0.5);
+        --bright-nav-button-shadow: 0 18px 40px rgba(18, 80, 160, 0.26);
+        --bright-nav-button-active-shadow: 0 26px 52px rgba(18, 80, 220, 0.36);
+        --bright-chrome-radius: 22px;
+        --bright-nav-button-radius: 14px;
+        --bright-nav-button-clip: polygon(8% 0, 100% 0, 92% 100%, 0 100%);
+
         --dark-background: #040915;
         --dark-background-gradient: linear-gradient(150deg, #040915 0%, #0c1734 48%, #132445 100%);
-        --dark-text: #dcf6ff;
-        --dark-muted: #7ab4d5;
+        --dark-text: #e9faff;
+        --dark-muted: #9ddfff;
         --dark-panel-bg: rgba(10, 20, 40, 0.92);
         --dark-panel-border: rgba(74, 130, 189, 0.55);
         --dark-panel-shadow: 0 26px 50px rgba(2, 8, 20, 0.7);
@@ -518,13 +850,33 @@
         --dark-status-success-bg: rgba(156, 246, 205, 0.22);
         --dark-status-success-text: #c9ffef;
         --dark-status-progress-track: rgba(120, 196, 255, 0.24);
+
+        --dark-interactive-text: #e9faff;
+        --dark-interactive-subtle: #9ddfff;
+        --dark-chrome-shadow: 0 38px 64px rgba(0, 20, 40, 0.74);
+        --dark-chrome-border: rgba(111, 225, 255, 0.4);
+        --dark-chrome-sheen: linear-gradient(
+          148deg,
+          rgba(12, 24, 48, 0.85) 0%,
+          rgba(111, 225, 255, 0.36) 48%,
+          rgba(140, 110, 255, 0.26) 100%
+        );
+        --dark-nav-button-bg: rgba(12, 24, 48, 0.78);
+        --dark-nav-button-hover: rgba(18, 36, 68, 0.94);
+        --dark-nav-button-active: var(--dark-accent);
+        --dark-nav-button-border: rgba(111, 225, 255, 0.38);
+        --dark-nav-button-shadow: 0 30px 54px rgba(0, 20, 40, 0.72);
+        --dark-nav-button-active-shadow: 0 36px 64px rgba(0, 30, 60, 0.78);
+        --dark-chrome-radius: 18px;
+        --dark-nav-button-radius: 0px;
+        --dark-nav-button-clip: polygon(10% 0, 100% 0, 90% 100%, 0 100%);
       }
 
       body[data-theme='obsidian'] {
         --bright-background: #f6f1ff;
         --bright-background-gradient: linear-gradient(140deg, #f6f1ff 0%, #ece4ff 52%, #e3f0ff 100%);
-        --bright-text: #241037;
-        --bright-muted: #5c4a72;
+        --bright-text: #1b0d2d;
+        --bright-muted: #3c2960;
         --bright-panel-bg: rgba(255, 255, 255, 0.94);
         --bright-panel-border: rgba(125, 98, 160, 0.45);
         --bright-panel-shadow: 0 18px 38px rgba(67, 38, 95, 0.18);
@@ -547,10 +899,30 @@
         --bright-status-success-text: #1b6c55;
         --bright-status-progress-track: rgba(126, 75, 255, 0.18);
 
+        --bright-interactive-text: #1b0d2d;
+        --bright-interactive-subtle: #3c2960;
+        --bright-chrome-shadow: 0 30px 54px rgba(70, 40, 120, 0.24);
+        --bright-chrome-border: rgba(126, 75, 255, 0.5);
+        --bright-chrome-sheen: linear-gradient(
+          138deg,
+          rgba(255, 255, 255, 0.78) 0%,
+          rgba(126, 75, 255, 0.45) 48%,
+          rgba(160, 120, 255, 0.26) 100%
+        );
+        --bright-nav-button-bg: rgba(255, 255, 255, 0.94);
+        --bright-nav-button-hover: rgba(255, 255, 255, 1);
+        --bright-nav-button-active: var(--bright-accent);
+        --bright-nav-button-border: rgba(126, 75, 255, 0.5);
+        --bright-nav-button-shadow: 0 20px 42px rgba(70, 40, 120, 0.24);
+        --bright-nav-button-active-shadow: 0 26px 52px rgba(80, 44, 150, 0.3);
+        --bright-chrome-radius: 28px;
+        --bright-nav-button-radius: 20px;
+        --bright-nav-button-clip: polygon(0 18%, 84% 0, 100% 100%, 12% 100%);
+
         --dark-background: #120f1b;
         --dark-background-gradient: linear-gradient(155deg, #1a1428 0%, #261b38 48%, #331f3f 100%);
-        --dark-text: #f9f2ff;
-        --dark-muted: #b49fd4;
+        --dark-text: #fbf6ff;
+        --dark-muted: #d8c9f5;
         --dark-panel-bg: rgba(28, 20, 46, 0.92);
         --dark-panel-border: rgba(122, 96, 161, 0.6);
         --dark-panel-shadow: 0 24px 46px rgba(19, 10, 33, 0.65);
@@ -572,13 +944,33 @@
         --dark-status-success-bg: rgba(156, 246, 205, 0.18);
         --dark-status-success-text: #c4ffe8;
         --dark-status-progress-track: rgba(255, 255, 255, 0.2);
+
+        --dark-interactive-text: #fbf6ff;
+        --dark-interactive-subtle: #d8c9f5;
+        --dark-chrome-shadow: 0 36px 62px rgba(20, 10, 35, 0.72);
+        --dark-chrome-border: rgba(201, 175, 255, 0.34);
+        --dark-chrome-sheen: linear-gradient(
+          146deg,
+          rgba(28, 20, 46, 0.82) 0%,
+          rgba(201, 175, 255, 0.32) 48%,
+          rgba(160, 120, 255, 0.24) 100%
+        );
+        --dark-nav-button-bg: rgba(28, 20, 46, 0.86);
+        --dark-nav-button-hover: rgba(36, 24, 56, 0.95);
+        --dark-nav-button-active: var(--dark-accent);
+        --dark-nav-button-border: rgba(201, 175, 255, 0.38);
+        --dark-nav-button-shadow: 0 30px 56px rgba(19, 10, 33, 0.72);
+        --dark-nav-button-active-shadow: 0 36px 64px rgba(24, 12, 42, 0.78);
+        --dark-chrome-radius: 22px;
+        --dark-nav-button-radius: 18px;
+        --dark-nav-button-clip: polygon(4% 0, 100% 0, 92% 100%, 0 100%);
       }
 
       body[data-theme='ethereal'] {
         --bright-background: #f5fbff;
         --bright-background-gradient: linear-gradient(150deg, #f5fbff 0%, #eef5ff 48%, #f8efff 100%);
-        --bright-text: #1f2a4a;
-        --bright-muted: #5a6b92;
+        --bright-text: #152145;
+        --bright-muted: #2d3d68;
         --bright-panel-bg: rgba(255, 255, 255, 0.9);
         --bright-panel-border: rgba(173, 204, 255, 0.45);
         --bright-panel-shadow: 0 18px 38px rgba(94, 122, 183, 0.18);
@@ -601,10 +993,29 @@
         --bright-status-success-text: #1a6d58;
         --bright-status-progress-track: rgba(154, 208, 255, 0.2);
 
+        --bright-interactive-text: #152145;
+        --bright-interactive-subtle: #2d3d68;
+        --bright-chrome-shadow: 0 28px 52px rgba(80, 100, 180, 0.22);
+        --bright-chrome-border: rgba(154, 208, 255, 0.5);
+        --bright-chrome-sheen: linear-gradient(
+          140deg,
+          rgba(255, 255, 255, 0.76) 0%,
+          rgba(154, 208, 255, 0.4) 48%,
+          rgba(210, 180, 255, 0.22) 100%
+        );
+        --bright-nav-button-bg: rgba(255, 255, 255, 0.94);
+        --bright-nav-button-hover: rgba(255, 255, 255, 1);
+        --bright-nav-button-active: var(--bright-accent);
+        --bright-nav-button-border: rgba(154, 208, 255, 0.45);
+        --bright-nav-button-shadow: 0 20px 42px rgba(80, 100, 180, 0.24);
+        --bright-nav-button-active-shadow: 0 28px 52px rgba(70, 90, 200, 0.3);
+        --bright-chrome-radius: 34px;
+        --bright-nav-button-radius: 22px;
+
         --dark-background: #141c2a;
         --dark-background-gradient: linear-gradient(155deg, #141c2a 0%, #1a2740 48%, #1f3450 100%);
-        --dark-text: #edf6ff;
-        --dark-muted: #9bb5d6;
+        --dark-text: #f2f8ff;
+        --dark-muted: #c2daf5;
         --dark-panel-bg: rgba(18, 26, 40, 0.92);
         --dark-panel-border: rgba(92, 128, 176, 0.55);
         --dark-panel-shadow: 0 26px 50px rgba(5, 12, 24, 0.68);
@@ -626,6 +1037,25 @@
         --dark-status-success-bg: rgba(176, 247, 226, 0.22);
         --dark-status-success-text: #e9fff6;
         --dark-status-progress-track: rgba(220, 236, 255, 0.24);
+
+        --dark-interactive-text: #f2f8ff;
+        --dark-interactive-subtle: #c2daf5;
+        --dark-chrome-shadow: 0 36px 62px rgba(8, 16, 30, 0.72);
+        --dark-chrome-border: rgba(174, 226, 255, 0.32);
+        --dark-chrome-sheen: linear-gradient(
+          150deg,
+          rgba(18, 26, 40, 0.82) 0%,
+          rgba(174, 226, 255, 0.32) 50%,
+          rgba(210, 200, 255, 0.24) 100%
+        );
+        --dark-nav-button-bg: rgba(18, 26, 40, 0.88);
+        --dark-nav-button-hover: rgba(24, 34, 50, 0.95);
+        --dark-nav-button-active: var(--dark-accent);
+        --dark-nav-button-border: rgba(174, 226, 255, 0.36);
+        --dark-nav-button-shadow: 0 30px 56px rgba(8, 16, 30, 0.7);
+        --dark-nav-button-active-shadow: 0 36px 64px rgba(10, 20, 38, 0.78);
+        --dark-chrome-radius: 26px;
+        --dark-nav-button-radius: 20px;
       }
 
       body[data-effects='none'] {
@@ -2110,27 +2540,33 @@
       }
 
       .storage-browser-nav button {
-        border-radius: 999px;
-        border: 1px solid var(--panel-border);
-        background: transparent;
-        color: var(--muted);
-        padding: 6px 14px;
+        border-radius: var(--nav-button-radius);
+        border: 1px solid var(--nav-button-border);
+        background: var(--nav-button-bg);
+        color: var(--interactive-text);
+        padding: 8px 16px;
         font-weight: 600;
         cursor: pointer;
-        transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease,
-          filter 0.2s ease;
+        clip-path: var(--nav-button-clip);
+        box-shadow: var(--nav-button-shadow);
+        transition: transform 0.25s ease, background 0.25s ease,
+          color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
       }
 
       .storage-browser-nav button:hover {
         border-color: var(--accent);
-        color: var(--text);
-        background: var(--accent-muted);
+        background: var(--nav-button-hover);
+        color: var(--accent-contrast);
+        box-shadow: var(--nav-button-active-shadow);
+        transform: translateY(-2px);
       }
 
       .storage-browser-nav button:disabled {
         cursor: not-allowed;
-        opacity: 0.6;
+        opacity: 0.55;
         filter: none;
+        transform: none;
+        box-shadow: none;
       }
 
       .storage-browser-table-wrapper {
@@ -2240,47 +2676,56 @@
       }
 
       .storage-actions button {
-        border-radius: 999px;
-        border: 1px solid var(--panel-border);
-        background: transparent;
-        color: var(--muted);
-        padding: 6px 14px;
+        border-radius: var(--nav-button-radius);
+        border: 1px solid var(--nav-button-border);
+        background: var(--nav-button-bg);
+        color: var(--interactive-text);
+        padding: 8px 16px;
         font-weight: 600;
         cursor: pointer;
-        transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease,
-          filter 0.2s ease;
+        clip-path: var(--nav-button-clip);
+        box-shadow: var(--nav-button-shadow);
+        transition: transform 0.25s ease, background 0.25s ease,
+          color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease,
+          opacity 0.25s ease;
       }
 
       .storage-actions button:hover {
         border-color: var(--accent);
-        color: var(--text);
-        background: var(--accent-muted);
+        background: var(--nav-button-hover);
+        color: var(--accent-contrast);
+        box-shadow: var(--nav-button-active-shadow);
+        transform: translateY(-2px);
       }
 
       .storage-actions button.primary {
         background: var(--accent);
-        border-color: var(--accent);
+        border-color: transparent;
         color: var(--accent-contrast);
+        box-shadow: var(--nav-button-active-shadow);
       }
 
       .storage-actions button.primary:hover {
-        filter: brightness(0.95);
+        filter: none;
       }
 
       .storage-actions button.danger {
         background: var(--danger);
-        border-color: var(--danger);
+        border-color: transparent;
         color: var(--danger-contrast);
+        box-shadow: var(--nav-button-active-shadow);
       }
 
       .storage-actions button.danger:hover {
-        filter: brightness(0.95);
+        filter: none;
       }
 
       .storage-actions button:disabled {
         cursor: not-allowed;
-        opacity: 0.6;
+        opacity: 0.55;
         filter: none;
+        transform: none;
+        box-shadow: none;
       }
 
       .storage-usage {
@@ -2559,77 +3004,206 @@
       }
 
       .top-bar {
+        position: relative;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 12px;
-        padding: 16px 20px 0;
-        border-bottom: 1px solid var(--panel-border);
-        background: var(--panel-bg);
-        border-radius: 8px 8px 0 0;
+        flex-wrap: wrap;
+        gap: 16px;
+        padding: 18px 24px 16px;
+        border-bottom: none;
+        background: transparent;
+        border-radius: var(--chrome-radius);
+        overflow: hidden;
+        border: 1px solid var(--chrome-border);
+        box-shadow: var(--chrome-shadow);
+        backdrop-filter: blur(22px);
+        isolation: isolate;
+      }
+
+      .top-bar::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: var(--chrome-sheen);
+        opacity: 0.95;
+        pointer-events: none;
+      }
+
+      .top-bar::after {
+        content: '';
+        position: absolute;
+        top: -120%;
+        right: -40%;
+        width: 160%;
+        height: 200%;
+        background: radial-gradient(
+          circle at 35% 35%,
+          var(--accent-highlight) 0%,
+          transparent 62%
+        );
+        opacity: 0.35;
+        filter: blur(44px);
+        transform: rotate(10deg);
+        pointer-events: none;
       }
 
       .top-bar-left,
       .top-bar-right {
         display: flex;
         align-items: center;
-        gap: 8px;
+        flex-wrap: wrap;
+        gap: 12px;
       }
 
       .top-bar button {
-        border-radius: 999px;
-        border: 1px solid transparent;
-        background: var(--accent-muted);
-        color: var(--text);
-        padding: 6px 14px;
+        position: relative;
+        border-radius: var(--nav-button-radius);
+        border: 1px solid var(--nav-button-border);
+        background: var(--nav-button-bg);
+        color: var(--interactive-text);
+        padding: 10px 18px;
         font-weight: 600;
-        transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
-      }
-
-      .top-bar button[data-view]:hover {
-        background: var(--accent);
-        color: var(--accent-contrast);
-        border-color: var(--accent);
-      }
-
-      .top-bar button.active {
-        background: var(--accent);
-        border-color: var(--accent);
-        color: var(--accent-contrast);
-      }
-
-      .top-bar button.ghost {
-        background: transparent;
-        border-color: var(--panel-border);
-        color: var(--muted);
-      }
-
-      .top-bar button.ghost:hover {
-        border-color: var(--accent);
-        color: var(--text);
-      }
-
-      .top-bar button.ghost.active {
-        background: var(--accent);
-        border-color: var(--accent);
-        color: var(--accent-contrast);
-      }
-
-      .content-panel {
-        padding: 0;
+        letter-spacing: 0.01em;
+        clip-path: var(--nav-button-clip);
+        box-shadow: var(--nav-button-shadow);
+        transition: transform 0.3s ease, color 0.3s ease, background 0.3s ease,
+          box-shadow 0.3s ease, border-color 0.3s ease, opacity 0.3s ease;
         overflow: hidden;
       }
 
+      .top-bar button::before {
+        content: '';
+        position: absolute;
+        inset: -40% -20%;
+        background: radial-gradient(
+          circle at 30% 20%,
+          var(--accent-highlight) 0%,
+          transparent 65%
+        );
+        opacity: 0;
+        transform: translateY(20%) scale(0.6);
+        transition: opacity 0.4s ease, transform 0.4s ease;
+        pointer-events: none;
+      }
+
+      .top-bar button:hover,
+      .top-bar button:focus-visible {
+        transform: translateY(-2px);
+        border-color: var(--accent);
+      }
+
+      .top-bar button:hover::before,
+      .top-bar button:focus-visible::before {
+        opacity: 0.55;
+        transform: translateY(0) scale(1);
+      }
+
+      .top-bar button:focus-visible {
+        outline: none;
+        box-shadow: var(--nav-button-shadow), 0 0 0 3px var(--accent-soft);
+      }
+
+      .top-bar button.active {
+        background: var(--nav-button-active);
+        border-color: transparent;
+        color: var(--accent-contrast);
+        box-shadow: var(--nav-button-active-shadow);
+      }
+
+      .top-bar button.active::before {
+        opacity: 0.85;
+        transform: translateY(0) scale(1.05);
+      }
+
+      .top-bar button.ghost {
+        background: var(--nav-button-bg);
+        opacity: 0.86;
+        color: var(--interactive-text);
+      }
+
+      .top-bar button.ghost:hover,
+      .top-bar button.ghost:focus-visible {
+        opacity: 1;
+      }
+
+      .top-bar button.ghost.active {
+        opacity: 1;
+      }
+
+      .top-bar button.pill {
+        border-radius: var(--nav-button-radius);
+      }
+
+      .content-panel {
+        position: relative;
+        padding: 0;
+        overflow: hidden;
+        border-radius: calc(var(--chrome-radius) - 6px);
+        border: 1px solid var(--panel-border);
+        background: var(--panel-bg);
+        box-shadow: var(--panel-shadow-high);
+        backdrop-filter: blur(18px);
+        min-height: 360px;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .content-panel::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          180deg,
+          rgba(255, 255, 255, 0.08) 0%,
+          rgba(0, 0, 0, 0.04) 100%
+        );
+        opacity: 0.6;
+        pointer-events: none;
+      }
+
+      .content-panel > * {
+        position: relative;
+        z-index: 1;
+      }
+
+      .view-stack {
+        position: relative;
+        flex: 1;
+        min-height: 320px;
+      }
+
       .content-panel .view {
-        padding: 20px;
+        position: absolute;
+        inset: 0;
+        padding: 24px;
+        overflow-y: auto;
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(24px) scale(0.97);
+        transition: opacity 0.45s cubic-bezier(0.25, 0.8, 0.25, 1),
+          transform 0.45s cubic-bezier(0.25, 0.8, 0.25, 1);
       }
 
       .view {
-        display: none;
+        opacity: 0;
+        pointer-events: none;
       }
 
       .view.active {
-        display: block;
+        opacity: 1;
+        pointer-events: auto;
+        transform: translateY(0) scale(1);
+      }
+
+      .view.leaving {
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(-18px) scale(0.98);
+      }
+
+      .view[hidden] {
+        display: none !important;
       }
 
       .tasks-panel {
@@ -2872,12 +3446,17 @@
       }
 
       button.secondary {
-        background: transparent;
-        color: var(--accent);
+        background: var(--nav-button-bg);
+        border-color: var(--nav-button-border);
+        color: var(--interactive-text);
+        box-shadow: var(--nav-button-shadow);
       }
 
       button.secondary:hover {
-        background: var(--accent-muted);
+        background: var(--nav-button-hover);
+        border-color: var(--accent);
+        color: var(--accent-contrast);
+        box-shadow: var(--nav-button-active-shadow);
       }
 
       button.danger {
@@ -3426,41 +4005,50 @@
       }
 
       .asset-actions button {
-        border-radius: 999px;
-        border: 1px solid var(--panel-border);
-        background: transparent;
-        color: var(--muted);
-        padding: 6px 14px;
+        border-radius: var(--nav-button-radius);
+        border: 1px solid var(--nav-button-border);
+        background: var(--nav-button-bg);
+        color: var(--interactive-text);
+        padding: 8px 16px;
         font-weight: 600;
         cursor: pointer;
-        transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease,
-          filter 0.2s ease;
+        clip-path: var(--nav-button-clip);
+        box-shadow: var(--nav-button-shadow);
+        transition: transform 0.25s ease, background 0.25s ease,
+          color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease,
+          opacity 0.25s ease;
       }
 
       .asset-actions button.secondary {
-        background: transparent;
+        background: var(--nav-button-bg);
       }
 
       .asset-actions button.secondary:hover {
         border-color: var(--accent);
-        color: var(--text);
-        background: var(--accent-muted);
+        color: var(--accent-contrast);
+        background: var(--nav-button-hover);
+        box-shadow: var(--nav-button-active-shadow);
+        transform: translateY(-2px);
       }
 
       .asset-actions button.danger {
         background: var(--danger);
-        border-color: var(--danger);
+        border-color: transparent;
         color: var(--danger-contrast);
+        box-shadow: var(--nav-button-active-shadow);
       }
 
       .asset-actions button.danger:hover {
-        filter: brightness(0.95);
+        filter: none;
+        transform: translateY(-2px);
       }
 
       .asset-actions button:disabled {
         cursor: not-allowed;
-        opacity: 0.6;
+        opacity: 0.55;
         filter: none;
+        transform: none;
+        box-shadow: none;
       }
 
       .asset-actions label.inline {
@@ -3730,7 +4318,8 @@
               </button>
             </div>
           </div>
-          <div id="view-details" class="view active" data-view="details">
+          <div class="view-stack">
+            <div id="view-details" class="view active" data-view="details">
             <header style="display: flex; justify-content: space-between; align-items: center;">
               <h2 data-i18n="details.title">Lecture details</h2>
               <button
@@ -3779,8 +4368,8 @@
               <h3 data-i18n="assets.title">Assets</h3>
               <ul id="asset-list" class="asset-list"></ul>
             </section>
-          </div>
-          <div id="view-tasks" class="view" data-view="tasks" hidden>
+            </div>
+            <div id="view-tasks" class="view" data-view="tasks" hidden>
             <section class="panel tasks-panel">
               <div class="tasks-header">
                 <h2 data-i18n="tasks.title">Tasks</h2>
@@ -3847,8 +4436,8 @@
               </div>
               <ul id="tasks-list" class="tasks-list" aria-live="polite" aria-busy="false"></ul>
             </section>
-          </div>
-          <div id="view-create" class="view" data-view="create" hidden>
+            </div>
+            <div id="view-create" class="view" data-view="create" hidden>
             <h2 data-i18n="create.title">Create lecture</h2>
             <form id="lecture-create-form">
               <div class="field">
@@ -3869,8 +4458,8 @@
                 </button>
               </div>
             </form>
-          </div>
-          <div id="view-storage" class="view" data-view="storage" hidden>
+            </div>
+            <div id="view-storage" class="view" data-view="storage" hidden>
             <div class="storage-page">
               <div class="storage-header">
                 <h2 data-i18n="storage.title">Storage manager</h2>
@@ -3987,12 +4576,11 @@
               <div id="storage-empty" class="storage-empty" hidden data-i18n="storage.empty">
                 No stored classes found.
               </div>
-              <div id="storage-class-wrapper" class="storage-class-wrapper" hidden>
-                <ul id="storage-class-list" class="storage-class-list"></ul>
-              </div>
+            <div id="storage-class-wrapper" class="storage-class-wrapper" hidden>
+              <ul id="storage-class-list" class="storage-class-list"></ul>
             </div>
-          </div>
-          <div id="view-settings" class="view" data-view="settings" hidden>
+            </div>
+            <div id="view-settings" class="view" data-view="settings" hidden>
             <h2 data-i18n="settings.title">Settings</h2>
             <form id="settings-form">
               <fieldset>
@@ -4250,6 +4838,7 @@
                 </button>
               </div>
             </form>
+            </div>
           </div>
         </section>
       </section>
@@ -14077,9 +14666,43 @@
             if (!element) {
               return;
             }
-            const isActive = key === view;
-            element.classList.toggle('active', isActive);
-            element.hidden = !isActive;
+            const isTarget = key === view;
+            if (isTarget) {
+              element.classList.remove('active');
+              element.classList.remove('leaving');
+              element.hidden = false;
+              element.setAttribute('aria-hidden', 'false');
+              element.scrollTop = 0;
+              requestAnimationFrame(() => {
+                element.classList.add('active');
+              });
+            } else if (!element.hidden && element.classList.contains('active')) {
+              element.classList.remove('active');
+              element.classList.add('leaving');
+              element.setAttribute('aria-hidden', 'true');
+              const finalize = (event) => {
+                if (event.propertyName !== 'opacity') {
+                  return;
+                }
+                if (element.classList.contains('active')) {
+                  return;
+                }
+                element.hidden = true;
+                element.classList.remove('leaving');
+              };
+              element.addEventListener('transitionend', finalize, { once: true });
+              window.setTimeout(() => {
+                if (!element.hidden && !element.classList.contains('active')) {
+                  element.hidden = true;
+                  element.classList.remove('leaving');
+                }
+              }, 600);
+            } else {
+              element.classList.remove('active');
+              element.classList.remove('leaving');
+              element.hidden = true;
+              element.setAttribute('aria-hidden', 'true');
+            }
           });
           if (view === 'storage') {
             const browserState = getStorageBrowserState();
