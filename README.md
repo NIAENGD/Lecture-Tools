@@ -196,6 +196,7 @@ python run.py ingest \
   --audio path/to/lecture.wav \
   --slides path/to/slides.pdf
 ```
+Slides can be ingested from PDFs (which enable Markdown bundle generation) or from other document formats such as DOC/DOCX and Markdown. Non-PDF files are stored alongside the lecture for direct download without additional processing.
 The CLI stores originals under `storage/<class>/<module>/<lecture>/raw` while transcripts and slides enter the `processed/` suites. Metadata is tracked in SQLite for instant retrieval by the UI.
 
 Slide processing now produces a Markdown document with inline image references plus the rendered slide images. The Markdown file lives in `processed/notes/` and the web UI exposes a single ZIP bundle containing the Markdown and its assets from `processed/slides/`.

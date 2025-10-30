@@ -4157,6 +4157,13 @@
         margin-bottom: 6px;
       }
 
+      .asset-status-note {
+        display: block;
+        margin-top: 4px;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
       .asset-actions {
         display: flex;
         flex-wrap: wrap;
@@ -5470,17 +5477,18 @@
               labels: {
                 audio: 'Audio (.wav, .mp3, .m4a, .aac, .flac, .ogg, .opus)',
                 masteredAudio: 'Mastered audio',
-                slides: 'Slides (PDF)',
+                slides: 'Slides (PDF or document)',
                 transcript: 'Transcript',
                 notes: 'Notes',
                 slideBundle: 'Slide bundle (Markdown + ZIP)',
               },
               status: {
                 notLinked: 'Not linked',
-                slidesHint: 'Upload a PDF, then process it to generate the Markdown bundle.',
-                noSlideImages: 'No slide bundle yet. Use “Process slides” after uploading a PDF.',
+                slidesHint: 'Upload a PDF to generate the Markdown bundle. Other document formats are stored as-is.',
+                noSlideImages: 'No slide bundle yet. Upload a PDF and use “Process slides” to generate one.',
                 linked: 'Linked: {{name}}',
                 slidesUploaded: 'Slides uploaded: {{name}}',
+                slidesStoredOnly: 'Stored as a document. Processing is available for PDFs.',
                 archiveCreated: 'Bundle created: {{name}}',
                 mastered: 'Mastered: {{name}}',
               },
@@ -5960,9 +5968,9 @@
               lectureTitleRequired: 'Lecture title is required.',
               createLectureRequirements: 'Select a module and enter a title.',
               slidesProcessed: 'Slides processed into a Markdown bundle with images.',
-              slidesUploaded: 'Slides uploaded. Process them to generate the Markdown bundle.',
-              slidesUploadRequired: 'Upload a PDF before processing slides.',
-              slidePreviewFailed: 'Unable to prepare the slide preview. Try re-uploading the PDF.',
+              slidesUploaded: 'Slides uploaded. PDFs can be processed into a Markdown bundle.',
+              slidesUploadRequired: 'Upload a PDF before processing slides. Other document formats are stored as-is.',
+              slidePreviewFailed: 'Unable to prepare the slide preview. Ensure the file is a PDF and try again.',
               processingSlides: 'Processing slides…',
               audioProcessingQueued: 'Audio uploaded. Mastering will continue in the background.',
               assetUploaded: 'Asset uploaded successfully.',
@@ -6056,17 +6064,18 @@
               labels: {
                 audio: '音频（.wav、.mp3、.m4a、.aac、.flac、.ogg、.opus）',
                 masteredAudio: '优化音频',
-                slides: '课件（PDF）',
+                slides: '课件（PDF 或文档）',
                 transcript: '逐字稿',
                 notes: '笔记',
                 slideBundle: '课件资源包（Markdown + ZIP）',
               },
               status: {
                 notLinked: '未关联',
-                slidesHint: '先上传 PDF，然后使用“处理课件”生成 Markdown 资源包。',
-                noSlideImages: '尚未生成课件资源包。上传 PDF 后点击“处理课件”。',
+                slidesHint: '上传 PDF 以生成 Markdown 资源包。其他文档将按原样保存。',
+                noSlideImages: '尚未生成课件资源包。上传 PDF 并使用“处理课件”生成。',
                 linked: '已关联：{{name}}',
                 slidesUploaded: '已上传课件：{{name}}',
+                slidesStoredOnly: '文档已保存。仅支持处理 PDF。',
                 archiveCreated: '已生成资源包：{{name}}',
                 mastered: '已优化：{{name}}',
               },
@@ -6538,9 +6547,9 @@
               lectureTitleRequired: '需要填写讲座标题。',
               createLectureRequirements: '请选择模块并输入标题。',
               slidesProcessed: '课件已转换为包含 Markdown 的资源包。',
-              slidesUploaded: '课件已上传。处理后可生成 Markdown 资源包。',
-              slidesUploadRequired: '请先上传 PDF 再处理课件。',
-              slidePreviewFailed: '无法准备课件预览，请尝试重新上传 PDF。',
+              slidesUploaded: '课件已上传。PDF 可转换为 Markdown 资源包。',
+              slidesUploadRequired: '处理课件前请上传 PDF，其他文档将原样保存。',
+              slidePreviewFailed: '无法准备课件预览，请确认文件为 PDF 后重试。',
               processingSlides: '正在处理课件…',
               audioProcessingQueued: '音频已上传，母带处理将在后台继续进行。',
               assetUploaded: '资源上传成功。',
@@ -6634,17 +6643,18 @@
               labels: {
                 audio: 'Audio (.wav, .mp3, .m4a, .aac, .flac, .ogg, .opus)',
                 masteredAudio: 'Audio masterizado',
-                slides: 'Diapositivas (PDF)',
+                slides: 'Diapositivas (PDF o documento)',
                 transcript: 'Transcripción',
                 notes: 'Notas',
                 slideBundle: 'Paquete de diapositivas (Markdown + ZIP)',
               },
               status: {
                 notLinked: 'Sin vincular',
-                slidesHint: 'Carga un PDF y luego procésalo para generar el paquete Markdown.',
-                noSlideImages: 'Aún no hay paquete de diapositivas. Usa “Procesar diapositivas” después de subir un PDF.',
+                slidesHint: 'Carga un PDF para generar el paquete Markdown. Otros documentos se almacenan tal cual.',
+                noSlideImages: 'Aún no hay paquete de diapositivas. Sube un PDF y usa “Procesar diapositivas” para generarlo.',
                 linked: 'Vinculado: {{name}}',
                 slidesUploaded: 'Diapositivas subidas: {{name}}',
+                slidesStoredOnly: 'Documento almacenado. El procesamiento solo está disponible para PDFs.',
                 archiveCreated: 'Paquete creado: {{name}}',
                 mastered: 'Masterizado: {{name}}',
               },
@@ -7126,9 +7136,10 @@
               lectureTitleRequired: 'El título de la clase es obligatorio.',
               createLectureRequirements: 'Selecciona un módulo e ingresa un título.',
               slidesProcessed: 'Diapositivas convertidas en un paquete Markdown con imágenes.',
-              slidesUploaded: 'Diapositivas subidas. Procésalas para generar el paquete Markdown.',
-              slidesUploadRequired: 'Sube un PDF antes de procesar las diapositivas.',
-              slidePreviewFailed: 'No se pudo preparar la vista previa de las diapositivas. Intenta subir el PDF nuevamente.',
+              slidesUploaded: 'Diapositivas subidas. Los PDFs pueden procesarse para generar el paquete Markdown.',
+              slidesUploadRequired: 'Sube un PDF antes de procesar las diapositivas. Otros documentos se guardan tal cual.',
+              slidePreviewFailed:
+                'No se pudo preparar la vista previa de las diapositivas. Asegúrate de que el archivo sea un PDF e inténtalo de nuevo.',
               processingSlides: 'Procesando diapositivas…',
               audioProcessingQueued: 'Audio subido. La masterización continuará en segundo plano.',
               assetUploaded: 'Recurso subido correctamente.',
@@ -7223,17 +7234,20 @@
               labels: {
                 audio: 'Audio (.wav, .mp3, .m4a, .aac, .flac, .ogg, .opus)',
                 masteredAudio: 'Audio masterisé',
-                slides: 'Diapositives (PDF)',
+                slides: 'Diapositives (PDF ou document)',
                 transcript: 'Transcription',
                 notes: 'Notes',
                 slideBundle: 'Archive de diapositives (Markdown + ZIP)',
               },
               status: {
                 notLinked: 'Non lié',
-                slidesHint: 'Importez un PDF puis traitez-le pour générer l’archive Markdown.',
-                noSlideImages: 'Aucune archive de diapositives. Utilisez « Traiter les diapositives » après avoir importé un PDF.',
+                slidesHint:
+                  'Importez un PDF pour générer l’archive Markdown. Les autres documents sont conservés tels quels.',
+                noSlideImages:
+                  'Aucune archive de diapositives. Importez un PDF puis utilisez « Traiter les diapositives » pour la générer.',
                 linked: 'Lié : {{name}}',
                 slidesUploaded: 'Diapositives importées : {{name}}',
+                slidesStoredOnly: 'Document enregistré. Le traitement est réservé aux PDF.',
                 archiveCreated: 'Archive créée : {{name}}',
                 mastered: 'Masterisé : {{name}}',
               },
@@ -7718,9 +7732,11 @@
               lectureTitleRequired: 'Le titre de la leçon est requis.',
               createLectureRequirements: 'Sélectionnez un module et saisissez un titre.',
               slidesProcessed: 'Diapositives converties en archive Markdown avec images.',
-              slidesUploaded: 'Diapositives importées. Traitez-les pour générer l’archive Markdown.',
-              slidesUploadRequired: 'Importez un PDF avant de traiter les diapositives.',
-              slidePreviewFailed: 'Impossible de préparer l’aperçu des diapositives. Réessayez en important le PDF à nouveau.',
+              slidesUploaded: 'Diapositives importées. Les PDF peuvent être traités pour générer l’archive Markdown.',
+              slidesUploadRequired:
+                'Importez un PDF avant de traiter les diapositives. Les autres documents sont conservés tels quels.',
+              slidePreviewFailed:
+                'Impossible de préparer l’aperçu des diapositives. Vérifiez que le fichier est un PDF et réessayez.',
               processingSlides: 'Traitement des diapositives…',
               audioProcessingQueued: 'Audio téléversé. Le mastering se poursuit en arrière-plan.',
               assetUploaded: 'Ressource importée avec succès.',
@@ -8543,7 +8559,8 @@
           {
             key: 'slide_path',
             labelKey: 'assets.labels.slides',
-            accept: 'application/pdf',
+            accept:
+              'application/pdf,.pdf,.doc,.docx,.txt,.md,text/plain,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document',
             type: 'slides',
           },
           {
@@ -17242,10 +17259,16 @@
             const status = document.createElement('div');
             status.className = 'asset-status';
             let statusText = t('assets.status.notLinked');
+            let statusNote = null;
+            let isPdfSlide = false;
             if (value) {
               const fileName = value.split('/').pop();
               if (definition.type === 'slides') {
+                isPdfSlide = typeof value === 'string' && value.toLowerCase().endsWith('.pdf');
                 statusText = t('assets.status.slidesUploaded', { name: fileName });
+                if (!isPdfSlide) {
+                  statusNote = t('assets.status.slidesStoredOnly');
+                }
               } else if (definition.type === 'slide_bundle') {
                 statusText = t('assets.status.archiveCreated', { name: fileName });
               } else if (definition.type === 'processed_audio') {
@@ -17259,6 +17282,12 @@
               statusText = t('assets.status.noSlideImages');
             }
             status.textContent = statusText;
+            if (statusNote) {
+              const noteElement = document.createElement('span');
+              noteElement.className = 'asset-status-note';
+              noteElement.textContent = statusNote;
+              status.appendChild(noteElement);
+            }
             item.appendChild(status);
 
             const actions = document.createElement('div');
@@ -17339,7 +17368,7 @@
               anchor.remove();
             });
 
-            if (definition.type === 'slides') {
+            if (definition.type === 'slides' && isPdfSlide) {
               const isProcessing = state.processingProgressLectureId === lecture.id;
               const processSlidesButton = document.createElement('button');
               processSlidesButton.type = 'button';
