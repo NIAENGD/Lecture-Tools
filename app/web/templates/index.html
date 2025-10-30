@@ -4367,7 +4367,7 @@
       }
     </style>
   </head>
-  <body data-display-mode="system" data-theme="vibrant" data-effects="mid">
+  <body data-display-mode="system" data-theme="vibrant" data-effects="none">
     <div id="status-bar" class="status-bar" role="status">
       <div id="status-bar-message" class="status-message"></div>
       <div id="status-bar-progress" class="status-progress" hidden>
@@ -7977,7 +7977,7 @@
         const EFFECTS_CHOICES = new Set(['none', 'low', 'mid', 'high']);
         const EFFECTS_ALIASES = new Map([
           ['medium', 'mid'],
-          ['default', 'mid'],
+          ['default', 'none'],
           ['off', 'none'],
           ['disable', 'none'],
           ['disabled', 'none'],
@@ -7998,7 +7998,7 @@
         ]);
         const DEFAULT_DISPLAY_MODE = 'system';
         const DEFAULT_THEME = 'vibrant';
-        const DEFAULT_VISUAL_EFFECTS = 'mid';
+        const DEFAULT_VISUAL_EFFECTS = 'none';
         const WHISPER_MODEL_CHOICES = new Set([
           'tiny',
           'base',
@@ -14816,6 +14816,8 @@
           if (dom.sidebarOverview) {
             dom.sidebarOverview.hidden = view !== 'settings';
           }
+          const effectsLevel = document.body?.dataset?.effects || DEFAULT_VISUAL_EFFECTS;
+          const useTransitions = effectsLevel !== 'none';
           Object.entries(dom.views).forEach(([key, element]) => {
             if (!element) {
               return;
@@ -14827,30 +14829,41 @@
               element.hidden = false;
               element.setAttribute('aria-hidden', 'false');
               element.scrollTop = 0;
-              requestAnimationFrame(() => {
+              if (useTransitions) {
+                requestAnimationFrame(() => {
+                  element.classList.add('active');
+                });
+              } else {
                 element.classList.add('active');
-              });
+              }
             } else if (!element.hidden && element.classList.contains('active')) {
-              element.classList.remove('active');
-              element.classList.add('leaving');
-              element.setAttribute('aria-hidden', 'true');
-              const finalize = (event) => {
-                if (event.propertyName !== 'opacity') {
-                  return;
-                }
-                if (element.classList.contains('active')) {
-                  return;
-                }
-                element.hidden = true;
-                element.classList.remove('leaving');
-              };
-              element.addEventListener('transitionend', finalize, { once: true });
-              window.setTimeout(() => {
-                if (!element.hidden && !element.classList.contains('active')) {
+              if (useTransitions) {
+                element.classList.remove('active');
+                element.classList.add('leaving');
+                element.setAttribute('aria-hidden', 'true');
+                const finalize = (event) => {
+                  if (event.propertyName !== 'opacity') {
+                    return;
+                  }
+                  if (element.classList.contains('active')) {
+                    return;
+                  }
                   element.hidden = true;
                   element.classList.remove('leaving');
-                }
-              }, 600);
+                };
+                element.addEventListener('transitionend', finalize, { once: true });
+                window.setTimeout(() => {
+                  if (!element.hidden && !element.classList.contains('active')) {
+                    element.hidden = true;
+                    element.classList.remove('leaving');
+                  }
+                }, 600);
+              } else {
+                element.classList.remove('active');
+                element.classList.remove('leaving');
+                element.hidden = true;
+                element.setAttribute('aria-hidden', 'true');
+              }
             } else {
               element.classList.remove('active');
               element.classList.remove('leaving');
