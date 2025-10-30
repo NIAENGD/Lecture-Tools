@@ -3177,11 +3177,16 @@
         flex: 1;
         min-height: 320px;
         perspective: var(--view-stack-perspective, 0px);
+        display: grid;
+        grid-auto-rows: minmax(0, 1fr);
+        align-items: stretch;
       }
 
       .content-panel .view {
         position: relative;
+        grid-area: 1 / 1;
         padding: 24px;
+        min-height: 0;
         overflow-y: auto;
         opacity: var(--view-enter-opacity, 0);
         pointer-events: none;
@@ -3221,6 +3226,7 @@
         pointer-events: auto;
         transform: var(--view-active-transform, translateZ(0) scale(1) rotateX(0deg));
         filter: var(--view-active-filter, blur(0) saturate(1.02));
+        z-index: 2;
       }
 
       .view.leaving {
@@ -3228,6 +3234,7 @@
         pointer-events: none;
         transform: var(--view-exit-transform, translateY(-22px) scale(0.97) rotateX(-3deg));
         filter: var(--view-exit-filter, blur(16px) saturate(0.94));
+        z-index: 1;
       }
 
       .view[hidden] {
