@@ -3176,20 +3176,35 @@
         position: relative;
         flex: 1;
         min-height: 320px;
+        perspective: var(--view-stack-perspective, 0px);
       }
 
       .content-panel .view {
         position: relative;
         padding: 24px;
         overflow-y: auto;
-        opacity: 0;
+        opacity: var(--view-enter-opacity, 0);
         pointer-events: none;
-        transform: translateY(24px) scale(0.97);
-        transition: opacity 0.45s cubic-bezier(0.25, 0.8, 0.25, 1),
-          transform 0.45s cubic-bezier(0.25, 0.8, 0.25, 1);
+        transform: var(
+          --view-enter-transform,
+          translateY(26px) scale(0.97) rotateX(2deg)
+        );
+        filter: var(--view-enter-filter, blur(18px) saturate(1.08));
+        --view-filter-duration: 340ms;
+        transition:
+          opacity var(--view-transition-duration, 380ms)
+            var(--view-transition-easing, cubic-bezier(0.25, 0.8, 0.25, 1)),
+          transform var(--view-transition-duration, 380ms)
+            var(--view-transition-easing, cubic-bezier(0.25, 0.8, 0.25, 1)),
+          filter var(--view-filter-duration, 340ms)
+            var(--view-transition-easing, cubic-bezier(0.25, 0.8, 0.25, 1));
         flex: 1 1 auto;
         width: 100%;
         box-sizing: border-box;
+        transform-origin: var(--view-transform-origin, 50% 45%);
+        transform-style: preserve-3d;
+        backface-visibility: hidden;
+        will-change: opacity, transform, filter;
       }
 
       .view {
@@ -3202,19 +3217,146 @@
       }
 
       .view.active {
-        opacity: 1;
+        opacity: var(--view-active-opacity, 1);
         pointer-events: auto;
-        transform: translateY(0) scale(1);
+        transform: var(--view-active-transform, translateZ(0) scale(1) rotateX(0deg));
+        filter: var(--view-active-filter, blur(0) saturate(1.02));
       }
 
       .view.leaving {
-        opacity: 0;
+        opacity: var(--view-exit-opacity, 0);
         pointer-events: none;
-        transform: translateY(-18px) scale(0.98);
+        transform: var(--view-exit-transform, translateY(-22px) scale(0.97) rotateX(-3deg));
+        filter: var(--view-exit-filter, blur(16px) saturate(0.94));
       }
 
       .view[hidden] {
         display: none !important;
+      }
+
+      body[data-effects='none'] .view-stack {
+        --view-stack-perspective: 0px;
+      }
+
+      body[data-effects='none'] .content-panel .view {
+        transition: none;
+        --view-transition-duration: 0ms;
+        --view-filter-duration: 0ms;
+        --view-enter-transform: none;
+        --view-active-transform: none;
+        --view-exit-transform: none;
+        --view-enter-filter: none;
+        --view-active-filter: none;
+        --view-exit-filter: none;
+        --view-transform-origin: 50% 50%;
+      }
+
+      body[data-effects='low'] .view-stack {
+        --view-stack-perspective: 0px;
+      }
+
+      body[data-effects='low'] .content-panel .view {
+        --view-transition-duration: 260ms;
+        --view-transition-easing: cubic-bezier(0.33, 1, 0.68, 1);
+        --view-filter-duration: 220ms;
+        --view-enter-transform: translateY(14px) scale(0.99);
+        --view-active-transform: translateY(0) scale(1);
+        --view-exit-transform: translateY(-10px) scale(0.995);
+        --view-enter-filter: blur(6px) saturate(1.02);
+        --view-active-filter: none;
+        --view-exit-filter: blur(6px) saturate(0.98);
+        --view-transform-origin: 50% 50%;
+      }
+
+      body[data-effects='mid'] .view-stack {
+        --view-stack-perspective: 1200px;
+      }
+
+      body[data-effects='mid'] .content-panel .view {
+        --view-transition-duration: 380ms;
+        --view-transition-easing: cubic-bezier(0.2, 0.8, 0.2, 1);
+        --view-filter-duration: 320ms;
+        --view-enter-transform: translateY(28px) scale(0.965) rotateX(4deg);
+        --view-active-transform: translateZ(0) scale(1) rotateX(0deg);
+        --view-exit-transform: translateY(-18px) scale(0.975) rotateX(-3deg);
+        --view-enter-filter: blur(20px) saturate(1.12);
+        --view-active-filter: blur(0) saturate(1.02);
+        --view-exit-filter: blur(14px) saturate(0.95);
+        --view-transform-origin: 50% 44%;
+      }
+
+      body[data-effects='high'] .view-stack {
+        --view-stack-perspective: 1800px;
+      }
+
+      body[data-effects='high'] .content-panel .view {
+        --view-transition-duration: 520ms;
+        --view-transition-easing: cubic-bezier(0.16, 1, 0.3, 1);
+        --view-filter-duration: 480ms;
+        --view-enter-transform: translateZ(-140px) rotateX(14deg) scale(0.9);
+        --view-active-transform: translateZ(0) rotateX(0deg) scale(1);
+        --view-exit-transform: translateZ(160px) rotateX(-12deg) scale(0.9);
+        --view-enter-filter: blur(36px) saturate(1.35) brightness(1.05);
+        --view-active-filter: blur(0) saturate(1.08) brightness(1);
+        --view-exit-filter: blur(28px) saturate(0.88) brightness(0.92);
+        --view-transform-origin: 50% 42%;
+      }
+
+      body[data-effects='high'] .content-panel .view::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(
+            140% 140% at 20% 20%,
+            rgba(255, 255, 255, 0.28) 0%,
+            rgba(255, 255, 255, 0) 65%
+          ),
+          linear-gradient(
+            120deg,
+            rgba(108, 176, 255, 0.28) 0%,
+            rgba(181, 129, 255, 0.24) 45%,
+            rgba(255, 255, 255, 0) 100%
+          );
+        opacity: 0;
+        transform: translateY(72px) scale(0.88);
+        filter: blur(38px);
+        transition:
+          opacity 540ms cubic-bezier(0.16, 1, 0.3, 1),
+          transform 540ms cubic-bezier(0.16, 1, 0.3, 1),
+          filter 520ms cubic-bezier(0.16, 1, 0.3, 1);
+        pointer-events: none;
+        mix-blend-mode: screen;
+      }
+
+      body[data-effects='high'] .content-panel .view.active::after {
+        opacity: 0.24;
+        transform: translateY(0) scale(1);
+        filter: blur(18px);
+      }
+
+      body[data-effects='high'] .content-panel .view.leaving::after {
+        opacity: 0;
+        transform: translateY(-96px) scale(1.08);
+        filter: blur(42px);
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .content-panel .view {
+          transition: none !important;
+          filter: none !important;
+          transform: none !important;
+        }
+        .view.active,
+        .view.leaving {
+          transform: none !important;
+          filter: none !important;
+        }
+        .content-panel .view::after {
+          opacity: 0 !important;
+          transform: none !important;
+          filter: none !important;
+        }
       }
 
       .tasks-panel {
