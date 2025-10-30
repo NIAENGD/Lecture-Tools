@@ -3179,8 +3179,7 @@
       }
 
       .content-panel .view {
-        position: absolute;
-        inset: 0;
+        position: relative;
         padding: 24px;
         overflow-y: auto;
         opacity: 0;
@@ -3188,11 +3187,18 @@
         transform: translateY(24px) scale(0.97);
         transition: opacity 0.45s cubic-bezier(0.25, 0.8, 0.25, 1),
           transform 0.45s cubic-bezier(0.25, 0.8, 0.25, 1);
+        flex: 1 1 auto;
+        width: 100%;
+        box-sizing: border-box;
       }
 
       .view {
-        opacity: 0;
-        pointer-events: none;
+        display: none;
+      }
+
+      .view.active,
+      .view.leaving {
+        display: block;
       }
 
       .view.active {
@@ -4583,6 +4589,7 @@
               </div>
             <div id="storage-class-wrapper" class="storage-class-wrapper" hidden>
               <ul id="storage-class-list" class="storage-class-list"></ul>
+            </div>
             </div>
             </div>
             <div id="view-settings" class="view" data-view="settings" hidden>
