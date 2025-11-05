@@ -48,7 +48,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 
 T = TypeVar("T")
 
-TaskOperation = Literal["audio_mastering", "slide_bundle"]
+TaskOperation = Literal["audio_mastering", "slide_bundle", "transcription"]
 
 
 @dataclass
@@ -2872,6 +2872,42 @@ def create_app(
             _JOB_ID_VAR.reset(job_token)
 
 
+    async def _run_transcription_task(task: QueuedTask) -> None:
+        lecture_id = task.lecture_id
+        lecture = repository.get_lecture(lecture_id)
+        if lecture is None:
+            raise RuntimeError("Lecture not found")
+
+        options = task.options if isinstance(task.options, dict) else {}
+        model_option = None
+        if isinstance(options, dict):
+            model_option = options.get("model")
+
+        settings = _load_ui_settings()
+        default_model = (
+            getattr(settings, "whisper_model_requested", None)
+            or getattr(settings, "whisper_model", "base")
+        )
+        model = str(model_option or default_model)
+        payload = TranscriptionRequest(model=model)
+
+        try:
+            await _execute_transcription_job(
+                lecture_id,
+                payload,
+                tracker=processing_tracker,
+                context={
+                    "operation": "transcription",
+                    "task_id": task.id,
+                    "model": model,
+                },
+            )
+        except HTTPException as error:
+            raise RuntimeError(error.detail or str(error)) from error
+        except Exception as error:  # noqa: BLE001 - background task may raise arbitrary errors
+            raise RuntimeError(str(error)) from error
+
+
     async def _run_slide_bundle_task(task: QueuedTask) -> None:
         lecture_id = task.lecture_id
         lecture = repository.get_lecture(lecture_id)
@@ -3032,6 +3068,9 @@ def create_app(
     async def _execute_task_queue_entry(task: QueuedTask) -> None:
         if task.operation == "audio_mastering":
             await _run_audio_mastering_task(task)
+            return
+        if task.operation == "transcription":
+            await _run_transcription_task(task)
             return
         if task.operation == "slide_bundle":
             await _run_slide_bundle_task(task)
@@ -4095,9 +4134,27 @@ def create_app(
             if lecture is None:
                 raise HTTPException(status_code=404, detail="Lecture not found")
             operation = definition.operation
+            options = dict(definition.options or {})
             if operation == "audio_mastering":
                 if not (lecture.audio_path or lecture.processed_audio_path):
                     raise HTTPException(status_code=400, detail="Upload an audio file first")
+            elif operation == "transcription":
+                if not (lecture.audio_path or lecture.processed_audio_path):
+                    raise HTTPException(status_code=400, detail="Upload an audio file first")
+                if FasterWhisperTranscription is None:
+                    raise HTTPException(
+                        status_code=503,
+                        detail=(
+                            "Transcription backend is unavailable. Install faster-whisper."
+                        ),
+                    )
+                if "model" not in options:
+                    settings = _load_ui_settings()
+                    default_model = (
+                        getattr(settings, "whisper_model_requested", None)
+                        or getattr(settings, "whisper_model", "base")
+                    )
+                    options["model"] = default_model
             elif operation == "slide_bundle":
                 if not lecture.slide_path:
                     raise HTTPException(
@@ -4107,7 +4164,7 @@ def create_app(
             else:
                 raise HTTPException(status_code=400, detail="Unsupported task operation")
 
-            entry = await task_queue.enqueue(lecture_id, operation, definition.options or {})
+            entry = await task_queue.enqueue(lecture_id, operation, options)
             enqueued.append(entry)
             _log_event(
                 "Queued background task",
@@ -4157,8 +4214,13 @@ def create_app(
         )
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
-    @app.post("/api/lectures/{lecture_id}/transcribe")
-    async def transcribe_audio(lecture_id: int, payload: TranscriptionRequest) -> Dict[str, Any]:
+    async def _execute_transcription_job(
+        lecture_id: int,
+        payload: TranscriptionRequest,
+        *,
+        tracker: TranscriptionProgressTracker,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
         _log_event("Starting transcription", lecture_id=lecture_id, model=payload.model)
         lecture = repository.get_lecture(lecture_id)
         if lecture is None:
@@ -4219,11 +4281,11 @@ def create_app(
 
         job_id = _new_correlation_id()
         job_token = _JOB_ID_VAR.set(job_id)
+        tracker_context: Dict[str, Any] = dict(context or {})
+        tracker_context.setdefault("operation", "transcription")
+        tracker_context.setdefault("model", payload.model)
         try:
-            progress_tracker.start(
-                lecture_id,
-                context={"operation": "transcription", "model": payload.model},
-            )
+            tracker.start(lecture_id, context=tracker_context)
     
             def _perform_audio_mastering(source: Path) -> Tuple[Path, str]:
                 timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
@@ -4234,7 +4296,7 @@ def create_app(
                     "audio",
                 )
                 total_steps = float(AUDIO_MASTERING_TOTAL_STEPS)
-                progress_tracker.update(
+                tracker.update(
                     lecture_id,
                     0.0,
                     total_steps,
@@ -4243,6 +4305,7 @@ def create_app(
                         0.0,
                         total_steps,
                     ),
+                    context=tracker_context,
                 )
     
                 wav_path, _ = ensure_wav(
@@ -4253,7 +4316,7 @@ def create_app(
                 )
     
                 completed_steps = 1.0
-                progress_tracker.update(
+                tracker.update(
                     lecture_id,
                     completed_steps,
                     total_steps,
@@ -4262,6 +4325,7 @@ def create_app(
                         completed_steps,
                         total_steps,
                     ),
+                    context=tracker_context,
                 )
     
                 samples, sample_rate = load_wav_file(wav_path)
@@ -4279,11 +4343,12 @@ def create_app(
                     stage_index,
                     total_stage_count,
                 ) = build_mastering_stage_progress_message(completed_steps, total_steps)
-                progress_tracker.update(
+                tracker.update(
                     lecture_id,
                     completed_steps,
                     total_steps,
                     stage_message,
+                    context=tracker_context,
                 )
                 if LOGGER.isEnabledFor(logging.INFO):
                     LOGGER.info(
@@ -4327,11 +4392,12 @@ def create_app(
                         progress_value,
                         total_steps,
                     )
-                    progress_tracker.update(
+                    tracker.update(
                         lecture_id,
                         progress_value,
                         total_steps,
                         progress_message,
+                        context=tracker_context,
                     )
     
                 processed = preprocess_audio(
@@ -4348,7 +4414,7 @@ def create_app(
                     )
     
                 completed_steps += 1.0
-                progress_tracker.update(
+                tracker.update(
                     lecture_id,
                     completed_steps,
                     total_steps,
@@ -4357,6 +4423,7 @@ def create_app(
                         completed_steps,
                         total_steps,
                     ),
+                    context=tracker_context,
                 )
     
                 lecture_paths.processed_audio_dir.mkdir(parents=True, exist_ok=True)
@@ -4377,11 +4444,12 @@ def create_app(
                     total_steps,
                     total_steps,
                 )
-                progress_tracker.update(
+                tracker.update(
                     lecture_id,
                     total_steps,
                     total_steps,
                     completion_message,
+                    context=tracker_context,
                 )
     
                 return processed_target, completion_message
@@ -4392,21 +4460,24 @@ def create_app(
                         "Audio mastering requires FFmpeg to be installed on the server. "
                         "Install FFmpeg or disable audio mastering."
                     )
-                    progress_tracker.fail(lecture_id, f"====> {message}")
+                    tracker.fail(lecture_id, f"====> {message}", context=tracker_context)
                     raise HTTPException(status_code=503, detail=message)
                 try:
                     mastered_path, _completion = await _run_serialized_background_task(
                         lambda: _perform_audio_mastering(audio_file),
                         context_label="audio mastering",
-                        queued_callback=lambda: progress_tracker.note(
-                            lecture_id, "====> Waiting for other tasks to finish…"
+                        queued_callback=lambda: tracker.note(
+                            lecture_id,
+                            "====> Waiting for other tasks to finish…",
+                            context=tracker_context,
                         ),
                         job_id=job_id,
                     )
                 except ValueError as error:
-                    progress_tracker.fail(
+                    tracker.fail(
                         lecture_id,
                         f"====> {error}",
+                        context=tracker_context,
                         exception=error,
                     )
                     raise HTTPException(status_code=400, detail=str(error)) from error
@@ -4414,9 +4485,10 @@ def create_app(
                     LOGGER.exception(
                         "Audio mastering failed during transcription for lecture %s", lecture_id
                     )
-                    progress_tracker.fail(
+                    tracker.fail(
                         lecture_id,
                         f"====> {error}",
+                        context=tracker_context,
                         exception=error,
                     )
                     raise HTTPException(status_code=500, detail=str(error)) from error
@@ -4439,7 +4511,7 @@ def create_app(
                         )
                     audio_file = mastered_path
             def handle_progress(current: float, total: Optional[float], message: str) -> None:
-                progress_tracker.update(lecture_id, current, total, message)
+                tracker.update(lecture_id, current, total, message, context=tracker_context)
     
             def _perform_transcription() -> Tuple[
                 TranscriptResult,
@@ -4465,9 +4537,10 @@ def create_app(
                     fallback_model = _DEFAULT_UI_SETTINGS.whisper_model
                     fallback_reason = str(error)
                     gpu_probe = {"supported": False, "message": str(error), "output": ""}
-                    progress_tracker.note(
+                    tracker.note(
                         lecture_id,
                         f"====> {error} Falling back to {fallback_model} model.",
+                        context=tracker_context,
                     )
                     engine = _build_engine(fallback_model)
                 except GPUWhisperModelMissingError as error:
@@ -4491,16 +4564,19 @@ def create_app(
                 result, fallback_model, fallback_reason, gpu_probe = await _run_serialized_background_task(
                     _perform_transcription,
                     context_label="transcription",
-                    queued_callback=lambda: progress_tracker.note(
-                        lecture_id, "====> Waiting for other tasks to finish…"
+                    queued_callback=lambda: tracker.note(
+                        lecture_id,
+                        "====> Waiting for other tasks to finish…",
+                        context=tracker_context,
                     ),
                     job_id=job_id,
                 )
             except HTTPException as error:
                 detail = getattr(error, "detail", str(error))
-                progress_tracker.fail(
+                tracker.fail(
                     lecture_id,
                     f"====> {detail}",
+                    context=tracker_context,
                     exception=error,
                 )
                 probe = getattr(error, "gpu_probe", None)
@@ -4508,9 +4584,10 @@ def create_app(
                     _record_gpu_probe(probe)
                 raise
             except Exception as error:  # noqa: BLE001 - backend may raise arbitrary errors
-                progress_tracker.fail(
+                tracker.fail(
                     lecture_id,
                     f"====> {error}",
+                    context=tracker_context,
                     exception=error,
                 )
                 raise HTTPException(status_code=500, detail=str(error)) from error
@@ -4521,7 +4598,11 @@ def create_app(
                     _record_gpu_probe(
                         {"supported": True, "message": "GPU Whisper CLI active.", "output": ""}
                     )
-                progress_tracker.finish(lecture_id, "====> Transcription completed.")
+                tracker.finish(
+                    lecture_id,
+                    "====> Transcription completed.",
+                    context=tracker_context,
+                )
     
             transcript_relative = result.text_path.relative_to(storage_root).as_posix()
             repository.update_lecture_assets(lecture_id, transcript_path=transcript_relative)
@@ -4544,6 +4625,14 @@ def create_app(
         finally:
             _JOB_ID_VAR.reset(job_token)
         return response
+
+    @app.post("/api/lectures/{lecture_id}/transcribe")
+    async def transcribe_audio(lecture_id: int, payload: TranscriptionRequest) -> Dict[str, Any]:
+        return await _execute_transcription_job(
+            lecture_id,
+            payload,
+            tracker=progress_tracker,
+        )
 
     @app.post(
         "/api/lectures/{lecture_id}/slides/previews",
