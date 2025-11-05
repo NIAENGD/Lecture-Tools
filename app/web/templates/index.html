@@ -3476,50 +3476,16 @@
         opacity: 1;
       }
 
-      .task-form {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-      }
-
-      .task-form-grid {
-        display: grid;
-        gap: 12px;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        align-items: end;
-      }
-
-      .task-field,
-      .task-field-inline {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        font-size: 0.9rem;
-        font-weight: 600;
-        color: var(--muted);
-      }
-
-      .task-field select,
-      .task-field-inline input {
-        width: 100%;
-      }
-
-      .task-slide-options {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-      }
-
-      .task-slide-options.hidden {
-        display: none;
-      }
-
-      .task-form-actions {
+      .task-controls {
         display: flex;
         justify-content: flex-end;
-        align-items: flex-end;
         gap: 12px;
         flex-wrap: wrap;
+        margin-bottom: 12px;
+      }
+
+      .task-controls button {
+        min-width: 140px;
       }
 
       .edit-banner {
@@ -4544,59 +4510,27 @@
                   Refresh
                 </button>
               </div>
-              <p id="tasks-description" class="tasks-description" data-i18n="tasks.description">
-                Queue audio mastering and slide processing jobs to run in order.
+                <p id="tasks-description" class="tasks-description" data-i18n="tasks.description">
+                  Queue transcription and slide processing jobs to run in order.
               </p>
-              <form id="task-create-form" class="task-form">
-                <div class="task-form-grid">
-                  <label class="task-field">
-                    <span data-i18n="tasks.form.lectureLabel">Lecture</span>
-                    <select id="task-lecture" required></select>
-                  </label>
-                  <label class="task-field">
-                    <span data-i18n="tasks.form.operationLabel">Action</span>
-                    <select id="task-operation" required>
-                      <option value="audio_mastering" data-i18n="tasks.form.operation.audioMastering">
-                        Process audio
-                      </option>
-                      <option value="slide_bundle" data-i18n="tasks.form.operation.slideBundle">
-                        Process slides
-                      </option>
-                    </select>
-                  </label>
-                  <div id="task-slide-options" class="task-slide-options hidden">
-                    <label class="task-field-inline">
-                      <span data-i18n="tasks.form.pageStartLabel">Start page</span>
-                      <input id="task-page-start" type="number" min="1" />
-                    </label>
-                    <label class="task-field-inline">
-                      <span data-i18n="tasks.form.pageEndLabel">End page</span>
-                      <input id="task-page-end" type="number" min="1" />
-                    </label>
-                  </div>
-                  <div class="task-form-actions">
-                    <button
-                      id="task-bulk-process"
-                      type="button"
-                      class="secondary"
-                      data-i18n="tasks.bulkProcess.button"
-                    >
-                      Bulk process
-                    </button>
-                    <button
-                      id="task-bulk-upload"
-                      type="button"
-                      class="secondary"
-                      data-i18n="tasks.bulkUpload.button"
-                    >
-                      Bulk upload
-                    </button>
-                    <button id="task-submit" type="submit" class="secondary" data-i18n="tasks.form.submit">
-                      Add task
-                    </button>
-                  </div>
-                </div>
-              </form>
+              <div class="task-controls">
+                <button
+                  id="task-bulk-process"
+                  type="button"
+                  class="secondary"
+                  data-i18n="tasks.bulkProcess.button"
+                >
+                  Bulk process
+                </button>
+                <button
+                  id="task-bulk-upload"
+                  type="button"
+                  class="secondary"
+                  data-i18n="tasks.bulkUpload.button"
+                >
+                  Bulk upload
+                </button>
+              </div>
               <input id="task-bulk-input" class="sr-only" type="file" multiple />
               <div id="tasks-empty" class="tasks-empty" data-i18n="tasks.empty">
                 No tasks in the queue.
@@ -5501,7 +5435,7 @@
             },
             tasks: {
               title: 'Tasks',
-              description: 'Queue audio mastering and slide processing jobs to run in order.',
+              description: 'Queue transcription and slide processing jobs to run in order.',
               empty: 'No tasks in the queue.',
               refresh: 'Refresh',
               actions: {
@@ -5520,7 +5454,7 @@
                 submit: 'Queue tasks',
                 summaryEmpty: 'No tasks selected.',
                 summarySelected: '{{count}} {{taskWord}} selected.',
-                summaryBreakdown: 'Process audio: {{audio}} • Process slides: {{slides}}.',
+                summaryBreakdown: 'Transcribe audio: {{transcription}} • Process slides: {{slides}}.',
                 status: {
                   unavailable: 'Upload required',
                   empty: 'Not selected',
@@ -5558,7 +5492,6 @@
               labels: {
                 transcription: 'Transcription',
                 slideBundle: 'Slide bundle generation',
-                audioMastering: 'Audio mastering',
                 generic: 'Task',
                 untitled: 'Untitled lecture',
               },
@@ -5572,7 +5505,7 @@
                 placeholder: 'Select a lecture',
                 operationLabel: 'Action',
                 operation: {
-                  audioMastering: 'Process audio',
+                  transcription: 'Transcribe audio',
                   slideBundle: 'Process slides',
                 },
                 pageStartLabel: 'Start page',
@@ -6088,7 +6021,7 @@
             },
             tasks: {
               title: '任务',
-              description: '按顺序排队处理音频优化和课件转换。',
+              description: '按顺序排队音频转录和课件处理任务。',
               empty: '当前没有排队任务。',
               refresh: '刷新',
               actions: {
@@ -6107,7 +6040,7 @@
                 submit: '加入队列',
                 summaryEmpty: '未选择任何任务。',
                 summarySelected: '已选择 {{count}} 个{{taskWord}}。',
-                summaryBreakdown: '处理音频：{{audio}} • 处理课件：{{slides}}。',
+                summaryBreakdown: '转录音频：{{transcription}} • 处理课件：{{slides}}。',
                 status: {
                   unavailable: '需要先上传源文件',
                   empty: '未选择',
@@ -6145,7 +6078,6 @@
               labels: {
                 transcription: '音频转录',
                 slideBundle: '课件资源打包',
-                audioMastering: '音频优化',
                 generic: '任务',
                 untitled: '未命名讲座',
               },
@@ -6159,7 +6091,7 @@
                 placeholder: '选择讲座',
                 operationLabel: '操作',
                 operation: {
-                  audioMastering: '处理音频',
+                  transcription: '转录音频',
                   slideBundle: '处理课件',
                 },
                 pageStartLabel: '起始页码',
@@ -6667,7 +6599,7 @@
             },
             tasks: {
               title: 'Tareas',
-              description: 'Programa trabajos de masterización de audio y procesamiento de diapositivas en secuencia.',
+              description: 'Programa trabajos de transcripción y procesamiento de diapositivas en secuencia.',
               empty: 'No hay tareas en la cola.',
               refresh: 'Actualizar',
               actions: {
@@ -6686,7 +6618,7 @@
                 submit: 'Añadir a la cola',
                 summaryEmpty: 'No hay tareas seleccionadas.',
                 summarySelected: '{{count}} {{taskWord}} seleccionadas.',
-                summaryBreakdown: 'Procesar audio: {{audio}} • Procesar diapositivas: {{slides}}.',
+                summaryBreakdown: 'Transcribir audio: {{transcription}} • Procesar diapositivas: {{slides}}.',
                 status: {
                   unavailable: 'Se requiere subir el archivo',
                   empty: 'No seleccionado',
@@ -6724,7 +6656,6 @@
               labels: {
                 transcription: 'Transcripción',
                 slideBundle: 'Paquete de diapositivas',
-                audioMastering: 'Masterización de audio',
                 generic: 'Tarea',
                 untitled: 'Clase sin título',
               },
@@ -6738,7 +6669,7 @@
                 placeholder: 'Selecciona una clase',
                 operationLabel: 'Acción',
                 operation: {
-                  audioMastering: 'Procesar audio',
+                  transcription: 'Transcribir audio',
                   slideBundle: 'Procesar diapositivas',
                 },
                 pageStartLabel: 'Página inicial',
@@ -7261,7 +7192,7 @@
             tasks: {
               title: 'Tâches',
               description:
-                'Planifiez les traitements audio et les conversions de diapositives à exécuter l’un après l’autre.',
+                'Planifiez les transcriptions audio et les conversions de diapositives à exécuter l’une après l’autre.',
               empty: 'Aucune tâche dans la file.',
               refresh: 'Actualiser',
               actions: {
@@ -7281,7 +7212,7 @@
                 summaryEmpty: 'Aucune tâche sélectionnée.',
                 summarySelected: '{{count}} {{taskWord}} sélectionnée(s).',
                 summaryBreakdown:
-                  'Traitement audio : {{audio}} • Traitement des diapositives : {{slides}}.',
+                  'Transcrire l’audio : {{transcription}} • Traiter les diapositives : {{slides}}.',
                 status: {
                   unavailable: 'Téléversement requis',
                   empty: 'Non sélectionné',
@@ -7320,7 +7251,6 @@
               labels: {
                 transcription: 'Transcription',
                 slideBundle: 'Archive de diapositives',
-                audioMastering: 'Masterisation audio',
                 generic: 'Tâche',
                 untitled: 'Leçon sans titre',
               },
@@ -7334,7 +7264,7 @@
                 placeholder: 'Sélectionnez une leçon',
                 operationLabel: 'Action',
                 operation: {
-                  audioMastering: 'Traiter l’audio',
+                  transcription: 'Transcrire l’audio',
                   slideBundle: 'Traiter les diapositives',
                 },
                 pageStartLabel: 'Page de début',
@@ -8043,18 +7973,23 @@
 
         const BULK_PROCESS_OPERATIONS = [
           {
-            key: 'audio',
-            operation: 'audio_mastering',
-            labelKey: 'tasks.form.operation.audioMastering',
-            isAvailable(lecture, settings) {
+            key: 'transcription',
+            operation: 'transcription',
+            labelKey: 'tasks.form.operation.transcription',
+            isAvailable(lecture) {
               if (!lecture || typeof lecture !== 'object') {
                 return false;
               }
-              const enabled = settings?.audio_mastering_enabled !== false;
-              return Boolean(enabled && (lecture.audio_path || lecture.processed_audio_path));
+              return Boolean(lecture.audio_path || lecture.processed_audio_path);
             },
             isCompleted(lecture) {
-              return Boolean(lecture?.processed_audio_path);
+              return Boolean(lecture?.transcript_path);
+            },
+            buildOptions(_lecture, settings) {
+              const preferred = normalizeWhisperModel(
+                settings?.whisper_model_requested || settings?.whisper_model || DEFAULT_WHISPER_MODEL,
+              );
+              return { model: preferred };
             },
           },
           {
@@ -8427,13 +8362,6 @@
             empty: document.getElementById('tasks-empty'),
             refresh: document.getElementById('tasks-refresh'),
             description: document.getElementById('tasks-description'),
-            form: document.getElementById('task-create-form'),
-            lecture: document.getElementById('task-lecture'),
-            operation: document.getElementById('task-operation'),
-            slideOptions: document.getElementById('task-slide-options'),
-            pageStart: document.getElementById('task-page-start'),
-            pageEnd: document.getElementById('task-page-end'),
-            submit: document.getElementById('task-submit'),
             bulkProcess: document.getElementById('task-bulk-process'),
             bulkUpload: document.getElementById('task-bulk-upload'),
             bulkInput: document.getElementById('task-bulk-input'),
@@ -9716,14 +9644,11 @@
           }
           const operation =
             entry.operation || entry?.context?.operation || entry?.context?.type || entry?.type || '';
-          if (operation === 'slide_bundle') {
-            return t('tasks.labels.slideBundle');
-          }
-          if (operation === 'audio_mastering') {
-            return t('tasks.labels.audioMastering');
-          }
           if (operation === 'transcription') {
             return t('tasks.labels.transcription');
+          }
+          if (operation === 'slide_bundle') {
+            return t('tasks.labels.slideBundle');
           }
           return t('tasks.labels.generic');
         }
@@ -10006,6 +9931,10 @@
                   const key = getBulkProcessKey(lectureId, definition.operation);
                   const available = Boolean(definition.isAvailable(lecture, state.settings));
                   const completed = available && Boolean(definition.isCompleted(lecture));
+                  const options =
+                    typeof definition.buildOptions === 'function'
+                      ? definition.buildOptions(lecture, state.settings)
+                      : null;
                   meta.set(key, {
                     key,
                     lectureId,
@@ -10018,6 +9947,7 @@
                     labelKey: definition.labelKey,
                     available,
                     completed,
+                    options,
                   });
                   if (!available) {
                     state.bulkProcess.selections.delete(key);
@@ -10079,7 +10009,7 @@
             classDetails.className = 'bulk-process-class';
             const classId = Number(klass.id);
             const classKey = Number.isFinite(classId) ? String(classId) : null;
-            let classOpen = true;
+            let classOpen = false;
             if (classKey) {
               const stored = state.bulkProcess.expandedClasses.get(classKey);
               if (typeof stored === 'boolean') {
@@ -10124,7 +10054,7 @@
               const moduleId = Number(entry.module?.id);
               const moduleKey =
                 classKey && Number.isFinite(moduleId) ? `${classKey}:${moduleId}` : null;
-              let moduleOpen = true;
+              let moduleOpen = false;
               if (moduleKey) {
                 const stored = state.bulkProcess.expandedModules.get(moduleKey);
                 if (typeof stored === 'boolean') {
@@ -10329,8 +10259,8 @@
           });
 
           const selectedCount = selectedEntries.length;
-          const audioCount = selectedEntries.filter(
-            (entry) => entry.operation === 'audio_mastering',
+          const transcriptionCount = selectedEntries.filter(
+            (entry) => entry.operation === 'transcription',
           ).length;
           const slideCount = selectedEntries.filter(
             (entry) => entry.operation === 'slide_bundle',
@@ -10351,7 +10281,7 @@
 
               const breakdown = document.createElement('span');
               breakdown.textContent = t('tasks.bulkProcess.summaryBreakdown', {
-                audio: audioCount,
+                transcription: transcriptionCount,
                 slides: slideCount,
               });
               summary.appendChild(breakdown);
@@ -10442,7 +10372,11 @@
           state.bulkProcess.selections.forEach((_, key) => {
             const meta = state.bulkProcess.meta.get(key);
             if (meta && meta.available) {
-              tasks.push({ lecture_id: meta.lectureId, operation: meta.operation });
+              const task = { lecture_id: meta.lectureId, operation: meta.operation };
+              if (meta.options && typeof meta.options === 'object') {
+                task.options = meta.options;
+              }
+              tasks.push(task);
             }
           });
           if (!tasks.length) {
@@ -14974,47 +14908,15 @@
         }
 
         function updateTaskLectureOptions() {
-          if (!dom.tasks || !dom.tasks.lecture) {
+          if (!dom.tasks) {
             return;
           }
-          const select = dom.tasks.lecture;
-          const previousValue = select.value;
-          select.innerHTML = '';
-
-          const placeholder = document.createElement('option');
-          placeholder.value = '';
-          placeholder.textContent = t('tasks.form.placeholder');
-          placeholder.disabled = true;
-          select.appendChild(placeholder);
 
           const lectures = getLectureOptionList();
-
-          lectures.forEach((item) => {
-            if (!item || !Number.isFinite(Number(item.id))) {
-              return;
-            }
-            const option = document.createElement('option');
-            option.value = String(item.id);
-            option.textContent = formatLectureOptionLabel(item);
-            select.appendChild(option);
-          });
-
-          const hasPreviousSelection = lectures.some((item) => String(item.id) === previousValue);
-          if (hasPreviousSelection) {
-            select.value = previousValue;
-            placeholder.selected = false;
-          } else {
-            placeholder.selected = true;
-          }
-
-          select.disabled = lectures.length === 0;
-
-          if (dom.tasks.submit) {
-            dom.tasks.submit.disabled = lectures.length === 0;
-          }
+          const hasLectures = lectures.length > 0;
 
           if (dom.tasks.bulkUpload) {
-            dom.tasks.bulkUpload.disabled = lectures.length === 0;
+            dom.tasks.bulkUpload.disabled = !hasLectures;
           }
 
           const { availableCount } = collectBulkProcessMeta();
@@ -15027,27 +14929,6 @@
             updateBulkProcessSummary();
             setBulkProcessStatus('');
           }
-
-          if (dom.tasks.operation) {
-            const audioOption = dom.tasks.operation.querySelector('option[value="audio_mastering"]');
-            const audioEnabled = state.settings?.audio_mastering_enabled !== false;
-            if (audioOption) {
-              audioOption.disabled = !audioEnabled;
-            }
-            if (!audioEnabled && dom.tasks.operation.value === 'audio_mastering') {
-              dom.tasks.operation.value = 'slide_bundle';
-            }
-          }
-
-          toggleTaskSlideOptions();
-        }
-
-        function toggleTaskSlideOptions() {
-          if (!dom.tasks || !dom.tasks.operation || !dom.tasks.slideOptions) {
-            return;
-          }
-          const value = dom.tasks.operation.value;
-          dom.tasks.slideOptions.classList.toggle('hidden', value !== 'slide_bundle');
         }
 
         function guessBulkAssetType(file) {
@@ -15520,80 +15401,6 @@
             return;
           }
           await startBulkUploadQueue(files);
-        }
-
-        async function handleTaskFormSubmit(event) {
-          event.preventDefault();
-          if (!dom.tasks || !dom.tasks.form || !dom.tasks.lecture || !dom.tasks.operation) {
-            return;
-          }
-
-          if (typeof dom.tasks.form.reportValidity === 'function') {
-            const valid = dom.tasks.form.reportValidity();
-            if (!valid) {
-              return;
-            }
-          }
-
-          const lectureId = Number(dom.tasks.lecture.value);
-          const operation = dom.tasks.operation.value;
-          if (!Number.isFinite(lectureId) || lectureId <= 0 || !operation) {
-            return;
-          }
-
-          const definition = { lecture_id: lectureId, operation };
-          if (operation === 'slide_bundle') {
-            const options = {};
-            const startRaw = dom.tasks.pageStart ? dom.tasks.pageStart.value.trim() : '';
-            const endRaw = dom.tasks.pageEnd ? dom.tasks.pageEnd.value.trim() : '';
-            const startNumber = Number.parseInt(startRaw, 10);
-            const endNumber = Number.parseInt(endRaw, 10);
-            if (Number.isFinite(startNumber) && startNumber > 0) {
-              options.page_start = startNumber;
-            }
-            if (Number.isFinite(endNumber) && endNumber > 0) {
-              options.page_end = endNumber;
-            }
-            if (Object.keys(options).length > 0) {
-              definition.options = options;
-            }
-          }
-
-          if (dom.tasks.form) {
-            dom.tasks.form.setAttribute('aria-busy', 'true');
-          }
-          let previousSubmitDisabled = false;
-          if (dom.tasks.submit) {
-            previousSubmitDisabled = dom.tasks.submit.disabled;
-            dom.tasks.submit.disabled = true;
-          }
-
-          try {
-            await request('/api/tasks', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ tasks: [definition] }),
-            });
-            showStatus(t('tasks.notifications.queued'), 'success');
-            if (dom.tasks.pageStart) {
-              dom.tasks.pageStart.value = '';
-            }
-            if (dom.tasks.pageEnd) {
-              dom.tasks.pageEnd.value = '';
-            }
-            await refreshTasks({ force: true });
-          } catch (error) {
-            const detail = error instanceof Error ? error.message : String(error);
-            showStatus(detail || t('status.processing'), 'error');
-          } finally {
-            if (dom.tasks.form) {
-              dom.tasks.form.setAttribute('aria-busy', 'false');
-            }
-            if (dom.tasks.submit) {
-              dom.tasks.submit.disabled = previousSubmitDisabled;
-            }
-            updateTaskLectureOptions();
-          }
         }
 
         function updateModuleOptions() {
@@ -17807,18 +17614,6 @@
         if (dom.tasks && dom.tasks.list) {
           dom.tasks.list.addEventListener('click', (event) => {
             void handleTaskAction(event);
-          });
-        }
-
-        if (dom.tasks && dom.tasks.form) {
-          dom.tasks.form.addEventListener('submit', (event) => {
-            void handleTaskFormSubmit(event);
-          });
-        }
-
-        if (dom.tasks && dom.tasks.operation) {
-          dom.tasks.operation.addEventListener('change', () => {
-            toggleTaskSlideOptions();
           });
         }
 
