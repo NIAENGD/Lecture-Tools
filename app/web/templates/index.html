@@ -1183,6 +1183,175 @@
         gap: 16px;
       }
 
+      .asset-viewer-window {
+        width: min(1100px, 100%);
+        max-width: 96vw;
+        height: min(90vh, 880px);
+        padding: 0;
+        gap: 0;
+        overflow: hidden;
+      }
+
+      .asset-viewer-chrome {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--panel-border);
+        background: var(--panel-bg);
+      }
+
+      .asset-viewer-header {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        min-width: 0;
+      }
+
+      .asset-viewer-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: clamp(240px, 45vw, 520px);
+      }
+
+      .asset-viewer-meta {
+        font-size: 0.85rem;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+
+      .asset-viewer-actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .asset-viewer-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background: var(--background);
+        min-height: 0;
+      }
+
+      .asset-viewer-status {
+        padding: 20px;
+        font-size: 0.95rem;
+        color: var(--muted);
+      }
+
+      .asset-viewer-content {
+        flex: 1;
+        position: relative;
+        overflow: auto;
+        background: rgba(15, 23, 42, 0.02);
+      }
+
+      .asset-viewer-content.pdf-mode {
+        padding: 0;
+        background: #0002;
+      }
+
+      .asset-viewer-content.text-mode {
+        padding: 24px 28px;
+        font-family: 'JetBrains Mono', 'SFMono-Regular', Menlo, Monaco, Consolas,
+          'Liberation Mono', 'Courier New', monospace;
+        font-size: 0.95rem;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .asset-viewer-content.markdown-mode {
+        padding: 28px 32px;
+        font-size: 1rem;
+        line-height: 1.65;
+      }
+
+      .asset-viewer-content.markdown-mode h1,
+      .asset-viewer-content.markdown-mode h2,
+      .asset-viewer-content.markdown-mode h3,
+      .asset-viewer-content.markdown-mode h4,
+      .asset-viewer-content.markdown-mode h5,
+      .asset-viewer-content.markdown-mode h6 {
+        margin-top: 1.6em;
+        margin-bottom: 0.6em;
+        font-weight: 600;
+        color: var(--text);
+      }
+
+      .asset-viewer-content.markdown-mode h1 {
+        font-size: 1.8rem;
+      }
+
+      .asset-viewer-content.markdown-mode h2 {
+        font-size: 1.5rem;
+      }
+
+      .asset-viewer-content.markdown-mode h3 {
+        font-size: 1.25rem;
+      }
+
+      .asset-viewer-content.markdown-mode p {
+        margin: 0 0 1.1em;
+      }
+
+      .asset-viewer-content.markdown-mode ul,
+      .asset-viewer-content.markdown-mode ol {
+        margin: 0 0 1.1em 1.35em;
+        padding: 0;
+      }
+
+      .asset-viewer-content.markdown-mode li + li {
+        margin-top: 0.4em;
+      }
+
+      .asset-viewer-content.markdown-mode pre {
+        background: rgba(15, 23, 42, 0.08);
+        padding: 16px 18px;
+        border-radius: 8px;
+        overflow: auto;
+        font-family: 'JetBrains Mono', 'SFMono-Regular', Menlo, Monaco, Consolas,
+          'Liberation Mono', 'Courier New', monospace;
+        font-size: 0.9rem;
+        line-height: 1.5;
+        margin: 0 0 1.1em;
+      }
+
+      .asset-viewer-content.markdown-mode code {
+        background: rgba(15, 23, 42, 0.08);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: 'JetBrains Mono', 'SFMono-Regular', Menlo, Monaco, Consolas,
+          'Liberation Mono', 'Courier New', monospace;
+        font-size: 0.9rem;
+      }
+
+      .asset-viewer-content.markdown-mode a {
+        color: var(--accent-contrast);
+        background: var(--accent-muted);
+        text-decoration: none;
+        padding: 2px 6px;
+        border-radius: 4px;
+      }
+
+      .asset-viewer-content.markdown-mode a:hover,
+      .asset-viewer-content.markdown-mode a:focus {
+        background: var(--accent-strong);
+        color: var(--accent-contrast);
+      }
+
+      .asset-viewer-content iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+        background: #fff;
+      }
+
       body.debug-enabled {
         padding-right: min(33vw, 520px);
       }
@@ -5177,6 +5346,32 @@
         </div>
       </div>
     </div>
+    <div id="asset-viewer" class="dialog hidden" aria-hidden="true" tabindex="-1">
+      <div id="asset-viewer-backdrop" class="dialog-backdrop"></div>
+      <div
+        id="asset-viewer-window"
+        class="dialog-window asset-viewer-window"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="asset-viewer-title"
+        tabindex="-1"
+      >
+        <div class="asset-viewer-chrome">
+          <div class="asset-viewer-header">
+            <span id="asset-viewer-title" class="asset-viewer-title"></span>
+            <span id="asset-viewer-meta" class="asset-viewer-meta hidden"></span>
+          </div>
+          <div class="asset-viewer-actions">
+            <button id="asset-viewer-download" type="button" class="text-button"></button>
+            <button id="asset-viewer-close" type="button" class="text-button"></button>
+          </div>
+        </div>
+        <div class="asset-viewer-body">
+          <div id="asset-viewer-status" class="asset-viewer-status hidden"></div>
+          <div id="asset-viewer-content" class="asset-viewer-content" role="document"></div>
+        </div>
+      </div>
+    </div>
     <div id="dialog-pending" class="dialog hidden" aria-hidden="true" tabindex="-1">
       <div id="dialog-pending-backdrop" class="dialog-backdrop"></div>
       <div
@@ -5429,6 +5624,7 @@
               actions: {
                 upload: 'Upload',
                 processSlides: 'Process slides',
+                view: 'View',
                 download: 'Download',
                 remove: 'Remove',
               },
@@ -5885,6 +6081,16 @@
                 ok: 'OK',
               },
             },
+            viewer: {
+              loading: 'Loading…',
+              failed: 'Unable to load file.',
+              unsupported: 'This file type cannot be viewed inline.',
+              types: {
+                pdf: 'PDF',
+                text: 'Plain text',
+                markdown: 'Markdown',
+              },
+            },
             status: {
               requireEdit: 'Enable edit mode to manage the curriculum.',
               requireEditLecture: 'Enable edit mode to update lecture details.',
@@ -6015,6 +6221,7 @@
               actions: {
                 upload: '上传',
                 processSlides: '处理课件',
+                view: '查看',
                 download: '下载',
                 remove: '移除',
               },
@@ -6463,6 +6670,16 @@
                 ok: '好的',
               },
             },
+            viewer: {
+              loading: '加载中…',
+              failed: '无法加载文件。',
+              unsupported: '此文件类型不支持在线预览。',
+              types: {
+                pdf: 'PDF',
+                text: '纯文本',
+                markdown: 'Markdown',
+              },
+            },
             status: {
               requireEdit: '开启编辑模式以管理课程表。',
               requireEditLecture: '开启编辑模式以更新讲座详情。',
@@ -6593,6 +6810,7 @@
               actions: {
                 upload: 'Subir',
                 processSlides: 'Procesar diapositivas',
+                view: 'Ver',
                 download: 'Descargar',
                 remove: 'Eliminar',
               },
@@ -7051,6 +7269,16 @@
                 ok: 'Aceptar',
               },
             },
+            viewer: {
+              loading: 'Cargando…',
+              failed: 'No se pudo cargar el archivo.',
+              unsupported: 'Este tipo de archivo no se puede visualizar en línea.',
+              types: {
+                pdf: 'PDF',
+                text: 'Texto sin formato',
+                markdown: 'Markdown',
+              },
+            },
             status: {
               requireEdit: 'Activa el modo edición para gestionar el plan de estudios.',
               requireEditLecture: 'Activa el modo edición para actualizar los detalles.',
@@ -7185,6 +7413,7 @@
               actions: {
                 upload: 'Importer',
                 processSlides: 'Traiter les diapositives',
+                view: 'Voir',
                 download: 'Télécharger',
                 remove: 'Supprimer',
               },
@@ -7644,6 +7873,16 @@
                 exit: 'Quitter',
                 close: 'Fermer',
                 ok: 'OK',
+              },
+            },
+            viewer: {
+              loading: 'Chargement…',
+              failed: 'Impossible de charger le fichier.',
+              unsupported: 'Ce type de fichier ne peut pas être affiché en ligne.',
+              types: {
+                pdf: 'PDF',
+                text: 'Texte brut',
+                markdown: 'Markdown',
               },
             },
             status: {
@@ -8160,6 +8399,14 @@
             model: null,
             gpuOption: null,
           },
+          viewer: {
+            active: false,
+            loadId: 0,
+            url: null,
+            filename: '',
+            type: null,
+            previousActive: null,
+          },
           debug: {
             enabled: false,
             timer: null,
@@ -8184,6 +8431,7 @@
           uploadActive: false,
           bulkUploadActive: false,
           bulkProcessActive: false,
+          viewerActive: false,
         };
 
         function getTranscribeButton() {
@@ -8408,6 +8656,17 @@
             confirm: document.getElementById('slide-range-confirm'),
             cancel: document.getElementById('slide-range-cancel'),
           },
+          viewer: {
+            root: document.getElementById('asset-viewer'),
+            backdrop: document.getElementById('asset-viewer-backdrop'),
+            window: document.getElementById('asset-viewer-window'),
+            title: document.getElementById('asset-viewer-title'),
+            meta: document.getElementById('asset-viewer-meta'),
+            status: document.getElementById('asset-viewer-status'),
+            content: document.getElementById('asset-viewer-content'),
+            download: document.getElementById('asset-viewer-download'),
+            close: document.getElementById('asset-viewer-close'),
+          },
           uploadDialog: {
             root: document.getElementById('upload-dialog'),
             backdrop: document.getElementById('upload-dialog-backdrop'),
@@ -8470,6 +8729,53 @@
           ? dom.debugEmpty.textContent || ''
           : '';
         const FILTERED_DEBUG_EMPTY_TEXT = 'No log entries match the current filters.';
+
+        if (dom.viewer?.close) {
+          dom.viewer.close.addEventListener('click', (event) => {
+            event.preventDefault();
+            closeAssetViewer();
+          });
+        }
+
+        if (dom.viewer?.backdrop) {
+          dom.viewer.backdrop.addEventListener('click', () => {
+            closeAssetViewer();
+          });
+        }
+
+        if (dom.viewer?.download) {
+          dom.viewer.download.addEventListener('click', (event) => {
+            event.preventDefault();
+            const url = state.viewer.url;
+            if (!url) {
+              return;
+            }
+            const anchor = document.createElement('a');
+            anchor.href = url;
+            anchor.download = state.viewer.filename || 'asset.bin';
+            anchor.rel = 'noopener';
+            anchor.style.display = 'none';
+            document.body.appendChild(anchor);
+            anchor.click();
+            anchor.remove();
+          });
+        }
+
+        if (dom.viewer?.window) {
+          dom.viewer.window.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+              event.preventDefault();
+              closeAssetViewer();
+            }
+          });
+        }
+
+        document.addEventListener('keydown', (event) => {
+          if (dialogState.viewerActive && event.key === 'Escape') {
+            event.preventDefault();
+            closeAssetViewer();
+          }
+        });
 
         const assetDefinitions = [
           {
@@ -10419,7 +10725,8 @@
             dialogState.bulkProcessActive ||
             dialogState.active ||
             dialogState.uploadActive ||
-            dialogState.bulkUploadActive
+            dialogState.bulkUploadActive ||
+            dialogState.viewerActive
           ) {
             return;
           }
@@ -10550,7 +10857,8 @@
             if (
               !dialogState.active &&
               !dialogState.uploadActive &&
-              !dialogState.bulkUploadActive
+              !dialogState.bulkUploadActive &&
+              !dialogState.viewerActive
             ) {
               document.body.classList.remove('dialog-open');
             }
@@ -12528,7 +12836,8 @@
               dialogState.active ||
               dialogState.uploadActive ||
               dialogState.bulkUploadActive ||
-              dialogState.bulkProcessActive
+              dialogState.bulkProcessActive ||
+              dialogState.viewerActive
             ) {
               resolve({ confirmed: false, value: null });
               return;
@@ -12584,8 +12893,15 @@
               }
               dialog.root.classList.add('hidden');
               dialog.root.setAttribute('aria-hidden', 'true');
-              document.body.classList.remove('dialog-open');
               dialogState.active = false;
+              if (
+                !dialogState.uploadActive &&
+                !dialogState.bulkUploadActive &&
+                !dialogState.bulkProcessActive &&
+                !dialogState.viewerActive
+              ) {
+                document.body.classList.remove('dialog-open');
+              }
               if (previousActive) {
                 previousActive.focus({ preventScroll: true });
               }
@@ -12698,7 +13014,8 @@
               !dialog.root ||
               dialogState.uploadActive ||
               dialogState.bulkUploadActive ||
-              dialogState.bulkProcessActive
+              dialogState.bulkProcessActive ||
+              dialogState.viewerActive
             ) {
               resolve({ confirmed: false, uploaded: false, file: null, result: null, meta: null });
               return;
@@ -12809,8 +13126,15 @@
                 dialog.root.classList.remove('upload-dialog-hidden');
                 dialog.root.setAttribute('aria-hidden', 'true');
               }
-              document.body.classList.remove('dialog-open');
               dialogState.uploadActive = false;
+              if (
+                !dialogState.active &&
+                !dialogState.bulkUploadActive &&
+                !dialogState.bulkProcessActive &&
+                !dialogState.viewerActive
+              ) {
+                document.body.classList.remove('dialog-open');
+              }
               selectedCleanup = null;
               if (previousActive) {
                 previousActive.focus({ preventScroll: true });
@@ -12965,8 +13289,15 @@
                 dialog.root.classList.add('upload-dialog-hidden');
                 dialog.root.setAttribute('aria-hidden', 'true');
               }
-              document.body.classList.remove('dialog-open');
               dialogState.uploadActive = false;
+              if (
+                !dialogState.active &&
+                !dialogState.bulkUploadActive &&
+                !dialogState.bulkProcessActive &&
+                !dialogState.viewerActive
+              ) {
+                document.body.classList.remove('dialog-open');
+              }
               try {
                 return await task();
               } finally {
@@ -12985,7 +13316,14 @@
                     }
                   });
                 } else {
-                  document.body.classList.remove('dialog-open');
+                  if (
+                    !dialogState.active &&
+                    !dialogState.bulkUploadActive &&
+                    !dialogState.bulkProcessActive &&
+                    !dialogState.viewerActive
+                  ) {
+                    document.body.classList.remove('dialog-open');
+                  }
                 }
               }
             }
@@ -13431,7 +13769,15 @@
         async function showSlideRangeDialog(source) {
           return new Promise((resolve) => {
             const dialog = dom.slideRangeDialog;
-            if (!dialog || !dialog.root || dialogState.active || dialogState.uploadActive) {
+            if (
+              !dialog ||
+              !dialog.root ||
+              dialogState.active ||
+              dialogState.uploadActive ||
+              dialogState.bulkUploadActive ||
+              dialogState.bulkProcessActive ||
+              dialogState.viewerActive
+            ) {
               resolve({ confirmed: false, pageStart: null, pageEnd: null, pageTotal: null });
               return;
             }
@@ -14098,8 +14444,15 @@
               if (dialog.zoomValue) {
                 dialog.zoomValue.textContent = '';
               }
-              document.body.classList.remove('dialog-open');
               dialogState.active = false;
+              if (
+                !dialogState.uploadActive &&
+                !dialogState.bulkUploadActive &&
+                !dialogState.bulkProcessActive &&
+                !dialogState.viewerActive
+              ) {
+                document.body.classList.remove('dialog-open');
+              }
               if (previousActive) {
                 previousActive.focus({ preventScroll: true });
               }
@@ -14381,6 +14734,407 @@
             timeStyle: 'short',
           });
           return formatter.format(new Date(isoString));
+        }
+
+        function escapeHtml(value) {
+          if (value === null || value === undefined) {
+            return '';
+          }
+          return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+        }
+
+        function renderInlineMarkdown(text) {
+          let result = escapeHtml(text ?? '');
+          result = result.replace(/(\*\*|__)(.+?)\1/g, '<strong>$2</strong>');
+          result = result.replace(/(\*|_)([^*_]+?)\1/g, '<em>$2</em>');
+          result = result.replace(/`([^`]+?)`/g, '<code>$1</code>');
+          return result;
+        }
+
+        function convertMarkdownToHtml(markdown) {
+          if (typeof markdown !== 'string') {
+            return '';
+          }
+          const lines = markdown.replace(/\r\n?/g, '\n').split('\n');
+          let html = '';
+          let inParagraph = false;
+          let inCodeBlock = false;
+          let codeFence = '```';
+          let listType = null;
+
+          const closeParagraph = () => {
+            if (inParagraph) {
+              html += '</p>';
+              inParagraph = false;
+            }
+          };
+
+          const closeList = () => {
+            if (listType === 'ul') {
+              html += '</ul>';
+            } else if (listType === 'ol') {
+              html += '</ol>';
+            }
+            listType = null;
+          };
+
+          const closeCodeBlock = () => {
+            if (inCodeBlock) {
+              html += '</code></pre>';
+              inCodeBlock = false;
+            }
+          };
+
+          lines.forEach((line) => {
+            const rawLine = line.replace(/\s+$/g, '');
+            const trimmed = rawLine.trim();
+
+            if (inCodeBlock) {
+              if (trimmed.startsWith(codeFence)) {
+                closeCodeBlock();
+                return;
+              }
+              html += `${escapeHtml(line)}\n`;
+              return;
+            }
+
+            const fenceMatch = trimmed.match(/^`{3,}/);
+            if (fenceMatch) {
+              closeParagraph();
+              closeList();
+              inCodeBlock = true;
+              codeFence = fenceMatch[0];
+              html += '<pre><code>';
+              return;
+            }
+
+            if (!trimmed) {
+              closeParagraph();
+              closeList();
+              return;
+            }
+
+            const hrMatch = trimmed.match(/^([-*_])\1{2,}$/);
+            if (hrMatch) {
+              closeParagraph();
+              closeList();
+              html += '<hr />';
+              return;
+            }
+
+            const headingMatch = trimmed.match(/^(#{1,6})\s+(.*)$/);
+            if (headingMatch) {
+              closeParagraph();
+              closeList();
+              const level = Math.min(6, headingMatch[1].length);
+              html += `<h${level}>${renderInlineMarkdown(headingMatch[2])}</h${level}>`;
+              return;
+            }
+
+            const unorderedMatch = trimmed.match(/^[-*+]\s+(.*)$/);
+            if (unorderedMatch) {
+              closeParagraph();
+              if (listType !== 'ul') {
+                closeList();
+                html += '<ul>';
+                listType = 'ul';
+              }
+              html += `<li>${renderInlineMarkdown(unorderedMatch[1])}</li>`;
+              return;
+            }
+
+            const orderedMatch = trimmed.match(/^\d+\.\s+(.*)$/);
+            if (orderedMatch) {
+              closeParagraph();
+              if (listType !== 'ol') {
+                closeList();
+                html += '<ol>';
+                listType = 'ol';
+              }
+              html += `<li>${renderInlineMarkdown(orderedMatch[1])}</li>`;
+              return;
+            }
+
+            if (!inParagraph) {
+              closeList();
+              html += '<p>';
+              inParagraph = true;
+              html += renderInlineMarkdown(trimmed);
+            } else {
+              html += `<br />${renderInlineMarkdown(trimmed)}`;
+            }
+          });
+
+          closeCodeBlock();
+          closeParagraph();
+          closeList();
+          return html;
+        }
+
+        function buildAssetViewerMeta(type, metadata) {
+          const parts = [];
+          const typeLabel = t(`viewer.types.${type}`) || type.toUpperCase();
+          if (typeLabel) {
+            parts.push(typeLabel);
+          }
+          const size = metadata?.size;
+          if (typeof size === 'number' && Number.isFinite(size) && size >= 0) {
+            parts.push(formatBytes(size));
+          }
+          return parts.join(' · ');
+        }
+
+        function setAssetViewerMeta(meta) {
+          const element = dom.viewer?.meta;
+          if (!element) {
+            return;
+          }
+          if (meta && meta.trim()) {
+            element.textContent = `[${meta}]`;
+            element.classList.remove('hidden');
+          } else {
+            element.textContent = '';
+            element.classList.add('hidden');
+          }
+        }
+
+        function setAssetViewerStatus(message) {
+          const element = dom.viewer?.status;
+          if (!element) {
+            return;
+          }
+          if (message && message.trim()) {
+            element.textContent = message;
+            element.classList.remove('hidden');
+          } else {
+            element.textContent = '';
+            element.classList.add('hidden');
+          }
+        }
+
+        async function fetchAssetMetadata(url) {
+          if (typeof url !== 'string' || !url) {
+            return null;
+          }
+          try {
+            const response = await fetch(url, { method: 'HEAD' });
+            if (!response.ok) {
+              return null;
+            }
+            const lengthHeader = response.headers.get('content-length');
+            const size = lengthHeader ? Number.parseInt(lengthHeader, 10) : null;
+            const contentType = response.headers.get('content-type') || '';
+            return {
+              size: Number.isFinite(size) && size !== null && size >= 0 ? size : null,
+              contentType,
+            };
+          } catch (error) {
+            console.warn('Failed to fetch asset metadata', error);
+            return null;
+          }
+        }
+
+        function resolveAssetViewerType(path, definition) {
+          if (typeof path !== 'string' || !path) {
+            return null;
+          }
+          const lowerPath = path.toLowerCase();
+          const sanitized = lowerPath.split(/[?#]/, 1)[0];
+          const extension = sanitized.includes('.')
+            ? sanitized.slice(sanitized.lastIndexOf('.') + 1)
+            : '';
+          if (extension === 'pdf') {
+            return 'pdf';
+          }
+          if (['txt', 'text'].includes(extension)) {
+            return 'text';
+          }
+          if (['md', 'markdown', 'mdown', 'mkd'].includes(extension)) {
+            return 'markdown';
+          }
+          const assetType = typeof definition?.type === 'string' ? definition.type : '';
+          if (!extension && ['transcript', 'notes'].includes(assetType)) {
+            return 'text';
+          }
+          return null;
+        }
+
+        function isAssetViewable(definition, value) {
+          return Boolean(resolveAssetViewerType(value, definition));
+        }
+
+        function closeAssetViewer({ restoreFocus = true } = {}) {
+          const viewer = dom.viewer;
+          const previousActive = state.viewer.previousActive;
+          state.viewer.loadId += 1;
+          state.viewer.active = false;
+          state.viewer.url = null;
+          state.viewer.filename = '';
+          state.viewer.type = null;
+          state.viewer.previousActive = null;
+          if (viewer?.content) {
+            viewer.content.innerHTML = '';
+            viewer.content.classList.remove('pdf-mode', 'text-mode', 'markdown-mode');
+            viewer.content.scrollTop = 0;
+            viewer.content.scrollLeft = 0;
+          }
+          setAssetViewerStatus('');
+          setAssetViewerMeta('');
+          if (viewer?.root) {
+            viewer.root.classList.add('hidden');
+            viewer.root.setAttribute('aria-hidden', 'true');
+          }
+          dialogState.viewerActive = false;
+          if (
+            !dialogState.active &&
+            !dialogState.uploadActive &&
+            !dialogState.bulkUploadActive &&
+            !dialogState.bulkProcessActive
+          ) {
+            document.body.classList.remove('dialog-open');
+          }
+          if (restoreFocus && previousActive) {
+            previousActive.focus({ preventScroll: true });
+          }
+        }
+
+        function openAssetViewer(definition, value) {
+          if (
+            dialogState.active ||
+            dialogState.uploadActive ||
+            dialogState.bulkUploadActive ||
+            dialogState.bulkProcessActive
+          ) {
+            return;
+          }
+          const path = typeof value === 'string' ? value : '';
+          if (!path) {
+            return;
+          }
+          const type = resolveAssetViewerType(path, definition);
+          if (!type) {
+            showStatus(t('viewer.unsupported'), 'info');
+            return;
+          }
+          const viewer = dom.viewer;
+          if (!viewer || !viewer.root || !viewer.content) {
+            showStatus(t('viewer.failed'), 'error');
+            return;
+          }
+
+          closeAssetViewer({ restoreFocus: false });
+
+          const previousActive =
+            document.activeElement instanceof HTMLElement ? document.activeElement : null;
+          const url = buildStorageURL(path);
+          const fallbackName = definition?.type ? `${definition.type}.bin` : 'asset.bin';
+          const fileName = path.split('/').pop() || fallbackName;
+
+          state.viewer.active = true;
+          state.viewer.url = url;
+          state.viewer.filename = fileName;
+          state.viewer.type = type;
+          state.viewer.previousActive = previousActive;
+          state.viewer.loadId += 1;
+          const loadId = state.viewer.loadId;
+
+          dialogState.viewerActive = true;
+
+          viewer.title.textContent = fileName;
+          viewer.download?.setAttribute('data-i18n', 'assets.actions.download');
+          if (viewer.download) {
+            viewer.download.textContent = t('assets.actions.download');
+            viewer.download.disabled = !url;
+          }
+          if (viewer.close) {
+            viewer.close.textContent = t('common.actions.close');
+          }
+          setAssetViewerMeta(buildAssetViewerMeta(type, null));
+          setAssetViewerStatus(t('viewer.loading'));
+
+          viewer.root.classList.remove('hidden');
+          viewer.root.setAttribute('aria-hidden', 'false');
+          viewer.content.innerHTML = '';
+          viewer.content.classList.remove('pdf-mode', 'text-mode', 'markdown-mode');
+          viewer.content.scrollTop = 0;
+          viewer.content.scrollLeft = 0;
+          document.body.classList.add('dialog-open');
+
+          window.requestAnimationFrame(() => {
+            const focusTarget = viewer.window || viewer.close || viewer.download;
+            focusTarget?.focus?.({ preventScroll: true });
+          });
+
+          fetchAssetMetadata(url)
+            .then((metadata) => {
+              if (state.viewer.loadId !== loadId) {
+                return;
+              }
+              const metaText = buildAssetViewerMeta(type, metadata);
+              if (metaText) {
+                setAssetViewerMeta(metaText);
+              }
+            })
+            .catch(() => {
+              // Ignore metadata failures.
+            });
+
+          if (type === 'pdf') {
+            const frame = document.createElement('iframe');
+            frame.src = url;
+            frame.title = fileName;
+            frame.setAttribute('loading', 'lazy');
+            frame.addEventListener('load', () => {
+              if (state.viewer.loadId === loadId) {
+                setAssetViewerStatus('');
+              }
+            });
+            frame.addEventListener('error', () => {
+              if (state.viewer.loadId === loadId) {
+                setAssetViewerStatus(t('viewer.failed'));
+              }
+            });
+            viewer.content.appendChild(frame);
+            viewer.content.classList.add('pdf-mode');
+            return;
+          }
+
+          (async () => {
+            try {
+              const response = await fetch(url, { cache: 'no-store' });
+              if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+              }
+              const text = await response.text();
+              if (state.viewer.loadId !== loadId) {
+                return;
+              }
+              if (type === 'text') {
+                const pre = document.createElement('pre');
+                pre.textContent = text;
+                viewer.content.appendChild(pre);
+                viewer.content.classList.add('text-mode');
+              } else {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'asset-viewer-markdown';
+                wrapper.innerHTML = convertMarkdownToHtml(text);
+                viewer.content.appendChild(wrapper);
+                viewer.content.classList.add('markdown-mode');
+              }
+              setAssetViewerStatus('');
+            } catch (error) {
+              if (state.viewer.loadId !== loadId) {
+                return;
+              }
+              console.warn('Unable to load asset preview', error);
+              setAssetViewerStatus(t('viewer.failed'));
+            }
+          })();
         }
 
         function buildStorageURL(path) {
@@ -14988,7 +15742,8 @@
               !dialog.root ||
               dialogState.bulkUploadActive ||
               dialogState.uploadActive ||
-              dialogState.active
+              dialogState.active ||
+              dialogState.viewerActive
             ) {
               resolve({ action: 'cancel' });
               return;
@@ -15056,7 +15811,6 @@
               }
               dialog.root.classList.add('hidden');
               dialog.root.setAttribute('aria-hidden', 'true');
-              document.body.classList.remove('dialog-open');
               setStatusMessage('', '');
               if (dialog.lecture) {
                 dialog.lecture.innerHTML = '';
@@ -15065,6 +15819,14 @@
                 dialog.type.innerHTML = '';
               }
               dialogState.bulkUploadActive = false;
+              if (
+                !dialogState.active &&
+                !dialogState.uploadActive &&
+                !dialogState.bulkProcessActive &&
+                !dialogState.viewerActive
+              ) {
+                document.body.classList.remove('dialog-open');
+              }
               if (previousActive) {
                 previousActive.focus({ preventScroll: true });
               }
@@ -17151,6 +17913,22 @@
               );
               modelSelect.value = requestedModel;
               modelLabel.appendChild(modelSelect);
+            }
+
+            const isViewable = isAssetViewable(definition, value);
+            if (isViewable) {
+              const viewButton = document.createElement('button');
+              viewButton.type = 'button';
+              viewButton.className = 'secondary';
+              viewButton.textContent = t('assets.actions.view');
+              viewButton.disabled = !value;
+              viewButton.addEventListener('click', () => {
+                if (!value) {
+                  return;
+                }
+                openAssetViewer(definition, value);
+              });
+              actions.appendChild(viewButton);
             }
 
             const downloadButton = document.createElement('button');
