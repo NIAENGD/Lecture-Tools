@@ -100,6 +100,60 @@ def test_ingestion_pipeline(temp_config: AppConfig, tmp_path: Path) -> None:
         assert any(name.lower().endswith('.png') for name in names)
 
 
+def test_ingestion_combines_multiple_assets(
+    temp_config: AppConfig,
+    tmp_path: Path,
+) -> None:
+    repository = LectureRepository(temp_config)
+    ingestor = LectureIngestor(
+        temp_config,
+        repository,
+        transcription_engine=DummyTranscriptionEngine(),
+        slide_converter=DummySlideConverter(),
+    )
+
+    audio_one = tmp_path / "lecture_part1.wav"
+    audio_two = tmp_path / "lecture_part2.wav"
+    audio_one.write_text("audio one", encoding="utf-8")
+    audio_two.write_text("audio two", encoding="utf-8")
+
+    slide_one = tmp_path / "slides_part1.pdf"
+    slide_two = tmp_path / "slides_part2.pdf"
+    slide_payload = "%PDF-1.4\n%\xe2\xe3\xcf\xd3\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF"
+    slide_one.write_text(slide_payload, encoding="latin1")
+    slide_two.write_text(slide_payload, encoding="latin1")
+
+    lecture = ingestor.ingest(
+        class_name="Mathematics",
+        module_name="Calculus",
+        lecture_name="Limits",
+        audio_files=[audio_one, audio_two],
+        slide_files=[slide_one, slide_two],
+    )
+
+    assert lecture.audio_path is not None
+    assert lecture.transcript_path is not None
+    transcript_file = temp_config.storage_root / lecture.transcript_path
+    transcript_text = transcript_file.read_text(encoding="utf-8")
+    assert "Transcript for mathematics-calculus-limits-audio-part-01" in transcript_text
+    assert "Transcript for mathematics-calculus-limits-audio-part-02" in transcript_text
+    assert transcript_text.count("## Part") >= 2
+
+    assert lecture.slide_image_dir is not None
+    slide_bundle = temp_config.storage_root / lecture.slide_image_dir
+    assert slide_bundle.exists()
+    with zipfile.ZipFile(slide_bundle, "r") as archive:
+        names = archive.namelist()
+        assert any(name.startswith("part_01/") for name in names)
+        assert any(name.startswith("part_02/") for name in names)
+
+    assert lecture.notes_path is not None
+    notes_file = temp_config.storage_root / lecture.notes_path
+    notes_text = notes_file.read_text(encoding="utf-8")
+    assert notes_text.count("# Dummy slides") == 2
+    assert "<!-- Part 02 -->" in notes_text
+
+
 def test_ingestion_requires_assets(temp_config: AppConfig) -> None:
     repository = LectureRepository(temp_config)
     ingestor = LectureIngestor(temp_config, repository)

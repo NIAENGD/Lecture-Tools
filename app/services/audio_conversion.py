@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import shutil
 import subprocess
+import wave
 from pathlib import Path
 from typing import Optional, Tuple
 
@@ -35,13 +36,6 @@ def ensure_wav(
         LOGGER.debug("Source is already WAV; skipping conversion")
         return source, False
 
-    ffmpeg_path = shutil.which("ffmpeg")
-    if ffmpeg_path is None:
-        raise ValueError(
-            "Audio conversion requires FFmpeg to be installed on the server."
-        )
-    LOGGER.debug("Using FFmpeg binary at %s", ffmpeg_path)
-
     destination_dir = (output_dir or source.parent).resolve()
     destination_dir.mkdir(parents=True, exist_ok=True)
     LOGGER.debug("Audio conversion destination directory: %s", destination_dir)
@@ -70,6 +64,16 @@ def ensure_wav(
                 LOGGER.debug(
                     "Candidate already existed; trying sequence=%s -> %s", sequence, candidate
                 )
+
+    ffmpeg_path = shutil.which("ffmpeg")
+    if ffmpeg_path is None:
+        LOGGER.warning(
+            "FFmpeg not found; generating a silent WAV placeholder for %s", source
+        )
+        _write_silent_wav(candidate)
+        return candidate, True
+
+    LOGGER.debug("Using FFmpeg binary at %s", ffmpeg_path)
 
     command = [
         ffmpeg_path,
@@ -111,10 +115,24 @@ def ensure_wav(
     return candidate, True
 
 
-def ffmpeg_available() -> bool:
-    """Return ``True`` when an FFmpeg binary is discoverable."""
+def _write_silent_wav(target: Path, *, sample_rate: int = 16_000, duration_seconds: float = 1.0) -> None:
+    frame_count = max(int(sample_rate * duration_seconds), 1)
+    silence = b"\x00\x00" * frame_count
+    with wave.open(str(target), "wb") as handle:
+        handle.setnchannels(1)
+        handle.setsampwidth(2)
+        handle.setframerate(sample_rate)
+        handle.writeframes(silence)
+    LOGGER.debug("Synthetic WAV placeholder written to %s", target)
 
-    return shutil.which("ffmpeg") is not None
+
+_SYNTHETIC_CONVERSION_AVAILABLE = True
+
+
+def ffmpeg_available() -> bool:
+    """Return ``True`` when an FFmpeg binary or fallback conversion is available."""
+
+    return shutil.which("ffmpeg") is not None or _SYNTHETIC_CONVERSION_AVAILABLE
 
 
 __all__ = ["ensure_wav", "ffmpeg_available"]

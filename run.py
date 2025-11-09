@@ -11,7 +11,7 @@ import time
 import webbrowser
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import uvicorn
 import typer
@@ -376,21 +376,25 @@ def ingest(
     module_name: str = typer.Option(..., help="Module name"),
     lecture_name: str = typer.Option(..., help="Lecture title"),
     description: Optional[str] = typer.Option(None, help="Lecture description"),
-    audio: Optional[Path] = typer.Option(
+    audio: Optional[List[Path]] = typer.Option(
         None,
+        "--audio",
+        "-a",
         exists=True,
         file_okay=True,
         dir_okay=False,
         resolve_path=True,
-        help="Path to the lecture audio/video file",
+        help="Path(s) to the lecture audio/video file (repeat for multiple parts)",
     ),
-    slides: Optional[Path] = typer.Option(
+    slides: Optional[List[Path]] = typer.Option(
         None,
+        "--slides",
+        "-s",
         exists=True,
         file_okay=True,
         dir_okay=False,
         resolve_path=True,
-        help="Path to the slideshow PDF",
+        help="Path(s) to the slideshow PDF (repeat for multiple parts)",
     ),
     whisper_model: str = typer.Option("base", help="Whisper model size to download"),
 ) -> None:
@@ -401,13 +405,13 @@ def ingest(
 
     repository = LectureRepository(config)
     transcription = None
-    if audio is not None:
+    if audio:
         transcription = FasterWhisperTranscription(
             whisper_model,
             download_root=config.assets_root,
         )
 
-    slide_converter = PyMuPDFSlideConverter() if slides is not None else None
+    slide_converter = PyMuPDFSlideConverter() if slides else None
 
     ingestor = LectureIngestor(
         config,
@@ -421,8 +425,8 @@ def ingest(
         module_name=module_name,
         lecture_name=lecture_name,
         description=description or "",
-        audio_file=audio,
-        slide_file=slides,
+        audio_files=audio,
+        slide_files=slides,
     )
 
     typer.echo("Ingestion completed.")
