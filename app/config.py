@@ -87,6 +87,7 @@ class AppConfig:
     storage_root: Path
     database_file: Path
     assets_root: Path
+    storage_repair_oversize_factor: float = 5.0
 
     @property
     def archive_root(self) -> Path:
@@ -149,7 +150,18 @@ class AppConfig:
                     database_file,
                 )
 
-        return cls(storage_root=storage_root, database_file=database_file, assets_root=assets_root)
+        repair_factor = mapping.get("storage_repair_oversize_factor", 5.0)
+        try:
+            repair_factor = float(repair_factor)
+        except (TypeError, ValueError):
+            repair_factor = 5.0
+
+        return cls(
+            storage_root=storage_root,
+            database_file=database_file,
+            assets_root=assets_root,
+            storage_repair_oversize_factor=float(repair_factor),
+        )
 
 
 def load_config(config_path: Path | None = None) -> AppConfig:

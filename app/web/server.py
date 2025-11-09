@@ -23,7 +23,7 @@ import time
 import traceback
 import uuid
 import zipfile
-from collections import deque
+from collections import Counter, defaultdict, deque
 from collections.abc import Mapping, Sequence, Set as AbstractSet
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
@@ -5578,7 +5578,43 @@ def create_app(
         root_path = _require_storage_root().resolve()
         archive_root = config.archive_root.resolve()
 
+        oversize_factor_value = getattr(config, "storage_repair_oversize_factor", 5.0)
+        try:
+            oversize_factor = float(oversize_factor_value)
+        except (TypeError, ValueError):
+            oversize_factor = 5.0
+        oversize_factor = max(oversize_factor, 1.0)
+
+        PAGE_IMAGE_THRESHOLD = 20
+        IMAGE_EXTENSIONS = {
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".webp",
+            ".tif",
+            ".tiff",
+            ".bmp",
+        }
+        ARCHIVE_SUFFIXES = (
+            ".zip",
+            ".tar",
+            ".tar.gz",
+            ".tgz",
+            ".tbz",
+            ".tar.bz2",
+            ".7z",
+        )
+        NUMERIC_IMAGE_PATTERN = re.compile(
+            r"^(?P<base>.+?)(?:[-_ ]?(?:page|img|image|slide|frame))?[-_ ]?\d+$",
+            re.IGNORECASE,
+        )
+
         protected_entries: Set[Path] = set()
+        removals: List[Dict[str, Any]] = []
+        skipped: List[Dict[str, Any]] = []
+        freed_bytes = 0
+        all_references: Set[Path] = set()
+        reference_sizes: Dict[Path, int] = {}
 
         def _normalize(path: Path) -> Path:
             try:
@@ -5609,18 +5645,26 @@ def create_app(
             except ValueError:
                 return False
 
+        def _contains_reference(path: Path) -> bool:
+            normalized = _normalize(path)
+            if normalized in all_references:
+                return True
+            for reference in all_references:
+                try:
+                    reference.relative_to(normalized)
+                    return True
+                except ValueError:
+                    continue
+            return False
+
         def _is_path_protected(path: Path) -> bool:
             resolved = _normalize(path)
+            if resolved in protected_entries:
+                return True
             for protected in protected_entries:
-                if resolved == protected:
-                    return True
                 if _is_within(protected, resolved):
                     return True
             return False
-
-        removals: List[Dict[str, Any]] = []
-        skipped: List[Dict[str, Any]] = []
-        freed_bytes = 0
 
         def _register_removal(resolved: Path, *, kind: str, description: str, size: int) -> None:
             nonlocal freed_bytes
@@ -5642,7 +5686,7 @@ def create_app(
             resolved = _normalize(target)
             if not resolved.exists():
                 return
-            if _is_path_protected(resolved):
+            if _is_path_protected(resolved) or _contains_reference(resolved):
                 skipped.append(
                     {
                         "path": _relative_label(resolved),
@@ -5672,36 +5716,45 @@ def create_app(
                 return
             _register_removal(resolved, kind=kind, description=description, size=int(size))
 
-        _protect(root_path)
-        for special in (archive_root, config.assets_root, config.database_file):
-            try:
-                resolved_special = special.resolve()
-            except OSError:
-                continue
-            if resolved_special.is_relative_to(root_path):
-                _protect(resolved_special)
+        def _compact_token(value: str) -> str:
+            return re.sub(r"[^a-z0-9]+", "", value.lower())
 
-        classes = list(repository.iter_classes())
-        module_map: Dict[int, List[ModuleRecord]] = {}
-        lecture_map: Dict[int, List[LectureRecord]] = {}
-        for class_record in classes:
-            modules = list(repository.iter_modules(class_record.id))
-            module_map[class_record.id] = modules
-            for module in modules:
-                lectures = list(repository.iter_lectures(module.id))
-                lecture_map[module.id] = lectures
+        def _image_group_key(path: Path) -> Optional[Tuple[Path, str, str]]:
+            stem = path.stem
+            match = NUMERIC_IMAGE_PATTERN.match(stem)
+            if match:
+                base = match.group("base")
+            else:
+                stripped = re.sub(r"\d+$", "", stem)
+                if stripped == stem:
+                    return None
+                base = stripped
+            base = re.sub(r"[-_ ()]+$", "", base)
+            if not base:
+                return None
+            parent = _normalize(path.parent)
+            return (parent, base.lower(), path.suffix.lower())
 
-        def _canonical_slug(value: str, fallback: str) -> str:
-            slug = slugify(value).strip()
-            if slug:
-                return slug
-            cleaned = value.strip()
-            if cleaned:
-                alt = slugify(cleaned)
-                if alt:
-                    return alt
-                return cleaned
-            return fallback
+        def _is_file_referenced(path: Path, files: Set[Path], directories: Set[Path]) -> bool:
+            if path in files:
+                return True
+            for directory in directories:
+                if _is_within(path, directory):
+                    return True
+            return False
+
+        def _is_referenced_path(path: Path, references: Optional[AbstractSet[Path]]) -> bool:
+            if not references:
+                return False
+            resolved_candidate = _normalize(path)
+            for reference in references:
+                if resolved_candidate == reference:
+                    return True
+                if _is_within(resolved_candidate, reference):
+                    return True
+                if _is_within(reference, resolved_candidate):
+                    return True
+            return False
 
         TEMP_DIR_NAMES = {
             "tmp",
@@ -5757,28 +5810,6 @@ def create_app(
         PREVIEW_KEYWORDS = (".previews", "_previews", "previews")
         AGGRESSIVE_IMAGE_PREFIXES = ("render-", "preview-", "slide-")
         AGGRESSIVE_IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
-        ARCHIVE_SUFFIXES = (
-            ".zip",
-            ".tar",
-            ".tar.gz",
-            ".tgz",
-            ".tbz",
-            ".tar.bz2",
-            ".7z",
-        )
-
-        def _is_referenced_path(path: Path, references: Optional[AbstractSet[Path]]) -> bool:
-            if not references:
-                return False
-            resolved_candidate = _normalize(path)
-            for reference in references:
-                if resolved_candidate == reference:
-                    return True
-                if _is_within(resolved_candidate, reference):
-                    return True
-                if _is_within(reference, resolved_candidate):
-                    return True
-            return False
 
         def _cleanup_temporary_entries(
             base: Path,
@@ -5795,10 +5826,15 @@ def create_app(
                 return
             for child in children:
                 normalized_child = _normalize(child)
-                if _is_referenced_path(normalized_child, references):
-                    continue
                 name_lower = child.name.lower()
                 if child.is_dir():
+                    if _is_referenced_path(normalized_child, references):
+                        _cleanup_temporary_entries(
+                            normalized_child,
+                            aggressive=aggressive,
+                            references=references,
+                        )
+                        continue
                     has_prefix = any(check(name_lower) for check in TEMP_PREFIX_CHECKS)
                     matches_suffix = any(name_lower.endswith(suffix) for suffix in TEMP_SUFFIXES)
                     matches_numeric = bool(
@@ -5838,6 +5874,8 @@ def create_app(
                         references=references,
                     )
                 else:
+                    if _is_referenced_path(normalized_child, references):
+                        continue
                     has_prefix = any(check(name_lower) for check in TEMP_PREFIX_CHECKS)
                     has_suffix = any(name_lower.endswith(suffix) for suffix in TEMP_SUFFIXES)
                     aggressive_preview = False
@@ -5864,63 +5902,91 @@ def create_app(
                             description=description,
                         )
 
-        def _remove_if_exists(
-            target: Path,
-            *,
-            kind: str,
-            description: str,
-            references: Optional[AbstractSet[Path]] = None,
-        ) -> None:
-            resolved_target = _normalize(target)
-            if not resolved_target.exists():
-                return
-            if _is_referenced_path(resolved_target, references):
-                return
-            _safe_delete(resolved_target, kind=kind, description=description)
-
-        def _remove_duplicate_slide_bundles(
-            base: Path, *, references: AbstractSet[Path]
+        def _remove_known_temp_files(
+            base: Path, *, references: Optional[AbstractSet[Path]] = None
         ) -> None:
             try:
                 candidates = list(base.rglob("*"))
             except (OSError, PermissionError):
                 return
             for candidate in candidates:
-                if not candidate.is_file():
+                normalized_candidate = _normalize(candidate)
+                if not normalized_candidate.is_file():
                     continue
-                name_lower = candidate.name.lower()
-                if not any(name_lower.endswith(suffix) for suffix in ARCHIVE_SUFFIXES):
+                if _is_referenced_path(normalized_candidate, references):
                     continue
-                if "slide" not in name_lower and "bundle" not in name_lower:
-                    continue
-                if _is_referenced_path(candidate, references):
-                    continue
-                _safe_delete(
-                    candidate,
-                    kind="duplicate_bundle",
-                    description="Unreferenced slide bundle",
-                )
+                name_lower = normalized_candidate.name.lower()
+                suffix_lower = normalized_candidate.suffix.lower()
+                if (
+                    name_lower in TEMP_FILE_NAMES
+                    or any(name_lower.endswith(suffix) for suffix in TEMP_SUFFIXES)
+                ):
+                    description = f"Temporary file '{normalized_candidate.name}'"
+                    kind = "temporary"
+                    if suffix_lower in AGGRESSIVE_IMAGE_SUFFIXES and any(
+                        name_lower.startswith(prefix)
+                        for prefix in AGGRESSIVE_IMAGE_PREFIXES
+                    ):
+                        kind = "oversized_preview"
+                        description = f"Preview artifact '{normalized_candidate.name}'"
+                    _safe_delete(
+                        normalized_candidate,
+                        kind=kind,
+                        description=description,
+                    )
+        def _add_reference_ancestors(path: Path) -> None:
+            ancestor = path if path.is_dir() else path.parent
+            while ancestor and ancestor != ancestor.parent:
+                try:
+                    ancestor.relative_to(root_path)
+                except ValueError:
+                    break
+                normalized = _normalize(ancestor)
+                all_references.add(normalized)
+                if normalized == root_path:
+                    break
+                ancestor = ancestor.parent
 
-        # Protect canonical directories and referenced assets
-        class_variants: Dict[int, Set[str]] = {}
-        canonical_class_dirs: Dict[int, Path] = {}
-        for class_record in classes:
-            canonical_slug = _canonical_slug(class_record.name, f"class-{class_record.id}")
-            canonical_class_dir = root_path / canonical_slug
-            canonical_class_dirs[class_record.id] = canonical_class_dir
-            _protect(canonical_class_dir)
-            variants = set(_name_variants(class_record.name))
-            variants.add(canonical_slug)
-            class_variants[class_record.id] = variants
-            for module in module_map.get(class_record.id, []):
-                module_slug = _canonical_slug(module.name, f"module-{module.id}")
-                canonical_module_dir = canonical_class_dir / module_slug
-                _protect(canonical_module_dir)
-                variants.add(module_slug)
-                for lecture in lecture_map.get(module.id, []):
-                    lecture_slug = _canonical_slug(lecture.name, f"lecture-{lecture.id}")
-                    canonical_lecture_dir = canonical_module_dir / lecture_slug
-                    _protect(canonical_lecture_dir)
+        _protect(root_path)
+        all_references.add(_normalize(root_path))
+
+        for special in (archive_root, config.assets_root, config.database_file):
+            try:
+                resolved_special = special.resolve()
+            except OSError:
+                continue
+            candidate = resolved_special
+            if candidate.exists() and candidate.is_file():
+                candidate = candidate.parent
+            if _is_within(candidate, root_path):
+                _protect(candidate)
+                all_references.add(_normalize(candidate))
+                _add_reference_ancestors(candidate)
+
+        @dataclass
+        class LectureContextInfo:
+            class_record: ClassRecord
+            module_record: ModuleRecord
+            lecture: LectureRecord
+            references: Set[Path]
+            reference_files: Set[Path]
+            reference_dirs: Set[Path]
+            lecture_roots: List[Path]
+            pdf_tokens: Set[str]
+            pdf_tokens_compact: Set[str]
+            lecture_tokens: Set[str]
+            lecture_tokens_compact: Set[str]
+
+        lecture_contexts: List[LectureContextInfo] = []
+
+        for class_record in repository.iter_classes():
+            for module in repository.iter_modules(class_record.id):
+                for lecture in repository.iter_lectures(module.id):
+                    references: Set[Path] = set()
+                    reference_files: Set[Path] = set()
+                    reference_dirs: Set[Path] = set()
+                    pdf_tokens: Set[str] = set()
+                    pdf_tokens_compact: Set[str] = set()
                     for relative in (
                         lecture.audio_path,
                         lecture.processed_audio_path,
@@ -5930,266 +5996,432 @@ def create_app(
                         lecture.slide_image_dir,
                     ):
                         asset = _resolve_existing_asset(relative)
-                        if asset is not None:
-                            _protect(asset)
+                        if asset is None:
+                            continue
+                        resolved = _normalize(asset)
+                        if resolved in references:
+                            continue
+                        references.add(resolved)
+                        all_references.add(resolved)
+                        _protect(resolved)
+                        _add_reference_ancestors(resolved)
+                        try:
+                            if resolved.is_dir():
+                                size = reference_sizes.get(resolved)
+                                if size is None:
+                                    size = _calculate_directory_size(resolved)
+                                    reference_sizes[resolved] = size
+                                reference_dirs.add(resolved)
+                            else:
+                                size = reference_sizes.get(resolved)
+                                if size is None:
+                                    size = resolved.stat().st_size
+                                    reference_sizes[resolved] = size
+                                reference_files.add(resolved)
+                        except (OSError, ValueError):
+                            reference_sizes.setdefault(resolved, 0)
+                            if resolved.is_dir():
+                                reference_dirs.add(resolved)
+                            else:
+                                reference_files.add(resolved)
+                        if resolved.suffix.lower() == ".pdf":
+                            pdf_tokens.add(resolved.name.lower())
+                            pdf_tokens.add(resolved.stem.lower())
+                            pdf_tokens_compact.add(_compact_token(resolved.name))
+                            pdf_tokens_compact.add(_compact_token(resolved.stem))
 
-        # Clear temporary export archives
-        _protect(archive_root)
-        if archive_root.exists() and archive_root.is_dir():
+                    candidate_dirs: List[Path] = []
+                    for reference in references:
+                        base_dir = reference if reference.is_dir() else reference.parent
+                        if base_dir is None:
+                            continue
+                        try:
+                            base_dir.relative_to(root_path)
+                        except ValueError:
+                            continue
+                        normalized_dir = _normalize(base_dir)
+                        if normalized_dir not in candidate_dirs:
+                            candidate_dirs.append(normalized_dir)
+
+                    try:
+                        candidate_dirs.sort(key=lambda value: len(value.relative_to(root_path).parts))
+                    except ValueError:
+                        candidate_dirs.sort()
+
+                    lecture_roots: List[Path] = []
+                    for candidate in candidate_dirs:
+                        if any(_is_within(candidate, existing) for existing in lecture_roots):
+                            continue
+                        lecture_roots.append(candidate)
+
+                    lecture_tokens = {lecture.name.lower()}
+                    slug = slugify(lecture.name).strip()
+                    if slug:
+                        lecture_tokens.add(slug.lower())
+                    lecture_tokens = {token for token in lecture_tokens if token}
+                    lecture_tokens_compact = {_compact_token(token) for token in lecture_tokens}
+
+                    lecture_contexts.append(
+                        LectureContextInfo(
+                            class_record=class_record,
+                            module_record=module,
+                            lecture=lecture,
+                            references=references,
+                            reference_files=reference_files,
+                            reference_dirs=reference_dirs,
+                            lecture_roots=lecture_roots,
+                            pdf_tokens=pdf_tokens,
+                            pdf_tokens_compact=pdf_tokens_compact,
+                            lecture_tokens=lecture_tokens,
+                            lecture_tokens_compact=lecture_tokens_compact,
+                        )
+                    )
+
+        for context in lecture_contexts:
+            if not context.lecture_roots:
+                continue
+            for lecture_root in context.lecture_roots:
+                normalized_root = _normalize(lecture_root)
+                if not normalized_root.exists() or not normalized_root.is_dir():
+                    continue
+                all_references.add(normalized_root)
+
+                dir_stats: Dict[Path, Dict[str, Any]] = {}
+                image_groups: defaultdict[Tuple[Path, str, str], List[Tuple[Path, int]]] = defaultdict(list)
+                archives_by_parent: defaultdict[Path, List[Path]] = defaultdict(list)
+
+                def _get_dir_stats(path: Path) -> Dict[str, Any]:
+                    stats = dir_stats.get(path)
+                    if stats is None:
+                        stats = {"files": 0, "size": 0, "ext": Counter(), "referenced": 0}
+                        dir_stats[path] = stats
+                    return stats
+
+                total_size = 0
+                try:
+                    walker = os.walk(normalized_root)
+                except (OSError, PermissionError):
+                    continue
+                for dirpath, dirnames, filenames in walker:
+                    current = _normalize(Path(dirpath))
+                    _get_dir_stats(current)
+                    for dirname in dirnames:
+                        _get_dir_stats(_normalize(Path(dirpath) / dirname))
+                    for filename in filenames:
+                        raw_file = Path(dirpath) / filename
+                        normalized_file = _normalize(raw_file)
+                        if normalized_file.is_symlink():
+                            continue
+                        try:
+                            stat = normalized_file.stat()
+                        except (OSError, FileNotFoundError, PermissionError):
+                            continue
+                        size = stat.st_size
+                        total_size += size
+                        suffix_lower = normalized_file.suffix.lower()
+                        referenced = _is_file_referenced(
+                            normalized_file, context.reference_files, context.reference_dirs
+                        )
+                        ancestor = normalized_file.parent
+                        while ancestor and ancestor != ancestor.parent:
+                            if not _is_within(ancestor, normalized_root):
+                                break
+                            stats = _get_dir_stats(ancestor)
+                            stats["files"] += 1
+                            stats["size"] += size
+                            stats["ext"][suffix_lower] = stats["ext"].get(suffix_lower, 0) + 1
+                            if referenced:
+                                stats["referenced"] += 1
+                            if ancestor == normalized_root:
+                                break
+                            ancestor = ancestor.parent
+                        if not referenced and suffix_lower in IMAGE_EXTENSIONS:
+                            key = _image_group_key(normalized_file)
+                            if key is not None:
+                                image_groups[key].append((normalized_file, size))
+                        if not referenced and suffix_lower in ARCHIVE_SUFFIXES:
+                            parent_dir = _normalize(normalized_file.parent)
+                            if _is_within(parent_dir, normalized_root):
+                                archives_by_parent[parent_dir].append(normalized_file)
+
+                referenced_size_in_root = 0
+                for path in context.reference_files:
+                    if _is_within(path, normalized_root):
+                        try:
+                            referenced_size_in_root += path.stat().st_size
+                        except (OSError, FileNotFoundError, PermissionError):
+                            continue
+                for path in context.reference_dirs:
+                    if _is_within(path, normalized_root):
+                        referenced_size_in_root += reference_sizes.get(path, 0)
+
+                actual_size = total_size
+                excess_bytes = max(0, actual_size - referenced_size_in_root)
+                bloated = False
+                if referenced_size_in_root > 0:
+                    bloated = actual_size > referenced_size_in_root * oversize_factor
+                elif actual_size > 0:
+                    bloated = True
+
+                cleaned = False
+                handled_archives: Set[Path] = set()
+                handled_files: Set[Path] = set()
+
+                possible_archive_tokens = set(context.pdf_tokens) | set(context.lecture_tokens)
+                possible_archive_tokens_compact = (
+                    set(context.pdf_tokens_compact) | set(context.lecture_tokens_compact)
+                )
+
+                for (parent, base, _ext), group_files in list(image_groups.items()):
+                    if not _is_within(parent, normalized_root):
+                        continue
+                    if len(group_files) < PAGE_IMAGE_THRESHOLD:
+                        continue
+                    description = (
+                        f"Derived slide images for lecture '{context.lecture.name}'"
+                    )
+                    for file_path, _size in group_files:
+                        if file_path in handled_files:
+                            continue
+                        _safe_delete(file_path, kind="derived_images", description=description)
+                        handled_files.add(file_path)
+                        cleaned = True
+                    archive_tokens = set(possible_archive_tokens)
+                    archive_tokens.add(base)
+                    archive_tokens_compact = set(possible_archive_tokens_compact)
+                    archive_tokens_compact.add(_compact_token(base))
+                    for archive_path in list(archives_by_parent.get(parent, [])):
+                        if archive_path in handled_archives:
+                            continue
+                        archive_stem = archive_path.stem.lower()
+                        archive_compact = _compact_token(archive_stem)
+                        matches_token = any(
+                            token and token in archive_stem for token in archive_tokens
+                        ) or any(
+                            token and token in archive_compact for token in archive_tokens_compact
+                        )
+                        if matches_token:
+                            _safe_delete(
+                                archive_path,
+                                kind="unreferenced_archive",
+                                description=f"Archive for derived images '{archive_path.name}'",
+                            )
+                            handled_archives.add(archive_path)
+                            cleaned = True
+
+                child_directories = [
+                    path
+                    for path in dir_stats
+                    if path != normalized_root and path.parent == normalized_root
+                ]
+
+                for directory in child_directories:
+                    if directory in context.reference_dirs:
+                        continue
+                    if not directory.exists():
+                        continue
+                    if _is_path_protected(directory) or _contains_reference(directory):
+                        continue
+                    stats = dir_stats.get(directory)
+                    if not stats:
+                        continue
+                    total_files = stats.get("files", 0)
+                    if total_files <= 0:
+                        continue
+                    image_count = sum(
+                        count for ext, count in stats.get("ext", {}).items() if ext in IMAGE_EXTENSIONS
+                    )
+                    image_ratio = image_count / total_files if total_files else 0.0
+                    has_referenced_files = stats.get("referenced", 0) > 0
+                    dir_name_lower = directory.name.lower()
+                    dir_name_compact = _compact_token(dir_name_lower)
+                    is_conversion_candidate = False
+                    if image_count >= PAGE_IMAGE_THRESHOLD and image_ratio >= 0.9:
+                        is_conversion_candidate = any(
+                            token and token in dir_name_lower for token in context.pdf_tokens
+                        ) or any(
+                            token and token in dir_name_compact
+                            for token in context.pdf_tokens_compact
+                        )
+                    if is_conversion_candidate:
+                        _safe_delete(
+                            directory,
+                            kind="unreferenced_conversion",
+                            description=f"Derived slide images in '{directory.name}'",
+                        )
+                        cleaned = True
+                        continue
+                    if (
+                        bloated
+                        and not has_referenced_files
+                        and image_count >= PAGE_IMAGE_THRESHOLD
+                        and image_ratio >= 0.95
+                    ):
+                        _safe_delete(
+                            directory,
+                            kind="bloated_lecture_cleanup",
+                            description=f"Derived image directory '{directory.name}'",
+                        )
+                        cleaned = True
+
+                for archives in archives_by_parent.values():
+                    for archive_path in archives:
+                        if archive_path in handled_archives:
+                            continue
+                        if not archive_path.exists():
+                            continue
+                        _safe_delete(
+                            archive_path,
+                            kind="unreferenced_archive",
+                            description=f"Unreferenced archive '{archive_path.name}'",
+                        )
+                        cleaned = True
+
+                references_for_cleanup = context.references | context.reference_dirs
+                freed_before = freed_bytes
+                _cleanup_temporary_entries(
+                    normalized_root,
+                    aggressive=bloated,
+                    references=references_for_cleanup,
+                )
+                if freed_bytes > freed_before:
+                    cleaned = True
+
+                _remove_known_temp_files(
+                    normalized_root, references=references_for_cleanup
+                )
+
+                if bloated and not cleaned and excess_bytes > 0:
+                    skipped.append(
+                        {
+                            "path": _relative_label(normalized_root),
+                            "kind": "could_not_clean",
+                            "reason": "no_patterns_detected",
+                            "excess_bytes": int(excess_bytes),
+                        }
+                    )
+
+        if _is_within(archive_root, root_path) and archive_root.exists() and archive_root.is_dir():
             for child in list(archive_root.iterdir()):
                 _safe_delete(child, kind="archive", description="Temporary export archive")
-            archive_root.mkdir(parents=True, exist_ok=True)
 
-        # Remove legacy class directories and orphaned top-level folders
-        for class_record in classes:
-            canonical_dir = canonical_class_dirs[class_record.id]
-            variants = class_variants.get(class_record.id, set())
-            for variant in variants:
-                candidate = root_path / variant
-                if candidate == canonical_dir:
-                    continue
-                _safe_delete(
-                    candidate,
-                    kind="legacy_class",
-                    description=f"Legacy class directory for '{class_record.name}'",
-                )
+        freed_before = freed_bytes
+        _cleanup_temporary_entries(root_path, aggressive=True, references=all_references)
+        if freed_bytes > freed_before:
+            pass
+
+        _remove_known_temp_files(root_path, references=all_references)
+
+        keep_directories: Set[Path] = set()
+
+        def _track_keep_directory(path: Path) -> None:
+            candidate = _normalize(path)
+            if candidate.exists() and candidate.is_file():
+                candidate = candidate.parent
+            try:
+                candidate.relative_to(root_path)
+            except ValueError:
+                if candidate != root_path:
+                    return
+            while True:
+                keep_directories.add(candidate)
+                if candidate == root_path:
+                    break
+                parent = candidate.parent
+                if parent == candidate:
+                    break
+                candidate = _normalize(parent)
+                try:
+                    candidate.relative_to(root_path)
+                except ValueError:
+                    break
+
+        _track_keep_directory(root_path)
+        if _is_within(archive_root, root_path):
+            _track_keep_directory(archive_root)
+        if _is_within(config.assets_root, root_path):
+            _track_keep_directory(config.assets_root)
+        if _is_within(config.database_file, root_path):
+            _track_keep_directory(config.database_file)
+        for context in lecture_contexts:
+            for lecture_root in context.lecture_roots:
+                _track_keep_directory(lecture_root)
+
+        def _prune_orphan_directories(path: Path) -> None:
+            try:
+                children = list(path.iterdir())
+            except (OSError, PermissionError):
+                return
+            for child in children:
+                normalized_child = _normalize(child)
+                if child.is_dir():
+                    _prune_orphan_directories(normalized_child)
+                    if (
+                        normalized_child in keep_directories
+                        or _is_path_protected(normalized_child)
+                        or _contains_reference(normalized_child)
+                    ):
+                        continue
+                    _safe_delete(
+                        normalized_child,
+                        kind="orphan_directory",
+                        description="Unreferenced directory",
+                    )
+                elif child.is_file():
+                    name_lower = child.name.lower()
+                    suffix_lower = child.suffix.lower()
+                    if (
+                        not _is_path_protected(normalized_child)
+                        and not _contains_reference(normalized_child)
+                        and (
+                            name_lower in TEMP_FILE_NAMES
+                            or any(name_lower.endswith(suffix) for suffix in TEMP_SUFFIXES)
+                        )
+                    ):
+                        description = f"Temporary file '{child.name}'"
+                        kind = "temporary"
+                        if suffix_lower in AGGRESSIVE_IMAGE_SUFFIXES and any(
+                            name_lower.startswith(prefix)
+                            for prefix in AGGRESSIVE_IMAGE_PREFIXES
+                        ):
+                            kind = "oversized_preview"
+                            description = f"Preview artifact '{child.name}'"
+                        _safe_delete(
+                            normalized_child,
+                            kind=kind,
+                            description=description,
+                        )
+                        continue
+                    if suffix_lower in ARCHIVE_SUFFIXES and not _is_path_protected(normalized_child):
+                        _safe_delete(
+                            normalized_child,
+                            kind="unreferenced_archive",
+                            description=f"Stray archive '{child.name}'",
+                        )
+
+        _prune_orphan_directories(root_path)
 
         try:
             top_level_children = list(root_path.iterdir())
         except (OSError, PermissionError):
             top_level_children = []
-
-        canonical_class_paths = { _normalize(path) for path in canonical_class_dirs.values() }
         for child in top_level_children:
-            if child == archive_root:
-                continue
-            if child.is_file():
-                name_lower = child.name.lower()
-                if any(name_lower.endswith(suffix) for suffix in ARCHIVE_SUFFIXES):
-                    if _is_path_protected(child):
-                        continue
-                    _safe_delete(
-                        child,
-                        kind="orphan_archive",
-                        description="Stray archive file",
-                    )
-                continue
+            normalized_child = _normalize(child)
             if not child.is_dir():
                 continue
-            normalized_child = _normalize(child)
-            if normalized_child in canonical_class_paths:
+            if not normalized_child.exists():
                 continue
-            if _is_path_protected(child):
+            if not _contains_reference(normalized_child):
                 continue
-            _safe_delete(child, kind="orphan_class", description="Unreferenced class directory")
-
-        # Clean up modules and lectures within canonical class directories
-        for class_record in classes:
-            canonical_class_dir = canonical_class_dirs[class_record.id]
-            modules = module_map.get(class_record.id, [])
-            module_variants: Dict[int, Set[str]] = {}
-            canonical_module_dirs: Dict[int, Path] = {}
-            module_variant_names: Set[str] = set()
-            for module in modules:
-                module_slug = _canonical_slug(module.name, f"module-{module.id}")
-                canonical_module_dir = canonical_class_dir / module_slug
-                canonical_module_dirs[module.id] = canonical_module_dir
-                variants = set(_name_variants(module.name))
-                variants.add(module_slug)
-                module_variants[module.id] = variants
-                module_variant_names.update(variants)
-                for variant in variants:
-                    candidate = canonical_class_dir / variant
-                    if candidate == canonical_module_dir:
-                        continue
-                    _safe_delete(
-                        candidate,
-                        kind="legacy_module",
-                        description=f"Legacy module directory for '{module.name}'",
-                    )
-
-            try:
-                module_children = list(canonical_class_dir.iterdir())
-            except (OSError, PermissionError):
-                module_children = []
-            expected_module_dirs = {
-                _normalize(path) for path in canonical_module_dirs.values() if path.exists()
-            }
-            for child in module_children:
-                if not child.is_dir():
-                    continue
-                normalized_child = _normalize(child)
-                if normalized_child in expected_module_dirs:
-                    continue
-                if child.name in module_variant_names:
-                    continue
-                if _is_path_protected(child):
-                    continue
-                _safe_delete(child, kind="orphan_module", description="Unreferenced module directory")
-
-            for module in modules:
-                canonical_module_dir = canonical_module_dirs.get(module.id)
-                if canonical_module_dir is None:
-                    continue
-                lecture_variants: Dict[int, Set[str]] = {}
-                canonical_lecture_dirs: Dict[int, Path] = {}
-                lecture_variant_names: Set[str] = set()
-                for lecture in lecture_map.get(module.id, []):
-                    lecture_slug = _canonical_slug(lecture.name, f"lecture-{lecture.id}")
-                    canonical_lecture_dir = canonical_module_dir / lecture_slug
-                    canonical_lecture_dirs[lecture.id] = canonical_lecture_dir
-                    variants = set(_name_variants(lecture.name))
-                    variants.add(lecture_slug)
-                    lecture_variants[lecture.id] = variants
-                    lecture_variant_names.update(variants)
-                    for variant in variants:
-                        candidate = canonical_module_dir / variant
-                        if candidate == canonical_lecture_dir:
-                            continue
-                        _safe_delete(
-                            candidate,
-                            kind="legacy_lecture",
-                            description=f"Legacy lecture directory for '{lecture.name}'",
-                        )
-                    lecture_references: Set[Path] = set()
-                    referenced_size = 0
-
-                    def _add_reference(path: Path) -> None:
-                        nonlocal referenced_size
-                        resolved = _normalize(path)
-                        if resolved in lecture_references:
-                            return
-                        lecture_references.add(resolved)
-                        try:
-                            if resolved.exists() and resolved.is_dir():
-                                referenced_size += _calculate_directory_size(resolved)
-                            elif resolved.exists():
-                                referenced_size += resolved.stat().st_size
-                        except (OSError, ValueError):
-                            return
-
-                    for relative in (
-                        lecture.audio_path,
-                        lecture.processed_audio_path,
-                        lecture.slide_path,
-                        lecture.transcript_path,
-                        lecture.notes_path,
-                        lecture.slide_image_dir,
-                    ):
-                        asset = _resolve_existing_asset(relative)
-                        if asset is not None:
-                            _add_reference(asset)
-
-                    lecture_dirs = _iter_lecture_dirs(class_record, module, lecture)
-                    for directory in lecture_dirs:
-                        _cleanup_temporary_entries(
-                            directory,
-                            references=lecture_references,
-                        )
-                        for suffix in (
-                            "raw",
-                            "processed",
-                            "processed/audio",
-                            "processed/transcripts",
-                            "processed/slides",
-                            "processed/notes",
-                        ):
-                            _cleanup_temporary_entries(
-                                directory / suffix,
-                                references=lecture_references,
-                            )
-
-                    processed_dir = canonical_lecture_dir / "processed"
-                    slides_dir = processed_dir / "slides"
-                    baseline = max(referenced_size, 1)
-                    lecture_dir_size = 0
-                    try:
-                        if canonical_lecture_dir.exists():
-                            lecture_dir_size = _calculate_directory_size(canonical_lecture_dir)
-                    except (OSError, ValueError):
-                        lecture_dir_size = 0
-                    if lecture_dir_size > baseline * 5 and lecture_dir_size - referenced_size > 0:
-                        for target in (
-                            canonical_lecture_dir / "raw",
-                            processed_dir,
-                            slides_dir,
-                        ):
-                            _cleanup_temporary_entries(
-                                target,
-                                aggressive=True,
-                                references=lecture_references,
-                            )
-                        for preview_name in PREVIEW_KEYWORDS:
-                            _remove_if_exists(
-                                canonical_lecture_dir / preview_name,
-                                kind="oversized_preview",
-                                description=f"Preview cache '{preview_name}'",
-                                references=lecture_references,
-                            )
-
-                    if not lecture.processed_audio_path:
-                        _remove_if_exists(
-                            processed_dir / "audio",
-                            kind="stale_asset",
-                            description="Stale processed audio directory",
-                            references=lecture_references,
-                        )
-                    if not lecture.transcript_path:
-                        _remove_if_exists(
-                            processed_dir / "transcripts",
-                            kind="stale_asset",
-                            description="Stale transcript directory",
-                            references=lecture_references,
-                        )
-                    if not lecture.notes_path:
-                        _remove_if_exists(
-                            processed_dir / "notes",
-                            kind="stale_asset",
-                            description="Stale notes directory",
-                            references=lecture_references,
-                        )
-                    if not _is_referenced_path(slides_dir, lecture_references):
-                        _remove_if_exists(
-                            slides_dir,
-                            kind="stale_asset",
-                            description="Unreferenced slide render directory",
-                            references=lecture_references,
-                        )
-
-                    _remove_duplicate_slide_bundles(
-                        canonical_lecture_dir,
-                        references=lecture_references,
-                    )
-
-                try:
-                    lecture_children = list(canonical_module_dir.iterdir())
-                except (OSError, PermissionError):
-                    lecture_children = []
-                expected_lecture_dirs = {
-                    _normalize(path)
-                    for path in canonical_lecture_dirs.values()
-                    if path.exists()
+            if child.name == child.name.lower():
+                continue
+            skipped.append(
+                {
+                    "path": _relative_label(normalized_child),
+                    "kind": "protected_directory",
+                    "reason": "protected",
                 }
-                for child in lecture_children:
-                    if not child.is_dir():
-                        continue
-                    normalized_child = _normalize(child)
-                    if normalized_child in expected_lecture_dirs:
-                        continue
-                    if child.name in lecture_variant_names:
-                        continue
-                    if _is_path_protected(child):
-                        continue
-                    _safe_delete(
-                        child,
-                        kind="orphan_lecture",
-                        description="Unreferenced lecture directory",
-                    )
-                _cleanup_temporary_entries(canonical_module_dir)
-
-            _cleanup_temporary_entries(canonical_class_dir)
-
-        _cleanup_temporary_entries(root_path, aggressive=True)
+            )
 
         _log_event(
             "Storage repair completed",
@@ -6203,7 +6435,6 @@ def create_app(
             "skipped": skipped,
             "freed_bytes": int(freed_bytes),
         }
-
     @app.post(
         "/api/assets/reveal",
         status_code=status.HTTP_204_NO_CONTENT,
