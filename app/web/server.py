@@ -51,6 +51,10 @@ T = TypeVar("T")
 TaskOperation = Literal["audio_mastering", "slide_bundle", "transcription"]
 
 
+class AudioMasteringUnavailableError(RuntimeError):
+    """Raised when mastering cannot proceed because WAV conversion failed."""
+
+
 @dataclass
 class QueuedTask:
     """Represents a background task scheduled by the task queue."""
@@ -2728,6 +2732,11 @@ def create_app(
                     stem=base_stem,
                     timestamp=timestamp,
                 )
+                if wav_path.suffix.lower() != ".wav":
+                    raise AudioMasteringUnavailableError(
+                        "Audio mastering requires converting the audio to WAV, "
+                        "but FFmpeg is unavailable on the server."
+                    )
                 completed_steps = 1.0
                 processing_tracker.update(
                     lecture_id,
@@ -2828,16 +2837,32 @@ def create_app(
                 )
                 return processed_target, completion
 
-            mastered_path, completion = await _run_serialized_background_task(
-                lambda: _perform_audio_mastering(source_audio),
-                context_label="audio mastering",
-                queued_callback=lambda: processing_tracker.note(
-                    lecture_id,
-                    "====> Waiting for other tasks to finish…",
-                    context=context,
-                ),
-                job_id=job_id,
-            )
+            try:
+                mastered_path, completion = await _run_serialized_background_task(
+                    lambda: _perform_audio_mastering(source_audio),
+                    context_label="audio mastering",
+                    queued_callback=lambda: processing_tracker.note(
+                        lecture_id,
+                        "====> Waiting for other tasks to finish…",
+                        context=context,
+                    ),
+                    job_id=job_id,
+                )
+            except AudioMasteringUnavailableError as error:
+                skip_message = (
+                    "====> Audio mastering skipped. "
+                    "Install FFmpeg to enable WAV conversion."
+                )
+                LOGGER.warning("%s", error)
+                processing_tracker.note(lecture_id, skip_message, context=context)
+                processing_tracker.finish(lecture_id, skip_message, context=context)
+                _log_event(
+                    "Audio mastering skipped",
+                    lecture_id=lecture_id,
+                    reason=str(error),
+                    task_id=task.id,
+                )
+                return
         except HTTPException as error:
             detail = getattr(error, "detail", str(error))
             processing_tracker.fail(
@@ -4384,6 +4409,11 @@ def create_app(
                     stem=base_stem,
                     timestamp=timestamp,
                 )
+                if wav_path.suffix.lower() != ".wav":
+                    raise AudioMasteringUnavailableError(
+                        "Audio mastering requires converting the audio to WAV, "
+                        "but FFmpeg is unavailable on the server."
+                    )
     
                 completed_steps = 1.0
                 tracker.update(
@@ -4543,6 +4573,13 @@ def create_app(
                         ),
                         job_id=job_id,
                     )
+                except AudioMasteringUnavailableError as error:
+                    skip_message = (
+                        "====> Audio mastering skipped. "
+                        "Install FFmpeg to enable WAV conversion."
+                    )
+                    LOGGER.warning("%s", error)
+                    tracker.note(lecture_id, skip_message, context=tracker_context)
                 except ValueError as error:
                     tracker.fail(
                         lecture_id,

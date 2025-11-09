@@ -67,11 +67,8 @@ def ensure_wav(
 
     ffmpeg_path = shutil.which("ffmpeg")
     if ffmpeg_path is None:
-        LOGGER.warning(
-            "FFmpeg not found; generating a silent WAV placeholder for %s", source
-        )
-        _write_silent_wav(candidate)
-        return candidate, True
+        LOGGER.warning("FFmpeg not found; keeping original audio at %s", source)
+        return source, False
 
     LOGGER.debug("Using FFmpeg binary at %s", ffmpeg_path)
 
