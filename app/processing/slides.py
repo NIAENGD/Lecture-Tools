@@ -283,17 +283,25 @@ class _TesseractOCREngine:
 class PyMuPDFSlideConverter(SlideConverter):
     """Slide converter that extracts Markdown notes and images from PDFs."""
 
-    def __init__(self, dpi: int = 200, *, ocr_language: str = "en") -> None:
+    def __init__(
+        self,
+        dpi: int = 200,
+        *,
+        ocr_language: str = "en",
+        retain_debug_assets: bool = False,
+    ) -> None:
         self._dpi = dpi
         self._ocr_language = ocr_language
         self._ocr_backends: List[_OCRBackendInfo] = []
         self._ocr_backends_initialized = False
         self._ocr_engine_label: str = "text-layer-only"
         self._ocr_engine_version: Optional[str] = None
+        self._retain_debug_assets = bool(retain_debug_assets)
         LOGGER.debug(
-            "PyMuPDFSlideConverter initialised with dpi=%s, ocr_language=%s",
+            "PyMuPDFSlideConverter initialised with dpi=%s, ocr_language=%s, retain_debug_assets=%s",
             dpi,
             ocr_language,
+            self._retain_debug_assets,
         )
 
     def _prepare_ocr_backends(self) -> List[_OCRBackendInfo]:
@@ -551,16 +559,17 @@ class PyMuPDFSlideConverter(SlideConverter):
 
                 array = np.asarray(full_image)
                 image_array_filename: Optional[str] = None
-                image_array_path = asset_dir / f"slide-{page_number + 1:03d}-image.npy"
-                try:
-                    np.save(image_array_path, array)
-                except Exception:  # pragma: no cover - debug persistence best effort
-                    LOGGER.exception(
-                        "Failed to persist OCR pixel array for slide %s",
-                        page_number + 1,
-                    )
-                else:
-                    image_array_filename = image_array_path.name
+                if self._retain_debug_assets:
+                    image_array_path = asset_dir / f"slide-{page_number + 1:03d}-image.npy"
+                    try:
+                        np.save(image_array_path, array)
+                    except Exception:  # pragma: no cover - debug persistence best effort
+                        LOGGER.exception(
+                            "Failed to persist OCR pixel array for slide %s",
+                            page_number + 1,
+                        )
+                    else:
+                        image_array_filename = image_array_path.name
 
                 fallback_result = self._extract_text_candidates(page)
                 fallback_lines = fallback_result.lines
@@ -746,87 +755,90 @@ class PyMuPDFSlideConverter(SlideConverter):
                 backend_used_label = backend_used.label if backend_used else None
                 backend_used_version = backend_used.version if backend_used else None
 
-                debug_entries_payload = [
-                    {
-                        "text": item["text"],
-                        "confidence": round(item["confidence"], 6),
-                        "center_y": round(item["center_y"], 3),
-                        "box": [
-                            [round(point[0], 3), round(point[1], 3)]
-                            for point in item["box"]
-                        ],
-                    }
-                    for item in debug_entries
-                ]
-
-                debug_payload = {
+                debug_summary = {
                     "page": page_number + 1,
                     "ocr_engine": self._ocr_engine_label,
                     "ocr_engine_version": self._ocr_engine_version,
                     "ocr_duration_ms": round(ocr_elapsed * 1000, 3),
                     "ocr_status": ocr_status,
-                    "ocr_backend_used": backend_used_label,
-                    "ocr_backend_version": backend_used_version,
-                    "ocr_backend_attempts": backend_attempts,
-                    "ocr_backend_failures": backend_failures,
                     "raw_recognition_count": len(recognition or []),
                     "accepted_entry_count": len(debug_entries),
-                    "group_count": len(groups),
-                    "confidence": confidence_stats,
-                    "ocr_entries": debug_entries_payload,
-                    "ocr_text": ocr_text_lines,
                     "fallback_line_count": len(fallback_lines),
-                    "fallback_lines": fallback_lines,
                     "text_layer_present": had_text_layer,
                     "no_text_reason": no_text_reason,
-                    "markdown_entries": entries,
-                    "fallback_used": fallback_was_used,
-                    "image_array_file": image_array_filename,
-                    "image_size": {"width": full_image.width, "height": full_image.height},
-                    "raw_recognition_preview": raw_preview,
-                    "include_image": include_image,
-                    "has_raster_images": bool(page_images),
-                    "has_vector_drawings": bool(page_drawings),
-                    "visual_region_count": len(visual_regions),
+                    "debug_assets": self._retain_debug_assets,
                 }
+                LOGGER.debug(
+                    "Slide %s OCR debug summary: %s",
+                    page_number + 1,
+                    json.dumps(debug_summary, ensure_ascii=False),
+                )
 
-                debug_path = asset_dir / f"slide-{page_number + 1:03d}-ocr.json"
-                try:
-                    debug_path.write_text(
-                        json.dumps(debug_payload, indent=2, ensure_ascii=False),
-                        encoding="utf-8",
-                    )
-                except Exception:  # pragma: no cover - debug persistence best effort
-                    LOGGER.exception(
-                        "Failed to persist OCR debug payload for slide %s",
-                        page_number + 1,
-                    )
-                else:
-                    summary_payload = {
-                        key: debug_payload[key]
-                        for key in (
-                            "page",
-                            "ocr_engine",
-                            "ocr_engine_version",
-                            "ocr_duration_ms",
-                            "ocr_status",
-                            "raw_recognition_count",
-                            "accepted_entry_count",
-                            "fallback_line_count",
-                            "text_layer_present",
-                            "no_text_reason",
-                        )
+                if self._retain_debug_assets:
+                    debug_entries_payload = [
+                        {
+                            "text": item["text"],
+                            "confidence": round(item["confidence"], 6),
+                            "center_y": round(item["center_y"], 3),
+                            "box": [
+                                [round(point[0], 3), round(point[1], 3)]
+                                for point in item["box"]
+                            ],
+                        }
+                        for item in debug_entries
+                    ]
+
+                    debug_payload = {
+                        "page": page_number + 1,
+                        "ocr_engine": self._ocr_engine_label,
+                        "ocr_engine_version": self._ocr_engine_version,
+                        "ocr_duration_ms": round(ocr_elapsed * 1000, 3),
+                        "ocr_status": ocr_status,
+                        "ocr_backend_used": backend_used_label,
+                        "ocr_backend_version": backend_used_version,
+                        "ocr_backend_attempts": backend_attempts,
+                        "ocr_backend_failures": backend_failures,
+                        "raw_recognition_count": len(recognition or []),
+                        "accepted_entry_count": len(debug_entries),
+                        "group_count": len(groups),
+                        "confidence": confidence_stats,
+                        "ocr_entries": debug_entries_payload,
+                        "ocr_text": ocr_text_lines,
+                        "fallback_line_count": len(fallback_lines),
+                        "fallback_lines": fallback_lines,
+                        "text_layer_present": had_text_layer,
+                        "no_text_reason": no_text_reason,
+                        "markdown_entries": entries,
+                        "fallback_used": fallback_was_used,
+                        "image_array_file": image_array_filename,
+                        "image_size": {
+                            "width": full_image.width,
+                            "height": full_image.height,
+                        },
+                        "raw_recognition_preview": raw_preview,
+                        "include_image": include_image,
+                        "has_raster_images": bool(page_images),
+                        "has_vector_drawings": bool(page_drawings),
+                        "visual_region_count": len(visual_regions),
                     }
-                    LOGGER.debug(
-                        "Slide %s OCR debug summary: %s",
-                        page_number + 1,
-                        json.dumps(summary_payload, ensure_ascii=False),
-                    )
-                    LOGGER.debug(
-                        "Slide %s OCR debug stored at %s",
-                        page_number + 1,
-                        debug_path,
-                    )
+
+                    debug_path = asset_dir / f"slide-{page_number + 1:03d}-ocr.json"
+                    try:
+                        debug_path.write_text(
+                            json.dumps(debug_payload, indent=2, ensure_ascii=False),
+                            encoding="utf-8",
+                        )
+                    except Exception:  # pragma: no cover - debug persistence best effort
+                        LOGGER.exception(
+                            "Failed to persist OCR debug payload for slide %s",
+                            page_number + 1,
+                        )
+                    else:
+                        LOGGER.debug(
+                            "Slide %s OCR debug stored at %s",
+                            page_number + 1,
+                            debug_path,
+                        )
 
                 section_lines = [
                     f"## Slide {page_number + 1}",

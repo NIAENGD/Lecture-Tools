@@ -2249,9 +2249,15 @@ def create_app(
         settings = _load_ui_settings()
         converter_cls = PyMuPDFSlideConverter
         try:
-            return converter_cls(dpi=settings.slide_dpi)
+            return converter_cls(
+                dpi=settings.slide_dpi,
+                retain_debug_assets=settings.debug_enabled,
+            )
         except TypeError:  # pragma: no cover - allows monkeypatched callables without kwargs
-            return converter_cls()
+            try:
+                return converter_cls(dpi=settings.slide_dpi)
+            except TypeError:  # pragma: no cover - defensive for callables without kwargs
+                return converter_cls()
 
     def _require_hierarchy(lecture: LectureRecord) -> Tuple[ClassRecord, ModuleRecord]:
         module = repository.get_module(lecture.module_id)
@@ -5228,13 +5234,52 @@ def create_app(
                     error,
                 )
                 raise HTTPException(status_code=503, detail=storage_unavailable_detail) from error
-        _log_event("Storage usage calculated", total=usage.total, used=usage.used)
+
+        directory_size = _calculate_directory_size(root_path)
+        largest_entries: List[Dict[str, Any]] = []
+        try:
+            children = list(root_path.iterdir())
+        except (FileNotFoundError, PermissionError, OSError):
+            children = []
+
+        for child in children:
+            try:
+                entry = _build_storage_entry(child)
+            except (OSError, ValueError):
+                continue
+            try:
+                largest_entries.append(entry.model_dump())
+            except AttributeError:  # pragma: no cover - fallback for older pydantic
+                largest_entries.append(entry.dict())
+
+        largest_entries.sort(key=lambda item: item.get("size", 0), reverse=True)
+        largest_summary = [
+            {
+                "name": item.get("name", ""),
+                "path": item.get("path", ""),
+                "is_dir": bool(item.get("is_dir")),
+                "size": int(item.get("size", 0) or 0),
+            }
+            for item in largest_entries[:10]
+        ]
+
+        _log_event(
+            "Storage usage calculated",
+            total=usage.total,
+            used=usage.used,
+            directory_size=directory_size,
+        )
         return {
             "usage": {
                 "total": usage.total,
                 "used": usage.used,
                 "free": usage.free,
-            }
+            },
+            "storage": {
+                "path": root_path.as_posix(),
+                "size": directory_size,
+                "largest": largest_summary,
+            },
         }
 
     @app.get("/api/storage/list")
