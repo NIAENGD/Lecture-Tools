@@ -1997,8 +1997,7 @@
 
       .upload-file-info {
         display: flex;
-        align-items: center;
-        justify-content: space-between;
+        flex-direction: column;
         gap: 12px;
         padding: 12px 14px;
         border-radius: 10px;
@@ -2006,9 +2005,71 @@
         background: rgba(148, 163, 184, 0.12);
       }
 
+      .upload-file-summary {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .upload-file-actions {
+        display: flex;
+        justify-content: flex-end;
+      }
+
       .upload-file-name {
         font-weight: 600;
         word-break: break-word;
+      }
+
+      .upload-file-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .upload-file-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 12px;
+        border-radius: 8px;
+        border: 1px dashed var(--panel-border);
+        background: rgba(148, 163, 184, 0.08);
+        cursor: grab;
+        transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+      }
+
+      .upload-file-item:active {
+        cursor: grabbing;
+      }
+
+      .upload-file-item.dragging {
+        opacity: 0.7;
+        transform: scale(0.99);
+      }
+
+      .upload-file-item.drop-target {
+        border-style: solid;
+        border-color: var(--accent);
+        background: var(--accent-soft);
+      }
+
+      .upload-file-item-name {
+        flex: 1;
+        font-weight: 600;
+        word-break: break-word;
+      }
+
+      .upload-file-item-meta {
+        font-size: 0.85rem;
+        color: var(--muted);
+        white-space: nowrap;
       }
 
       .upload-progress {
@@ -5419,11 +5480,14 @@
           ></span>
         </label>
         <div id="upload-file-info" class="upload-file-info hidden">
-          <div>
+          <div class="upload-file-summary">
             <div id="upload-file-name" class="upload-file-name"></div>
             <div id="upload-file-size" class="upload-progress-text"></div>
           </div>
-          <button id="upload-clear" type="button" class="dialog-button secondary"></button>
+          <ul id="upload-file-list" class="upload-file-list hidden" aria-live="polite"></ul>
+          <div class="upload-file-actions">
+            <button id="upload-clear" type="button" class="dialog-button secondary"></button>
+          </div>
         </div>
         <div id="upload-progress-container" class="hidden">
           <div
@@ -5604,7 +5668,7 @@
                 gpu: 'GPU (hardware accelerated)',
               },
               labels: {
-                audio: 'Audio (.wav, .mp3, .m4a, .aac, .flac, .ogg, .opus)',
+                audio: 'Audio (.wav, .mp3, .mp4, .m4a, .aac, .flac, .ogg, .opus)',
                 masteredAudio: 'Mastered audio',
                 slides: 'Slides (PDF or document)',
                 transcript: 'Transcript',
@@ -6027,6 +6091,11 @@
                 success: 'Upload completed.',
                 failure: 'Upload failed. Please try again.',
                 progress: 'Upload progress',
+                fileProgress: 'File {{current}} of {{total}}',
+                filesSelected: '{{count}} files selected',
+                filesSummary: '{{count}} files • {{size}} total',
+                listHelp: 'Drag to reorder files before uploading.',
+                uploadingFile: 'Uploading {{name}} ({{current}} of {{total}})…',
                 action: 'Upload',
                 assetTitle: 'Upload {{asset}}',
                 assetDescription: 'Choose a new file to attach to this resource.',
@@ -6201,7 +6270,7 @@
                 gpu: 'GPU（硬件加速）',
               },
               labels: {
-                audio: '音频（.wav、.mp3、.m4a、.aac、.flac、.ogg、.opus）',
+                audio: '音频（.wav、.mp3、.mp4、.m4a、.aac、.flac、.ogg、.opus）',
                 masteredAudio: '优化音频',
                 slides: '课件（PDF 或文档）',
                 transcript: '逐字稿',
@@ -6616,6 +6685,11 @@
                 success: '上传完成。',
                 failure: '上传失败，请重试。',
                 progress: '上传进度',
+                fileProgress: '第 {{current}} 个文件，共 {{total}} 个',
+                filesSelected: '已选择 {{count}} 个文件',
+                filesSummary: '共 {{count}} 个文件，总计 {{size}}',
+                listHelp: '拖动即可在上传前重新排序文件。',
+                uploadingFile: '正在上传 {{name}}（第 {{current}} 个，共 {{total}} 个）…',
                 action: '上传',
                 assetTitle: '上传 {{asset}}',
                 assetDescription: '为此资源选择一个新文件。',
@@ -6790,7 +6864,7 @@
                 gpu: 'GPU (acelerado por hardware)',
               },
               labels: {
-                audio: 'Audio (.wav, .mp3, .m4a, .aac, .flac, .ogg, .opus)',
+                audio: 'Audio (.wav, .mp3, .mp4, .m4a, .aac, .flac, .ogg, .opus)',
                 masteredAudio: 'Audio masterizado',
                 slides: 'Diapositivas (PDF o documento)',
                 transcript: 'Transcripción',
@@ -7215,6 +7289,11 @@
                 success: 'Subida completada.',
                 failure: 'La subida falló. Vuelve a intentarlo.',
                 progress: 'Progreso de subida',
+                fileProgress: 'Archivo {{current}} de {{total}}',
+                filesSelected: '{{count}} archivos seleccionados',
+                filesSummary: '{{count}} archivos • {{size}} en total',
+                listHelp: 'Arrastra para reordenar los archivos antes de subirlos.',
+                uploadingFile: 'Subiendo {{name}} ({{current}} de {{total}})…',
                 action: 'Subir',
                 assetTitle: 'Subir {{asset}}',
                 assetDescription: 'Elige un archivo nuevo para este recurso.',
@@ -7391,7 +7470,7 @@
                 gpu: 'GPU (accélération matérielle)',
               },
               labels: {
-                audio: 'Audio (.wav, .mp3, .m4a, .aac, .flac, .ogg, .opus)',
+                audio: 'Audio (.wav, .mp3, .mp4, .m4a, .aac, .flac, .ogg, .opus)',
                 masteredAudio: 'Audio masterisé',
                 slides: 'Diapositives (PDF ou document)',
                 transcript: 'Transcription',
@@ -7821,6 +7900,11 @@
                 success: 'Téléversement terminé.',
                 failure: 'Le téléversement a échoué. Réessayez.',
                 progress: 'Progression du téléversement',
+                fileProgress: 'Fichier {{current}} sur {{total}}',
+                filesSelected: '{{count}} fichiers sélectionnés',
+                filesSummary: '{{count}} fichiers • {{size}} au total',
+                listHelp: 'Faites glisser pour réorganiser les fichiers avant le téléversement.',
+                uploadingFile: 'Téléversement de {{name}} ({{current}} sur {{total}})…',
                 action: 'Téléverser',
                 assetTitle: 'Téléverser {{asset}}',
                 assetDescription: 'Choisissez un nouveau fichier à associer à cette ressource.',
@@ -8680,6 +8764,7 @@
             browse: document.getElementById('upload-browse-button'),
             fileInfo: document.getElementById('upload-file-info'),
             fileName: document.getElementById('upload-file-name'),
+            fileList: document.getElementById('upload-file-list'),
             fileSize: document.getElementById('upload-file-size'),
             clear: document.getElementById('upload-clear'),
             progressContainer: document.getElementById('upload-progress-container'),
@@ -8781,7 +8866,7 @@
           {
             key: 'audio_path',
             labelKey: 'assets.labels.audio',
-            accept: 'audio/*,.wav,.mp3,.m4a,.aac,.flac,.ogg,.oga,.opus',
+            accept: 'audio/*,video/mp4,.wav,.mp3,.mp4,.m4a,.aac,.flac,.ogg,.oga,.opus',
             type: 'audio',
           },
           {
@@ -13023,21 +13108,22 @@
 
             dialogState.uploadActive = true;
             let closed = false;
-            let selectedFile = null;
-            let selectedMeta = null;
-            let selectedCleanup = null;
+            let selectedEntries = [];
             let selecting = false;
             let uploading = false;
             let uploadComplete = false;
             let uploadResult = null;
+            let uploadResults = [];
             let uploadStage = 'idle';
             let processingInBackground = false;
             let autoCloseOnComplete = false;
+            let dragSourceIndex = null;
 
             const allowBackgroundProcessing = options.allowBackgroundProcessing === true;
             const enableProcessingStage = options.enableProcessingStage !== false;
             const backgroundProcessingMessage =
               typeof options.backgroundProcessing === 'string' ? options.backgroundProcessing : '';
+            const allowMultiple = options.multiple === true;
 
             const actionLabelCandidate =
               options.uploadLabel ||
@@ -13061,6 +13147,11 @@
               success: options.success || t('dialogs.upload.success'),
               failure: options.failure || t('dialogs.upload.failure'),
               progress: options.progressLabel || t('dialogs.upload.progress'),
+              fileProgress: options.fileProgressLabel || t('dialogs.upload.fileProgress'),
+              filesSelected: options.filesSelectedLabel || t('dialogs.upload.filesSelected'),
+              filesSummary: options.filesSummaryLabel || t('dialogs.upload.filesSummary'),
+              listHelp: options.listHelpLabel || t('dialogs.upload.listHelp'),
+              uploadingFile: options.uploadingFileLabel || t('dialogs.upload.uploadingFile'),
               action: actionLabelCandidate || 'Upload',
               close: options.closeLabel || t('common.actions.close') || 'Close',
             };
@@ -13112,6 +13203,10 @@
               if (dialog.fileName) {
                 dialog.fileName.textContent = '';
               }
+              if (dialog.fileList) {
+                dialog.fileList.innerHTML = '';
+                dialog.fileList.classList.add('hidden');
+              }
               if (dialog.fileSize) {
                 dialog.fileSize.textContent = '';
               }
@@ -13135,7 +13230,8 @@
               ) {
                 document.body.classList.remove('dialog-open');
               }
-              selectedCleanup = null;
+              selectedEntries = [];
+              dragSourceIndex = null;
               if (previousActive) {
                 previousActive.focus({ preventScroll: true });
               }
@@ -13267,8 +13363,9 @@
               }
               const readyLabel =
                 labels.action || t('dialogs.upload.action') || t('common.actions.upload') || 'Upload';
+              const hasSelection = selectedEntries.length > 0;
               dialog.confirm.textContent = readyLabel;
-              dialog.confirm.disabled = !selectedFile || !uploadHandler;
+              dialog.confirm.disabled = !hasSelection || !uploadHandler;
               if (dialog.cancel) {
                 dialog.cancel.textContent = t('dialog.cancel');
                 dialog.cancel.disabled = false;
@@ -13329,139 +13426,349 @@
             }
 
             async function runSelectedCleanup() {
-              const cleanupFn = selectedCleanup;
-              selectedCleanup = null;
-              if (typeof cleanupFn !== 'function') {
+              const cleanups = [];
+              selectedEntries.forEach((entry) => {
+                if (entry && typeof entry.cleanup === 'function') {
+                  cleanups.push(entry.cleanup);
+                  entry.cleanup = null;
+                }
+              });
+              if (!cleanups.length) {
                 return;
               }
-              try {
-                await cleanupFn();
-              } catch (error) {
-                console.warn('Failed to clear upload selection metadata', error);
+              for (const cleanupFn of cleanups) {
+                try {
+                  await cleanupFn();
+                } catch (error) {
+                  console.warn('Failed to clear upload selection metadata', error);
+                }
               }
             }
 
-            async function setSelectedFile(file) {
+
+            function renderSelectedFiles(summaryMessage = '') {
+              const total = selectedEntries.length;
+              if (!dialog.fileInfo) {
+                return;
+              }
+              if (total === 0) {
+                dialog.fileInfo.classList.add('hidden');
+                if (dialog.fileName) {
+                  dialog.fileName.textContent = '';
+                }
+                if (dialog.fileSize) {
+                  dialog.fileSize.textContent = '';
+                }
+                if (dialog.fileList) {
+                  dialog.fileList.innerHTML = '';
+                  dialog.fileList.classList.add('hidden');
+                }
+                if (summaryMessage) {
+                  setStatus(summaryMessage);
+                }
+                return;
+              }
+
+              dialog.fileInfo.classList.remove('hidden');
+
+              if (total === 1) {
+                const entry = selectedEntries[0];
+                if (dialog.fileName) {
+                  dialog.fileName.textContent = entry?.file?.name || '';
+                }
+                if (dialog.fileSize) {
+                  const sizeText =
+                    entry && entry.file && typeof entry.file.size === 'number' && Number.isFinite(entry.file.size)
+                      ? formatBytes(entry.file.size)
+                      : '';
+                  dialog.fileSize.textContent = sizeText;
+                }
+                if (dialog.fileList) {
+                  dialog.fileList.innerHTML = '';
+                  dialog.fileList.classList.add('hidden');
+                }
+                if (summaryMessage) {
+                  setStatus(summaryMessage);
+                } else if (!uploading) {
+                  setStatus(labels.waiting);
+                }
+                return;
+              }
+
+              if (dialog.fileList) {
+                dialog.fileList.innerHTML = '';
+                dialog.fileList.classList.remove('hidden');
+              }
+
+              const totalSize = selectedEntries.reduce((sum, entry) => {
+                const value =
+                  entry && entry.file && typeof entry.file.size === 'number' && Number.isFinite(entry.file.size)
+                    ? entry.file.size
+                    : 0;
+                return sum + value;
+              }, 0);
+              const sizeText = totalSize > 0 ? formatBytes(totalSize) : '';
+
+              const selectedText =
+                typeof labels.filesSelected === 'string' && labels.filesSelected
+                  ? formatTemplate(labels.filesSelected, { count: total })
+                  : `${total} files selected`;
+              let summaryText;
+              if (typeof labels.filesSummary === 'string' && labels.filesSummary && sizeText) {
+                summaryText = formatTemplate(labels.filesSummary, { count: total, size: sizeText });
+              } else if (typeof labels.filesSelected === 'string' && labels.filesSelected) {
+                summaryText = formatTemplate(labels.filesSelected, { count: total });
+              } else if (sizeText) {
+                summaryText = `${total} files • ${sizeText}`;
+              } else {
+                summaryText = `${total} files selected`;
+              }
+
+              if (dialog.fileName) {
+                dialog.fileName.textContent = selectedText;
+              }
+              if (dialog.fileSize) {
+                dialog.fileSize.textContent = summaryText;
+              }
+
+              if (dialog.fileList) {
+                selectedEntries.forEach((entry, index) => {
+                  const item = document.createElement('li');
+                  item.className = 'upload-file-item';
+                  item.dataset.index = String(index);
+                  item.setAttribute('draggable', uploading ? 'false' : 'true');
+                  const name = document.createElement('span');
+                  name.className = 'upload-file-item-name';
+                  name.textContent = entry?.file?.name || '';
+                  const meta = document.createElement('span');
+                  meta.className = 'upload-file-item-meta';
+                  const entrySize =
+                    entry && entry.file && typeof entry.file.size === 'number' && Number.isFinite(entry.file.size)
+                      ? formatBytes(entry.file.size)
+                      : '';
+                  meta.textContent = entrySize;
+                  item.appendChild(name);
+                  item.appendChild(meta);
+                  item.addEventListener('dragstart', handleFileItemDragStart);
+                  item.addEventListener('dragenter', handleFileItemDragEnter);
+                  item.addEventListener('dragover', handleFileItemDragOver);
+                  item.addEventListener('dragleave', handleFileItemDragLeave);
+                  item.addEventListener('drop', handleFileItemDrop);
+                  item.addEventListener('dragend', handleFileItemDragEnd);
+                  dialog.fileList.appendChild(item);
+                });
+              }
+
+              if (summaryMessage) {
+                setStatus(summaryMessage);
+              } else if (labels.listHelp) {
+                setStatus(labels.listHelp, 'info');
+              } else if (!uploading) {
+                setStatus(labels.waiting);
+              }
+            }
+
+            function handleFileItemDragStart(event) {
+              if (uploading) {
+                event.preventDefault();
+                return;
+              }
+              const target = event.currentTarget;
+              if (!(target instanceof HTMLElement)) {
+                return;
+              }
+              const index = Number(target.dataset.index || target.getAttribute('data-index'));
+              if (!Number.isFinite(index)) {
+                return;
+              }
+              dragSourceIndex = index;
+              target.classList.add('dragging');
+              if (event.dataTransfer) {
+                event.dataTransfer.effectAllowed = 'move';
+                event.dataTransfer.setData('text/plain', String(index));
+              }
+            }
+
+            function handleFileItemDragEnter(event) {
+              if (uploading) {
+                return;
+              }
+              const target = event.currentTarget;
+              if (target instanceof HTMLElement) {
+                target.classList.add('drop-target');
+              }
+            }
+
+            function handleFileItemDragOver(event) {
+              if (uploading) {
+                return;
+              }
+              event.preventDefault();
+              if (event.dataTransfer) {
+                event.dataTransfer.dropEffect = 'move';
+              }
+            }
+
+            function handleFileItemDragLeave(event) {
+              if (uploading) {
+                return;
+              }
+              const target = event.currentTarget;
+              if (target instanceof HTMLElement) {
+                target.classList.remove('drop-target');
+              }
+            }
+
+            function handleFileItemDrop(event) {
+              if (uploading) {
+                return;
+              }
+              event.preventDefault();
+              const target = event.currentTarget;
+              const targetIndex =
+                target instanceof HTMLElement
+                  ? Number(target.dataset.index || target.getAttribute('data-index'))
+                  : NaN;
+              const sourceIndex =
+                typeof dragSourceIndex === 'number'
+                  ? dragSourceIndex
+                  : Number(event.dataTransfer?.getData('text/plain'));
+              dragSourceIndex = null;
+              if (target instanceof HTMLElement) {
+                target.classList.remove('drop-target');
+              }
+              if (!Number.isFinite(sourceIndex) || !Number.isFinite(targetIndex) || sourceIndex === targetIndex) {
+                renderSelectedFiles();
+                return;
+              }
+              const [entry] = selectedEntries.splice(sourceIndex, 1);
+              if (entry) {
+                selectedEntries.splice(targetIndex, 0, entry);
+              }
+              renderSelectedFiles();
+            }
+
+            function handleFileItemDragEnd(event) {
+              const target = event.currentTarget;
+              if (target instanceof HTMLElement) {
+                target.classList.remove('dragging');
+                target.classList.remove('drop-target');
+              }
+              dragSourceIndex = null;
+            }
+
+            async function setSelectedFiles(files) {
               if (selecting) {
                 return;
               }
               selecting = true;
               try {
-                if (!file) {
+                const candidates = Array.isArray(files)
+                  ? files.filter((item) => item instanceof Blob)
+                  : files
+                  ? [files]
+                  : [];
+
+                if (!candidates.length) {
                   await runSelectedCleanup();
-                  selectedFile = null;
-                  selectedMeta = null;
-                  if (dialog.fileInfo) {
-                    dialog.fileInfo.classList.add('hidden');
-                  }
-                  if (dialog.fileName) {
-                    dialog.fileName.textContent = '';
-                  }
-                  if (dialog.fileSize) {
-                    dialog.fileSize.textContent = '';
-                  }
+                  selectedEntries = [];
+                  dragSourceIndex = null;
                   if (dialog.input) {
                     dialog.input.value = '';
                   }
                   resetProgress();
-                  setStatus(labels.waiting);
+                  renderSelectedFiles();
                   uploadComplete = false;
+                  setStatus(labels.waiting);
                   updateActionState();
                   return;
                 }
 
-                if (selectedCleanup) {
-                  await runSelectedCleanup();
-                }
+                const trimmed = allowMultiple ? candidates : candidates.slice(0, 1);
 
-                let meta = null;
-                let summary = '';
-                let cleanupFn = null;
-                if (fileSelectedHandler) {
-                  setStatus(labels.preparing);
-                  try {
-                    const result = await runWithSuspendedDialog(() => fileSelectedHandler(file));
-                    if (closed) {
-                      return;
-                    }
-                    if (
-                      result === false ||
-                      (result && result.cancelled === true) ||
-                      (result && result.confirmed === false)
-                    ) {
+                await runSelectedCleanup();
+
+                const entries = [];
+                let summaryMessage = '';
+
+                if (trimmed.length === 1) {
+                  const file = trimmed[0];
+                  let meta = null;
+                  let cleanupFn = null;
+                  let summary = '';
+                  if (fileSelectedHandler) {
+                    setStatus(labels.preparing);
+                    try {
+                      const result = await runWithSuspendedDialog(() => fileSelectedHandler(file));
+                      if (closed) {
+                        return;
+                      }
+                      if (
+                        result === false ||
+                        (result && result.cancelled === true) ||
+                        (result && result.confirmed === false)
+                      ) {
                       if (dialog.input) {
                         dialog.input.value = '';
                       }
                       setStatus(labels.waiting);
                       uploadComplete = false;
-                      selectedFile = null;
-                      selectedMeta = null;
+                      selectedEntries = [];
+                      dragSourceIndex = null;
+                      renderSelectedFiles();
                       updateActionState();
                       return;
                     }
-                    if (result && typeof result === 'object' && 'meta' in result) {
-                      meta = result.meta;
-                      if (typeof result.summary === 'string') {
-                        summary = result.summary;
+                      if (result && typeof result === 'object' && 'meta' in result) {
+                        meta = result.meta;
+                        if (typeof result.summary === 'string') {
+                          summary = result.summary;
+                        }
+                        if (typeof result.cleanup === 'function') {
+                          cleanupFn = result.cleanup;
+                        }
+                      } else if (result && typeof result === 'object') {
+                        meta = result;
+                        if (typeof result.cleanup === 'function') {
+                          cleanupFn = result.cleanup;
+                        }
                       }
-                      if (typeof result.cleanup === 'function') {
-                        cleanupFn = result.cleanup;
-                      } else {
-                        cleanupFn = null;
-                      }
-                    } else if (result && typeof result === 'object') {
-                      meta = result;
-                      if (typeof result.cleanup === 'function') {
-                        cleanupFn = result.cleanup;
-                      } else {
-                        cleanupFn = null;
-                      }
-                    }
-                  } catch (error) {
-                    const message =
-                      error instanceof Error && error.message ? error.message : labels.failure;
+                    } catch (error) {
+                    const message = error instanceof Error && error.message ? error.message : labels.failure;
                     setStatus(message, 'error');
                     uploadComplete = false;
-                    selectedFile = null;
-                    selectedMeta = null;
-                    selectedCleanup = null;
+                    selectedEntries = [];
+                    dragSourceIndex = null;
+                    renderSelectedFiles();
                     updateActionState();
                     return;
                   }
+                  }
+                  entries.push({
+                    file,
+                    meta: meta && typeof meta === 'object' ? meta : null,
+                    cleanup: typeof cleanupFn === 'function' ? cleanupFn : null,
+                    summary,
+                  });
+                  summaryMessage = summary;
+                } else {
+                  trimmed.forEach((file) => {
+                    entries.push({ file, meta: null, cleanup: null, summary: '' });
+                  });
                 }
 
-                selectedFile = file;
-                selectedMeta = meta && typeof meta === 'object' ? meta : null;
-                selectedCleanup = cleanupFn;
-                if (dialog.fileInfo) {
-                  dialog.fileInfo.classList.remove('hidden');
-                }
-                if (dialog.fileName) {
-                  dialog.fileName.textContent = file.name;
-                }
-                if (dialog.fileSize) {
-                  const sizeText =
-                    typeof file.size === 'number' && Number.isFinite(file.size)
-                      ? formatBytes(file.size)
-                      : '';
-                  dialog.fileSize.textContent = sizeText;
-                }
+                selectedEntries = entries;
+                dragSourceIndex = null;
                 if (dialog.input) {
                   dialog.input.value = '';
                 }
+                renderSelectedFiles(summaryMessage);
                 uploadComplete = false;
-                resetProgress();
-                if (summary) {
-                  setStatus(summary);
-                } else {
-                  setStatus(labels.waiting);
-                }
                 updateActionState();
               } finally {
                 selecting = false;
               }
             }
-
             async function handleDrop(event) {
               event.preventDefault();
               if (dialog.dropzone) {
@@ -13469,20 +13776,22 @@
               }
               const files = event.dataTransfer?.files;
               if (files && files.length > 0) {
-                await setSelectedFile(files[0]);
+                const selection = allowMultiple ? Array.from(files) : [files[0]];
+                await setSelectedFiles(selection);
               }
             }
 
             async function handleInputChange(event) {
               const files = event.target?.files;
               if (files && files.length > 0) {
-                await setSelectedFile(files[0]);
+                const selection = allowMultiple ? Array.from(files) : [files[0]];
+                await setSelectedFiles(selection);
               }
             }
 
             async function handleClearSelection(event) {
               event.preventDefault();
-              await setSelectedFile(null);
+              await setSelectedFiles([]);
             }
 
             function openFilePicker(input) {
@@ -13540,26 +13849,65 @@
               }
             }
 
+
             async function performUpload() {
-              if (!uploadHandler || !selectedFile || uploading) {
+              if (!uploadHandler || !selectedEntries.length || uploading) {
                 return;
               }
               uploading = true;
               uploadComplete = false;
+              uploadResults = [];
               resetProgress();
               uploadStage = 'uploading';
               updateActionState();
-              setStatus(labels.uploading);
+              renderSelectedFiles();
+              const total = selectedEntries.length;
+              const results = [];
               try {
-                const result = await uploadHandler(selectedFile, {
-                  reportProgress: (ratio) => {
-                    if (typeof ratio === 'number') {
-                      updateProgress(ratio);
+                for (let index = 0; index < total; index += 1) {
+                  const entry = selectedEntries[index];
+                  if (!entry || !(entry.file instanceof Blob)) {
+                    continue;
+                  }
+                  const baseProgress = total > 0 ? index / total : 0;
+                  const progressShare = total > 0 ? 1 / total : 1;
+                  if (total > 1) {
+                    const progressLabel =
+                      typeof labels.fileProgress === 'string' && labels.fileProgress
+                        ? formatTemplate(labels.fileProgress, { current: index + 1, total })
+                        : '';
+                    if (typeof labels.uploadingFile === 'string' && labels.uploadingFile) {
+                      const message = formatTemplate(labels.uploadingFile, {
+                        name: entry?.file?.name || t('dialogs.upload.title'),
+                        current: index + 1,
+                        total,
+                      });
+                      setStatus(message, 'info');
+                    } else if (progressLabel) {
+                      setStatus(progressLabel, 'info');
+                    } else {
+                      setStatus(labels.uploading);
                     }
-                  },
-                  meta: selectedMeta,
-                });
-                uploadResult = result ?? null;
+                  } else {
+                    setStatus(labels.uploading);
+                  }
+                  const result = await uploadHandler(entry.file, {
+                    reportProgress: (ratio) => {
+                      if (typeof ratio === 'number') {
+                        const constrained = Math.max(0, Math.min(1, ratio));
+                        const aggregate = Math.min(1, baseProgress + constrained * progressShare);
+                        updateProgress(aggregate);
+                      }
+                    },
+                    meta: entry.meta,
+                  });
+                  results.push(result ?? null);
+                  if (total > 0) {
+                    updateProgress((index + 1) / total);
+                  }
+                }
+                uploadResults = results;
+                uploadResult = results.length <= 1 ? results[0] ?? null : results;
                 uploadComplete = true;
                 uploading = false;
                 uploadStage = 'idle';
@@ -13572,9 +13920,12 @@
                   void resolveAndClose({
                     confirmed: true,
                     uploaded: true,
-                    file: selectedFile,
+                    file: selectedEntries[0]?.file || null,
+                    files: selectedEntries.map((entry) => entry.file),
                     result: uploadResult,
-                    meta: selectedMeta,
+                    results: uploadResults,
+                    meta: selectedEntries.length === 1 ? selectedEntries[0]?.meta || null : null,
+                    metas: selectedEntries.map((entry) => entry.meta || null),
                   });
                   return;
                 }
@@ -13582,17 +13933,16 @@
                 uploading = false;
                 uploadComplete = false;
                 uploadResult = null;
+                uploadResults = [];
                 uploadStage = 'idle';
                 processingInBackground = false;
                 autoCloseOnComplete = false;
-                const message =
-                  error instanceof Error && error.message ? error.message : labels.failure;
+                const message = error instanceof Error && error.message ? error.message : labels.failure;
                 setStatus(message, 'error');
                 resetProgress();
                 updateActionState();
               }
             }
-
             function getFocusableElements() {
               const elements = [];
               if (dialog.dropzone instanceof HTMLElement) {
@@ -13640,13 +13990,19 @@
 
             function handleConfirm(event) {
               event.preventDefault();
+              const firstEntry = selectedEntries[0] || null;
+              const files = selectedEntries.map((entry) => entry.file);
+              const metas = selectedEntries.map((entry) => entry.meta || null);
               if (processingInBackground && allowBackgroundProcessing && uploading) {
                 void resolveAndClose({
                   confirmed: false,
                   uploaded: uploadComplete,
-                  file: selectedFile,
+                  file: firstEntry?.file || null,
+                  files,
                   result: uploadResult,
-                  meta: selectedMeta,
+                  results: uploadResults,
+                  meta: firstEntry?.meta || null,
+                  metas,
                   processing: true,
                 });
                 return;
@@ -13655,9 +14011,12 @@
                 void resolveAndClose({
                   confirmed: true,
                   uploaded: true,
-                  file: selectedFile,
+                  file: firstEntry?.file || null,
+                  files,
                   result: uploadResult,
-                  meta: selectedMeta,
+                  results: uploadResults,
+                  meta: selectedEntries.length === 1 ? firstEntry?.meta || null : null,
+                  metas,
                 });
                 return;
               }
@@ -13666,12 +14025,16 @@
 
             function handleCancel(event) {
               event?.preventDefault?.();
+              const firstEntry = selectedEntries[0] || null;
               void resolveAndClose({
                 confirmed: false,
                 uploaded: uploadComplete,
-                file: selectedFile,
+                file: firstEntry?.file || null,
+                files: selectedEntries.map((entry) => entry.file),
                 result: uploadResult,
-                meta: selectedMeta,
+                results: uploadResults,
+                meta: selectedEntries.length === 1 ? firstEntry?.meta || null : null,
+                metas: selectedEntries.map((entry) => entry.meta || null),
                 processing: processingInBackground && uploading,
               });
             }
@@ -13706,6 +14069,11 @@
             }
             if (dialog.input) {
               dialog.input.accept = accept;
+              if (allowMultiple) {
+                dialog.input.setAttribute('multiple', 'multiple');
+              } else {
+                dialog.input.removeAttribute('multiple');
+              }
               dialog.input.value = '';
             }
             if (dialog.progress) {
@@ -13719,11 +14087,12 @@
             if (dialog.fileInfo) {
               dialog.fileInfo.classList.add('hidden');
             }
-            selectedFile = null;
-            selectedMeta = null;
+            selectedEntries = [];
+            dragSourceIndex = null;
             uploading = false;
             uploadComplete = false;
             uploadResult = null;
+            uploadResults = [];
             resetProgress();
             setStatus(labels.waiting);
             updateActionState();
@@ -15692,8 +16061,8 @@
           const name = typeof file.name === 'string' ? file.name.toLowerCase() : '';
           const type = typeof file.type === 'string' ? file.type.toLowerCase() : '';
           const extension = name.includes('.') ? name.slice(name.lastIndexOf('.') + 1) : '';
-          const audioExtensions = new Set(['wav', 'mp3', 'm4a', 'aac', 'flac', 'ogg', 'oga', 'opus']);
-          if (type.startsWith('audio/') || audioExtensions.has(extension)) {
+          const audioExtensions = new Set(['wav', 'mp3', 'mp4', 'm4a', 'aac', 'flac', 'ogg', 'oga', 'opus']);
+          if (type.startsWith('audio/') || type === 'video/mp4' || audioExtensions.has(extension)) {
             return 'audio';
           }
           if (type === 'application/pdf' || extension === 'pdf') {
@@ -18150,20 +18519,21 @@
           const backgroundProcessingLabel =
             kind === 'audio' ? t('dialogs.upload.backgroundProcessing') : undefined;
 
-          const dialogResult = await showUploadDialog({
-            accept: definition.accept || '',
-            title: t('dialogs.upload.assetTitle', { asset: assetLabel }),
-            description: t('dialogs.upload.assetDescription'),
-            prompt: t('dialogs.upload.prompt'),
-            help: t('dialogs.upload.help'),
-            browseLabel: t('dialogs.upload.browse'),
-            clearLabel: t('dialogs.upload.clear'),
-            uploadLabel: t('dialogs.upload.action'),
-            processing: processingLabel,
-            processingAction: t('dialogs.upload.processingAction'),
-            allowBackgroundProcessing,
-            enableProcessingStage,
-            backgroundProcessing: backgroundProcessingLabel,
+            const dialogResult = await showUploadDialog({
+              accept: definition.accept || '',
+              title: t('dialogs.upload.assetTitle', { asset: assetLabel }),
+              description: t('dialogs.upload.assetDescription'),
+              prompt: t('dialogs.upload.prompt'),
+              help: t('dialogs.upload.help'),
+              browseLabel: t('dialogs.upload.browse'),
+              clearLabel: t('dialogs.upload.clear'),
+              uploadLabel: t('dialogs.upload.action'),
+              multiple: kind === 'audio' || kind === 'slides',
+              processing: processingLabel,
+              processingAction: t('dialogs.upload.processingAction'),
+              allowBackgroundProcessing,
+              enableProcessingStage,
+              backgroundProcessing: backgroundProcessingLabel,
             onFileSelected: null,
             onUpload: async (file, helpers) => {
               const formData = new FormData();
