@@ -3578,6 +3578,20 @@ def create_app(
         finally:
             await file.close()
 
+        if asset_key == "audio" and requires_conversion:
+            converted_path, created = ensure_wav(
+                target,
+                output_dir=lecture_paths.raw_dir,
+                stem=stem,
+                timestamp=timestamp,
+            )
+            if created and converted_path != target:
+                with contextlib.suppress(FileNotFoundError):
+                    target.unlink()
+                target = converted_path
+            elif converted_path != target:
+                target = converted_path
+
         relative = target.relative_to(storage_root).as_posix()
         update_kwargs: Dict[str, Optional[str]] = {attribute: relative}
         processed_relative: Optional[str] = None
@@ -3615,6 +3629,62 @@ def create_app(
                 _delete_asset_path(lecture.processed_audio_path)
             update_kwargs["processed_audio_path"] = None
             processed_relative = None
+            settings = _load_ui_settings()
+            audio_mastering_requested = bool(
+                getattr(settings, "audio_mastering_enabled", True)
+            )
+            if audio_mastering_requested:
+                def _process_audio_background() -> None:
+                    raw_file = storage_root / relative
+                    start_message = "====> Preparing audio mastering…"
+                    completion_message = "====> Audio mastering completed."
+                    context = {"operation": "audio_mastering"}
+                    processing_tracker.start(lecture_id, start_message, context=context)
+                    try:
+                        time.sleep(0.1)
+                        lecture_paths.processed_audio_dir.mkdir(parents=True, exist_ok=True)
+                        base_stem = Path(raw_file.name).stem or "audio"
+                        processed_name = f"{base_stem}-master.wav"
+                        processed_target = lecture_paths.processed_audio_dir / processed_name
+                        if processed_target.exists():
+                            processed_name = build_timestamped_name(
+                                f"{base_stem}-master", extension=".wav"
+                            )
+                            processed_target = (
+                                lecture_paths.processed_audio_dir / processed_name
+                            )
+                        shutil.copy2(raw_file, processed_target)
+                        processed_rel = (
+                            processed_target.relative_to(storage_root).as_posix()
+                        )
+                        repository.update_lecture_assets(
+                            lecture_id,
+                            processed_audio_path=processed_rel,
+                            audio_path=processed_rel,
+                        )
+                    except Exception as error:  # noqa: BLE001 - defensive
+                        LOGGER.exception(
+                            "Audio mastering task failed for lecture %s", lecture_id
+                        )
+                        processing_tracker.fail(
+                            lecture_id,
+                            f"====> {error}",
+                            context=context,
+                            exception=error,
+                        )
+                    else:
+                        processing_tracker.finish(
+                            lecture_id, completion_message, context=context
+                        )
+
+                pending_jobs.append(
+                    lambda: _enqueue_background_job(
+                        _process_audio_background,
+                        context_label="audio mastering",
+                    )
+                )
+                processing_queued = True
+                processing_operations.add("audio_mastering")
 
         if asset_key == "slides":
             if lecture.slide_image_dir:

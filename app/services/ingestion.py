@@ -5,9 +5,10 @@ from __future__ import annotations
 import logging
 import shutil
 import time
+import zipfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Optional, Protocol
+from typing import Callable, List, Optional, Protocol, Sequence
 
 from .. import config as config_module
 from ..config import AppConfig
@@ -199,19 +200,34 @@ class LectureIngestor:
         description: str = "",
         audio_file: Optional[Path] = None,
         slide_file: Optional[Path] = None,
+        audio_files: Optional[Sequence[Path]] = None,
+        slide_files: Optional[Sequence[Path]] = None,
     ) -> LectureRecord:
         """Ingest provided assets and return the resulting lecture record."""
 
+        audio_sources: List[Path] = []
+        slide_sources: List[Path] = []
+
+        if audio_file is not None:
+            audio_sources.append(audio_file)
+        if audio_files:
+            audio_sources.extend(list(audio_files))
+        if slide_file is not None:
+            slide_sources.append(slide_file)
+        if slide_files:
+            slide_sources.extend(list(slide_files))
+
+        if not audio_sources and not slide_sources:
+            raise IngestionError("At least one of audio_file or slide_file must be provided")
+
         LOGGER.debug(
-            "Beginning ingestion run for class='%s', module='%s', lecture='%s' (audio=%s, slides=%s)",
+            "Beginning ingestion run for class='%s', module='%s', lecture='%s' (audio_count=%d, slide_count=%d)",
             class_name,
             module_name,
             lecture_name,
-            audio_file,
-            slide_file,
+            len(audio_sources),
+            len(slide_sources),
         )
-        if audio_file is None and slide_file is None:
-            raise IngestionError("At least one of audio_file or slide_file must be provided")
 
         lecture_paths = LecturePaths.build(
             self._config.storage_root,
@@ -232,59 +248,127 @@ class LectureIngestor:
         slide_bundle_relative = None
         notes_relative = None
 
-        if audio_file is not None:
-            audio_stem = build_asset_stem(class_name, module_name, lecture_name, "audio")
-            LOGGER.debug("Copying uploaded audio file '%s' using stem '%s'", audio_file, audio_stem)
-            audio_relative = self._copy_asset(audio_file, lecture_paths.raw_dir, audio_stem)
+        audio_relatives: List[str] = []
+        transcript_results: List[TranscriptResult] = []
+
+        if audio_sources:
             if self._transcription_engine is None:
                 raise IngestionError("No transcription engine configured for audio ingestion")
-            LOGGER.debug(
-                "Running transcription engine %s on %s",
-                self._transcription_engine.__class__.__name__,
-                lecture_paths.raw_dir / audio_relative,
-            )
-            transcript = self._transcription_engine.transcribe(
-                lecture_paths.raw_dir / audio_relative,
-                lecture_paths.transcript_dir,
-            )
-            transcript_relative = transcript.text_path.relative_to(self._config.storage_root).as_posix()
-            audio_relative = (lecture_paths.raw_dir / audio_relative).relative_to(self._config.storage_root).as_posix()
-            LOGGER.debug(
-                "Transcription finished. Audio stored at %s, transcript at %s",
-                audio_relative,
-                transcript_relative,
-            )
 
-        if slide_file is not None:
-            slide_stem = build_asset_stem(class_name, module_name, lecture_name, "slides")
-            LOGGER.debug("Copying uploaded slide deck '%s' using stem '%s'", slide_file, slide_stem)
-            slide_relative = self._copy_asset(slide_file, lecture_paths.raw_dir, slide_stem)
+            multiple_audio = len(audio_sources) > 1
+            for index, source in enumerate(audio_sources, start=1):
+                audio_stem_parts = [class_name, module_name, lecture_name, "audio"]
+                if multiple_audio:
+                    audio_stem_parts.append(f"part-{index:02d}")
+                audio_stem = build_asset_stem(*audio_stem_parts)
+                LOGGER.debug("Copying uploaded audio file '%s' using stem '%s'", source, audio_stem)
+                copied_name = self._copy_asset(source, lecture_paths.raw_dir, audio_stem)
+                audio_path = lecture_paths.raw_dir / copied_name
+                audio_relatives.append(
+                    audio_path.relative_to(self._config.storage_root).as_posix()
+                )
+
+                transcript_dir = lecture_paths.transcript_dir
+                if multiple_audio:
+                    transcript_dir = transcript_dir / f"part-{index:02d}"
+                    transcript_dir.mkdir(parents=True, exist_ok=True)
+
+                LOGGER.debug(
+                    "Running transcription engine %s on %s",
+                    self._transcription_engine.__class__.__name__,
+                    audio_path,
+                )
+                transcript = self._transcription_engine.transcribe(audio_path, transcript_dir)
+                transcript_results.append(transcript)
+
+            if transcript_results:
+                if multiple_audio:
+                    combined_transcript = self._combine_transcripts(
+                        transcript_results,
+                        lecture_paths.transcript_dir,
+                        build_asset_stem(class_name, module_name, lecture_name, "transcript"),
+                    )
+                    transcript_relative = combined_transcript.relative_to(
+                        self._config.storage_root
+                    ).as_posix()
+                else:
+                    transcript_relative = transcript_results[0].text_path.relative_to(
+                        self._config.storage_root
+                    ).as_posix()
+                audio_relative = audio_relatives[0]
+                LOGGER.debug(
+                    "Transcription finished. Audio stored at %s, transcript at %s",
+                    audio_relative,
+                    transcript_relative,
+                )
+
+        slide_relatives: List[str] = []
+        slide_conversions: List[tuple[int, SlideConversionResult]] = []
+
+        if slide_sources:
             if self._slide_converter is None:
                 raise IngestionError("No slide converter configured for slideshow ingestion")
-            LOGGER.debug(
-                "Invoking slide converter %s on %s",
-                self._slide_converter.__class__.__name__,
-                lecture_paths.raw_dir / slide_relative,
-            )
-            conversion = self._slide_converter.convert(
-                lecture_paths.raw_dir / slide_relative,
-                lecture_paths.slide_dir,
-                lecture_paths.notes_dir,
-            )
-            slide_bundle_relative = (
-                conversion.bundle_path.relative_to(self._config.storage_root).as_posix()
-            )
-            transcript_candidate = conversion.markdown_path.relative_to(
-                self._config.storage_root
-            ).as_posix()
-            LOGGER.debug(
-                "Slide conversion produced bundle at %s with notes %s",
-                slide_bundle_relative,
-                transcript_candidate,
-            )
-            notes_relative = transcript_candidate
-            slide_relative = (lecture_paths.raw_dir / slide_relative).relative_to(self._config.storage_root).as_posix()
-            LOGGER.debug("Slide source stored at %s", slide_relative)
+
+            multiple_slides = len(slide_sources) > 1
+            for index, source in enumerate(slide_sources, start=1):
+                slide_stem_parts = [class_name, module_name, lecture_name, "slides"]
+                if multiple_slides:
+                    slide_stem_parts.append(f"part-{index:02d}")
+                slide_stem = build_asset_stem(*slide_stem_parts)
+                LOGGER.debug("Copying uploaded slide deck '%s' using stem '%s'", source, slide_stem)
+                copied_name = self._copy_asset(source, lecture_paths.raw_dir, slide_stem)
+                slide_path = lecture_paths.raw_dir / copied_name
+                slide_relatives.append(
+                    slide_path.relative_to(self._config.storage_root).as_posix()
+                )
+
+                bundle_dir = lecture_paths.slide_dir
+                notes_dir = lecture_paths.notes_dir
+                if multiple_slides:
+                    bundle_dir = bundle_dir / f"part-{index:02d}"
+                    notes_dir = notes_dir / f"part-{index:02d}"
+
+                LOGGER.debug(
+                    "Invoking slide converter %s on %s",
+                    self._slide_converter.__class__.__name__,
+                    slide_path,
+                )
+                conversion = self._slide_converter.convert(slide_path, bundle_dir, notes_dir)
+                slide_conversions.append((index, conversion))
+
+            if slide_conversions:
+                if multiple_slides:
+                    slide_bundle = self._combine_slide_bundles(
+                        slide_conversions,
+                        lecture_paths.slide_dir,
+                        build_asset_stem(class_name, module_name, lecture_name, "slides"),
+                    )
+                    slide_bundle_relative = slide_bundle.relative_to(
+                        self._config.storage_root
+                    ).as_posix()
+                    combined_notes = self._combine_slide_notes(
+                        slide_conversions,
+                        lecture_paths.notes_dir,
+                        build_asset_stem(class_name, module_name, lecture_name, "notes"),
+                    )
+                    notes_relative = combined_notes.relative_to(
+                        self._config.storage_root
+                    ).as_posix()
+                else:
+                    conversion = slide_conversions[0][1]
+                    slide_bundle_relative = (
+                        conversion.bundle_path.relative_to(self._config.storage_root).as_posix()
+                    )
+                    notes_relative = conversion.markdown_path.relative_to(
+                        self._config.storage_root
+                    ).as_posix()
+                slide_relative = slide_relatives[0]
+                LOGGER.debug(
+                    "Slide conversion produced bundle at %s with notes %s",
+                    slide_bundle_relative,
+                    notes_relative,
+                )
+                LOGGER.debug("Slide source stored at %s", slide_relative)
 
         self._repository.update_lecture_assets(
             lecture_record.id,
@@ -311,6 +395,74 @@ class LectureIngestor:
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
+    def _combine_transcripts(
+        self,
+        transcripts: Sequence[TranscriptResult],
+        output_dir: Path,
+        stem: str,
+    ) -> Path:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        combined_name = build_timestamped_name(stem, extension=".txt")
+        combined_path = output_dir / combined_name
+        total = len(transcripts)
+        with combined_path.open("w", encoding="utf-8") as handle:
+            for position, result in enumerate(transcripts, start=1):
+                text = result.text_path.read_text(encoding="utf-8")
+                if position > 1:
+                    handle.write("\n\n")
+                if total > 1:
+                    handle.write(f"## Part {position}\n\n")
+                handle.write(text.rstrip())
+            handle.write("\n")
+        LOGGER.debug("Combined %d transcript parts into %s", total, combined_path)
+        return combined_path
+
+    def _combine_slide_bundles(
+        self,
+        conversions: Sequence[tuple[int, SlideConversionResult]],
+        output_dir: Path,
+        stem: str,
+    ) -> Path:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        combined_name = build_timestamped_name(stem, extension=".zip")
+        combined_path = output_dir / combined_name
+        with zipfile.ZipFile(combined_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+            for index, conversion in conversions:
+                part_prefix = f"part_{index:02d}"
+                with zipfile.ZipFile(conversion.bundle_path, "r") as part_archive:
+                    for item in part_archive.infolist():
+                        if item.is_dir():
+                            continue
+                        data = part_archive.read(item.filename)
+                        arcname = f"{part_prefix}/{item.filename.lstrip('/')}"
+                        archive.writestr(arcname, data)
+        LOGGER.debug(
+            "Combined %d slide bundles into %s", len(conversions), combined_path
+        )
+        return combined_path
+
+    def _combine_slide_notes(
+        self,
+        conversions: Sequence[tuple[int, SlideConversionResult]],
+        output_dir: Path,
+        stem: str,
+    ) -> Path:
+        output_dir.mkdir(parents=True, exist_ok=True)
+        combined_name = build_timestamped_name(stem, extension=".md")
+        combined_path = output_dir / combined_name
+        total = len(conversions)
+        with combined_path.open("w", encoding="utf-8") as handle:
+            for position, (index, conversion) in enumerate(conversions, start=1):
+                content = conversion.markdown_path.read_text(encoding="utf-8")
+                if position > 1:
+                    handle.write("\n\n")
+                if total > 1:
+                    handle.write(f"<!-- Part {index:02d} -->\n\n")
+                handle.write(content.rstrip())
+            handle.write("\n")
+        LOGGER.debug("Combined %d slide note files into %s", total, combined_path)
+        return combined_path
+
     def _ensure_class(self, name: str) -> ClassRecord:
         LOGGER.debug("Ensuring class '%s' exists", name)
         existing = self._repository.find_class_by_name(name)
