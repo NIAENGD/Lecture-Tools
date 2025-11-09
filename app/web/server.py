@@ -5712,9 +5712,22 @@ def create_app(
             "__pycache__",
             ".cache",
             "cache",
+            ".previews",
+            "_previews",
+            "previews",
+            ".ipynb_checkpoints",
         }
         TEMP_FILE_NAMES = {".ds_store", "thumbs.db", "desktop.ini"}
-        TEMP_SUFFIXES = (".tmp", ".temp", ".part", ".partial", ".cache")
+        TEMP_SUFFIXES = (
+            ".tmp",
+            ".temp",
+            ".part",
+            ".partial",
+            ".cache",
+            ".download",
+            ".crdownload",
+            ".swp",
+        )
 
         def _matches_prefix(name: str, prefix: str) -> bool:
             if not name.startswith(prefix):
@@ -5728,6 +5741,7 @@ def create_app(
             functools.partial(_matches_prefix, prefix="tmp"),
             functools.partial(_matches_prefix, prefix="temp"),
             functools.partial(_matches_prefix, prefix="cache"),
+            functools.partial(_matches_prefix, prefix="preview"),
             lambda value: value.startswith("~$"),
             lambda value: value.startswith(".~"),
             lambda value: value.startswith(".tmp"),
@@ -5738,7 +5752,40 @@ def create_app(
             lambda value: value.startswith("._"),
         )
 
-        def _cleanup_temporary_entries(base: Path) -> None:
+        NUMERIC_TMP_PATTERN = re.compile(r"^(?:tmp|temp|cache|preview)[-_]?\d+(?:[-_]\d+)*$")
+        DATED_TMP_PATTERN = re.compile(r"^(?:tmp|temp)[-_]?\d{4}(?:[-_]\d{2}){2}(?:[-_]\d+)?$")
+        PREVIEW_KEYWORDS = (".previews", "_previews", "previews")
+        AGGRESSIVE_IMAGE_PREFIXES = ("render-", "preview-", "slide-")
+        AGGRESSIVE_IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
+        ARCHIVE_SUFFIXES = (
+            ".zip",
+            ".tar",
+            ".tar.gz",
+            ".tgz",
+            ".tbz",
+            ".tar.bz2",
+            ".7z",
+        )
+
+        def _is_referenced_path(path: Path, references: Optional[AbstractSet[Path]]) -> bool:
+            if not references:
+                return False
+            resolved_candidate = _normalize(path)
+            for reference in references:
+                if resolved_candidate == reference:
+                    return True
+                if _is_within(resolved_candidate, reference):
+                    return True
+                if _is_within(reference, resolved_candidate):
+                    return True
+            return False
+
+        def _cleanup_temporary_entries(
+            base: Path,
+            *,
+            aggressive: bool = False,
+            references: Optional[AbstractSet[Path]] = None,
+        ) -> None:
             resolved_base = _normalize(base)
             if not resolved_base.exists() or not resolved_base.is_dir():
                 return
@@ -5747,28 +5794,116 @@ def create_app(
             except (OSError, PermissionError):
                 return
             for child in children:
+                normalized_child = _normalize(child)
+                if _is_referenced_path(normalized_child, references):
+                    continue
                 name_lower = child.name.lower()
                 if child.is_dir():
                     has_prefix = any(check(name_lower) for check in TEMP_PREFIX_CHECKS)
-                    if (
+                    matches_suffix = any(name_lower.endswith(suffix) for suffix in TEMP_SUFFIXES)
+                    matches_numeric = bool(
+                        NUMERIC_TMP_PATTERN.match(name_lower)
+                        or DATED_TMP_PATTERN.match(name_lower)
+                    )
+                    looks_preview = any(keyword in name_lower for keyword in PREVIEW_KEYWORDS)
+                    should_remove = (
                         name_lower in TEMP_DIR_NAMES
                         or has_prefix
-                        or any(name_lower.endswith(suffix) for suffix in TEMP_SUFFIXES)
-                    ):
-                        _safe_delete(child, kind="temporary", description=f"Temporary directory '{child.name}'")
+                        or matches_suffix
+                        or matches_numeric
+                        or looks_preview
+                    )
+                    if not should_remove and aggressive:
+                        should_remove = (
+                            "cache" in name_lower
+                            or "preview" in name_lower
+                            or name_lower.endswith("-previews")
+                            or name_lower.endswith("_previews")
+                        )
+                    if should_remove:
+                        description = (
+                            f"Preview cache '{child.name}'"
+                            if "preview" in name_lower
+                            else f"Temporary directory '{child.name}'"
+                        )
+                        _safe_delete(
+                            normalized_child,
+                            kind="temporary",
+                            description=description,
+                        )
+                        continue
+                    _cleanup_temporary_entries(
+                        normalized_child,
+                        aggressive=aggressive,
+                        references=references,
+                    )
                 else:
                     has_prefix = any(check(name_lower) for check in TEMP_PREFIX_CHECKS)
+                    has_suffix = any(name_lower.endswith(suffix) for suffix in TEMP_SUFFIXES)
+                    aggressive_preview = False
+                    suffix_lower = child.suffix.lower()
+                    if aggressive and suffix_lower in AGGRESSIVE_IMAGE_SUFFIXES:
+                        aggressive_preview = any(
+                            name_lower.startswith(prefix)
+                            for prefix in AGGRESSIVE_IMAGE_PREFIXES
+                        )
                     if (
                         name_lower in TEMP_FILE_NAMES
                         or has_prefix
-                        or any(name_lower.endswith(suffix) for suffix in TEMP_SUFFIXES)
+                        or has_suffix
+                        or aggressive_preview
                     ):
-                        _safe_delete(child, kind="temporary", description=f"Temporary file '{child.name}'")
+                        description = (
+                            f"Preview artifact '{child.name}'"
+                            if aggressive_preview
+                            else f"Temporary file '{child.name}'"
+                        )
+                        _safe_delete(
+                            normalized_child,
+                            kind="oversized_preview" if aggressive_preview else "temporary",
+                            description=description,
+                        )
+
+        def _remove_if_exists(
+            target: Path,
+            *,
+            kind: str,
+            description: str,
+            references: Optional[AbstractSet[Path]] = None,
+        ) -> None:
+            resolved_target = _normalize(target)
+            if not resolved_target.exists():
+                return
+            if _is_referenced_path(resolved_target, references):
+                return
+            _safe_delete(resolved_target, kind=kind, description=description)
+
+        def _remove_duplicate_slide_bundles(
+            base: Path, *, references: AbstractSet[Path]
+        ) -> None:
+            try:
+                candidates = list(base.rglob("*"))
+            except (OSError, PermissionError):
+                return
+            for candidate in candidates:
+                if not candidate.is_file():
+                    continue
+                name_lower = candidate.name.lower()
+                if not any(name_lower.endswith(suffix) for suffix in ARCHIVE_SUFFIXES):
+                    continue
+                if "slide" not in name_lower and "bundle" not in name_lower:
+                    continue
+                if _is_referenced_path(candidate, references):
+                    continue
+                _safe_delete(
+                    candidate,
+                    kind="duplicate_bundle",
+                    description="Unreferenced slide bundle",
+                )
 
         # Protect canonical directories and referenced assets
         class_variants: Dict[int, Set[str]] = {}
         canonical_class_dirs: Dict[int, Path] = {}
-        valid_class_names: Set[str] = set()
         for class_record in classes:
             canonical_slug = _canonical_slug(class_record.name, f"class-{class_record.id}")
             canonical_class_dir = root_path / canonical_slug
@@ -5777,7 +5912,6 @@ def create_app(
             variants = set(_name_variants(class_record.name))
             variants.add(canonical_slug)
             class_variants[class_record.id] = variants
-            valid_class_names.update(variants)
             for module in module_map.get(class_record.id, []):
                 module_slug = _canonical_slug(module.name, f"module-{module.id}")
                 canonical_module_dir = canonical_class_dir / module_slug
@@ -5787,16 +5921,6 @@ def create_app(
                     lecture_slug = _canonical_slug(lecture.name, f"lecture-{lecture.id}")
                     canonical_lecture_dir = canonical_module_dir / lecture_slug
                     _protect(canonical_lecture_dir)
-                    for derived in (
-                        canonical_lecture_dir,
-                        canonical_lecture_dir / "raw",
-                        canonical_lecture_dir / "processed",
-                        canonical_lecture_dir / "processed" / "audio",
-                        canonical_lecture_dir / "processed" / "transcripts",
-                        canonical_lecture_dir / "processed" / "slides",
-                        canonical_lecture_dir / "processed" / "notes",
-                    ):
-                        _protect(derived)
                     for relative in (
                         lecture.audio_path,
                         lecture.processed_audio_path,
@@ -5837,12 +5961,23 @@ def create_app(
 
         canonical_class_paths = { _normalize(path) for path in canonical_class_dirs.values() }
         for child in top_level_children:
-            if not child.is_dir() or child == archive_root:
+            if child == archive_root:
+                continue
+            if child.is_file():
+                name_lower = child.name.lower()
+                if any(name_lower.endswith(suffix) for suffix in ARCHIVE_SUFFIXES):
+                    if _is_path_protected(child):
+                        continue
+                    _safe_delete(
+                        child,
+                        kind="orphan_archive",
+                        description="Stray archive file",
+                    )
+                continue
+            if not child.is_dir():
                 continue
             normalized_child = _normalize(child)
             if normalized_child in canonical_class_paths:
-                continue
-            if child.name in valid_class_names:
                 continue
             if _is_path_protected(child):
                 continue
@@ -5916,8 +6051,41 @@ def create_app(
                             kind="legacy_lecture",
                             description=f"Legacy lecture directory for '{lecture.name}'",
                         )
-                    for directory in _iter_lecture_dirs(class_record, module, lecture):
-                        _cleanup_temporary_entries(directory)
+                    lecture_references: Set[Path] = set()
+                    referenced_size = 0
+
+                    def _add_reference(path: Path) -> None:
+                        nonlocal referenced_size
+                        resolved = _normalize(path)
+                        if resolved in lecture_references:
+                            return
+                        lecture_references.add(resolved)
+                        try:
+                            if resolved.exists() and resolved.is_dir():
+                                referenced_size += _calculate_directory_size(resolved)
+                            elif resolved.exists():
+                                referenced_size += resolved.stat().st_size
+                        except (OSError, ValueError):
+                            return
+
+                    for relative in (
+                        lecture.audio_path,
+                        lecture.processed_audio_path,
+                        lecture.slide_path,
+                        lecture.transcript_path,
+                        lecture.notes_path,
+                        lecture.slide_image_dir,
+                    ):
+                        asset = _resolve_existing_asset(relative)
+                        if asset is not None:
+                            _add_reference(asset)
+
+                    lecture_dirs = _iter_lecture_dirs(class_record, module, lecture)
+                    for directory in lecture_dirs:
+                        _cleanup_temporary_entries(
+                            directory,
+                            references=lecture_references,
+                        )
                         for suffix in (
                             "raw",
                             "processed",
@@ -5926,7 +6094,72 @@ def create_app(
                             "processed/slides",
                             "processed/notes",
                         ):
-                            _cleanup_temporary_entries(directory / suffix)
+                            _cleanup_temporary_entries(
+                                directory / suffix,
+                                references=lecture_references,
+                            )
+
+                    processed_dir = canonical_lecture_dir / "processed"
+                    slides_dir = processed_dir / "slides"
+                    baseline = max(referenced_size, 1)
+                    lecture_dir_size = 0
+                    try:
+                        if canonical_lecture_dir.exists():
+                            lecture_dir_size = _calculate_directory_size(canonical_lecture_dir)
+                    except (OSError, ValueError):
+                        lecture_dir_size = 0
+                    if lecture_dir_size > baseline * 5 and lecture_dir_size - referenced_size > 0:
+                        for target in (
+                            canonical_lecture_dir / "raw",
+                            processed_dir,
+                            slides_dir,
+                        ):
+                            _cleanup_temporary_entries(
+                                target,
+                                aggressive=True,
+                                references=lecture_references,
+                            )
+                        for preview_name in PREVIEW_KEYWORDS:
+                            _remove_if_exists(
+                                canonical_lecture_dir / preview_name,
+                                kind="oversized_preview",
+                                description=f"Preview cache '{preview_name}'",
+                                references=lecture_references,
+                            )
+
+                    if not lecture.processed_audio_path:
+                        _remove_if_exists(
+                            processed_dir / "audio",
+                            kind="stale_asset",
+                            description="Stale processed audio directory",
+                            references=lecture_references,
+                        )
+                    if not lecture.transcript_path:
+                        _remove_if_exists(
+                            processed_dir / "transcripts",
+                            kind="stale_asset",
+                            description="Stale transcript directory",
+                            references=lecture_references,
+                        )
+                    if not lecture.notes_path:
+                        _remove_if_exists(
+                            processed_dir / "notes",
+                            kind="stale_asset",
+                            description="Stale notes directory",
+                            references=lecture_references,
+                        )
+                    if not _is_referenced_path(slides_dir, lecture_references):
+                        _remove_if_exists(
+                            slides_dir,
+                            kind="stale_asset",
+                            description="Unreferenced slide render directory",
+                            references=lecture_references,
+                        )
+
+                    _remove_duplicate_slide_bundles(
+                        canonical_lecture_dir,
+                        references=lecture_references,
+                    )
 
                 try:
                     lecture_children = list(canonical_module_dir.iterdir())
@@ -5955,6 +6188,8 @@ def create_app(
                 _cleanup_temporary_entries(canonical_module_dir)
 
             _cleanup_temporary_entries(canonical_class_dir)
+
+        _cleanup_temporary_entries(root_path, aggressive=True)
 
         _log_event(
             "Storage repair completed",

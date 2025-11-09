@@ -71,6 +71,63 @@ def _create_sample_data(config) -> tuple[LectureRepository, int, int]:
     return repository, lecture_id, module_id
 
 
+def _prepare_canonical_lecture(
+    repository: LectureRepository,
+    config,
+    lecture_id: int,
+    module_id: int,
+):
+    module_record = repository.get_module(module_id)
+    assert module_record is not None
+    class_record = repository.get_class(module_record.class_id)
+    assert class_record is not None
+    lecture_record = repository.get_lecture(lecture_id)
+    assert lecture_record is not None
+
+    lecture_paths = LecturePaths.build(
+        config.storage_root,
+        class_record.name,
+        module_record.name,
+        lecture_record.name,
+    )
+    lecture_paths.ensure()
+
+    canonical_audio = lecture_paths.raw_dir / "audio.mp3"
+    canonical_transcript = lecture_paths.transcript_dir / "transcript.txt"
+    canonical_notes = lecture_paths.notes_dir / "notes.md"
+    canonical_slide = lecture_paths.raw_dir / "slides.pdf"
+    canonical_bundle = lecture_paths.lecture_root / "slides.zip"
+
+    canonical_audio.write_bytes(b"canonical-audio")
+    canonical_transcript.write_text("transcript", encoding="utf-8")
+    canonical_notes.write_text("# notes", encoding="utf-8")
+    canonical_slide.write_bytes(b"slide")
+    canonical_bundle.write_bytes(b"bundle")
+
+    repository.update_lecture_assets(
+        lecture_id,
+        audio_path=canonical_audio.relative_to(config.storage_root).as_posix(),
+        slide_path=canonical_slide.relative_to(config.storage_root).as_posix(),
+        transcript_path=canonical_transcript.relative_to(config.storage_root).as_posix(),
+        notes_path=canonical_notes.relative_to(config.storage_root).as_posix(),
+        slide_image_dir=canonical_bundle.relative_to(config.storage_root).as_posix(),
+    )
+
+    return (
+        class_record,
+        module_record,
+        lecture_record,
+        lecture_paths,
+        {
+            "audio": canonical_audio,
+            "transcript": canonical_transcript,
+            "notes": canonical_notes,
+            "slides_pdf": canonical_slide,
+            "bundle": canonical_bundle,
+        },
+    )
+
+
 def _build_wav_bytes(duration_seconds: float = 0.25, sample_rate: int = 16_000) -> bytes:
     frame_count = int(sample_rate * duration_seconds)
     buffer = io.BytesIO()
@@ -500,6 +557,183 @@ def test_storage_repair_preserves_referenced_paths(temp_config):
 
     expected_minimum = len(b"x" * 32) + len(b"x" * 8) + len(b"zip" * 10)
     assert payload["freed_bytes"] >= expected_minimum
+
+
+def test_storage_repair_cleans_preview_and_cache_explosions(temp_config):
+    repository, lecture_id, module_id = _create_sample_data(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    (
+        _class_record,
+        _module_record,
+        _lecture_record,
+        lecture_paths,
+        assets,
+    ) = _prepare_canonical_lecture(repository, temp_config, lecture_id, module_id)
+
+    preview_dir = lecture_paths.raw_dir / ".previews"
+    preview_dir.mkdir(parents=True, exist_ok=True)
+    preview_file = preview_dir / "preview-0001.png"
+    preview_file.write_bytes(b"p" * 2048)
+
+    raw_cache_dir = lecture_paths.raw_dir / "cache-12345"
+    raw_cache_dir.mkdir(parents=True, exist_ok=True)
+    raw_cache_file = raw_cache_dir / "junk.bin"
+    raw_cache_file.write_bytes(b"c" * 1024)
+
+    processed_tmp_dir = lecture_paths.processed_dir / "tmp20231109"
+    processed_tmp_dir.mkdir(parents=True, exist_ok=True)
+    processed_tmp_file = processed_tmp_dir / "junk.bin"
+    processed_tmp_file.write_bytes(b"x" * 4096)
+
+    processed_cache_dir = lecture_paths.processed_dir / "cache-data"
+    processed_cache_dir.mkdir(parents=True, exist_ok=True)
+    processed_cache_file = processed_cache_dir / "cache.bin"
+    processed_cache_file.write_bytes(b"d" * 2048)
+
+    slides_dir = lecture_paths.processed_dir / "slides"
+    slides_dir.mkdir(parents=True, exist_ok=True)
+    for index in range(1, 51):
+        render_file = slides_dir / f"render-{index:04d}.png"
+        render_file.write_bytes(b"r" * 256)
+
+    extra_bundle = lecture_paths.lecture_root / "slides-extra.zip"
+    extra_bundle.write_bytes(b"z" * 512)
+
+    stray_preview_dir = lecture_paths.processed_dir / "_previews"
+    stray_preview_dir.mkdir(parents=True, exist_ok=True)
+    stray_preview_file = stray_preview_dir / "ghost.bin"
+    stray_preview_file.write_bytes(b"g" * 128)
+
+    stray_archive = temp_config.storage_root / "astronomy-export.zip"
+    stray_archive.write_bytes(b"z" * 256)
+
+    response = client.post("/api/storage/repair")
+    assert response.status_code == 200
+    payload = response.json()
+    removed_paths = {entry["path"] for entry in payload["removed"]}
+
+    preview_rel = preview_dir.relative_to(temp_config.storage_root).as_posix()
+    raw_cache_rel = raw_cache_dir.relative_to(temp_config.storage_root).as_posix()
+    processed_tmp_rel = processed_tmp_dir.relative_to(temp_config.storage_root).as_posix()
+    processed_cache_rel = processed_cache_dir.relative_to(temp_config.storage_root).as_posix()
+    slides_dir_rel = slides_dir.relative_to(temp_config.storage_root).as_posix()
+    stray_preview_rel = stray_preview_dir.relative_to(temp_config.storage_root).as_posix()
+    extra_bundle_rel = extra_bundle.relative_to(temp_config.storage_root).as_posix()
+    stray_archive_rel = stray_archive.relative_to(temp_config.storage_root).as_posix()
+
+    assert preview_rel in removed_paths
+    assert raw_cache_rel in removed_paths
+    assert processed_tmp_rel in removed_paths
+    assert processed_cache_rel in removed_paths
+    assert slides_dir_rel in removed_paths
+    assert stray_preview_rel in removed_paths
+    assert extra_bundle_rel in removed_paths
+    assert stray_archive_rel in removed_paths
+
+    assert not preview_dir.exists()
+    assert not raw_cache_dir.exists()
+    assert not processed_tmp_dir.exists()
+    assert not processed_cache_dir.exists()
+    assert not slides_dir.exists()
+    assert not stray_preview_dir.exists()
+    assert not extra_bundle.exists()
+    assert not stray_archive.exists()
+
+    assert lecture_paths.lecture_root.exists()
+    assert assets["audio"].exists()
+    assert assets["transcript"].exists()
+    assert assets["notes"].exists()
+    assert assets["slides_pdf"].exists()
+    assert assets["bundle"].exists()
+
+    expected_freed = (
+        len(b"p" * 2048)
+        + len(b"c" * 1024)
+        + len(b"x" * 4096)
+        + len(b"d" * 2048)
+        + (len(b"r" * 256) * 50)
+        + len(b"g" * 128)
+        + len(b"z" * 512)
+        + len(b"z" * 256)
+    )
+    assert payload["freed_bytes"] >= expected_freed
+
+
+def test_storage_repair_aggressive_cleanup_for_large_lecture(temp_config):
+    repository, lecture_id, module_id = _create_sample_data(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    (
+        _class_record,
+        _module_record,
+        _lecture_record,
+        lecture_paths,
+        assets,
+    ) = _prepare_canonical_lecture(repository, temp_config, lecture_id, module_id)
+
+    assets["audio"].write_bytes(b"a" * 128)
+    assets["slides_pdf"].write_bytes(b"s" * 256)
+    assets["bundle"].write_bytes(b"b" * 128)
+    assets["transcript"].write_text("tiny", encoding="utf-8")
+    assets["notes"].write_text("tiny", encoding="utf-8")
+
+    preview_dir = lecture_paths.processed_dir / ".previews"
+    preview_dir.mkdir(parents=True, exist_ok=True)
+    preview_bytes = 0
+    for index in range(1, 101):
+        file_path = preview_dir / f"preview-{index:04d}.png"
+        file_path.write_bytes(b"p" * 4096)
+        preview_bytes += len(b"p" * 4096)
+
+    cache_dir = lecture_paths.processed_dir / "cache-heavy"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    cache_bytes = 0
+    for index in range(5):
+        cache_file = cache_dir / f"cache-{index}.bin"
+        cache_file.write_bytes(b"c" * 8192)
+        cache_bytes += len(b"c" * 8192)
+
+    tmp_dir = lecture_paths.processed_dir / "tmp-2025-11-09"
+    tmp_dir.mkdir(parents=True, exist_ok=True)
+    tmp_file = tmp_dir / "junk.bin"
+    tmp_file.write_bytes(b"x" * 2048)
+
+    preview_root = lecture_paths.lecture_root / "previews"
+    preview_root.mkdir(parents=True, exist_ok=True)
+    preview_root_file = preview_root / "ghost.png"
+    preview_root_file.write_bytes(b"g" * 1024)
+
+    response = client.post("/api/storage/repair")
+    assert response.status_code == 200
+    payload = response.json()
+    removed_paths = {entry["path"] for entry in payload["removed"]}
+
+    preview_rel = preview_dir.relative_to(temp_config.storage_root).as_posix()
+    cache_rel = cache_dir.relative_to(temp_config.storage_root).as_posix()
+    tmp_rel = tmp_dir.relative_to(temp_config.storage_root).as_posix()
+    preview_root_rel = preview_root.relative_to(temp_config.storage_root).as_posix()
+
+    assert preview_rel in removed_paths
+    assert cache_rel in removed_paths
+    assert tmp_rel in removed_paths
+    assert preview_root_rel in removed_paths
+
+    assert not preview_dir.exists()
+    assert not cache_dir.exists()
+    assert not tmp_dir.exists()
+    assert not preview_root.exists()
+
+    assert lecture_paths.lecture_root.exists()
+    assert assets["audio"].exists()
+    assert assets["slides_pdf"].exists()
+    assert assets["bundle"].exists()
+
+    expected_freed = preview_bytes + cache_bytes + len(b"x" * 2048) + len(b"g" * 1024)
+    assert payload["freed_bytes"] >= expected_freed
+    assert payload.get("skipped", []) == []
 
 
 def test_system_update_endpoint(temp_config):
