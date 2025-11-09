@@ -2988,6 +2988,89 @@
         font-weight: 600;
       }
 
+      .storage-largest {
+        margin-top: 16px;
+        background: var(--panel-bg);
+        border: 1px solid var(--panel-border);
+        border-radius: 10px;
+        padding: 12px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .storage-largest-title {
+        margin: 0;
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--muted);
+      }
+
+      .storage-largest-empty {
+        margin: 0;
+        font-size: 0.9rem;
+        color: var(--muted);
+      }
+
+      .storage-largest-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 6px;
+      }
+
+      .storage-largest-item {
+        margin: 0;
+      }
+
+      .storage-largest-button {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 12px;
+        border-radius: 8px;
+        border: 1px solid transparent;
+        background: var(--background);
+        color: inherit;
+        font: inherit;
+        cursor: pointer;
+        transition: border-color 0.2s ease, background-color 0.2s ease;
+      }
+
+      .storage-largest-button:hover,
+      .storage-largest-button:focus-visible {
+        border-color: var(--accent);
+        outline: none;
+        background: var(--panel-bg);
+      }
+
+      .storage-largest-name {
+        flex: 1;
+        text-align: left;
+        font-weight: 600;
+      }
+
+      .storage-largest-meta {
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      .storage-largest-size {
+        font-weight: 600;
+      }
+
+      .storage-largest-type {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
       .storage-empty,
       .storage-loading {
         text-align: center;
@@ -4895,6 +4978,23 @@
                   <span class="storage-usage-label" data-i18n="storage.usage.total">Total</span>
                   <span id="storage-total" class="storage-usage-value">--</span>
                 </div>
+                <div class="storage-usage-item">
+                  <span class="storage-usage-label" data-i18n="storage.usage.library">Library size</span>
+                  <span id="storage-library" class="storage-usage-value">--</span>
+                </div>
+              </section>
+              <section class="storage-largest" aria-live="polite">
+                <h3 class="storage-largest-title" data-i18n="storage.usage.largest">
+                  Largest folders &amp; files
+                </h3>
+                <p
+                  id="storage-largest-empty"
+                  class="storage-largest-empty"
+                  data-i18n="storage.usage.largestEmpty"
+                >
+                  No stored items yet.
+                </p>
+                <ul id="storage-largest-list" class="storage-largest-list"></ul>
               </section>
               <p
                 id="storage-purge-summary"
@@ -5905,6 +6005,9 @@
                 used: 'Used',
                 available: 'Available',
                 total: 'Total',
+                library: 'Library size',
+                largest: 'Largest folders & files',
+                largestEmpty: 'No stored items yet.',
               },
               actions: {
                 refresh: 'Refresh',
@@ -6505,6 +6608,9 @@
                 used: '已用',
                 available: '可用',
                 total: '总计',
+                library: '资料库大小',
+                largest: '最大文件/文件夹',
+                largestEmpty: '暂无存储项目。',
               },
               actions: {
                 refresh: '刷新',
@@ -7101,6 +7207,9 @@
                 used: 'En uso',
                 available: 'Disponible',
                 total: 'Total',
+                library: 'Tamaño de la biblioteca',
+                largest: 'Carpetas y archivos más grandes',
+                largestEmpty: 'Todavía no hay elementos almacenados.',
               },
               actions: {
                 refresh: 'Actualizar',
@@ -7712,6 +7821,9 @@
                 used: 'Utilisé',
                 available: 'Disponible',
                 total: 'Total',
+                library: 'Taille de la bibliothèque',
+                largest: 'Dossiers et fichiers les plus volumineux',
+                largestEmpty: 'Aucun élément stocké pour le moment.',
               },
               actions: {
                 refresh: 'Actualiser',
@@ -8434,6 +8546,7 @@
           statusHideTimer: null,
           storage: {
             usage: null,
+            detail: null,
             loading: false,
             overview: null,
             purging: false,
@@ -8672,6 +8785,9 @@
             used: document.getElementById('storage-used'),
             available: document.getElementById('storage-available'),
             total: document.getElementById('storage-total'),
+            library: document.getElementById('storage-library'),
+            largestList: document.getElementById('storage-largest-list'),
+            largestEmpty: document.getElementById('storage-largest-empty'),
             loading: document.getElementById('storage-loading'),
             empty: document.getElementById('storage-empty'),
             wrapper: document.getElementById('storage-class-wrapper'),
@@ -9053,6 +9169,7 @@
             return;
           }
           const usage = state.storage.usage;
+          const detail = state.storage.detail;
           if (dom.storage.used) {
             dom.storage.used.textContent =
               usage && typeof usage.used === 'number' ? formatBytes(usage.used) : '—';
@@ -9064,6 +9181,55 @@
           if (dom.storage.total) {
             dom.storage.total.textContent =
               usage && typeof usage.total === 'number' ? formatBytes(usage.total) : '—';
+          }
+          if (dom.storage.library) {
+            dom.storage.library.textContent =
+              detail && typeof detail.size === 'number' ? formatBytes(detail.size) : '—';
+          }
+          if (dom.storage.largestList) {
+            const items = Array.isArray(detail?.largest) ? detail.largest : [];
+            dom.storage.largestList.innerHTML = '';
+            if (dom.storage.largestEmpty) {
+              dom.storage.largestEmpty.hidden = items.length > 0;
+            }
+            dom.storage.largestList.hidden = items.length === 0;
+            if (!items.length) {
+              return;
+            }
+            const limit = Math.min(items.length, 8);
+            for (let index = 0; index < limit; index += 1) {
+              const entry = items[index] || {};
+              const li = document.createElement('li');
+              li.className = 'storage-largest-item';
+              const button = document.createElement('button');
+              button.type = 'button';
+              button.className = 'storage-largest-button';
+              button.dataset.path = entry.path || '';
+              button.dataset.isDir = entry.is_dir ? '1' : '0';
+
+              const nameSpan = document.createElement('span');
+              nameSpan.className = 'storage-largest-name';
+              nameSpan.textContent = entry.name || entry.path || t('storage.browser.unnamed');
+
+              const metaSpan = document.createElement('span');
+              metaSpan.className = 'storage-largest-meta';
+
+              const sizeSpan = document.createElement('span');
+              sizeSpan.className = 'storage-largest-size';
+              sizeSpan.textContent =
+                typeof entry.size === 'number' ? formatBytes(entry.size) : '—';
+
+              const typeSpan = document.createElement('span');
+              typeSpan.className = 'storage-largest-type';
+              typeSpan.textContent = entry.is_dir
+                ? t('storage.browser.directory')
+                : t('storage.browser.file');
+
+              metaSpan.append(sizeSpan, typeSpan);
+              button.append(nameSpan, metaSpan);
+              li.append(button);
+              dom.storage.largestList.append(li);
+            }
           }
         }
 
@@ -9851,9 +10017,11 @@
             try {
               const usagePayload = await request('/api/storage/usage');
               state.storage.usage = usagePayload?.usage ?? usagePayload ?? null;
+              state.storage.detail = usagePayload?.storage ?? null;
             } catch (error) {
               const message = error instanceof Error ? error.message : String(error);
               showStatus(message || t('status.storageUsageFailed'), 'error');
+              state.storage.detail = null;
             }
             state.storage.initialized = true;
             state.storage.loading = false;
@@ -18393,6 +18561,7 @@
             state.storage.initialized = false;
             state.storage.overview = null;
             state.storage.usage = null;
+            state.storage.detail = null;
             const storageBrowser = getStorageBrowserState();
             storageBrowser.initialized = false;
             storageBrowser.entries = [];
@@ -18723,6 +18892,23 @@
             }
             const parentPath = browserState.parent || '';
             void refreshStorage({ includeOverview: false, path: parentPath, force: true });
+          });
+        }
+
+        if (dom.storage && dom.storage.largestList) {
+          dom.storage.largestList.addEventListener('click', (event) => {
+            const button = event.target.closest('button[data-path]');
+            if (!button) {
+              return;
+            }
+            const isDirectory = button.dataset.isDir === '1';
+            let targetPath = button.dataset.path || '';
+            if (!isDirectory) {
+              const parts = targetPath.split('/').filter(Boolean);
+              parts.pop();
+              targetPath = parts.join('/') || '';
+            }
+            void refreshStorage({ includeOverview: false, path: targetPath, force: true });
           });
         }
 

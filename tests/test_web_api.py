@@ -193,6 +193,11 @@ def test_storage_endpoints_recover_missing_root(temp_config):
     usage_response = client.get("/api/storage/usage")
     assert usage_response.status_code == 200
     assert temp_config.storage_root.exists()
+    usage_payload = usage_response.json()
+    assert usage_payload["usage"]["used"] >= 0
+    storage_summary = usage_payload.get("storage") or {}
+    assert storage_summary.get("size") == 0
+    assert isinstance(storage_summary.get("largest"), list)
 
     listing_response = client.get("/api/storage/list")
     assert listing_response.status_code == 200
@@ -231,6 +236,35 @@ def test_storage_listing_and_delete_orphan_directory(temp_config):
     assert refreshed_listing.status_code == 200
     refreshed_entries = refreshed_listing.json().get("entries", [])
     assert all(entry.get("path") != orphan_entry["path"] for entry in refreshed_entries)
+
+
+def test_storage_usage_reports_directory_summary(temp_config):
+    repository = LectureRepository(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    base = temp_config.storage_root
+    big_dir = base / "alpha"
+    big_dir.mkdir(parents=True, exist_ok=True)
+    (big_dir / "big.bin").write_bytes(b"a" * 2048)
+    (base / "beta.txt").write_bytes(b"hello world")
+    small_dir = base / "gamma"
+    small_dir.mkdir(parents=True, exist_ok=True)
+    (small_dir / "tiny.bin").write_bytes(b"b" * 16)
+
+    usage_response = client.get("/api/storage/usage")
+    assert usage_response.status_code == 200
+    payload = usage_response.json()
+    storage_summary = payload.get("storage") or {}
+    assert storage_summary.get("size", 0) >= 2048 + len("hello world") + 16
+    largest = storage_summary.get("largest") or []
+    assert isinstance(largest, list) and largest
+    paths = {entry.get("path"): entry for entry in largest}
+    alpha_entry = paths.get("alpha")
+    assert alpha_entry is not None
+    assert alpha_entry.get("is_dir") is True
+    assert alpha_entry.get("size", 0) >= 2048
+    assert "beta.txt" in paths
 
 
 def test_storage_batch_download_creates_archive(temp_config):
