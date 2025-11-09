@@ -311,6 +311,170 @@ def test_storage_batch_download_requires_selection(temp_config):
     assert "selected" in response.json()["detail"].lower()
 
 
+def test_storage_repair_removes_legacy_artifacts(temp_config):
+    repository, lecture_id, module_id = _create_sample_data(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    module_record = repository.get_module(module_id)
+    assert module_record is not None
+    class_record = repository.get_class(module_record.class_id)
+    assert class_record is not None
+    lecture_record = repository.get_lecture(lecture_id)
+    assert lecture_record is not None
+
+    lecture_paths = LecturePaths.build(
+        temp_config.storage_root,
+        class_record.name,
+        module_record.name,
+        lecture_record.name,
+    )
+    lecture_paths.ensure()
+
+    canonical_audio = lecture_paths.raw_dir / "audio.mp3"
+    canonical_audio.write_bytes(b"canonical-audio")
+    canonical_transcript = lecture_paths.transcript_dir / "transcript.txt"
+    canonical_transcript.write_text("transcript", encoding="utf-8")
+    canonical_notes = lecture_paths.notes_dir / "notes.md"
+    canonical_notes.write_text("# notes", encoding="utf-8")
+    canonical_slide = lecture_paths.raw_dir / "slides.pdf"
+    canonical_slide.write_bytes(b"slide")
+    canonical_slide_bundle_dir = lecture_paths.slide_dir
+    canonical_slide_bundle_dir.mkdir(parents=True, exist_ok=True)
+    (canonical_slide_bundle_dir / "slide.png").write_bytes(b"img")
+
+    repository.update_lecture_assets(
+        lecture_id,
+        audio_path=canonical_audio.relative_to(temp_config.storage_root).as_posix(),
+        slide_path=canonical_slide.relative_to(temp_config.storage_root).as_posix(),
+        transcript_path=canonical_transcript.relative_to(temp_config.storage_root).as_posix(),
+        notes_path=canonical_notes.relative_to(temp_config.storage_root).as_posix(),
+        slide_image_dir=canonical_slide_bundle_dir.relative_to(temp_config.storage_root).as_posix(),
+    )
+
+    temp_dir = lecture_paths.raw_dir / "tmp-old"
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    (temp_dir / "junk.bin").write_bytes(b"x" * 64)
+    stray_file = lecture_paths.processed_dir / "Thumbs.db"
+    stray_file.write_bytes(b"x" * 16)
+
+    legacy_class_dir = temp_config.storage_root / class_record.name
+    legacy_module_dir = lecture_paths.lecture_root.parent / module_record.name
+    legacy_lecture_dir = legacy_module_dir / lecture_record.name
+    legacy_class_dir.mkdir(parents=True, exist_ok=True)
+    (legacy_class_dir / "legacy.txt").write_text("legacy", encoding="utf-8")
+    legacy_module_dir.mkdir(parents=True, exist_ok=True)
+    (legacy_module_dir / "legacy.txt").write_text("legacy", encoding="utf-8")
+    legacy_lecture_dir.mkdir(parents=True, exist_ok=True)
+    (legacy_lecture_dir / "legacy.txt").write_text("legacy", encoding="utf-8")
+
+    orphan_dir = temp_config.storage_root / "orphan"
+    orphan_dir.mkdir(parents=True, exist_ok=True)
+    (orphan_dir / "note.txt").write_bytes(b"orphan")
+
+    archive_root = temp_config.archive_root
+    archive_root.mkdir(parents=True, exist_ok=True)
+    old_archive = archive_root / "old.zip"
+    old_archive.write_bytes(b"z" * 128)
+
+    response = client.post("/api/storage/repair")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["status"] == "ok"
+    removed_paths = {entry["path"] for entry in payload["removed"]}
+
+    legacy_class_rel = legacy_class_dir.relative_to(temp_config.storage_root).as_posix()
+    legacy_module_rel = legacy_module_dir.relative_to(temp_config.storage_root).as_posix()
+    legacy_lecture_rel = legacy_lecture_dir.relative_to(temp_config.storage_root).as_posix()
+    orphan_rel = orphan_dir.relative_to(temp_config.storage_root).as_posix()
+    temp_rel = temp_dir.relative_to(temp_config.storage_root).as_posix()
+    stray_rel = stray_file.relative_to(temp_config.storage_root).as_posix()
+    archive_rel = old_archive.relative_to(temp_config.storage_root).as_posix()
+
+    assert legacy_class_rel in removed_paths
+    assert legacy_module_rel in removed_paths
+    assert orphan_rel in removed_paths
+    assert temp_rel in removed_paths
+    assert stray_rel in removed_paths
+    assert archive_rel in removed_paths
+
+    assert not legacy_class_dir.exists()
+    assert not legacy_module_dir.exists()
+    assert not legacy_lecture_dir.exists()
+    assert not orphan_dir.exists()
+    assert not temp_dir.exists()
+    assert not stray_file.exists()
+    assert not any(archive_root.iterdir())
+    assert lecture_paths.lecture_root.exists()
+
+    expected_minimum = (
+        len("legacy") * 3
+        + len(b"orphan")
+        + 64
+        + 16
+        + 128
+    )
+    assert payload["freed_bytes"] >= expected_minimum
+    assert payload.get("skipped", []) == []
+
+
+def test_storage_repair_preserves_referenced_paths(temp_config):
+    repository, lecture_id, module_id = _create_sample_data(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    module_record = repository.get_module(module_id)
+    assert module_record is not None
+    class_record = repository.get_class(module_record.class_id)
+    assert class_record is not None
+    lecture_record = repository.get_lecture(lecture_id)
+    assert lecture_record is not None
+
+    base_dir = (
+        temp_config.storage_root
+        / class_record.name
+        / module_record.name
+        / lecture_record.name
+    )
+    temp_dir = base_dir / "tmp-old"
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    (temp_dir / "junk.bin").write_bytes(b"x" * 32)
+    stray_file = base_dir / "Thumbs.db"
+    stray_file.write_bytes(b"x" * 8)
+
+    archive_root = temp_config.archive_root
+    archive_root.mkdir(parents=True, exist_ok=True)
+    old_archive = archive_root / "stale.zip"
+    old_archive.write_bytes(b"zip" * 10)
+
+    temp_rel = temp_dir.relative_to(temp_config.storage_root).as_posix()
+    stray_rel = stray_file.relative_to(temp_config.storage_root).as_posix()
+    archive_rel = old_archive.relative_to(temp_config.storage_root).as_posix()
+
+    response = client.post("/api/storage/repair")
+    assert response.status_code == 200
+    payload = response.json()
+    removed_paths = {entry["path"] for entry in payload["removed"]}
+    skipped_paths = {entry["path"] for entry in payload.get("skipped", [])}
+
+    assert (temp_config.storage_root / class_record.name).exists()
+    assert base_dir.exists()
+    assert temp_rel in removed_paths
+    assert stray_rel in removed_paths
+    assert archive_rel in removed_paths
+    assert not temp_dir.exists()
+    assert not stray_file.exists()
+    assert not any(archive_root.iterdir())
+
+    legacy_class_rel = (temp_config.storage_root / class_record.name).relative_to(
+        temp_config.storage_root
+    ).as_posix()
+    assert legacy_class_rel in skipped_paths
+
+    expected_minimum = len(b"x" * 32) + len(b"x" * 8) + len(b"zip" * 10)
+    assert payload["freed_bytes"] >= expected_minimum
+
+
 def test_system_update_endpoint(temp_config):
     repository = LectureRepository(temp_config)
     app = create_app(repository, config=temp_config)

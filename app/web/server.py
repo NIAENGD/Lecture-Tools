@@ -5572,6 +5572,365 @@ def create_app(
         _log_event("Purged processed audio", deleted=deleted)
         return {"deleted": deleted}
 
+    @app.post("/api/storage/repair")
+    async def repair_storage() -> Dict[str, Any]:
+        _log_event("Repairing storage")
+        root_path = _require_storage_root().resolve()
+        archive_root = config.archive_root.resolve()
+
+        protected_entries: Set[Path] = set()
+
+        def _normalize(path: Path) -> Path:
+            try:
+                return path.resolve(strict=False)
+            except OSError:
+                return path
+
+        def _relative_label(path: Path) -> str:
+            try:
+                return _normalize(path).relative_to(root_path).as_posix()
+            except ValueError:
+                return path.name
+
+        def _protect(path: Path) -> None:
+            resolved = _normalize(path)
+            while True:
+                if resolved in protected_entries:
+                    break
+                protected_entries.add(resolved)
+                if resolved == root_path or resolved.parent == resolved:
+                    break
+                resolved = resolved.parent
+
+        def _is_path_protected(path: Path) -> bool:
+            resolved = _normalize(path)
+            for protected in protected_entries:
+                try:
+                    if protected == resolved or protected.is_relative_to(resolved):
+                        return True
+                except ValueError:
+                    continue
+            return False
+
+        removals: List[Dict[str, Any]] = []
+        skipped: List[Dict[str, Any]] = []
+        freed_bytes = 0
+
+        def _register_removal(resolved: Path, *, kind: str, description: str, size: int) -> None:
+            nonlocal freed_bytes
+            try:
+                relative = resolved.relative_to(root_path).as_posix()
+            except ValueError:
+                relative = resolved.name
+            removals.append(
+                {
+                    "path": relative,
+                    "kind": kind,
+                    "description": description,
+                    "size": int(size),
+                }
+            )
+            freed_bytes += int(size)
+
+        def _safe_delete(target: Path, *, kind: str, description: str) -> None:
+            resolved = _normalize(target)
+            if not resolved.exists():
+                return
+            if _is_path_protected(resolved):
+                skipped.append(
+                    {
+                        "path": _relative_label(resolved),
+                        "kind": kind,
+                        "reason": "protected",
+                    }
+                )
+                return
+            try:
+                size = (
+                    _calculate_directory_size(resolved)
+                    if resolved.is_dir()
+                    else resolved.stat().st_size
+                )
+            except (OSError, ValueError):
+                size = 0
+            try:
+                _delete_storage_path(resolved)
+            except (OSError, ValueError) as error:
+                skipped.append(
+                    {
+                        "path": _relative_label(resolved),
+                        "kind": kind,
+                        "reason": f"{error.__class__.__name__}: {error}",
+                    }
+                )
+                return
+            _register_removal(resolved, kind=kind, description=description, size=int(size))
+
+        _protect(root_path)
+        for special in (archive_root, config.assets_root, config.database_file):
+            try:
+                resolved_special = special.resolve()
+            except OSError:
+                continue
+            if resolved_special.is_relative_to(root_path):
+                _protect(resolved_special)
+
+        classes = list(repository.iter_classes())
+        module_map: Dict[int, List[ModuleRecord]] = {}
+        lecture_map: Dict[int, List[LectureRecord]] = {}
+        for class_record in classes:
+            modules = list(repository.iter_modules(class_record.id))
+            module_map[class_record.id] = modules
+            for module in modules:
+                lectures = list(repository.iter_lectures(module.id))
+                lecture_map[module.id] = lectures
+
+        def _canonical_slug(value: str, fallback: str) -> str:
+            slug = slugify(value).strip()
+            if slug:
+                return slug
+            cleaned = value.strip()
+            if cleaned:
+                alt = slugify(cleaned)
+                if alt:
+                    return alt
+                return cleaned
+            return fallback
+
+        TEMP_DIR_NAMES = {"tmp", "temp", "__macosx", ".tmp", ".temp"}
+        TEMP_FILE_NAMES = {".ds_store", "thumbs.db"}
+        TEMP_PREFIXES = ("tmp-", "temp-", "~$", ".~", "_tmp", "_temp")
+        TEMP_SUFFIXES = (".tmp", ".temp", ".part", ".partial")
+
+        def _cleanup_temporary_entries(base: Path) -> None:
+            resolved_base = _normalize(base)
+            if not resolved_base.exists() or not resolved_base.is_dir():
+                return
+            try:
+                children = list(resolved_base.iterdir())
+            except (OSError, PermissionError):
+                return
+            for child in children:
+                name_lower = child.name.lower()
+                if child.is_dir():
+                    if (
+                        name_lower in TEMP_DIR_NAMES
+                        or any(name_lower.startswith(prefix) for prefix in TEMP_PREFIXES)
+                        or any(name_lower.endswith(suffix) for suffix in TEMP_SUFFIXES)
+                    ):
+                        _safe_delete(child, kind="temporary", description=f"Temporary directory '{child.name}'")
+                else:
+                    if (
+                        name_lower in TEMP_FILE_NAMES
+                        or any(name_lower.startswith(prefix) for prefix in TEMP_PREFIXES)
+                        or any(name_lower.endswith(suffix) for suffix in TEMP_SUFFIXES)
+                    ):
+                        _safe_delete(child, kind="temporary", description=f"Temporary file '{child.name}'")
+
+        # Protect canonical directories and referenced assets
+        class_variants: Dict[int, Set[str]] = {}
+        canonical_class_dirs: Dict[int, Path] = {}
+        valid_class_names: Set[str] = set()
+        for class_record in classes:
+            canonical_slug = _canonical_slug(class_record.name, f"class-{class_record.id}")
+            canonical_class_dir = root_path / canonical_slug
+            canonical_class_dirs[class_record.id] = canonical_class_dir
+            _protect(canonical_class_dir)
+            variants = set(_name_variants(class_record.name))
+            variants.add(canonical_slug)
+            class_variants[class_record.id] = variants
+            valid_class_names.update(variants)
+            for module in module_map.get(class_record.id, []):
+                module_slug = _canonical_slug(module.name, f"module-{module.id}")
+                canonical_module_dir = canonical_class_dir / module_slug
+                _protect(canonical_module_dir)
+                variants.add(module_slug)
+                for lecture in lecture_map.get(module.id, []):
+                    lecture_slug = _canonical_slug(lecture.name, f"lecture-{lecture.id}")
+                    canonical_lecture_dir = canonical_module_dir / lecture_slug
+                    _protect(canonical_lecture_dir)
+                    for derived in (
+                        canonical_lecture_dir,
+                        canonical_lecture_dir / "raw",
+                        canonical_lecture_dir / "processed",
+                        canonical_lecture_dir / "processed" / "audio",
+                        canonical_lecture_dir / "processed" / "transcripts",
+                        canonical_lecture_dir / "processed" / "slides",
+                        canonical_lecture_dir / "processed" / "notes",
+                    ):
+                        _protect(derived)
+                    for relative in (
+                        lecture.audio_path,
+                        lecture.processed_audio_path,
+                        lecture.slide_path,
+                        lecture.transcript_path,
+                        lecture.notes_path,
+                        lecture.slide_image_dir,
+                    ):
+                        asset = _resolve_existing_asset(relative)
+                        if asset is not None:
+                            _protect(asset)
+
+        # Clear temporary export archives
+        _protect(archive_root)
+        if archive_root.exists() and archive_root.is_dir():
+            for child in list(archive_root.iterdir()):
+                _safe_delete(child, kind="archive", description="Temporary export archive")
+            archive_root.mkdir(parents=True, exist_ok=True)
+
+        # Remove legacy class directories and orphaned top-level folders
+        for class_record in classes:
+            canonical_dir = canonical_class_dirs[class_record.id]
+            variants = class_variants.get(class_record.id, set())
+            for variant in variants:
+                candidate = root_path / variant
+                if candidate == canonical_dir:
+                    continue
+                _safe_delete(
+                    candidate,
+                    kind="legacy_class",
+                    description=f"Legacy class directory for '{class_record.name}'",
+                )
+
+        try:
+            top_level_children = list(root_path.iterdir())
+        except (OSError, PermissionError):
+            top_level_children = []
+
+        canonical_class_paths = { _normalize(path) for path in canonical_class_dirs.values() }
+        for child in top_level_children:
+            if not child.is_dir() or child == archive_root:
+                continue
+            normalized_child = _normalize(child)
+            if normalized_child in canonical_class_paths:
+                continue
+            if child.name in valid_class_names:
+                continue
+            if _is_path_protected(child):
+                continue
+            _safe_delete(child, kind="orphan_class", description="Unreferenced class directory")
+
+        # Clean up modules and lectures within canonical class directories
+        for class_record in classes:
+            canonical_class_dir = canonical_class_dirs[class_record.id]
+            modules = module_map.get(class_record.id, [])
+            module_variants: Dict[int, Set[str]] = {}
+            canonical_module_dirs: Dict[int, Path] = {}
+            module_variant_names: Set[str] = set()
+            for module in modules:
+                module_slug = _canonical_slug(module.name, f"module-{module.id}")
+                canonical_module_dir = canonical_class_dir / module_slug
+                canonical_module_dirs[module.id] = canonical_module_dir
+                variants = set(_name_variants(module.name))
+                variants.add(module_slug)
+                module_variants[module.id] = variants
+                module_variant_names.update(variants)
+                for variant in variants:
+                    candidate = canonical_class_dir / variant
+                    if candidate == canonical_module_dir:
+                        continue
+                    _safe_delete(
+                        candidate,
+                        kind="legacy_module",
+                        description=f"Legacy module directory for '{module.name}'",
+                    )
+
+            try:
+                module_children = list(canonical_class_dir.iterdir())
+            except (OSError, PermissionError):
+                module_children = []
+            expected_module_dirs = {
+                _normalize(path) for path in canonical_module_dirs.values() if path.exists()
+            }
+            for child in module_children:
+                if not child.is_dir():
+                    continue
+                normalized_child = _normalize(child)
+                if normalized_child in expected_module_dirs:
+                    continue
+                if child.name in module_variant_names:
+                    continue
+                if _is_path_protected(child):
+                    continue
+                _safe_delete(child, kind="orphan_module", description="Unreferenced module directory")
+
+            for module in modules:
+                canonical_module_dir = canonical_module_dirs.get(module.id)
+                if canonical_module_dir is None:
+                    continue
+                lecture_variants: Dict[int, Set[str]] = {}
+                canonical_lecture_dirs: Dict[int, Path] = {}
+                lecture_variant_names: Set[str] = set()
+                for lecture in lecture_map.get(module.id, []):
+                    lecture_slug = _canonical_slug(lecture.name, f"lecture-{lecture.id}")
+                    canonical_lecture_dir = canonical_module_dir / lecture_slug
+                    canonical_lecture_dirs[lecture.id] = canonical_lecture_dir
+                    variants = set(_name_variants(lecture.name))
+                    variants.add(lecture_slug)
+                    lecture_variants[lecture.id] = variants
+                    lecture_variant_names.update(variants)
+                    for variant in variants:
+                        candidate = canonical_module_dir / variant
+                        if candidate == canonical_lecture_dir:
+                            continue
+                        _safe_delete(
+                            candidate,
+                            kind="legacy_lecture",
+                            description=f"Legacy lecture directory for '{lecture.name}'",
+                        )
+                    for directory in _iter_lecture_dirs(class_record, module, lecture):
+                        _cleanup_temporary_entries(directory)
+                        for suffix in (
+                            "raw",
+                            "processed",
+                            "processed/audio",
+                            "processed/transcripts",
+                            "processed/slides",
+                            "processed/notes",
+                        ):
+                            _cleanup_temporary_entries(directory / suffix)
+
+                try:
+                    lecture_children = list(canonical_module_dir.iterdir())
+                except (OSError, PermissionError):
+                    lecture_children = []
+                expected_lecture_dirs = {
+                    _normalize(path)
+                    for path in canonical_lecture_dirs.values()
+                    if path.exists()
+                }
+                for child in lecture_children:
+                    if not child.is_dir():
+                        continue
+                    normalized_child = _normalize(child)
+                    if normalized_child in expected_lecture_dirs:
+                        continue
+                    if child.name in lecture_variant_names:
+                        continue
+                    if _is_path_protected(child):
+                        continue
+                    _safe_delete(
+                        child,
+                        kind="orphan_lecture",
+                        description="Unreferenced lecture directory",
+                    )
+                _cleanup_temporary_entries(canonical_module_dir)
+
+            _cleanup_temporary_entries(canonical_class_dir)
+
+        _log_event(
+            "Storage repair completed",
+            removed=len(removals),
+            freed=freed_bytes,
+            skipped=len(skipped),
+        )
+        return {
+            "status": "ok",
+            "removed": removals,
+            "skipped": skipped,
+            "freed_bytes": int(freed_bytes),
+        }
+
     @app.post(
         "/api/assets/reveal",
         status_code=status.HTTP_204_NO_CONTENT,

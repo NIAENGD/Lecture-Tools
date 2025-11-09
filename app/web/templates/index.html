@@ -4882,6 +4882,14 @@
                     Refresh
                   </button>
                   <button
+                    id="storage-repair"
+                    type="button"
+                    class="secondary"
+                    data-i18n="storage.actions.repair"
+                  >
+                    Repair storage
+                  </button>
+                  <button
                     id="storage-download-selected"
                     type="button"
                     class="secondary"
@@ -5000,6 +5008,11 @@
                 id="storage-purge-summary"
                 class="storage-purge-summary"
                 data-i18n="storage.purge.none"
+              ></p>
+              <p
+                id="storage-repair-summary"
+                class="storage-purge-summary"
+                data-i18n="storage.repair.none"
               ></p>
               <div id="storage-loading" class="storage-loading" hidden data-i18n="storage.loading">
                 Loading…
@@ -6011,6 +6024,7 @@
               },
               actions: {
                 refresh: 'Refresh',
+                repair: 'Repair storage',
                 downloadSelected: 'Download selected',
                 purge: 'Remove processed audio',
               },
@@ -6035,6 +6049,12 @@
                 available: '{{count}} {{lectureWord}} ready for cleanup.',
                 working: 'Removing audio…',
                 readyCount: '{{count}} {{lectureWord}} ready for cleanup',
+              },
+              repair: {
+                working: 'Repairing…',
+                summary: 'Removed {{count}} {{itemWord}} • Freed {{freed}}',
+                none: 'No storage repairs have been run yet.',
+                noChange: 'No space reclaimed',
               },
               classes: {
                 summary: '{{moduleCount}} {{moduleWord}} • {{lectureCount}} {{lectureWord}}',
@@ -6298,6 +6318,11 @@
               storageDownloadReady: 'Download ready.',
               storageDownloadFailed: 'Unable to prepare download.',
               storageDownloadNone: 'Select at least one item to download.',
+              storageRepairing: 'Scanning storage for temporary files…',
+              storageRepairComplete:
+                'Storage repair removed {{count}} {{itemWord}} and freed {{freed}}.',
+              storageRepairNoChanges: 'Storage repair completed. No temporary items found.',
+              storageRepairFailed: 'Unable to repair storage.',
               gpuChecking: '====> Checking GPU Whisper support…',
               gpuConfirmed: 'GPU Whisper support confirmed.',
               gpuUnavailable: 'GPU acceleration is unavailable on this platform.',
@@ -6319,11 +6344,12 @@
               importSuccess: 'Imported {{count}} lectures.',
               importNoChanges: 'Archive imported (no new lectures).',
             },
-            counts: {
-              module: { one: 'module', other: 'modules' },
-              lecture: { one: 'lecture', other: 'lectures' },
-              task: { one: 'task', other: 'tasks' },
-            },
+              counts: {
+                module: { one: 'module', other: 'modules' },
+                lecture: { one: 'lecture', other: 'lectures' },
+                task: { one: 'task', other: 'tasks' },
+                item: { one: 'item', other: 'items' },
+              },
           },
           zh: {
             document: {
@@ -6614,6 +6640,7 @@
               },
               actions: {
                 refresh: '刷新',
+                repair: '修复存储',
                 downloadSelected: '下载所选项',
                 purge: '移除已处理的音频',
               },
@@ -6638,6 +6665,12 @@
                 available: '有 {{count}} 个{{lectureWord}}可清理。',
                 working: '正在移除音频…',
                 readyCount: '{{count}} 个{{lectureWord}}可清理',
+              },
+              repair: {
+                working: '正在修复…',
+                summary: '已移除 {{count}} 个{{itemWord}} • 释放 {{freed}} 空间',
+                none: '尚未运行存储修复。',
+                noChange: '未释放空间',
               },
               classes: {
                 summary: '{{moduleCount}} 个{{moduleWord}} • {{lectureCount}} 个{{lectureWord}}',
@@ -6895,6 +6928,10 @@
               storageDownloadReady: '已准备好下载。',
               storageDownloadFailed: '无法准备下载。',
               storageDownloadNone: '请选择至少一个项目。',
+              storageRepairing: '正在扫描存储中的临时文件…',
+              storageRepairComplete: '存储修复完成，已清理 {{count}} 个{{itemWord}}，释放 {{freed}} 空间。',
+              storageRepairNoChanges: '存储修复完成，未发现可清理的项目。',
+              storageRepairFailed: '无法修复存储。',
               gpuChecking: '====> 正在检查 GPU Whisper 支持…',
               gpuConfirmed: 'GPU Whisper 支持已确认。',
               gpuUnavailable: '此平台不支持 GPU 加速。',
@@ -6916,11 +6953,12 @@
               importSuccess: '已导入 {{count}} 个讲座。',
               importNoChanges: '归档导入完成（没有新讲座）。',
             },
-            counts: {
-              module: { one: '模块', other: '模块' },
-              lecture: { one: '讲座', other: '讲座' },
-              task: { one: '任务', other: '任务' },
-            },
+              counts: {
+                module: { one: '模块', other: '模块' },
+                lecture: { one: '讲座', other: '讲座' },
+                task: { one: '任务', other: '任务' },
+                item: { one: '项目', other: '项目' },
+              },
           },
           es: {
             document: {
@@ -7213,6 +7251,7 @@
               },
               actions: {
                 refresh: 'Actualizar',
+                repair: 'Reparar almacenamiento',
                 downloadSelected: 'Descargar seleccionados',
                 purge: 'Quitar audio procesado',
               },
@@ -7237,6 +7276,12 @@
                 available: '{{count}} {{lectureWord}} listos para limpiar.',
                 working: 'Eliminando audio…',
                 readyCount: '{{count}} {{lectureWord}} listos para limpiar',
+              },
+              repair: {
+                working: 'Reparando…',
+                summary: 'Se eliminaron {{count}} {{itemWord}} • Se liberaron {{freed}}',
+                none: 'Aún no se ha ejecutado la reparación de almacenamiento.',
+                noChange: 'No se liberó espacio',
               },
               classes: {
                 summary: '{{moduleCount}} {{moduleWord}} • {{lectureCount}} {{lectureWord}}',
@@ -7503,6 +7548,11 @@
               storageDownloadReady: 'Descarga preparada.',
               storageDownloadFailed: 'No se pudo preparar la descarga.',
               storageDownloadNone: 'Selecciona al menos un elemento.',
+              storageRepairing: 'Buscando archivos temporales en el almacenamiento…',
+              storageRepairComplete:
+                'Reparación completada. Se eliminaron {{count}} {{itemWord}} y se liberaron {{freed}}.',
+              storageRepairNoChanges: 'Reparación completada. No se encontraron elementos temporales.',
+              storageRepairFailed: 'No se pudo reparar el almacenamiento.',
               gpuChecking: '====> Comprobando compatibilidad con GPU Whisper…',
               gpuConfirmed: 'Compatibilidad con GPU Whisper confirmada.',
               gpuUnavailable: 'GPU no disponible en esta plataforma.',
@@ -7524,11 +7574,12 @@
               importSuccess: 'Se importaron {{count}} clases.',
               importNoChanges: 'Archivo importado (sin clases nuevas).',
             },
-            counts: {
-              module: { one: 'módulo', other: 'módulos' },
-              lecture: { one: 'clase', other: 'clases' },
-              task: { one: 'tarea', other: 'tareas' },
-            },
+              counts: {
+                module: { one: 'módulo', other: 'módulos' },
+                lecture: { one: 'clase', other: 'clases' },
+                task: { one: 'tarea', other: 'tareas' },
+                item: { one: 'elemento', other: 'elementos' },
+              },
           },
           fr: {
             document: {
@@ -7827,6 +7878,7 @@
               },
               actions: {
                 refresh: 'Actualiser',
+                repair: 'Réparer le stockage',
                 downloadSelected: 'Télécharger la sélection',
                 purge: 'Supprimer l’audio traité',
               },
@@ -7851,6 +7903,12 @@
                 available: '{{count}} {{lectureWord}} prêts à nettoyer.',
                 working: 'Suppression des audios…',
                 readyCount: '{{count}} {{lectureWord}} prêts à nettoyer',
+              },
+              repair: {
+                working: 'Réparation…',
+                summary: '{{count}} {{itemWord}} supprimés • {{freed}} libérés',
+                none: 'Aucune réparation de stockage n’a encore été effectuée.',
+                noChange: 'Aucun espace libéré',
               },
               classes: {
                 summary: '{{moduleCount}} {{moduleWord}} • {{lectureCount}} {{lectureWord}}',
@@ -8118,6 +8176,11 @@
               storageDownloadReady: 'Téléchargement prêt.',
               storageDownloadFailed: 'Impossible de préparer le téléchargement.',
               storageDownloadNone: 'Sélectionnez au moins un élément.',
+              storageRepairing: 'Analyse du stockage à la recherche de fichiers temporaires…',
+              storageRepairComplete:
+                'Réparation terminée. {{count}} {{itemWord}} supprimés pour {{freed}} libérés.',
+              storageRepairNoChanges: 'Réparation terminée. Aucun élément temporaire détecté.',
+              storageRepairFailed: 'Impossible de réparer le stockage.',
               gpuChecking: '====> Vérification de la compatibilité GPU Whisper…',
               gpuConfirmed: 'Compatibilité GPU Whisper confirmée.',
               gpuUnavailable: 'GPU indisponible sur cette plateforme.',
@@ -8143,6 +8206,7 @@
               module: { one: 'module', other: 'modules' },
               lecture: { one: 'leçon', other: 'leçons' },
               task: { one: 'tâche', other: 'tâches' },
+              item: { one: 'élément', other: 'éléments' },
             },
           },
         };
@@ -8551,6 +8615,8 @@
             overview: null,
             purging: false,
             initialized: false,
+            repairing: false,
+            repairSummary: null,
             browser: {
               path: '',
               parent: null,
@@ -8781,6 +8847,7 @@
             container: document.getElementById('view-storage'),
             path: document.getElementById('storage-path'),
             refresh: document.getElementById('storage-refresh'),
+            repair: document.getElementById('storage-repair'),
             downloadSelected: document.getElementById('storage-download-selected'),
             used: document.getElementById('storage-used'),
             available: document.getElementById('storage-available'),
@@ -8794,6 +8861,7 @@
             list: document.getElementById('storage-class-list'),
             purge: document.getElementById('storage-purge'),
             purgeSummary: document.getElementById('storage-purge-summary'),
+            repairSummary: document.getElementById('storage-repair-summary'),
             browser: {
               navRoot: document.getElementById('storage-nav-root'),
               navUp: document.getElementById('storage-nav-up'),
@@ -9254,6 +9322,30 @@
           }
         }
 
+        function renderStorageRepairSummary() {
+          if (!dom.storage || !dom.storage.repairSummary) {
+            return;
+          }
+          const summary = state.storage.repairSummary;
+          if (!summary) {
+            dom.storage.repairSummary.textContent = t('storage.repair.none');
+            return;
+          }
+          const count = Number(summary.count) || 0;
+          const freedBytes = Number(summary.freed) || 0;
+          if (count <= 0) {
+            dom.storage.repairSummary.textContent = t('storage.repair.none');
+            return;
+          }
+          const itemWord = pluralize(currentLanguage, 'counts.item', count);
+          const freedLabel = freedBytes > 0 ? formatBytes(freedBytes) : t('storage.repair.noChange');
+          dom.storage.repairSummary.textContent = t('storage.repair.summary', {
+            count,
+            itemWord,
+            freed: freedLabel,
+          });
+        }
+
         function renderStoragePurgeControls() {
           if (!dom.storage || !dom.storage.purge) {
             return;
@@ -9266,6 +9358,19 @@
             dom.storage.purge.textContent = t('storage.purge.working');
           } else {
             dom.storage.purge.textContent = t('storage.actions.purge');
+          }
+        }
+
+        function renderStorageRepairControls() {
+          if (!dom.storage || !dom.storage.repair) {
+            return;
+          }
+          const disabled = state.storage.loading || state.storage.repairing;
+          dom.storage.repair.disabled = disabled;
+          if (state.storage.repairing) {
+            dom.storage.repair.textContent = t('storage.repair.working');
+          } else {
+            dom.storage.repair.textContent = t('storage.actions.repair');
           }
         }
 
@@ -9740,6 +9845,8 @@
           renderStorageUsage();
           renderStoragePurgeSummary();
           renderStoragePurgeControls();
+          renderStorageRepairSummary();
+          renderStorageRepairControls();
           renderStorageClasses();
         }
 
@@ -10194,6 +10301,76 @@
               browserState.selected.clear();
             }
             renderStorageBrowser();
+          }
+        }
+
+        async function handleStorageRepair() {
+          if (!dom.storage || state.storage.repairing) {
+            return;
+          }
+          state.storage.repairing = true;
+          renderStorageRepairControls();
+          showStatus(t('status.storageRepairing'), 'info');
+          try {
+            const payload = await request('/api/storage/repair', { method: 'POST' });
+            const removed = Array.isArray(payload?.removed) ? payload.removed : [];
+            const freed = Number(payload?.freed_bytes) || 0;
+            state.storage.repairSummary = {
+              count: removed.length,
+              freed,
+            };
+            renderStorageRepairSummary();
+            if (removed.length > 0) {
+              const itemWord = pluralize(currentLanguage, 'counts.item', removed.length);
+              const freedLabel = freed > 0 ? formatBytes(freed) : t('storage.repair.noChange');
+              showStatus(
+                t('status.storageRepairComplete', {
+                  count: removed.length,
+                  itemWord,
+                  freed: freedLabel,
+                }),
+                'success',
+              );
+            } else {
+              showStatus(t('status.storageRepairNoChanges'), 'info');
+            }
+            const skipped = Array.isArray(payload?.skipped) ? payload.skipped : [];
+            if (removed.length > 0 || skipped.length > 0) {
+              try {
+                console.groupCollapsed('[storage] repair summary');
+                if (removed.length > 0) {
+                  console.table(
+                    removed.map((entry) => ({
+                      path: entry?.path ?? '',
+                      size: formatBytes(Number(entry?.size) || 0),
+                      kind: entry?.kind ?? '',
+                      description: entry?.description ?? '',
+                    })),
+                  );
+                }
+                if (skipped.length > 0) {
+                  console.table(
+                    skipped.map((entry) => ({
+                      path: entry?.path ?? '',
+                      reason: entry?.reason ?? '',
+                      kind: entry?.kind ?? '',
+                    })),
+                  );
+                }
+                console.groupEnd();
+              } catch (error) {
+                // eslint-disable-next-line no-console
+                console.error('Failed to render storage repair summary', error);
+              }
+            }
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            showStatus(message || t('status.storageRepairFailed'), 'error');
+          } finally {
+            state.storage.repairing = false;
+            renderStorageRepairControls();
+            await refreshStorage({ includeOverview: true, force: true, silent: true });
+            renderStorageRepairSummary();
           }
         }
 
@@ -18562,6 +18739,8 @@
             state.storage.overview = null;
             state.storage.usage = null;
             state.storage.detail = null;
+            state.storage.repairing = false;
+            state.storage.repairSummary = null;
             const storageBrowser = getStorageBrowserState();
             storageBrowser.initialized = false;
             storageBrowser.entries = [];
@@ -18930,6 +19109,12 @@
         if (dom.storage && dom.storage.downloadSelected) {
           dom.storage.downloadSelected.addEventListener('click', () => {
             void handleStorageDownloadSelected();
+          });
+        }
+
+        if (dom.storage && dom.storage.repair) {
+          dom.storage.repair.addEventListener('click', () => {
+            void handleStorageRepair();
           });
         }
 
