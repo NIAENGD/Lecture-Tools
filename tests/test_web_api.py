@@ -736,6 +736,96 @@ def test_storage_repair_aggressive_cleanup_for_large_lecture(temp_config):
     assert payload.get("skipped", []) == []
 
 
+def test_storage_repair_pdf_with_image_burst_is_cleaned(temp_config):
+    repository = LectureRepository(temp_config)
+    class_id = repository.add_class("Cleanup 101", "Storage repair burst test")
+    module_id = repository.add_module(class_id, "Slide Cleanup", "")
+
+    lecture_dir = temp_config.storage_root / "Cleanup 101" / "Slide Cleanup" / "Burst Session"
+    lecture_dir.mkdir(parents=True, exist_ok=True)
+
+    pdf_path = lecture_dir / "slides.pdf"
+    pdf_bytes = b"p" * 4096
+    pdf_path.write_bytes(pdf_bytes)
+
+    images_dir = lecture_dir / "slides.pdf_images"
+    images_dir.mkdir(parents=True, exist_ok=True)
+    image_bytes = b"i" * 2048
+    image_count = 120
+    for index in range(image_count):
+        (images_dir / f"page-{index:03d}.png").write_bytes(image_bytes)
+
+    zip_path = lecture_dir / "slides.pdf_images.zip"
+    zip_bytes = b"z" * 8192
+    zip_path.write_bytes(zip_bytes)
+
+    slide_relative = pdf_path.relative_to(temp_config.storage_root).as_posix()
+    repository.add_lecture(module_id, "Slide Burst", slide_path=slide_relative)
+
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    response = client.post("/api/storage/repair")
+    assert response.status_code == 200
+    payload = response.json()
+
+    removed_paths = {entry["path"] for entry in payload["removed"]}
+    images_rel = images_dir.relative_to(temp_config.storage_root).as_posix()
+    zip_rel = zip_path.relative_to(temp_config.storage_root).as_posix()
+
+    assert pdf_path.exists()
+    assert not images_dir.exists()
+    assert not zip_path.exists()
+    assert lecture_dir.exists()
+
+    assert images_rel in removed_paths or any(path.startswith(f"{images_rel}/") for path in removed_paths)
+    assert zip_rel in removed_paths
+
+    expected_removed = len(image_bytes) * image_count + len(zip_bytes)
+    assert payload["freed_bytes"] >= expected_removed
+
+
+def test_storage_repair_detects_unknown_image_directory(temp_config):
+    repository = LectureRepository(temp_config)
+    class_id = repository.add_class("Databases", "Cleanup unknown dirs")
+    module_id = repository.add_module(class_id, "SQL", "")
+
+    lecture_dir = temp_config.storage_root / "Databases" / "SQL" / "Lesson"
+    lecture_dir.mkdir(parents=True, exist_ok=True)
+
+    pdf_path = lecture_dir / "lesson.pdf"
+    pdf_bytes = b"s" * 2048
+    pdf_path.write_bytes(pdf_bytes)
+
+    pages_dir = lecture_dir / "07a_Basic_SQL (pages)"
+    pages_dir.mkdir(parents=True, exist_ok=True)
+    page_bytes = b"p" * 1024
+    page_count = 200
+    for index in range(page_count):
+        (pages_dir / f"07a_Basic_SQL-{index:03d}.png").write_bytes(page_bytes)
+
+    slide_relative = pdf_path.relative_to(temp_config.storage_root).as_posix()
+    repository.add_lecture(module_id, "SQL Session", slide_path=slide_relative)
+
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    response = client.post("/api/storage/repair")
+    assert response.status_code == 200
+    payload = response.json()
+
+    pages_rel = pages_dir.relative_to(temp_config.storage_root).as_posix()
+    removed_paths = {entry["path"] for entry in payload["removed"]}
+
+    assert pdf_path.exists()
+    assert not pages_dir.exists()
+    assert lecture_dir.exists()
+    assert pages_rel in removed_paths
+
+    expected_removed = len(page_bytes) * page_count
+    assert payload["freed_bytes"] >= expected_removed
+
+
 def test_system_update_endpoint(temp_config):
     repository = LectureRepository(temp_config)
     app = create_app(repository, config=temp_config)
