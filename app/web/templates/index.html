@@ -4436,6 +4436,51 @@
         margin-bottom: 6px;
       }
 
+      .asset-sublist {
+        list-style: none;
+        margin: 6px 0 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .asset-sublist-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      .asset-sublist-item strong {
+        font-size: 0.9rem;
+        color: var(--text);
+      }
+
+      .asset-sublist-meta {
+        font-size: 0.8rem;
+      }
+
+      .asset-sublist-actions {
+        margin-left: auto;
+        display: flex;
+        gap: 6px;
+      }
+
+      .asset-sublist-actions button {
+        border: none;
+        background: none;
+        color: var(--accent);
+        cursor: pointer;
+        font-size: 0.8rem;
+        padding: 0;
+      }
+
+      .asset-sublist-actions button:hover {
+        text-decoration: underline;
+      }
+
       .asset-status-note {
         display: block;
         margin-top: 4px;
@@ -5797,6 +5842,8 @@
                 slidesStoredOnly: 'Stored as a document. Processing is available for PDFs.',
                 archiveCreated: 'Bundle created: {{name}}',
                 mastered: 'Mastered: {{name}}',
+                audioPending: 'Uploaded {{count}} audio file(s) pending combination.',
+                slidesPending: 'Uploaded {{count}} slide file(s) pending combination.',
               },
               actions: {
                 upload: 'Upload',
@@ -6415,6 +6462,8 @@
                 slidesStoredOnly: '文档已保存。仅支持处理 PDF。',
                 archiveCreated: '已生成资源包：{{name}}',
                 mastered: '已优化：{{name}}',
+                audioPending: '已上传 {{count}} 个音频文件，等待合并。',
+                slidesPending: '已上传 {{count}} 个课件文件，等待合并。',
               },
               actions: {
                 upload: '上传',
@@ -7024,6 +7073,8 @@
                 slidesStoredOnly: 'Documento almacenado. El procesamiento solo está disponible para PDFs.',
                 archiveCreated: 'Paquete creado: {{name}}',
                 mastered: 'Masterizado: {{name}}',
+                audioPending: 'Se cargaron {{count}} archivo(s) de audio pendientes de combinar.',
+                slidesPending: 'Se cargaron {{count}} archivo(s) de diapositivas pendientes de combinar.',
               },
               actions: {
                 upload: 'Subir',
@@ -7648,6 +7699,8 @@
                 slidesStoredOnly: 'Document enregistré. Le traitement est réservé aux PDF.',
                 archiveCreated: 'Archive créée : {{name}}',
                 mastered: 'Masterisé : {{name}}',
+                audioPending: '{{count}} fichier(s) audio en attente de combinaison.',
+                slidesPending: '{{count}} fichier(s) de diapositives en attente de combinaison.',
               },
               actions: {
                 upload: 'Importer',
@@ -18524,6 +18577,65 @@
         function renderAssets(lecture) {
           dom.assetList.innerHTML = '';
           setTranscribeControls(null, null, null);
+          const rawAudioFiles = Array.isArray(lecture.raw_audio_files)
+            ? lecture.raw_audio_files
+            : [];
+          const rawSlideFiles = Array.isArray(lecture.raw_slide_files)
+            ? lecture.raw_slide_files
+            : [];
+
+          function createAssetFileList(files, definition) {
+            if (!Array.isArray(files) || !files.length) {
+              return null;
+            }
+            const list = document.createElement('ul');
+            list.className = 'asset-sublist';
+            files.forEach((entry, index) => {
+              if (!entry || typeof entry.path !== 'string') {
+                return;
+              }
+              const item = document.createElement('li');
+              item.className = 'asset-sublist-item';
+              const title = document.createElement('strong');
+              title.textContent = entry.name || `File ${index + 1}`;
+              item.appendChild(title);
+              if (typeof entry.size === 'number' && Number.isFinite(entry.size) && entry.size >= 0) {
+                const sizeElement = document.createElement('span');
+                sizeElement.className = 'asset-sublist-meta';
+                sizeElement.textContent = formatBytes(entry.size);
+                item.appendChild(sizeElement);
+              }
+              const actions = document.createElement('div');
+              actions.className = 'asset-sublist-actions';
+              const viewButton = document.createElement('button');
+              viewButton.type = 'button';
+              viewButton.textContent = t('assets.actions.view');
+              viewButton.addEventListener('click', () => {
+                openAssetViewer(definition, entry.path);
+              });
+              actions.appendChild(viewButton);
+              const downloadButton = document.createElement('button');
+              downloadButton.type = 'button';
+              downloadButton.textContent = t('assets.actions.download');
+              downloadButton.addEventListener('click', () => {
+                const downloadUrl = buildStorageURL(entry.path);
+                const fallbackName = entry.name || `${definition.type || 'asset'}.bin`;
+                const anchor = document.createElement('a');
+                anchor.href = downloadUrl;
+                anchor.download = fallbackName;
+                anchor.rel = 'noopener';
+                anchor.style.display = 'none';
+                document.body.appendChild(anchor);
+                anchor.click();
+                anchor.remove();
+              });
+              actions.appendChild(downloadButton);
+              item.appendChild(actions);
+              list.appendChild(item);
+            });
+            return list;
+          }
+
           assetDefinitions.forEach((definition) => {
             const value = lecture[definition.key];
             if (
@@ -18532,6 +18644,12 @@
             ) {
               return;
             }
+            const rawFiles =
+              definition.type === 'audio'
+                ? rawAudioFiles
+                : definition.type === 'slides'
+                ? rawSlideFiles
+                : [];
             const item = document.createElement('li');
             item.className = 'asset-item';
             const header = document.createElement('div');
@@ -18544,6 +18662,8 @@
             let statusText = t('assets.status.notLinked');
             let statusNote = null;
             let isPdfSlide = false;
+            const firstRawPath = rawFiles.length ? rawFiles[0]?.path : null;
+            const effectiveValue = value || firstRawPath || null;
             if (value) {
               const fileName = value.split('/').pop();
               if (definition.type === 'slides') {
@@ -18559,6 +18679,11 @@
               } else {
                 statusText = t('assets.status.linked', { name: fileName });
               }
+            } else if (definition.type === 'audio' && rawFiles.length) {
+              statusText = t('assets.status.audioPending', { count: rawFiles.length });
+            } else if (definition.type === 'slides' && rawFiles.length) {
+              statusText = t('assets.status.slidesPending', { count: rawFiles.length });
+              isPdfSlide = true;
             } else if (definition.type === 'slides') {
               statusText = t('assets.status.slidesHint');
             } else if (definition.type === 'slide_bundle') {
@@ -18598,7 +18723,9 @@
               transcribeButton.className = 'secondary';
               transcribeButton.setAttribute('data-i18n', 'assets.transcribe');
               transcribeButton.textContent = t('assets.transcribe');
-              transcribeButton.disabled = !value;
+              const hasProcessedAudio = Boolean(lecture.processed_audio_path);
+              const hasAudioSource = Boolean(value) || hasProcessedAudio || rawFiles.length > 0;
+              transcribeButton.disabled = !hasAudioSource;
               actions.appendChild(transcribeButton);
 
               modelLabel = document.createElement('label');
@@ -18629,18 +18756,19 @@
               modelLabel.appendChild(modelSelect);
             }
 
-            const isViewable = isAssetViewable(definition, value);
-            if (isViewable) {
+            const viewTarget = effectiveValue;
+            const viewable = Boolean(viewTarget && isAssetViewable(definition, viewTarget));
+            if (viewable) {
               const viewButton = document.createElement('button');
               viewButton.type = 'button';
               viewButton.className = 'secondary';
               viewButton.textContent = t('assets.actions.view');
-              viewButton.disabled = !value;
+              viewButton.disabled = !viewTarget;
               viewButton.addEventListener('click', () => {
-                if (!value) {
+                if (!viewTarget) {
                   return;
                 }
-                openAssetViewer(definition, value);
+                openAssetViewer(definition, viewTarget);
               });
               actions.appendChild(viewButton);
             }
@@ -18649,17 +18777,20 @@
             downloadButton.type = 'button';
             downloadButton.className = 'secondary';
             downloadButton.textContent = t('assets.actions.download');
-            downloadButton.disabled = !value;
+            downloadButton.disabled = !viewTarget;
             downloadButton.addEventListener('click', () => {
-              if (!value) {
+              if (!viewTarget) {
                 return;
               }
-              const downloadUrl = buildStorageURL(value);
-              const fallbackName = definition.type ? `${definition.type}.bin` : 'asset.bin';
-              const fileName = value.split('/').pop() || fallbackName;
+              const downloadUrl = buildStorageURL(viewTarget);
+              const rawEntry = rawFiles.find((entry) => entry?.path === viewTarget) || rawFiles[0];
+              const fallbackName =
+                (typeof value === 'string' && value.split('/').pop()) ||
+                rawEntry?.name ||
+                `${definition.type || 'asset'}.bin`;
               const anchor = document.createElement('a');
               anchor.href = downloadUrl;
-              anchor.download = fileName;
+              anchor.download = fallbackName;
               anchor.rel = 'noopener';
               anchor.style.display = 'none';
               document.body.appendChild(anchor);
@@ -18667,18 +18798,22 @@
               anchor.remove();
             });
 
-            if (definition.type === 'slides' && isPdfSlide) {
+            if (definition.type === 'slides') {
               const isProcessing = state.processingProgressLectureId === lecture.id;
-              const processSlidesButton = document.createElement('button');
-              processSlidesButton.type = 'button';
-              processSlidesButton.className = 'secondary';
-              processSlidesButton.setAttribute('data-i18n', 'assets.actions.processSlides');
-              processSlidesButton.textContent = t('assets.actions.processSlides');
-              processSlidesButton.disabled = !value || isProcessing;
-              processSlidesButton.addEventListener('click', () => {
-                handleSlideProcessing(definition);
-              });
-              actions.appendChild(processSlidesButton);
+              const hasSlideSource = Boolean(viewTarget);
+              if (hasSlideSource) {
+                const processSlidesButton = document.createElement('button');
+                processSlidesButton.type = 'button';
+                processSlidesButton.className = 'secondary';
+                processSlidesButton.setAttribute('data-i18n', 'assets.actions.processSlides');
+                processSlidesButton.textContent = t('assets.actions.processSlides');
+                processSlidesButton.disabled = !hasSlideSource || isProcessing;
+                processSlidesButton.addEventListener('click', () => {
+                  handleSlideProcessing(definition);
+                });
+                actions.appendChild(processSlidesButton);
+              }
+              isPdfSlide = isPdfSlide || rawFiles.length > 0;
             }
 
             actions.appendChild(downloadButton);
@@ -18687,9 +18822,10 @@
             removeButton.type = 'button';
             removeButton.className = 'danger';
             removeButton.textContent = t('assets.actions.remove');
-            removeButton.disabled = !value;
+            const hasAsset = Boolean(value) || rawFiles.length > 0;
+            removeButton.disabled = !hasAsset;
             removeButton.addEventListener('click', () => {
-              if (!value) {
+              if (!hasAsset) {
                 return;
               }
               handleAssetRemoval(definition);
@@ -18699,10 +18835,25 @@
             if (definition.type === 'audio' && modelLabel && modelSelect) {
               actions.appendChild(modelLabel);
               setTranscribeControls(transcribeButton, modelSelect, gpuOption);
-              setTranscribeButtonDisabled(!value);
+              const hasProcessedAudio = Boolean(lecture.processed_audio_path);
+              const hasAudioSource = Boolean(value) || hasProcessedAudio || rawFiles.length > 0;
+              setTranscribeButtonDisabled(!hasAudioSource);
             }
 
             item.appendChild(actions);
+
+            if (definition.type === 'audio') {
+              const sublist = createAssetFileList(rawAudioFiles, definition);
+              if (sublist) {
+                item.appendChild(sublist);
+              }
+            } else if (definition.type === 'slides') {
+              const sublist = createAssetFileList(rawSlideFiles, definition);
+              if (sublist) {
+                item.appendChild(sublist);
+              }
+            }
+
             dom.assetList.appendChild(item);
           });
         }
@@ -18805,7 +18956,11 @@
               dom.editName.focus();
             }
 
-            setTranscribeButtonDisabled(!detail.lecture.audio_path);
+            const rawAudioFiles = Array.isArray(detail.lecture.raw_audio_files)
+              ? detail.lecture.raw_audio_files
+              : [];
+            const hasAudioSource = Boolean(detail.lecture.audio_path || detail.lecture.processed_audio_path);
+            setTranscribeButtonDisabled(!hasAudioSource && rawAudioFiles.length === 0);
 
             renderAssets(detail.lecture);
           } catch (error) {
@@ -18972,7 +19127,10 @@
           const lectureId = state.selectedLectureId;
           const detail = state.selectedLectureDetail;
           const slidePath = detail?.lecture?.slide_path;
-          if (!slidePath) {
+          const rawSlides = Array.isArray(detail?.lecture?.raw_slide_files)
+            ? detail.lecture.raw_slide_files
+            : [];
+          if (!slidePath && rawSlides.length === 0) {
             showStatus(t('status.slidesUploadRequired'), 'info');
             return;
           }
