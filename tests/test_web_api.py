@@ -357,6 +357,17 @@ def test_storage_repair_removes_legacy_artifacts(temp_config):
     (temp_dir / "junk.bin").write_bytes(b"x" * 64)
     stray_file = lecture_paths.processed_dir / "Thumbs.db"
     stray_file.write_bytes(b"x" * 16)
+    numeric_tmp_dir = lecture_paths.processed_dir / "tmp12345"
+    numeric_tmp_dir.mkdir(parents=True, exist_ok=True)
+    (numeric_tmp_dir / "junk.bin").write_bytes(b"x" * 32)
+    pycache_dir = lecture_paths.processed_dir / "__pycache__"
+    pycache_dir.mkdir(parents=True, exist_ok=True)
+    (pycache_dir / "module.cpython-311.pyc").write_bytes(b"p" * 24)
+    cache_dir = lecture_paths.processed_dir / "cache-data"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    (cache_dir / "data.bin").write_bytes(b"c" * 40)
+    cache_file = lecture_paths.processed_dir / "render.cache"
+    cache_file.write_bytes(b"r" * 12)
 
     legacy_class_dir = temp_config.storage_root / class_record.name
     legacy_module_dir = lecture_paths.lecture_root.parent / module_record.name
@@ -389,6 +400,10 @@ def test_storage_repair_removes_legacy_artifacts(temp_config):
     orphan_rel = orphan_dir.relative_to(temp_config.storage_root).as_posix()
     temp_rel = temp_dir.relative_to(temp_config.storage_root).as_posix()
     stray_rel = stray_file.relative_to(temp_config.storage_root).as_posix()
+    numeric_tmp_rel = numeric_tmp_dir.relative_to(temp_config.storage_root).as_posix()
+    pycache_rel = pycache_dir.relative_to(temp_config.storage_root).as_posix()
+    cache_dir_rel = cache_dir.relative_to(temp_config.storage_root).as_posix()
+    cache_file_rel = cache_file.relative_to(temp_config.storage_root).as_posix()
     archive_rel = old_archive.relative_to(temp_config.storage_root).as_posix()
 
     assert legacy_class_rel in removed_paths
@@ -396,6 +411,10 @@ def test_storage_repair_removes_legacy_artifacts(temp_config):
     assert orphan_rel in removed_paths
     assert temp_rel in removed_paths
     assert stray_rel in removed_paths
+    assert numeric_tmp_rel in removed_paths
+    assert pycache_rel in removed_paths
+    assert cache_dir_rel in removed_paths
+    assert cache_file_rel in removed_paths
     assert archive_rel in removed_paths
 
     assert not legacy_class_dir.exists()
@@ -404,6 +423,10 @@ def test_storage_repair_removes_legacy_artifacts(temp_config):
     assert not orphan_dir.exists()
     assert not temp_dir.exists()
     assert not stray_file.exists()
+    assert not numeric_tmp_dir.exists()
+    assert not pycache_dir.exists()
+    assert not cache_dir.exists()
+    assert not cache_file.exists()
     assert not any(archive_root.iterdir())
     assert lecture_paths.lecture_root.exists()
 
@@ -412,6 +435,10 @@ def test_storage_repair_removes_legacy_artifacts(temp_config):
         + len(b"orphan")
         + 64
         + 16
+        + 32
+        + 24
+        + 40
+        + 12
         + 128
     )
     assert payload["freed_bytes"] >= expected_minimum
