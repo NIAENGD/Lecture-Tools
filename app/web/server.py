@@ -5602,14 +5602,20 @@ def create_app(
                     break
                 resolved = resolved.parent
 
+        def _is_within(candidate: Path, ancestor: Path) -> bool:
+            try:
+                candidate.relative_to(ancestor)
+                return True
+            except ValueError:
+                return False
+
         def _is_path_protected(path: Path) -> bool:
             resolved = _normalize(path)
             for protected in protected_entries:
-                try:
-                    if protected == resolved or protected.is_relative_to(resolved):
-                        return True
-                except ValueError:
-                    continue
+                if resolved == protected:
+                    return True
+                if _is_within(protected, resolved):
+                    return True
             return False
 
         removals: List[Dict[str, Any]] = []
@@ -5697,10 +5703,40 @@ def create_app(
                 return cleaned
             return fallback
 
-        TEMP_DIR_NAMES = {"tmp", "temp", "__macosx", ".tmp", ".temp"}
-        TEMP_FILE_NAMES = {".ds_store", "thumbs.db"}
-        TEMP_PREFIXES = ("tmp-", "temp-", "~$", ".~", "_tmp", "_temp")
-        TEMP_SUFFIXES = (".tmp", ".temp", ".part", ".partial")
+        TEMP_DIR_NAMES = {
+            "tmp",
+            "temp",
+            "__macosx",
+            ".tmp",
+            ".temp",
+            "__pycache__",
+            ".cache",
+            "cache",
+        }
+        TEMP_FILE_NAMES = {".ds_store", "thumbs.db", "desktop.ini"}
+        TEMP_SUFFIXES = (".tmp", ".temp", ".part", ".partial", ".cache")
+
+        def _matches_prefix(name: str, prefix: str) -> bool:
+            if not name.startswith(prefix):
+                return False
+            if len(name) == len(prefix):
+                return True
+            next_char = name[len(prefix)]
+            return not next_char.isalpha()
+
+        TEMP_PREFIX_CHECKS = (
+            functools.partial(_matches_prefix, prefix="tmp"),
+            functools.partial(_matches_prefix, prefix="temp"),
+            functools.partial(_matches_prefix, prefix="cache"),
+            lambda value: value.startswith("~$"),
+            lambda value: value.startswith(".~"),
+            lambda value: value.startswith(".tmp"),
+            lambda value: value.startswith(".temp"),
+            lambda value: value.startswith(".cache"),
+            lambda value: value.startswith("_tmp"),
+            lambda value: value.startswith("_temp"),
+            lambda value: value.startswith("._"),
+        )
 
         def _cleanup_temporary_entries(base: Path) -> None:
             resolved_base = _normalize(base)
@@ -5713,16 +5749,18 @@ def create_app(
             for child in children:
                 name_lower = child.name.lower()
                 if child.is_dir():
+                    has_prefix = any(check(name_lower) for check in TEMP_PREFIX_CHECKS)
                     if (
                         name_lower in TEMP_DIR_NAMES
-                        or any(name_lower.startswith(prefix) for prefix in TEMP_PREFIXES)
+                        or has_prefix
                         or any(name_lower.endswith(suffix) for suffix in TEMP_SUFFIXES)
                     ):
                         _safe_delete(child, kind="temporary", description=f"Temporary directory '{child.name}'")
                 else:
+                    has_prefix = any(check(name_lower) for check in TEMP_PREFIX_CHECKS)
                     if (
                         name_lower in TEMP_FILE_NAMES
-                        or any(name_lower.startswith(prefix) for prefix in TEMP_PREFIXES)
+                        or has_prefix
                         or any(name_lower.endswith(suffix) for suffix in TEMP_SUFFIXES)
                     ):
                         _safe_delete(child, kind="temporary", description=f"Temporary file '{child.name}'")
