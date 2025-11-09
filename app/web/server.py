@@ -290,6 +290,8 @@ _VISUAL_EFFECT_OPTIONS: Tuple[str, ...] = tuple(EFFECTS_LEVEL_OPTIONS)
 _DEFAULT_UI_SETTINGS = UISettings()
 _SERVER_LOGGER_PREFIXES: Tuple[str, ...] = ("uvicorn", "gunicorn", "hypercorn", "werkzeug")
 _SLIDE_PREVIEW_DIR_NAME = ".previews"
+_AUDIO_MANIFEST_FILENAME = "audio_manifest.json"
+_SLIDE_MANIFEST_FILENAME = "slides_manifest.json"
 _SLIDE_PREVIEW_TOKEN_PATTERN = re.compile(r"^[a-f0-9]{16,64}$")
 _DB_SLOW_WARNING_MS = 450.0
 _FILE_SLOW_WARNING_MS = 300.0
@@ -1274,6 +1276,8 @@ def _serialize_lecture(lecture: LectureRecord) -> Dict[str, Any]:
         "transcript_path": lecture.transcript_path,
         "notes_path": lecture.notes_path,
         "slide_image_dir": lecture.slide_image_dir,
+        "raw_audio_files": [],
+        "raw_slide_files": [],
     }
 
 
@@ -2426,6 +2430,336 @@ def create_app(
             return None
         return candidate if candidate.exists() else None
 
+    def _load_asset_manifest(manifest_path: Path) -> List[Dict[str, Any]]:
+        try:
+            raw = manifest_path.read_text("utf-8")
+        except FileNotFoundError:
+            return []
+        except OSError:
+            LOGGER.warning("Unable to read asset manifest at %s", manifest_path)
+            return []
+
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            LOGGER.warning("Asset manifest at %s is invalid and will be reset", manifest_path)
+            manifest_path.unlink(missing_ok=True)
+            return []
+
+        entries: List[Dict[str, Any]] = []
+        if not isinstance(data, list):
+            return entries
+
+        for entry in data:
+            if not isinstance(entry, dict):
+                continue
+            relative = entry.get("path")
+            if not isinstance(relative, str):
+                continue
+            relative = relative.strip()
+            if not relative:
+                continue
+            name = entry.get("name")
+            if isinstance(name, str) and name.strip():
+                display_name = name.strip()
+            else:
+                display_name = Path(relative).name or relative
+            uploaded_at = entry.get("uploaded_at")
+            cleaned: Dict[str, Any] = {"path": relative, "name": display_name}
+            if isinstance(uploaded_at, str) and uploaded_at:
+                cleaned["uploaded_at"] = uploaded_at
+            entries.append(cleaned)
+
+        return entries
+
+    def _write_asset_manifest(manifest_path: Path, entries: Sequence[Dict[str, Any]]) -> None:
+        serializable: List[Dict[str, Any]] = []
+        for entry in entries:
+            relative = entry.get("path")
+            if not isinstance(relative, str):
+                continue
+            relative = relative.strip()
+            if not relative:
+                continue
+            name = entry.get("name")
+            if isinstance(name, str) and name.strip():
+                display_name = name.strip()
+            else:
+                display_name = Path(relative).name or relative
+            payload: Dict[str, Any] = {"path": relative, "name": display_name}
+            uploaded_at = entry.get("uploaded_at")
+            if isinstance(uploaded_at, str) and uploaded_at:
+                payload["uploaded_at"] = uploaded_at
+            serializable.append(payload)
+
+        if serializable:
+            manifest_path.parent.mkdir(parents=True, exist_ok=True)
+            manifest_path.write_text(
+                json.dumps(serializable, indent=2, sort_keys=True),
+                encoding="utf-8",
+            )
+        else:
+            manifest_path.unlink(missing_ok=True)
+
+    def _prune_manifest_entries(manifest_path: Path, storage_root: Path) -> List[Dict[str, Any]]:
+        entries = _load_asset_manifest(manifest_path)
+        if not entries:
+            manifest_path.unlink(missing_ok=True)
+            return []
+
+        filtered: List[Dict[str, Any]] = []
+        changed = False
+        for entry in entries:
+            relative = entry.get("path")
+            if not isinstance(relative, str):
+                changed = True
+                continue
+            try:
+                candidate = _resolve_storage_path(storage_root, relative)
+            except ValueError:
+                changed = True
+                continue
+            if not candidate.exists():
+                changed = True
+                continue
+            filtered.append(entry)
+
+        if changed:
+            _write_asset_manifest(manifest_path, filtered)
+        return filtered
+
+    def _upsert_manifest_entry(
+        manifest_path: Path, *, path: str, name: Optional[str], uploaded_at: Optional[str]
+    ) -> List[Dict[str, Any]]:
+        entries = _load_asset_manifest(manifest_path)
+        cleaned_path = path.strip()
+        if not cleaned_path:
+            return entries
+
+        display_name = name.strip() if isinstance(name, str) and name.strip() else Path(cleaned_path).name
+        payload: Dict[str, Any] = {"path": cleaned_path, "name": display_name}
+        if isinstance(uploaded_at, str) and uploaded_at:
+            payload["uploaded_at"] = uploaded_at
+
+        replaced = False
+        for index, entry in enumerate(entries):
+            if entry.get("path") == cleaned_path:
+                entries[index].update(payload)
+                replaced = True
+                break
+
+        if not replaced:
+            entries.append(payload)
+
+        _write_asset_manifest(manifest_path, entries)
+        return entries
+
+    def _remove_manifest_paths(
+        manifest_path: Path, relative_paths: AbstractSet[str]
+    ) -> List[Dict[str, Any]]:
+        if not manifest_path.exists():
+            return []
+        entries = _load_asset_manifest(manifest_path)
+        filtered = [entry for entry in entries if entry.get("path") not in relative_paths]
+        if filtered:
+            _write_asset_manifest(manifest_path, filtered)
+        else:
+            manifest_path.unlink(missing_ok=True)
+        return filtered
+
+    def _describe_manifest_entries(
+        entries: Sequence[Dict[str, Any]], storage_root: Path
+    ) -> List[Dict[str, Any]]:
+        described: List[Dict[str, Any]] = []
+        for index, entry in enumerate(entries):
+            relative = entry.get("path")
+            if not isinstance(relative, str):
+                continue
+            try:
+                candidate = _resolve_storage_path(storage_root, relative)
+            except ValueError:
+                continue
+            if not candidate.exists():
+                continue
+            try:
+                size = candidate.stat().st_size
+            except OSError:
+                size = None
+            described.append(
+                {
+                    "path": relative,
+                    "name": entry.get("name") or Path(relative).name or relative,
+                    "uploaded_at": entry.get("uploaded_at"),
+                    "size": size,
+                    "index": index,
+                }
+            )
+        return described
+
+    def _ensure_slide_source(
+        lecture_id: int,
+        lecture: LectureRecord,
+        lecture_paths: LecturePaths,
+        storage_root: Path,
+        *,
+        class_name: str,
+        module_name: str,
+    ) -> Optional[Path]:
+        existing = _resolve_existing_asset(lecture.slide_path)
+        if existing is not None:
+            return existing
+
+        manifest_path = lecture_paths.raw_dir / _SLIDE_MANIFEST_FILENAME
+        manifest_entries = _prune_manifest_entries(manifest_path, storage_root)
+        if not manifest_entries:
+            return None
+
+        try:
+            import fitz  # type: ignore
+        except ImportError as error:  # pragma: no cover - dependency guard
+            raise HTTPException(
+                status_code=503,
+                detail="Combining slide files requires PyMuPDF to be installed.",
+            ) from error
+
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        base_stem = build_asset_stem(class_name, module_name, lecture.name, "slides")
+        combined_name = build_timestamped_name(
+            f"{base_stem}-combined",
+            timestamp=timestamp,
+            extension=".pdf",
+        )
+        combined_path = lecture_paths.raw_dir / combined_name
+        combined_path.parent.mkdir(parents=True, exist_ok=True)
+
+        document = fitz.open()
+        try:
+            for entry in manifest_entries:
+                relative = entry.get("path")
+                if not isinstance(relative, str):
+                    continue
+                try:
+                    source = _resolve_storage_path(storage_root, relative)
+                except ValueError:
+                    continue
+                if not source.exists():
+                    continue
+                with fitz.open(source) as part:  # type: ignore[arg-type]
+                    document.insert_pdf(part)
+            if document.page_count == 0:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Uploaded slide files could not be combined into a PDF.",
+                )
+            document.save(str(combined_path))
+        finally:
+            document.close()
+
+        combined_relative = combined_path.relative_to(storage_root).as_posix()
+        repository.update_lecture_assets(lecture_id, slide_path=combined_relative)
+        return combined_path
+
+    def _combine_audio_sources(
+        lecture_id: int,
+        lecture: LectureRecord,
+        lecture_paths: LecturePaths,
+        storage_root: Path,
+        *,
+        class_name: str,
+        module_name: str,
+    ) -> Optional[Path]:
+        manifest_path = lecture_paths.raw_dir / _AUDIO_MANIFEST_FILENAME
+        manifest_entries = _prune_manifest_entries(manifest_path, storage_root)
+        if not manifest_entries:
+            return None
+
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        base_stem = build_asset_stem(class_name, module_name, lecture.name, "audio")
+        combined_name = build_timestamped_name(
+            f"{base_stem}-combined",
+            timestamp=timestamp,
+            extension=".wav",
+        )
+        combined_path = lecture_paths.raw_dir / combined_name
+        combined_path.parent.mkdir(parents=True, exist_ok=True)
+
+        wav_paths: List[Path] = []
+        with TemporaryDirectory() as temp_dir:
+            temp_dir_path = Path(temp_dir)
+            for index, entry in enumerate(manifest_entries):
+                relative = entry.get("path")
+                if not isinstance(relative, str):
+                    continue
+                try:
+                    source = _resolve_storage_path(storage_root, relative)
+                except ValueError:
+                    continue
+                if not source.exists():
+                    continue
+                wav_stem = f"{Path(combined_name).stem}-{index:03d}"
+                wav_path, _ = ensure_wav(
+                    source,
+                    output_dir=temp_dir_path,
+                    stem=wav_stem,
+                    timestamp=timestamp,
+                )
+                wav_paths.append(wav_path)
+
+            if not wav_paths:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Uploaded audio files could not be prepared for transcription.",
+                )
+
+            if len(wav_paths) == 1:
+                shutil.copy2(wav_paths[0], combined_path)
+            else:
+                ffmpeg_path = shutil.which("ffmpeg")
+                if ffmpeg_path is None:
+                    raise HTTPException(
+                        status_code=503,
+                        detail="Combining audio files requires FFmpeg to be installed.",
+                    )
+                list_file = temp_dir_path / "inputs.txt"
+                with list_file.open("w", encoding="utf-8") as handle:
+                    for wav_path in wav_paths:
+                        handle.write(f"file {shlex.quote(str(wav_path))}\n")
+                command = [
+                    ffmpeg_path,
+                    "-hide_banner",
+                    "-loglevel",
+                    "error",
+                    "-y",
+                    "-f",
+                    "concat",
+                    "-safe",
+                    "0",
+                    "-i",
+                    str(list_file),
+                    "-c",
+                    "copy",
+                    str(combined_path),
+                ]
+                completed = subprocess.run(
+                    command,
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+                if completed.returncode != 0:
+                    stderr = (completed.stderr or "").strip()
+                    stdout = (completed.stdout or "").strip()
+                    message = stderr or stdout or "FFmpeg exited with a non-zero status."
+                    raise HTTPException(status_code=500, detail=message)
+
+        combined_relative = combined_path.relative_to(storage_root).as_posix()
+        repository.update_lecture_assets(
+            lecture_id,
+            audio_path=combined_relative,
+            processed_audio_path=None,
+        )
+        return combined_path
+
     def _summarize_lecture_storage(
         lecture: LectureRecord, class_record: ClassRecord, module: ModuleRecord
     ) -> LectureStorageSummary:
@@ -3432,8 +3766,29 @@ def create_app(
         if class_record is None:
             raise HTTPException(status_code=404, detail="Class not found")
 
+        storage_root = _require_storage_root()
+        lecture_paths = LecturePaths.build(
+            storage_root,
+            class_record.name,
+            module.name,
+            lecture.name,
+        )
+        raw_audio_entries = _prune_manifest_entries(
+            lecture_paths.raw_dir / _AUDIO_MANIFEST_FILENAME, storage_root
+        )
+        raw_slide_entries = _prune_manifest_entries(
+            lecture_paths.raw_dir / _SLIDE_MANIFEST_FILENAME, storage_root
+        )
+        lecture_payload = _serialize_lecture(lecture)
+        lecture_payload["raw_audio_files"] = _describe_manifest_entries(
+            raw_audio_entries, storage_root
+        )
+        lecture_payload["raw_slide_files"] = _describe_manifest_entries(
+            raw_slide_entries, storage_root
+        )
+
         return {
-            "lecture": _serialize_lecture(lecture),
+            "lecture": lecture_payload,
             "module": {
                 "id": module.id,
                 "name": module.name,
@@ -3591,150 +3946,80 @@ def create_app(
             candidate_name = build_timestamped_name(stem, timestamp=timestamp, extension=suffix)
             target = destination / candidate_name
 
-        if asset_key == "audio":
-            normalized_suffix = suffix.lower()
-            requires_conversion = normalized_suffix not in {".wav"}
-            if requires_conversion and not ffmpeg_available():
-                await file.close()
-                raise HTTPException(
-                    status_code=503,
-                    detail=(
-                        "FFmpeg is required to convert audio files on this server. "
-                        "Install FFmpeg or upload a WAV file instead."
-                    ),
-                )
-
         try:
             await _persist_upload_file(file, target)
         finally:
             await file.close()
 
-        if asset_key == "audio" and requires_conversion:
-            converted_path, created = ensure_wav(
-                target,
-                output_dir=lecture_paths.raw_dir,
-                stem=stem,
-                timestamp=timestamp,
-            )
-            if created and converted_path != target:
-                with contextlib.suppress(FileNotFoundError):
-                    target.unlink()
-                target = converted_path
-            elif converted_path != target:
-                target = converted_path
-
         relative = target.relative_to(storage_root).as_posix()
-        update_kwargs: Dict[str, Optional[str]] = {attribute: relative}
+        update_kwargs: Dict[str, Optional[str]] = {}
         processed_relative: Optional[str] = None
         processing_queued = False
         processing_operations: Set[str] = set()
-        pending_jobs: List[Callable[[], None]] = []
 
-        def _enqueue_background_job(task: Callable[[], None], *, context_label: str) -> None:
-            executor: ThreadPoolExecutor = getattr(app.state, "background_executor")
-            jobs: Set[Future] = getattr(app.state, "background_jobs")
-            jobs_lock: threading.Lock = getattr(app.state, "background_jobs_lock")
-
-            try:
-                future = executor.submit(task)
-            except Exception as error:  # noqa: BLE001 - executor may raise
-                LOGGER.exception(
-                    "Failed to queue %s for lecture %s", context_label, lecture_id
-                )
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Unable to queue {context_label} task.",
-                ) from error
-
-            with jobs_lock:
-                jobs.add(future)
-
-            def _cleanup_future(done: Future) -> None:
-                with jobs_lock:
-                    jobs.discard(done)
-
-            future.add_done_callback(_cleanup_future)
+        raw_audio_payload: List[Dict[str, Any]] = []
+        raw_slide_payload: List[Dict[str, Any]] = []
 
         if asset_key == "audio":
+            manifest_path = lecture_paths.raw_dir / _AUDIO_MANIFEST_FILENAME
+            uploaded_at = datetime.now(timezone.utc).isoformat()
+            _upsert_manifest_entry(
+                manifest_path,
+                path=relative,
+                name=original_name or candidate_name,
+                uploaded_at=uploaded_at,
+            )
+            manifest_entries = _prune_manifest_entries(manifest_path, storage_root)
+            raw_audio_payload = _describe_manifest_entries(manifest_entries, storage_root)
+            if lecture.audio_path and lecture.audio_path != relative:
+                _delete_asset_path(lecture.audio_path)
             if lecture.processed_audio_path:
                 _delete_asset_path(lecture.processed_audio_path)
+            update_kwargs["audio_path"] = None
             update_kwargs["processed_audio_path"] = None
             processed_relative = None
-            settings = _load_ui_settings()
-            audio_mastering_requested = bool(
-                getattr(settings, "audio_mastering_enabled", True)
+
+        elif asset_key == "slides":
+            manifest_path = lecture_paths.raw_dir / _SLIDE_MANIFEST_FILENAME
+            uploaded_at = datetime.now(timezone.utc).isoformat()
+            _upsert_manifest_entry(
+                manifest_path,
+                path=relative,
+                name=original_name or candidate_name,
+                uploaded_at=uploaded_at,
             )
-            if audio_mastering_requested:
-                def _process_audio_background() -> None:
-                    raw_file = storage_root / relative
-                    start_message = "====> Preparing audio mastering…"
-                    completion_message = "====> Audio mastering completed."
-                    context = {"operation": "audio_mastering"}
-                    processing_tracker.start(lecture_id, start_message, context=context)
-                    try:
-                        time.sleep(0.1)
-                        lecture_paths.processed_audio_dir.mkdir(parents=True, exist_ok=True)
-                        base_stem = Path(raw_file.name).stem or "audio"
-                        processed_name = f"{base_stem}-master.wav"
-                        processed_target = lecture_paths.processed_audio_dir / processed_name
-                        if processed_target.exists():
-                            processed_name = build_timestamped_name(
-                                f"{base_stem}-master", extension=".wav"
-                            )
-                            processed_target = (
-                                lecture_paths.processed_audio_dir / processed_name
-                            )
-                        shutil.copy2(raw_file, processed_target)
-                        processed_rel = (
-                            processed_target.relative_to(storage_root).as_posix()
-                        )
-                        repository.update_lecture_assets(
-                            lecture_id,
-                            processed_audio_path=processed_rel,
-                            audio_path=processed_rel,
-                        )
-                    except Exception as error:  # noqa: BLE001 - defensive
-                        LOGGER.exception(
-                            "Audio mastering task failed for lecture %s", lecture_id
-                        )
-                        processing_tracker.fail(
-                            lecture_id,
-                            f"====> {error}",
-                            context=context,
-                            exception=error,
-                        )
-                    else:
-                        processing_tracker.finish(
-                            lecture_id, completion_message, context=context
-                        )
-
-                pending_jobs.append(
-                    lambda: _enqueue_background_job(
-                        _process_audio_background,
-                        context_label="audio mastering",
-                    )
-                )
-                processing_queued = True
-                processing_operations.add("audio_mastering")
-
-        if asset_key == "slides":
+            manifest_entries = _prune_manifest_entries(manifest_path, storage_root)
+            raw_slide_payload = _describe_manifest_entries(manifest_entries, storage_root)
+            if lecture.slide_path:
+                _delete_asset_path(lecture.slide_path)
             if lecture.slide_image_dir:
                 _delete_asset_path(lecture.slide_image_dir)
-
+            update_kwargs["slide_path"] = None
             update_kwargs["slide_image_dir"] = None
+
+        else:
+            update_kwargs[attribute] = relative
 
         repository.update_lecture_assets(lecture_id, **update_kwargs)
         updated = repository.get_lecture(lecture_id)
         if updated is None:
             raise HTTPException(status_code=500, detail="Lecture update failed")
-        for job in pending_jobs:
-            job()
-        response: Dict[str, Any] = {"lecture": _serialize_lecture(updated), attribute: relative}
+        lecture_payload = _serialize_lecture(updated)
+        if asset_key == "audio":
+            lecture_payload["raw_audio_files"] = raw_audio_payload
+        if asset_key == "slides":
+            lecture_payload["raw_slide_files"] = raw_slide_payload
+        response: Dict[str, Any] = {"lecture": lecture_payload}
+        if asset_key not in {"audio", "slides"}:
+            response[attribute] = relative
+        else:
+            response[attribute] = update_kwargs.get(attribute)
         if asset_key == "audio":
             response["processed_audio_path"] = processed_relative
-            response["processing"] = processing_queued
+            response["raw_audio_files"] = raw_audio_payload
         if asset_key == "slides":
             response["slide_image_dir"] = update_kwargs.get("slide_image_dir")
+            response["raw_slide_files"] = raw_slide_payload
         response["processing"] = bool(processing_queued)
         if processing_operations:
             response["processing_operations"] = sorted(processing_operations)
@@ -3752,6 +4037,15 @@ def create_app(
         lecture = repository.get_lecture(lecture_id)
         if lecture is None:
             raise HTTPException(status_code=404, detail="Lecture not found")
+
+        class_record, module = _require_hierarchy(lecture)
+        storage_root = _require_storage_root()
+        lecture_paths = LecturePaths.build(
+            storage_root,
+            class_record.name,
+            module.name,
+            lecture.name,
+        )
 
         asset_key = asset_type.lower()
         removal_map: Dict[str, Tuple[str, ...]] = {
@@ -3777,6 +4071,19 @@ def create_app(
                 paths_to_remove.add(str(current))
             update_kwargs[attribute] = None
 
+        if asset_key == "audio":
+            manifest_path = lecture_paths.raw_dir / _AUDIO_MANIFEST_FILENAME
+            manifest_entries = _prune_manifest_entries(manifest_path, storage_root)
+            manifest_paths = {entry.get("path") for entry in manifest_entries if entry.get("path")}
+            paths_to_remove.update(manifest_paths)
+            _remove_manifest_paths(manifest_path, {path for path in manifest_paths if path})
+        elif asset_key == "slides":
+            manifest_path = lecture_paths.raw_dir / _SLIDE_MANIFEST_FILENAME
+            manifest_entries = _prune_manifest_entries(manifest_path, storage_root)
+            manifest_paths = {entry.get("path") for entry in manifest_entries if entry.get("path")}
+            paths_to_remove.update(manifest_paths)
+            _remove_manifest_paths(manifest_path, {path for path in manifest_paths if path})
+
         for relative_path in paths_to_remove:
             _delete_asset_path(relative_path)
 
@@ -3785,13 +4092,19 @@ def create_app(
         if updated is None:
             raise HTTPException(status_code=500, detail="Lecture update failed")
 
+        lecture_payload = _serialize_lecture(updated)
+        if asset_key == "audio":
+            lecture_payload["raw_audio_files"] = []
+        if asset_key == "slides":
+            lecture_payload["raw_slide_files"] = []
+
         _log_event(
             "Removed asset",
             lecture_id=lecture_id,
             asset_type=asset_key,
             cleared=list(attributes),
         )
-        return {"lecture": _serialize_lecture(updated)}
+        return {"lecture": lecture_payload}
 
     @app.get("/api/settings/whisper-gpu/status")
     async def get_gpu_status() -> Dict[str, Any]:
@@ -4238,10 +4551,36 @@ def create_app(
             options = dict(definition.options or {})
             if operation == "audio_mastering":
                 if not (lecture.audio_path or lecture.processed_audio_path):
-                    raise HTTPException(status_code=400, detail="Upload an audio file first")
+                    class_record, module = _require_hierarchy(lecture)
+                    storage_root = _require_storage_root()
+                    lecture_paths = LecturePaths.build(
+                        storage_root,
+                        class_record.name,
+                        module.name,
+                        lecture.name,
+                    )
+                    manifest_entries = _prune_manifest_entries(
+                        lecture_paths.raw_dir / _AUDIO_MANIFEST_FILENAME,
+                        storage_root,
+                    )
+                    if not manifest_entries:
+                        raise HTTPException(status_code=400, detail="Upload an audio file first")
             elif operation == "transcription":
                 if not (lecture.audio_path or lecture.processed_audio_path):
-                    raise HTTPException(status_code=400, detail="Upload an audio file first")
+                    class_record, module = _require_hierarchy(lecture)
+                    storage_root = _require_storage_root()
+                    lecture_paths = LecturePaths.build(
+                        storage_root,
+                        class_record.name,
+                        module.name,
+                        lecture.name,
+                    )
+                    manifest_entries = _prune_manifest_entries(
+                        lecture_paths.raw_dir / _AUDIO_MANIFEST_FILENAME,
+                        storage_root,
+                    )
+                    if not manifest_entries:
+                        raise HTTPException(status_code=400, detail="Upload an audio file first")
                 if FasterWhisperTranscription is None:
                     raise HTTPException(
                         status_code=503,
@@ -4258,10 +4597,23 @@ def create_app(
                     options["model"] = default_model
             elif operation == "slide_bundle":
                 if not lecture.slide_path:
-                    raise HTTPException(
-                        status_code=400,
-                        detail="Upload a PDF before processing slides.",
+                    class_record, module = _require_hierarchy(lecture)
+                    storage_root = _require_storage_root()
+                    lecture_paths = LecturePaths.build(
+                        storage_root,
+                        class_record.name,
+                        module.name,
+                        lecture.name,
                     )
+                    manifest_entries = _prune_manifest_entries(
+                        lecture_paths.raw_dir / _SLIDE_MANIFEST_FILENAME,
+                        storage_root,
+                    )
+                    if not manifest_entries:
+                        raise HTTPException(
+                            status_code=400,
+                            detail="Upload a PDF before processing slides.",
+                        )
             else:
                 raise HTTPException(status_code=400, detail="Unsupported task operation")
 
@@ -4326,8 +4678,6 @@ def create_app(
         lecture = repository.get_lecture(lecture_id)
         if lecture is None:
             raise HTTPException(status_code=404, detail="Lecture not found")
-        if not lecture.audio_path and not lecture.processed_audio_path:
-            raise HTTPException(status_code=400, detail="Upload an audio file first")
         if FasterWhisperTranscription is None:
             raise HTTPException(
                 status_code=503,
@@ -4340,8 +4690,28 @@ def create_app(
         audio_mastering_enabled = getattr(settings, "audio_mastering_enabled", True)
         storage_root = _require_storage_root()
 
+        lecture_paths = LecturePaths.build(
+            storage_root,
+            class_record.name,
+            module.name,
+            lecture.name,
+        )
+        lecture_paths.ensure()
+
+        manifest_entries = _prune_manifest_entries(
+            lecture_paths.raw_dir / _AUDIO_MANIFEST_FILENAME, storage_root
+        )
+        has_raw_audio = bool(manifest_entries)
+
+        if (
+            not lecture.audio_path
+            and not lecture.processed_audio_path
+            and not has_raw_audio
+        ):
+            raise HTTPException(status_code=400, detail="Upload an audio file first")
+
         processed_relative = lecture.processed_audio_path
-        audio_file: Path
+        audio_file: Optional[Path] = None
         audio_mastering_required = False
 
         if processed_relative:
@@ -4363,20 +4733,32 @@ def create_app(
         else:
             audio_mastering_required = audio_mastering_enabled
 
-        if processed_relative is None:
-            if not lecture.audio_path:
-                raise HTTPException(status_code=400, detail="Upload an audio file first")
-            audio_file = _resolve_storage_path(storage_root, lecture.audio_path)
-            if not audio_file.exists():
-                raise HTTPException(status_code=404, detail="Audio file not found")
+        if audio_file is None and lecture.audio_path:
+            candidate = _resolve_storage_path(storage_root, lecture.audio_path)
+            if candidate.exists():
+                audio_file = candidate
+            else:
+                audio_file = None
 
-        lecture_paths = LecturePaths.build(
-            storage_root,
-            class_record.name,
-            module.name,
-            lecture.name,
-        )
-        lecture_paths.ensure()
+        if audio_file is None and has_raw_audio:
+            combined = _combine_audio_sources(
+                lecture_id,
+                lecture,
+                lecture_paths,
+                storage_root,
+                class_name=class_record.name,
+                module_name=module.name,
+            )
+            if combined is None:
+                raise HTTPException(status_code=400, detail="Upload an audio file first")
+            lecture = repository.get_lecture(lecture_id) or lecture
+            audio_file = combined
+            processed_relative = None
+            audio_mastering_required = audio_mastering_enabled
+
+        if audio_file is None:
+            raise HTTPException(status_code=400, detail="Upload an audio file first")
+
         compute_type = settings.whisper_compute_type or default_settings.whisper_compute_type
         beam_size = settings.whisper_beam_size or default_settings.whisper_beam_size
 
@@ -4781,7 +5163,17 @@ def create_app(
         if source_mode == "existing":
             existing_slide = _resolve_existing_asset(lecture.slide_path)
             if existing_slide is None:
-                raise HTTPException(status_code=404, detail="No slides available for preview")
+                existing_slide = _ensure_slide_source(
+                    lecture_id,
+                    lecture,
+                    lecture_paths,
+                    storage_root,
+                    class_name=class_record.name,
+                    module_name=module.name,
+                )
+                if existing_slide is None:
+                    raise HTTPException(status_code=404, detail="No slides available for preview")
+                lecture = repository.get_lecture(lecture_id) or lecture
             original_name = existing_slide.name or "slides.pdf"
         else:
             if file is None:
@@ -5069,7 +5461,18 @@ def create_app(
             slide_destination = existing_slide
             slide_relative = lecture.slide_path
         else:
-            raise HTTPException(status_code=400, detail="Slide file is required")
+            combined_slide = _ensure_slide_source(
+                lecture_id,
+                lecture,
+                lecture_paths,
+                storage_root,
+                class_name=class_record.name,
+                module_name=module.name,
+            )
+            if combined_slide is None:
+                raise HTTPException(status_code=400, detail="Slide file is required")
+            slide_destination = combined_slide
+            slide_relative = combined_slide.relative_to(storage_root).as_posix()
 
         selected_range: Optional[Tuple[int, int]] = None
         if page_start is not None or page_end is not None:
