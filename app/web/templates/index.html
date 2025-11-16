@@ -4027,9 +4027,16 @@
         font-size: 0.95rem;
       }
 
-      .curriculum.curriculum-editor-active {
-        display: flex;
-        flex-direction: column;
+      .curriculum-editor-host {
+        margin-top: 16px;
+        border: 1px solid var(--panel-border);
+        border-radius: 12px;
+        padding: 16px;
+        background: var(--panel-bg);
+      }
+
+      .curriculum-editor-host[hidden] {
+        display: none;
       }
 
       .curriculum.placeholder {
@@ -4042,10 +4049,6 @@
         flex-direction: column;
         gap: 12px;
         min-height: 320px;
-      }
-
-      .curriculum.curriculum-editor-active .curriculum-editor {
-        flex: 1;
       }
 
       .curriculum-editor-header {
@@ -4082,10 +4085,6 @@
         line-height: 1.5;
         resize: vertical;
         white-space: pre;
-      }
-
-      .curriculum.curriculum-editor-active .curriculum-editor-textarea {
-        min-height: 0;
       }
 
       .curriculum-editor-textarea:focus {
@@ -4826,6 +4825,7 @@
             <div id="edit-mode-banner" class="edit-banner" hidden data-i18n="details.editModeBanner">
               Edit mode is enabled. Update lecture information or remove items while it is active.
             </div>
+            <div id="curriculum-editor-host" class="curriculum-editor-host" hidden></div>
             <div id="lecture-summary" class="placeholder" data-i18n="details.summaryPlaceholder">
               Select a lecture from the curriculum.
             </div>
@@ -8829,6 +8829,7 @@
           statusProgressText: document.getElementById('status-bar-progress-text'),
           stats: document.getElementById('stats'),
           curriculum: document.getElementById('curriculum'),
+          curriculumEditorHost: document.getElementById('curriculum-editor-host'),
           curriculumEditor: null,
           search: document.getElementById('search-input'),
           summary: document.getElementById('lecture-summary'),
@@ -17464,6 +17465,20 @@
         }
 
         function renderCurriculumEditor() {
+          const host = dom.curriculumEditorHost;
+          if (!host) {
+            return;
+          }
+
+          if (!state.editMode) {
+            host.hidden = true;
+            host.innerHTML = '';
+            return;
+          }
+
+          host.hidden = false;
+          host.innerHTML = '';
+
           const container = document.createElement('div');
           container.className = 'curriculum-editor';
 
@@ -17487,7 +17502,175 @@
           }
           container.appendChild(editor);
 
-          dom.curriculum.appendChild(container);
+          host.appendChild(container);
+        }
+
+        function normalizeCurriculumName(value) {
+          if (typeof value === 'string') {
+            return value.trim().toLowerCase();
+          }
+          if (value == null) {
+            return '';
+          }
+          return String(value).trim().toLowerCase();
+        }
+
+        function buildExistingNameIndexes() {
+          const classNames = new Map();
+          const moduleNames = new Map();
+          const lectureNames = new Map();
+
+          state.classes.forEach((klass) => {
+            if (!klass || typeof klass !== 'object') {
+              return;
+            }
+            const classId = Number(klass.id);
+            const classKey = normalizeCurriculumName(klass.name);
+            if (Number.isFinite(classId) && classKey) {
+              if (!classNames.has(classKey)) {
+                classNames.set(classKey, []);
+              }
+              classNames.get(classKey).push({ id: classId });
+            }
+            if (!Number.isFinite(classId)) {
+              return;
+            }
+            const modules = Array.isArray(klass.modules) ? klass.modules : [];
+            modules.forEach((module) => {
+              if (!module || typeof module !== 'object') {
+                return;
+              }
+              const moduleId = Number(module.id);
+              const moduleKey = normalizeCurriculumName(module.name);
+              if (!Number.isFinite(moduleId) || !moduleKey) {
+                return;
+              }
+              if (!moduleNames.has(classId)) {
+                moduleNames.set(classId, new Map());
+              }
+              const moduleMap = moduleNames.get(classId);
+              if (!moduleMap.has(moduleKey)) {
+                moduleMap.set(moduleKey, []);
+              }
+              moduleMap.get(moduleKey).push({ id: moduleId });
+
+              const lectures = Array.isArray(module.lectures) ? module.lectures : [];
+              lectures.forEach((lecture) => {
+                if (!lecture || typeof lecture !== 'object') {
+                  return;
+                }
+                const lectureId = Number(lecture.id);
+                const lectureKey = normalizeCurriculumName(lecture.name);
+                if (!Number.isFinite(lectureId) || !lectureKey) {
+                  return;
+                }
+                if (!lectureNames.has(moduleId)) {
+                  lectureNames.set(moduleId, new Map());
+                }
+                const lectureMap = lectureNames.get(moduleId);
+                if (!lectureMap.has(lectureKey)) {
+                  lectureMap.set(lectureKey, []);
+                }
+                lectureMap.get(lectureKey).push({ id: lectureId });
+              });
+            });
+          });
+
+          return { classNames, moduleNames, lectureNames };
+        }
+
+        function selectUniqueAvailableCandidate(candidates, usedSet) {
+          if (!Array.isArray(candidates) || candidates.length === 0) {
+            return null;
+          }
+          const available = candidates.filter((candidate) =>
+            Number.isFinite(candidate?.id) && !usedSet.has(candidate.id),
+          );
+          if (available.length === 1) {
+            return available[0];
+          }
+          return null;
+        }
+
+        function assignCurriculumIdentifiersByName(parsedClasses) {
+          if (!Array.isArray(parsedClasses) || parsedClasses.length === 0) {
+            return;
+          }
+          const indexes = buildExistingNameIndexes();
+          const matchedClasses = new Set();
+
+          parsedClasses.forEach((classNode) => {
+            if (!classNode || typeof classNode !== 'object') {
+              return;
+            }
+            const classId = Number(classNode.id);
+            if (Number.isFinite(classId)) {
+              matchedClasses.add(classId);
+            } else {
+              const key = normalizeCurriculumName(classNode.name);
+              const candidates = key ? indexes.classNames.get(key) : null;
+              const match = candidates ? selectUniqueAvailableCandidate(candidates, matchedClasses) : null;
+              if (match) {
+                classNode.id = match.id;
+                matchedClasses.add(match.id);
+              }
+            }
+
+            const resolvedClassId = Number(classNode.id);
+            const moduleMap = Number.isFinite(resolvedClassId)
+              ? indexes.moduleNames.get(resolvedClassId)
+              : null;
+            const matchedModules = new Set();
+            const modules = Array.isArray(classNode.modules) ? classNode.modules : [];
+            modules.forEach((moduleNode) => {
+              if (!moduleNode || typeof moduleNode !== 'object') {
+                return;
+              }
+              const moduleId = Number(moduleNode.id);
+              if (Number.isFinite(moduleId)) {
+                matchedModules.add(moduleId);
+              } else if (moduleMap instanceof Map) {
+                const key = normalizeCurriculumName(moduleNode.name);
+                const candidates = key ? moduleMap.get(key) : null;
+                const match = candidates
+                  ? selectUniqueAvailableCandidate(candidates, matchedModules)
+                  : null;
+                if (match) {
+                  moduleNode.id = match.id;
+                  matchedModules.add(match.id);
+                }
+              }
+
+              const resolvedModuleId = Number(moduleNode.id);
+              const lectureMap = Number.isFinite(resolvedModuleId)
+                ? indexes.lectureNames.get(resolvedModuleId)
+                : null;
+              const matchedLectures = new Set();
+              const lectures = Array.isArray(moduleNode.lectures) ? moduleNode.lectures : [];
+              lectures.forEach((lectureNode) => {
+                if (!lectureNode || typeof lectureNode !== 'object') {
+                  return;
+                }
+                const lectureId = Number(lectureNode.id);
+                if (Number.isFinite(lectureId)) {
+                  matchedLectures.add(lectureId);
+                  return;
+                }
+                if (!(lectureMap instanceof Map)) {
+                  return;
+                }
+                const key = normalizeCurriculumName(lectureNode.name);
+                const candidates = key ? lectureMap.get(key) : null;
+                const match = candidates
+                  ? selectUniqueAvailableCandidate(candidates, matchedLectures)
+                  : null;
+                if (match) {
+                  lectureNode.id = match.id;
+                  matchedLectures.add(match.id);
+                }
+              });
+            });
+          });
         }
 
         function parseCurriculumEditorValue(value) {
@@ -17959,6 +18142,8 @@
             return false;
           }
 
+          assignCurriculumIdentifiersByName(parsed.classes);
+
           const validation = validateCurriculumStructure(parsed.classes);
           if (validation.errors.length > 0) {
             showStatus(validation.errors[0], 'error');
@@ -17986,12 +18171,6 @@
         function renderCurriculum() {
           state.buttonMap.clear();
           dom.curriculum.innerHTML = '';
-          dom.curriculum.classList.toggle('curriculum-editor-active', state.editMode);
-
-          if (state.editMode) {
-            renderCurriculumEditor();
-            return;
-          }
 
           const filtered = computeFilteredClasses();
 
@@ -18002,6 +18181,7 @@
               ? t('placeholders.noLecturesFilter')
               : t('placeholders.noClasses');
             dom.curriculum.appendChild(message);
+            renderCurriculumEditor();
             return;
           }
 
@@ -18262,6 +18442,7 @@
           });
 
           dom.curriculum.appendChild(syllabus);
+          renderCurriculumEditor();
           highlightSelected();
         }
 
