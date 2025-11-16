@@ -17515,6 +17515,34 @@
           return String(value).trim().toLowerCase();
         }
 
+        function toFiniteNumber(value) {
+          if (typeof value === 'number' && Number.isFinite(value)) {
+            return value;
+          }
+          if (typeof value === 'string') {
+            const trimmed = value.trim();
+            if (!trimmed) {
+              return null;
+            }
+            const parsed = Number(trimmed);
+            if (Number.isFinite(parsed)) {
+              return parsed;
+            }
+          }
+          return null;
+        }
+
+        function createTemporaryLectureName(baseName) {
+          const fallbackName = 'lecture';
+          const normalized =
+            typeof baseName === 'string' && baseName.trim().length > 0
+              ? baseName.trim()
+              : fallbackName;
+          const truncated = normalized.length > 40 ? normalized.slice(0, 40) : normalized;
+          const suffix = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+          return `${truncated} (temp ${suffix})`;
+        }
+
         function buildExistingNameIndexes() {
           const classNames = new Map();
           const moduleNames = new Map();
@@ -17900,6 +17928,147 @@
           const moduleMap = maps.moduleMap;
           const lectureMap = maps.lectureMap;
 
+          const lectureNameState = new Map();
+          lectureMap.forEach((info, lectureId) => {
+            if (!info || typeof info !== 'object') {
+              return;
+            }
+            const moduleId = toFiniteNumber(info.moduleId);
+            const lectureName = info.lecture?.name;
+            if (moduleId == null || typeof lectureName !== 'string' || !lectureName) {
+              return;
+            }
+            if (!lectureNameState.has(moduleId)) {
+              lectureNameState.set(moduleId, new Map());
+            }
+            lectureNameState.get(moduleId).set(lectureName, lectureId);
+          });
+
+          const lectureChangePlan = new Map();
+          parsedClasses.forEach((classNode) => {
+            if (!classNode || typeof classNode !== 'object') {
+              return;
+            }
+            const modules = Array.isArray(classNode.modules) ? classNode.modules : [];
+            modules.forEach((moduleNode) => {
+              if (!moduleNode || typeof moduleNode !== 'object') {
+                return;
+              }
+              const targetModuleId = toFiniteNumber(moduleNode.id);
+              const lectures = Array.isArray(moduleNode.lectures) ? moduleNode.lectures : [];
+              lectures.forEach((lectureNode) => {
+                if (!lectureNode || typeof lectureNode !== 'object') {
+                  return;
+                }
+                const lectureId = toFiniteNumber(lectureNode.id);
+                if (lectureId == null) {
+                  return;
+                }
+                const existing = lectureMap.get(lectureId);
+                const currentModuleId = toFiniteNumber(existing?.moduleId);
+                const currentName = existing?.lecture?.name ?? '';
+                const targetName = lectureNode.name;
+                const moduleChanged = currentModuleId !== targetModuleId;
+                const nameChanged = currentName !== targetName;
+                lectureChangePlan.set(lectureId, {
+                  moduleId: targetModuleId,
+                  name: targetName,
+                  willChange: moduleChanged || nameChanged,
+                });
+              });
+            });
+          });
+
+          const removeLectureName = (moduleId, name, lectureId) => {
+            if (moduleId == null || typeof name !== 'string' || !name) {
+              return;
+            }
+            const map = lectureNameState.get(moduleId);
+            if (map && map.get(name) === lectureId) {
+              map.delete(name);
+            }
+          };
+
+          const assignLectureName = (moduleId, name, lectureId) => {
+            if (moduleId == null || typeof name !== 'string' || !name) {
+              return;
+            }
+            let map = lectureNameState.get(moduleId);
+            if (!map) {
+              map = new Map();
+              lectureNameState.set(moduleId, map);
+            }
+            map.set(name, lectureId);
+          };
+
+          const findLectureConflict = (moduleId, name, lectureId) => {
+            if (moduleId == null || typeof name !== 'string' || !name) {
+              return null;
+            }
+            const map = lectureNameState.get(moduleId);
+            if (!map) {
+              return null;
+            }
+            const conflictingId = map.get(name);
+            if (!Number.isFinite(conflictingId) || conflictingId === lectureId) {
+              return null;
+            }
+            return lectureMap.get(conflictingId) ?? null;
+          };
+
+          const lectureIsPlannedToChange = (lectureId) => {
+            const plan = lectureChangePlan.get(lectureId);
+            return Boolean(plan && plan.willChange);
+          };
+
+          const updateLectureNameState = (
+            info,
+            moduleId,
+            name,
+            previousModuleOverride,
+            previousNameOverride,
+          ) => {
+            const existingId = toFiniteNumber(info?.lecture?.id);
+            if (existingId == null) {
+              return;
+            }
+            const previousModuleId =
+              previousModuleOverride ?? toFiniteNumber(info?.moduleId);
+            const previousName = previousNameOverride ?? info?.lecture?.name;
+            removeLectureName(previousModuleId, previousName, existingId);
+            assignLectureName(moduleId, name, existingId);
+          };
+
+          const ensureLectureNameAvailable = async (moduleId, lectureId, targetName) => {
+            if (moduleId == null || typeof targetName !== 'string' || !targetName) {
+              return;
+            }
+            const conflict = findLectureConflict(moduleId, targetName, lectureId);
+            if (!conflict) {
+              return;
+            }
+            const conflictingId = toFiniteNumber(conflict?.lecture?.id);
+            if (conflictingId == null) {
+              return;
+            }
+            if (!lectureIsPlannedToChange(conflictingId)) {
+              throw new Error(t('status.curriculumSaveFailed'));
+            }
+            const placeholderName = createTemporaryLectureName(conflict?.lecture?.name);
+            await request(`/api/lectures/${conflictingId}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name: placeholderName }),
+            });
+            updateLectureNameState(conflict, moduleId, placeholderName);
+            if (conflict) {
+              conflict.moduleId = moduleId;
+              if (conflict.lecture) {
+                conflict.lecture.name = placeholderName;
+              }
+            }
+          };
+
           const parsedClassIds = new Set();
           const parsedModuleIds = new Set();
           const parsedLectureIds = new Set();
@@ -17949,12 +18118,22 @@
 
           for (const lectureId of lecturesToDelete) {
             await request(`/api/lectures/${lectureId}`, { method: 'DELETE' });
+            const removed = lectureMap.get(lectureId);
+            if (removed) {
+              const removedModuleId = toFiniteNumber(removed.moduleId);
+              const removedName = removed.lecture?.name;
+              removeLectureName(removedModuleId, removedName, lectureId);
+              lectureMap.delete(lectureId);
+            }
           }
           for (const moduleId of modulesToDelete) {
             await request(`/api/modules/${moduleId}`, { method: 'DELETE' });
+            lectureNameState.delete(moduleId);
+            moduleMap.delete(moduleId);
           }
           for (const classId of classesToDelete) {
             await request(`/api/classes/${classId}`, { method: 'DELETE' });
+            classMap.delete(classId);
           }
 
           for (const classNode of parsedClasses) {
@@ -18057,14 +18236,33 @@
                     throw new Error(t('status.curriculumSaveFailed'));
                   }
                   lectureNode.id = Number(newId);
+                  lectureMap.set(lectureNode.id, {
+                    lecture: {
+                      id: lectureNode.id,
+                      name: lectureNode.name,
+                      module_id: moduleId,
+                    },
+                    moduleId: moduleId,
+                    classId: classId,
+                  });
+                  assignLectureName(moduleId, lectureNode.name, lectureNode.id);
                 } else {
                   const existingLecture = lectureMap.get(lectureNode.id);
                   if (existingLecture) {
                     const updates = {};
-                    if (existingLecture.lecture?.name !== lectureNode.name) {
+                    const lectureId = Number(lectureNode.id);
+                    const currentModuleId = toFiniteNumber(existingLecture.moduleId);
+                    const currentName = existingLecture.lecture?.name ?? '';
+                    const desiredName = lectureNode.name;
+                    const requiresConflictCheck =
+                      currentModuleId !== moduleId || currentName !== desiredName;
+                    if (requiresConflictCheck) {
+                      await ensureLectureNameAvailable(moduleId, lectureId, desiredName);
+                    }
+                    if (currentName !== desiredName) {
                       updates.name = lectureNode.name;
                     }
-                    if (existingLecture.moduleId !== moduleId) {
+                    if (currentModuleId !== moduleId) {
                       updates.module_id = moduleId;
                     }
                     if (Object.keys(updates).length > 0) {
@@ -18082,6 +18280,18 @@
                         }
                         if (Object.prototype.hasOwnProperty.call(updates, 'module_id')) {
                           existingLecture.lecture.module_id = moduleId;
+                        }
+                        if (
+                          Object.prototype.hasOwnProperty.call(updates, 'name') ||
+                          Object.prototype.hasOwnProperty.call(updates, 'module_id')
+                        ) {
+                          updateLectureNameState(
+                            existingLecture,
+                            moduleId,
+                            lectureNode.name,
+                            currentModuleId,
+                            currentName,
+                          );
                         }
                       }
                     }
