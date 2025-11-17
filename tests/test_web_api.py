@@ -943,6 +943,29 @@ def test_list_classes_reports_asset_counts(temp_config):
     assert module_payload["asset_counts"]["slide_images"] == 1
 
 
+def test_classes_include_slide_manifest_counts(temp_config):
+    repository, lecture_id, _module_id = _create_sample_data(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    pdf_payload = _build_sample_pdf(1)
+    response = client.post(
+        f"/api/lectures/{lecture_id}/assets/slides",
+        files={"file": ("deck.pdf", pdf_payload, "application/pdf")},
+    )
+    assert response.status_code == 200
+
+    response = client.get("/api/classes")
+    assert response.status_code == 200
+    payload = response.json()
+    classes = payload.get("classes") or []
+    assert classes
+    lectures = classes[0]["modules"][0]["lectures"]
+    target = next((entry for entry in lectures if entry["id"] == lecture_id), None)
+    assert target is not None
+    assert target.get("raw_slide_file_count") == 1
+
+
 def test_lecture_preview_includes_transcript_and_notes(temp_config):
     repository, lecture_id, _module_id = _create_sample_data(temp_config)
     app = create_app(repository, config=temp_config)

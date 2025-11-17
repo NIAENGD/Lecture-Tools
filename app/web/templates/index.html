@@ -5874,7 +5874,8 @@
                 submit: 'Queue tasks',
                 summaryEmpty: 'No tasks selected.',
                 summarySelected: '{{count}} {{taskWord}} selected.',
-                summaryBreakdown: 'Transcribe audio: {{transcription}} • Process slides: {{slides}}.',
+                summaryBreakdown:
+                  'Merge slide PDFs: {{merge}} • Transcribe audio: {{transcription}} • Process slides: {{slides}}.',
                 status: {
                   unavailable: 'Upload required',
                   empty: 'Not selected',
@@ -5912,6 +5913,7 @@
               labels: {
                 transcription: 'Transcription',
                 slideBundle: 'Slide bundle generation',
+                slideMerge: 'Slide PDF merge',
                 generic: 'Task',
                 untitled: 'Untitled lecture',
               },
@@ -5927,6 +5929,7 @@
                 operation: {
                   transcription: 'Transcribe audio',
                   slideBundle: 'Process slides',
+                  slideMerge: 'Merge uploaded PDFs',
                 },
                 pageStartLabel: 'Start page',
                 pageEndLabel: 'End page',
@@ -6494,7 +6497,7 @@
                 submit: '加入队列',
                 summaryEmpty: '未选择任何任务。',
                 summarySelected: '已选择 {{count}} 个{{taskWord}}。',
-                summaryBreakdown: '转录音频：{{transcription}} • 处理课件：{{slides}}。',
+                summaryBreakdown: '合并课件 PDF：{{merge}} • 转录音频：{{transcription}} • 处理课件：{{slides}}。',
                 status: {
                   unavailable: '需要先上传源文件',
                   empty: '未选择',
@@ -6532,6 +6535,7 @@
               labels: {
                 transcription: '音频转录',
                 slideBundle: '课件资源打包',
+                slideMerge: '课件 PDF 合并',
                 generic: '任务',
                 untitled: '未命名讲座',
               },
@@ -6547,6 +6551,7 @@
                 operation: {
                   transcription: '转录音频',
                   slideBundle: '处理课件',
+                  slideMerge: '合并课件 PDF',
                 },
                 pageStartLabel: '起始页码',
                 pageEndLabel: '结束页码',
@@ -7105,7 +7110,8 @@
                 submit: 'Añadir a la cola',
                 summaryEmpty: 'No hay tareas seleccionadas.',
                 summarySelected: '{{count}} {{taskWord}} seleccionadas.',
-                summaryBreakdown: 'Transcribir audio: {{transcription}} • Procesar diapositivas: {{slides}}.',
+                summaryBreakdown:
+                  'Combinar PDFs de diapositivas: {{merge}} • Transcribir audio: {{transcription}} • Procesar diapositivas: {{slides}}.',
                 status: {
                   unavailable: 'Se requiere subir el archivo',
                   empty: 'No seleccionado',
@@ -7143,6 +7149,7 @@
               labels: {
                 transcription: 'Transcripción',
                 slideBundle: 'Paquete de diapositivas',
+                slideMerge: 'Fusión de PDF de diapositivas',
                 generic: 'Tarea',
                 untitled: 'Clase sin título',
               },
@@ -7158,6 +7165,7 @@
                 operation: {
                   transcription: 'Transcribir audio',
                   slideBundle: 'Procesar diapositivas',
+                  slideMerge: 'Combinar PDFs de diapositivas',
                 },
                 pageStartLabel: 'Página inicial',
                 pageEndLabel: 'Página final',
@@ -7733,7 +7741,7 @@
                 summaryEmpty: 'Aucune tâche sélectionnée.',
                 summarySelected: '{{count}} {{taskWord}} sélectionnée(s).',
                 summaryBreakdown:
-                  'Transcrire l’audio : {{transcription}} • Traiter les diapositives : {{slides}}.',
+                  'Fusionner les PDF de diapositives : {{merge}} • Transcrire l’audio : {{transcription}} • Traiter les diapositives : {{slides}}.',
                 status: {
                   unavailable: 'Téléversement requis',
                   empty: 'Non sélectionné',
@@ -7772,6 +7780,7 @@
               labels: {
                 transcription: 'Transcription',
                 slideBundle: 'Archive de diapositives',
+                slideMerge: 'Fusion de PDF de diapositives',
                 generic: 'Tâche',
                 untitled: 'Leçon sans titre',
               },
@@ -7787,6 +7796,7 @@
                 operation: {
                   transcription: 'Transcrire l’audio',
                   slideBundle: 'Traiter les diapositives',
+                  slideMerge: 'Fusionner les PDF téléversés',
                 },
                 pageStartLabel: 'Page de début',
                 pageEndLabel: 'Page de fin',
@@ -8523,7 +8533,29 @@
         const SERVER_LOG_CATEGORY = 'server';
         const UPDATE_POLL_INTERVAL_MS = 3000;
 
+        function getPendingSlideUploadCount(lecture) {
+          if (!lecture || typeof lecture !== 'object') {
+            return 0;
+          }
+          const count = Number(lecture.raw_slide_file_count);
+          if (Number.isFinite(count) && count > 0) {
+            return count;
+          }
+          return 0;
+        }
+
         const BULK_PROCESS_OPERATIONS = [
+          {
+            key: 'slide_merge',
+            operation: 'slide_merge',
+            labelKey: 'tasks.form.operation.slideMerge',
+            isAvailable(lecture) {
+              return getPendingSlideUploadCount(lecture) > 0;
+            },
+            isCompleted(lecture) {
+              return Boolean(lecture?.slide_path);
+            },
+          },
           {
             key: 'transcription',
             operation: 'transcription',
@@ -8549,13 +8581,19 @@
             operation: 'slide_bundle',
             labelKey: 'tasks.form.operation.slideBundle',
             isAvailable(lecture) {
-              return Boolean(lecture?.slide_path);
+              return Boolean(lecture?.slide_path) || getPendingSlideUploadCount(lecture) > 0;
             },
             isCompleted(lecture) {
               return Boolean(lecture?.slide_image_dir);
             },
           },
         ];
+
+        const BULK_PROCESS_OPERATION_PRIORITY = new Map([
+          ['slide_merge', 0],
+          ['transcription', 1],
+          ['slide_bundle', 2],
+        ]);
 
         function normalizeDisplayMode(value, themeHint = null) {
           if (typeof value === 'string') {
@@ -10437,6 +10475,9 @@
           if (operation === 'transcription') {
             return t('tasks.labels.transcription');
           }
+          if (operation === 'slide_merge') {
+            return t('tasks.labels.slideMerge');
+          }
           if (operation === 'slide_bundle') {
             return t('tasks.labels.slideBundle');
           }
@@ -10717,6 +10758,8 @@
                   typeof lecture.name === 'string' && lecture.name
                     ? lecture.name
                     : t('tasks.labels.untitled');
+                const pendingSlideUploads = getPendingSlideUploadCount(lecture);
+                const hasSlideSource = Boolean(lecture?.slide_path);
                 BULK_PROCESS_OPERATIONS.forEach((definition) => {
                   const key = getBulkProcessKey(lectureId, definition.operation);
                   const available = Boolean(definition.isAvailable(lecture, state.settings));
@@ -10725,6 +10768,10 @@
                     typeof definition.buildOptions === 'function'
                       ? definition.buildOptions(lecture, state.settings)
                       : null;
+                  const requiresSlideMerge =
+                    definition.operation === 'slide_bundle' &&
+                    pendingSlideUploads > 0 &&
+                    !hasSlideSource;
                   meta.set(key, {
                     key,
                     lectureId,
@@ -10738,6 +10785,8 @@
                     available,
                     completed,
                     options,
+                    pendingSlideUploadCount: pendingSlideUploads,
+                    requiresSlideMerge,
                   });
                   if (!available) {
                     state.bulkProcess.selections.delete(key);
@@ -11052,6 +11101,9 @@
           const transcriptionCount = selectedEntries.filter(
             (entry) => entry.operation === 'transcription',
           ).length;
+          const mergeCount = selectedEntries.filter(
+            (entry) => entry.operation === 'slide_merge',
+          ).length;
           const slideCount = selectedEntries.filter(
             (entry) => entry.operation === 'slide_bundle',
           ).length;
@@ -11071,6 +11123,7 @@
 
               const breakdown = document.createElement('span');
               breakdown.textContent = t('tasks.bulkProcess.summaryBreakdown', {
+                merge: mergeCount,
                 transcription: transcriptionCount,
                 slides: slideCount,
               });
@@ -11135,6 +11188,18 @@
           }
           if (checked) {
             state.bulkProcess.selections.set(key, true);
+            if (meta.operation === 'slide_bundle' && meta.requiresSlideMerge) {
+              const mergeKey = getBulkProcessKey(meta.lectureId, 'slide_merge');
+              const mergeMeta = state.bulkProcess.meta.get(mergeKey);
+              if (
+                mergeMeta &&
+                mergeMeta.available &&
+                !state.bulkProcess.selections.has(mergeKey)
+              ) {
+                state.bulkProcess.selections.set(mergeKey, true);
+                updateBulkProcessCheckboxState(mergeKey);
+              }
+            }
           } else {
             state.bulkProcess.selections.delete(key);
           }
@@ -11168,6 +11233,21 @@
               }
               tasks.push(task);
             }
+          });
+          tasks.sort((a, b) => {
+            const priorityA =
+              BULK_PROCESS_OPERATION_PRIORITY.get(a.operation) ?? Number.MAX_SAFE_INTEGER;
+            const priorityB =
+              BULK_PROCESS_OPERATION_PRIORITY.get(b.operation) ?? Number.MAX_SAFE_INTEGER;
+            if (priorityA !== priorityB) {
+              return priorityA - priorityB;
+            }
+            const lectureA = Number(a.lecture_id) || 0;
+            const lectureB = Number(b.lecture_id) || 0;
+            if (lectureA !== lectureB) {
+              return lectureA - lectureB;
+            }
+            return 0;
           });
           if (!tasks.length) {
             updateBulkProcessSummary();
