@@ -48,7 +48,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 
 T = TypeVar("T")
 
-TaskOperation = Literal["audio_mastering", "slide_bundle", "transcription"]
+TaskOperation = Literal["audio_mastering", "slide_bundle", "slide_merge", "transcription"]
 
 
 class AudioMasteringUnavailableError(RuntimeError):
@@ -1278,6 +1278,7 @@ def _serialize_lecture(lecture: LectureRecord) -> Dict[str, Any]:
         "slide_image_dir": lecture.slide_image_dir,
         "raw_audio_files": [],
         "raw_slide_files": [],
+        "raw_slide_file_count": 0,
     }
 
 
@@ -1317,6 +1318,58 @@ def _serialize_class(repository: LectureRepository, class_record: ClassRecord) -
         "module_count": len(modules),
         "asset_counts": asset_counts,
     }
+
+
+def _annotate_slide_manifest_counts(
+    classes: List[Dict[str, Any]], storage_root: Path
+) -> None:
+    """Populate slide manifest counts for serialized class payloads."""
+
+    if not classes:
+        return
+
+    for class_entry in classes:
+        class_name = class_entry.get("name") or ""
+        modules = class_entry.get("modules") or []
+        if not isinstance(modules, list):
+            continue
+        for module_entry in modules:
+            module_name = module_entry.get("name") or ""
+            lectures = module_entry.get("lectures") or []
+            if not isinstance(lectures, list):
+                continue
+            for lecture_entry in lectures:
+                lecture_name = lecture_entry.get("name") or ""
+                try:
+                    lecture_paths = LecturePaths.build(
+                        storage_root, class_name, module_name, lecture_name
+                    )
+                except Exception:
+                    lecture_entry["raw_slide_file_count"] = lecture_entry.get(
+                        "raw_slide_file_count", 0
+                    )
+                    continue
+                manifest_path = lecture_paths.raw_dir / _SLIDE_MANIFEST_FILENAME
+                if not manifest_path.exists():
+                    lecture_entry["raw_slide_file_count"] = lecture_entry.get(
+                        "raw_slide_file_count", 0
+                    )
+                    continue
+                try:
+                    raw = manifest_path.read_text(encoding="utf-8")
+                    data = json.loads(raw)
+                except (OSError, json.JSONDecodeError):
+                    lecture_entry["raw_slide_file_count"] = lecture_entry.get(
+                        "raw_slide_file_count", 0
+                    )
+                    continue
+                if isinstance(data, list):
+                    count = sum(
+                        1 for entry in data if isinstance(entry, dict) and entry.get("path")
+                    )
+                else:
+                    count = 0
+                lecture_entry["raw_slide_file_count"] = count
 
 
 def _safe_preview_for_path(storage_root: Path, relative_path: Optional[str]) -> Optional[Dict[str, Any]]:
@@ -3430,12 +3483,88 @@ def create_app(
             _JOB_ID_VAR.reset(job_token)
 
 
+    async def _run_slide_merge_task(task: QueuedTask) -> None:
+        lecture_id = task.lecture_id
+        lecture = repository.get_lecture(lecture_id)
+        if lecture is None:
+            raise RuntimeError("Lecture not found")
+
+        class_record, module = _require_hierarchy(lecture)
+        storage_root = _require_storage_root()
+        lecture_paths = LecturePaths.build(
+            storage_root,
+            class_record.name,
+            module.name,
+            lecture.name,
+        )
+        lecture_paths.ensure()
+
+        context = {
+            "operation": "slide_merge",
+            "task_id": task.id,
+        }
+        start_message = "====> Combining uploaded slide PDFs…"
+        completion_message = "====> Slide PDFs combined."
+
+        job_id = _new_correlation_id()
+        job_token = _JOB_ID_VAR.set(job_id)
+        processing_tracker.start(lecture_id, start_message, context=context)
+        try:
+            combined_slide = _ensure_slide_source(
+                lecture_id,
+                lecture,
+                lecture_paths,
+                storage_root,
+                class_name=class_record.name,
+                module_name=module.name,
+            )
+        except HTTPException as error:
+            detail = getattr(error, "detail", str(error))
+            processing_tracker.fail(
+                lecture_id,
+                f"====> {detail}",
+                context=context,
+                exception=error,
+            )
+            raise RuntimeError(detail) from error
+        except Exception as error:  # noqa: BLE001 - defensive
+            processing_tracker.fail(
+                lecture_id,
+                f"====> {error}",
+                context=context,
+                exception=error,
+            )
+            raise
+        else:
+            if combined_slide is None:
+                message = "Upload a PDF before merging slides."
+                processing_tracker.fail(
+                    lecture_id,
+                    f"====> {message}",
+                    context=context,
+                )
+                raise RuntimeError(message)
+            processing_tracker.finish(lecture_id, completion_message, context=context)
+            relative_path = combined_slide.relative_to(storage_root).as_posix()
+            _log_event(
+                "Slide merge task completed",
+                lecture_id=lecture_id,
+                slide_path=relative_path,
+                task_id=task.id,
+            )
+        finally:
+            _JOB_ID_VAR.reset(job_token)
+
+
     async def _execute_task_queue_entry(task: QueuedTask) -> None:
         if task.operation == "audio_mastering":
             await _run_audio_mastering_task(task)
             return
         if task.operation == "transcription":
             await _run_transcription_task(task)
+            return
+        if task.operation == "slide_merge":
+            await _run_slide_merge_task(task)
             return
         if task.operation == "slide_bundle":
             await _run_slide_bundle_task(task)
@@ -3475,6 +3604,7 @@ def create_app(
     async def list_classes() -> Dict[str, Any]:
         _log_event("Listing classes")
         classes = [_serialize_class(repository, record) for record in repository.iter_classes()]
+        _annotate_slide_manifest_counts(classes, config.storage_root)
         total_modules = sum(item["module_count"] for item in classes)
         total_lectures = sum(
             module["lecture_count"] for item in classes for module in item["modules"]
@@ -3786,6 +3916,7 @@ def create_app(
         lecture_payload["raw_slide_files"] = _describe_manifest_entries(
             raw_slide_entries, storage_root
         )
+        lecture_payload["raw_slide_file_count"] = len(raw_slide_entries)
 
         return {
             "lecture": lecture_payload,
@@ -4009,6 +4140,7 @@ def create_app(
             lecture_payload["raw_audio_files"] = raw_audio_payload
         if asset_key == "slides":
             lecture_payload["raw_slide_files"] = raw_slide_payload
+            lecture_payload["raw_slide_file_count"] = len(raw_slide_payload)
         response: Dict[str, Any] = {"lecture": lecture_payload}
         if asset_key not in {"audio", "slides"}:
             response[attribute] = relative
@@ -4020,6 +4152,7 @@ def create_app(
         if asset_key == "slides":
             response["slide_image_dir"] = update_kwargs.get("slide_image_dir")
             response["raw_slide_files"] = raw_slide_payload
+            response["raw_slide_file_count"] = len(raw_slide_payload)
         response["processing"] = bool(processing_queued)
         if processing_operations:
             response["processing_operations"] = sorted(processing_operations)
@@ -4097,6 +4230,7 @@ def create_app(
             lecture_payload["raw_audio_files"] = []
         if asset_key == "slides":
             lecture_payload["raw_slide_files"] = []
+            lecture_payload["raw_slide_file_count"] = 0
 
         _log_event(
             "Removed asset",
@@ -4595,6 +4729,24 @@ def create_app(
                         or getattr(settings, "whisper_model", "base")
                     )
                     options["model"] = default_model
+            elif operation == "slide_merge":
+                class_record, module = _require_hierarchy(lecture)
+                storage_root = _require_storage_root()
+                lecture_paths = LecturePaths.build(
+                    storage_root,
+                    class_record.name,
+                    module.name,
+                    lecture.name,
+                )
+                manifest_entries = _prune_manifest_entries(
+                    lecture_paths.raw_dir / _SLIDE_MANIFEST_FILENAME,
+                    storage_root,
+                )
+                if not manifest_entries and not lecture.slide_path:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Upload a PDF before merging slides.",
+                    )
             elif operation == "slide_bundle":
                 if not lecture.slide_path:
                     class_record, module = _require_hierarchy(lecture)
