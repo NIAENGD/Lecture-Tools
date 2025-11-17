@@ -64,10 +64,13 @@ def _create_sample_data(config) -> tuple[LectureRepository, int, int]:
     notes_file = base_dir / "notes.md"
     audio_file = base_dir / "audio.mp3"
     slide_file = base_dir / "slides.pdf"
+    bundle_file = base_dir / "slides.zip"
     audio_file.write_bytes(b"audio")
     transcript_file.write_text("Line one\nLine two\nLine three\n", encoding="utf-8")
     notes_file.write_text("# Notes\nImportant points.\n", encoding="utf-8")
     slide_file.write_bytes(_build_sample_pdf(3))
+    with zipfile.ZipFile(bundle_file, "w") as archive:
+        archive.writestr("notes.txt", "bundle")
 
     return repository, lecture_id, module_id
 
@@ -367,6 +370,49 @@ def test_storage_batch_download_requires_selection(temp_config):
     response = client.post("/api/storage/download", json={"paths": []})
     assert response.status_code == 400
     assert "selected" in response.json()["detail"].lower()
+
+
+def test_bulk_download_endpoint_prepares_archive(temp_config):
+    repository, lecture_id, _module_id = _create_sample_data(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    payload = {
+        "items": [
+            {
+                "lecture_id": lecture_id,
+                "assets": ["audio", "txt", "pdf", "md", "zip"],
+            }
+        ]
+    }
+
+    response = client.post("/api/download/bulk", json=payload)
+    assert response.status_code == 200
+    archive = response.json().get("archive") or {}
+    archive_path = temp_config.storage_root / archive.get("path", "")
+    assert archive_path.exists()
+
+    with zipfile.ZipFile(archive_path, "r") as bundle:
+        names = set(bundle.namelist())
+        assert "lectures/astronomy/stellar-physics/stellar-evolution/audio.mp3" in names
+        assert "lectures/astronomy/stellar-physics/stellar-evolution/transcript.txt" in names
+        assert "lectures/astronomy/stellar-physics/stellar-evolution/notes.md" in names
+        assert "lectures/astronomy/stellar-physics/stellar-evolution/slides.pdf" in names
+        assert "lectures/astronomy/stellar-physics/stellar-evolution/slides.zip" in names
+        assert archive.get("count") == 5
+
+
+def test_bulk_download_requires_valid_selection(temp_config):
+    repository, lecture_id, _module_id = _create_sample_data(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    response = client.post(
+        "/api/download/bulk",
+        json={"items": [{"lecture_id": lecture_id, "assets": []}]},
+    )
+    assert response.status_code == 400
+    assert "asset" in response.json()["detail"].lower()
 
 
 def test_storage_repair_removes_legacy_artifacts(temp_config):

@@ -50,6 +50,14 @@ T = TypeVar("T")
 
 TaskOperation = Literal["audio_mastering", "slide_bundle", "slide_merge", "transcription"]
 
+BULK_DOWNLOAD_ASSET_FIELDS: Dict[str, Tuple[str, ...]] = {
+    "audio": ("processed_audio_path", "audio_path"),
+    "txt": ("transcript_path",),
+    "pdf": ("slide_path",),
+    "md": ("notes_path",),
+    "zip": ("slide_image_dir",),
+}
+
 
 class AudioMasteringUnavailableError(RuntimeError):
     """Raised when mastering cannot proceed because WAV conversion failed."""
@@ -1656,6 +1664,15 @@ class StorageDeleteRequest(BaseModel):
 
 class StorageBatchDownloadRequest(BaseModel):
     paths: List[str] = Field(default_factory=list)
+
+
+class BulkDownloadItem(BaseModel):
+    lecture_id: int
+    assets: List[str] = Field(default_factory=list)
+
+
+class BulkDownloadRequest(BaseModel):
+    items: List[BulkDownloadItem] = Field(default_factory=list)
 
 
 class LectureStorageSummary(BaseModel):
@@ -5978,6 +5995,112 @@ def create_app(
             size=info.st_size,
             file_count=file_count,
             selection_count=len(normalized_paths),
+        )
+
+        return {
+            "archive": {
+                "filename": filename,
+                "path": relative_path,
+                "size": info.st_size,
+                "count": file_count,
+            }
+        }
+
+    @app.post("/api/download/bulk")
+    async def download_bulk_assets(payload: BulkDownloadRequest) -> Dict[str, Any]:
+        normalized: Dict[int, Set[str]] = {}
+        raw_items = payload.items if isinstance(payload.items, list) else []
+        for item in raw_items:
+            lecture_id = int(getattr(item, "lecture_id", 0))
+            if lecture_id <= 0:
+                continue
+            requested = set()
+            for asset in getattr(item, "assets", []) or []:
+                key = str(asset).strip().lower()
+                if key in BULK_DOWNLOAD_ASSET_FIELDS:
+                    requested.add(key)
+            if not requested:
+                continue
+            normalized.setdefault(lecture_id, set()).update(requested)
+
+        if not normalized:
+            raise HTTPException(status_code=400, detail="No assets selected for download")
+
+        def _slug_or_default(label: Optional[str], fallback: str) -> str:
+            slug = slugify(label or "")
+            return slug or fallback
+
+        root_path = _require_storage_root().resolve()
+        archive_root = config.archive_root
+        archive_root.mkdir(parents=True, exist_ok=True)
+
+        filename = build_timestamped_name("bulk-download", extension="zip")
+        archive_path = archive_root / filename
+        file_count = 0
+        written: Set[str] = set()
+
+        try:
+            with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as bundle:
+                for lecture_id, asset_keys in normalized.items():
+                    lecture = repository.get_lecture(lecture_id)
+                    if lecture is None:
+                        continue
+                    module = repository.get_module(lecture.module_id)
+                    class_record = repository.get_class(module.class_id) if module else None
+                    class_dir = _slug_or_default(
+                        class_record.name if class_record else None,
+                        f"class-{module.class_id if module else lecture.module_id}",
+                    )
+                    module_dir = _slug_or_default(
+                        module.name if module else None,
+                        f"module-{module.id if module else lecture.module_id}",
+                    )
+                    lecture_dir = _slug_or_default(lecture.name, f"lecture-{lecture.id}")
+                    base_dir = Path("lectures") / class_dir / module_dir / lecture_dir
+
+                    for asset_key in asset_keys:
+                        fields = BULK_DOWNLOAD_ASSET_FIELDS.get(asset_key)
+                        if not fields:
+                            continue
+                        relative: Optional[str] = None
+                        for field in fields:
+                            candidate = getattr(lecture, field, None)
+                            if candidate:
+                                relative = candidate
+                                break
+                        if not relative:
+                            continue
+                        try:
+                            source = _resolve_storage_path(root_path, relative)
+                        except ValueError:
+                            continue
+                        if not source.exists() or not source.is_file():
+                            continue
+                        arcname = (base_dir / source.name).as_posix()
+                        if arcname in written:
+                            continue
+                        bundle.write(source, arcname)
+                        written.add(arcname)
+                        file_count += 1
+        except OSError as error:
+            with contextlib.suppress(OSError):
+                archive_path.unlink()
+            raise HTTPException(status_code=500, detail="Failed to create archive") from error
+
+        if file_count == 0:
+            with contextlib.suppress(OSError):
+                archive_path.unlink()
+            raise HTTPException(status_code=400, detail="No downloadable assets found")
+
+        relative_path = archive_path.relative_to(root_path).as_posix()
+        info = archive_path.stat()
+
+        _log_event(
+            "Prepared bulk asset download",
+            filename=filename,
+            size=info.st_size,
+            file_count=file_count,
+            lecture_count=len(normalized),
         )
 
         return {
