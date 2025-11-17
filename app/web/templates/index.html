@@ -11944,394 +11944,394 @@
 
                   checkbox.appendChild(text);
                   checkboxGroup.appendChild(checkbox);
-+                  state.bulkDownload.checkboxMap.set(key, {
-+                    checkbox,
-+                    input,
-+                    status,
-+                  });
-+                });
-+
-+                lectureItem.appendChild(checkboxGroup);
-+                lectureList.appendChild(lectureItem);
-+              });
-+
-+              moduleDetails.appendChild(lectureList);
-+              moduleList.appendChild(moduleDetails);
-+            });
-+
-+            classDetails.appendChild(moduleList);
-+            tree.appendChild(classDetails);
-+          });
-+
-+          container.appendChild(tree);
-+          if (dom.bulkDownloadDialog.empty) {
-+            dom.bulkDownloadDialog.empty.hidden = lectureRendered > 0;
-+          }
-+          refreshBulkDownloadCheckboxes();
-+        }
-+
-+        function updateBulkDownloadCheckboxState(key) {
-+          const entry = state.bulkDownload.checkboxMap.get(key);
-+          const meta = state.bulkDownload.meta.get(key);
-+          if (!entry || !meta) {
-+            state.bulkDownload.selections.delete(key);
-+            return;
-+          }
-+          const { checkbox, input, status } = entry;
-+          const available = Boolean(meta.available);
-+          const selected = available && state.bulkDownload.selections.has(key);
-+          input.disabled = !available;
-+          input.checked = selected;
-+          const stateValue = !available ? 'unavailable' : selected ? 'selected' : 'available';
-+          checkbox.dataset.state = stateValue;
-+          if (status) {
-+            status.textContent = t(`tasks.bulkDownload.status.${stateValue}`);
-+          }
-+        }
-+
-+        function refreshBulkDownloadCheckboxes() {
-+          state.bulkDownload.checkboxMap.forEach((_, key) => {
-+            updateBulkDownloadCheckboxState(key);
-+          });
-+        }
-+
-+        function updateBulkDownloadSummary() {
-+          if (!dom.bulkDownloadDialog || !dom.bulkDownloadDialog.summary) {
-+            return;
-+          }
-+          const summary = dom.bulkDownloadDialog.summary;
-+          const selectAllButton = dom.bulkDownloadDialog.selectAll;
-+          const clearButton = dom.bulkDownloadDialog.clear;
-+          const submitButton = dom.bulkDownloadDialog.submit;
-+          summary.innerHTML = '';
-+
-+          let selectedCount = 0;
-+          const breakdown = {
-+            audio: 0,
-+            txt: 0,
-+            pdf: 0,
-+            md: 0,
-+            zip: 0,
-+          };
-+
-+          state.bulkDownload.selections.forEach((_, key) => {
-+            const meta = state.bulkDownload.meta.get(key);
-+            if (!meta || !meta.available) {
-+              state.bulkDownload.selections.delete(key);
-+              return;
-+            }
-+            selectedCount += 1;
-+            const assetKey = meta.assetKey;
-+            breakdown[assetKey] = (breakdown[assetKey] || 0) + 1;
-+          });
-+
-+          if (selectedCount === 0) {
-+            summary.textContent = t('tasks.bulkDownload.summaryEmpty');
-+          } else {
-+            const totalLine = document.createElement('p');
-+            const assetWord =
-+              selectedCount === 1
-+                ? t('tasks.bulkDownload.assetSingular')
-+                : t('tasks.bulkDownload.assetPlural');
-+            totalLine.textContent = t('tasks.bulkDownload.summarySelected', {
-+              count: selectedCount,
-+              assetWord,
-+            });
-+            const breakdownLine = document.createElement('p');
-+            breakdownLine.textContent = t('tasks.bulkDownload.summaryBreakdown', {
-+              audio: breakdown.audio || 0,
-+              txt: breakdown.txt || 0,
-+              pdf: breakdown.pdf || 0,
-+              md: breakdown.md || 0,
-+              zip: breakdown.zip || 0,
-+            });
-+            summary.appendChild(totalLine);
-+            summary.appendChild(breakdownLine);
-+          }
-+
-+          if (selectAllButton) {
-+            selectAllButton.disabled = state.bulkDownload.availableCount === 0;
-+          }
-+          if (clearButton) {
-+            clearButton.disabled = state.bulkDownload.selections.size === 0;
-+          }
-+          if (submitButton) {
-+            submitButton.disabled = state.bulkDownload.selections.size === 0;
-+          }
-+        }
-+
-+        function setBulkDownloadStatus(message = '', variant = '') {
-+          if (!dom.bulkDownloadDialog || !dom.bulkDownloadDialog.status) {
-+            return;
-+          }
-+          const element = dom.bulkDownloadDialog.status;
-+          element.textContent = message || '';
-+          element.classList.remove('error', 'success');
-+          if (variant === 'error') {
-+            element.classList.add('error');
-+          } else if (variant === 'success') {
-+            element.classList.add('success');
-+          }
-+        }
-+
-+        function selectAllBulkDownload() {
-+          state.bulkDownload.meta.forEach((meta, key) => {
-+            if (!meta || !meta.available) {
-+              state.bulkDownload.selections.delete(key);
-+              return;
-+            }
-+            state.bulkDownload.selections.set(key, true);
-+          });
-+          refreshBulkDownloadCheckboxes();
-+          updateBulkDownloadSummary();
-+        }
-+
-+        function clearBulkDownloadSelections() {
-+          if (state.bulkDownload.selections.size > 0) {
-+            state.bulkDownload.selections.clear();
-+          }
-+          refreshBulkDownloadCheckboxes();
-+          updateBulkDownloadSummary();
-+        }
-+
-+        function handleBulkDownloadCheckboxChange(key, checked) {
-+          const meta = state.bulkDownload.meta.get(key);
-+          if (!meta || !meta.available) {
-+            state.bulkDownload.selections.delete(key);
-+          } else if (checked) {
-+            state.bulkDownload.selections.set(key, true);
-+          } else {
-+            state.bulkDownload.selections.delete(key);
-+          }
-+          updateBulkDownloadCheckboxState(key);
-+          updateBulkDownloadSummary();
-+        }
-+
-+        let bulkDownloadDialogCleanup = null;
-+        let bulkDownloadPreviousFocus = null;
-+
-+        function closeBulkDownloadDialog(options = {}) {
-+          if (typeof bulkDownloadDialogCleanup === 'function') {
-+            const cleanup = bulkDownloadDialogCleanup;
-+            bulkDownloadDialogCleanup = null;
-+            cleanup(options);
-+          }
-+        }
-+
-+        async function handleBulkDownloadSubmit(event) {
-+          event?.preventDefault?.();
-+          if (state.bulkDownload.selections.size === 0) {
-+            setBulkDownloadStatus(t('tasks.bulkDownload.noneSelected'), 'error');
-+            return;
-+          }
-+          const grouped = new Map();
-+          state.bulkDownload.selections.forEach((_, key) => {
-+            const meta = state.bulkDownload.meta.get(key);
-+            if (!meta || !meta.available) {
-+              return;
-+            }
-+            const assets = grouped.get(meta.lectureId) || [];
-+            assets.push(meta.assetKey);
-+            grouped.set(meta.lectureId, assets);
-+          });
-+          if (!grouped.size) {
-+            setBulkDownloadStatus(t('tasks.bulkDownload.noneSelected'), 'error');
-+            return;
-+          }
-+
-+          const submitButton = dom.bulkDownloadDialog?.submit;
-+          if (submitButton) {
-+            submitButton.disabled = true;
-+          }
-+          setBulkDownloadStatus(t('tasks.bulkDownload.preparing'), 'info');
-+
-+          try {
-+            const items = Array.from(grouped.entries()).map(([lectureId, assets]) => ({
-+              lecture_id: lectureId,
-+              assets,
-+            }));
-+            const response = await request('/api/download/bulk', {
-+              method: 'POST',
-+              headers: { 'Content-Type': 'application/json' },
-+              body: JSON.stringify({ items }),
-+            });
-+            const archive = response?.archive;
-+            if (!archive || !archive.path) {
-+              throw new Error(t('tasks.bulkDownload.failure'));
-+            }
-+            const downloadUrl = buildStorageURL(archive.path);
-+            const anchor = document.createElement('a');
-+            anchor.href = downloadUrl;
-+            anchor.download = archive.filename || 'lecture-assets.zip';
-+            anchor.rel = 'noopener';
-+            document.body.appendChild(anchor);
-+            anchor.click();
-+            anchor.remove();
-+            const filename = archive.filename || 'archive.zip';
-+            setBulkDownloadStatus(t('tasks.bulkDownload.ready', { filename }), 'success');
-+          } catch (error) {
-+            const detail = error instanceof Error ? error.message : String(error);
-+            setBulkDownloadStatus(detail || t('tasks.bulkDownload.failure'), 'error');
-+          } finally {
-+            if (submitButton) {
-+              submitButton.disabled = state.bulkDownload.selections.size === 0;
-+            }
-+          }
-+        }
-+
-+        function openBulkDownloadDialog() {
-+          if (
-+            dialogState.bulkDownloadActive ||
-+            dialogState.bulkProcessActive ||
-+            dialogState.active ||
-+            dialogState.uploadActive ||
-+            dialogState.bulkUploadActive ||
-+            dialogState.viewerActive
-+          ) {
-+            return;
-+          }
-+          if (!dom.bulkDownloadDialog || !dom.bulkDownloadDialog.root) {
-+            return;
-+          }
-+
-+          collectBulkDownloadMeta();
-+          renderBulkDownloadTree();
-+          refreshBulkDownloadCheckboxes();
-+          updateBulkDownloadSummary();
-+          setBulkDownloadStatus('');
-+
-+          const root = dom.bulkDownloadDialog.root;
-+          root.classList.remove('hidden');
-+          root.setAttribute('aria-hidden', 'false');
-+          document.body.classList.add('dialog-open');
-+          dialogState.bulkDownloadActive = true;
-+
-+          bulkDownloadPreviousFocus =
-+            document.activeElement instanceof HTMLElement ? document.activeElement : null;
-+
-+          const focusTargets = [
-+            dom.bulkDownloadDialog.selectAll,
-+            dom.bulkDownloadDialog.clear,
-+            dom.bulkDownloadDialog.submit,
-+            dom.bulkDownloadDialog.cancel,
-+          ].filter((element) => element instanceof HTMLElement && !element.disabled);
-+          if (focusTargets.length > 0) {
-+            focusTargets[0].focus({ preventScroll: true });
-+          }
-+
-+          function handleSelectAll(event) {
-+            event?.preventDefault?.();
-+            setBulkDownloadStatus('');
-+            selectAllBulkDownload();
-+          }
-+
-+          function handleClear(event) {
-+            event?.preventDefault?.();
-+            setBulkDownloadStatus('');
-+            clearBulkDownloadSelections();
-+          }
-+
-+          function handleCancel(event) {
-+            event?.preventDefault?.();
-+            closeBulkDownloadDialog();
-+          }
-+
-+          function handleBackdrop(event) {
-+            event?.preventDefault?.();
-+            closeBulkDownloadDialog();
-+          }
-+
-+          function handleKeyDown(event) {
-+            if (event.key === 'Escape') {
-+              event.preventDefault();
-+              closeBulkDownloadDialog();
-+              return;
-+            }
-+            if (event.key === 'Tab') {
-+              const focusable = [
-+                dom.bulkDownloadDialog.selectAll,
-+                dom.bulkDownloadDialog.clear,
-+                dom.bulkDownloadDialog.submit,
-+                dom.bulkDownloadDialog.cancel,
-+              ].filter((element) => element instanceof HTMLElement && !element.disabled);
-+              if (!focusable.length) {
-+                return;
-+              }
-+              const currentIndex = focusable.indexOf(document.activeElement);
-+              const nextIndex = event.shiftKey
-+                ? currentIndex <= 0
-+                  ? focusable.length - 1
-+                  : currentIndex - 1
-+                : currentIndex === focusable.length - 1
-+                ? 0
-+                : currentIndex + 1;
-+              focusable[nextIndex].focus({ preventScroll: true });
-+              event.preventDefault();
-+            }
-+          }
-+
-+          if (dom.bulkDownloadDialog.selectAll) {
-+            dom.bulkDownloadDialog.selectAll.addEventListener('click', handleSelectAll);
-+          }
-+          if (dom.bulkDownloadDialog.clear) {
-+            dom.bulkDownloadDialog.clear.addEventListener('click', handleClear);
-+          }
-+          if (dom.bulkDownloadDialog.cancel) {
-+            dom.bulkDownloadDialog.cancel.addEventListener('click', handleCancel);
-+          }
-+          if (dom.bulkDownloadDialog.backdrop) {
-+            dom.bulkDownloadDialog.backdrop.addEventListener('click', handleBackdrop);
-+          }
-+          if (dom.bulkDownloadDialog.submit) {
-+            dom.bulkDownloadDialog.submit.addEventListener('click', handleBulkDownloadSubmit);
-+          }
-+          if (dom.bulkDownloadDialog.window) {
-+            dom.bulkDownloadDialog.window.addEventListener('keydown', handleKeyDown);
-+          }
-+
-+          bulkDownloadDialogCleanup = (options = {}) => {
-+            const { restoreFocus = true } = options;
-+            if (dom.bulkDownloadDialog.selectAll) {
-+              dom.bulkDownloadDialog.selectAll.removeEventListener('click', handleSelectAll);
-+            }
-+            if (dom.bulkDownloadDialog.clear) {
-+              dom.bulkDownloadDialog.clear.removeEventListener('click', handleClear);
-+            }
-+            if (dom.bulkDownloadDialog.cancel) {
-+              dom.bulkDownloadDialog.cancel.removeEventListener('click', handleCancel);
-+            }
-+            if (dom.bulkDownloadDialog.backdrop) {
-+              dom.bulkDownloadDialog.backdrop.removeEventListener('click', handleBackdrop);
-+            }
-+            if (dom.bulkDownloadDialog.submit) {
-+              dom.bulkDownloadDialog.submit.removeEventListener('click', handleBulkDownloadSubmit);
-+            }
-+            if (dom.bulkDownloadDialog.window) {
-+              dom.bulkDownloadDialog.window.removeEventListener('keydown', handleKeyDown);
-+            }
-+
-+            root.classList.add('hidden');
-+            root.setAttribute('aria-hidden', 'true');
-+            dialogState.bulkDownloadActive = false;
-+            state.bulkDownload.checkboxMap.clear();
-+            if (
-+              !dialogState.active &&
-+              !dialogState.uploadActive &&
-+              !dialogState.bulkUploadActive &&
-+              !dialogState.bulkProcessActive &&
-+              !dialogState.viewerActive
-+            ) {
-+              document.body.classList.remove('dialog-open');
-+            }
-+            if (restoreFocus && bulkDownloadPreviousFocus) {
-+              bulkDownloadPreviousFocus.focus({ preventScroll: true });
-+            }
-+            bulkDownloadPreviousFocus = null;
-+            setBulkDownloadStatus('');
-+            updateBulkDownloadSummary();
-+          };
-+        }
-+
+                  state.bulkDownload.checkboxMap.set(key, {
+                    checkbox,
+                    input,
+                    status,
+                  });
+                });
+
+                lectureItem.appendChild(checkboxGroup);
+                lectureList.appendChild(lectureItem);
+              });
+
+              moduleDetails.appendChild(lectureList);
+              moduleList.appendChild(moduleDetails);
+            });
+
+            classDetails.appendChild(moduleList);
+            tree.appendChild(classDetails);
+          });
+
+          container.appendChild(tree);
+          if (dom.bulkDownloadDialog.empty) {
+            dom.bulkDownloadDialog.empty.hidden = lectureRendered > 0;
+          }
+          refreshBulkDownloadCheckboxes();
+        }
+
+        function updateBulkDownloadCheckboxState(key) {
+          const entry = state.bulkDownload.checkboxMap.get(key);
+          const meta = state.bulkDownload.meta.get(key);
+          if (!entry || !meta) {
+            state.bulkDownload.selections.delete(key);
+            return;
+          }
+          const { checkbox, input, status } = entry;
+          const available = Boolean(meta.available);
+          const selected = available && state.bulkDownload.selections.has(key);
+          input.disabled = !available;
+          input.checked = selected;
+          const stateValue = !available ? 'unavailable' : selected ? 'selected' : 'available';
+          checkbox.dataset.state = stateValue;
+          if (status) {
+            status.textContent = t(`tasks.bulkDownload.status.${stateValue}`);
+          }
+        }
+
+        function refreshBulkDownloadCheckboxes() {
+          state.bulkDownload.checkboxMap.forEach((_, key) => {
+            updateBulkDownloadCheckboxState(key);
+          });
+        }
+
+        function updateBulkDownloadSummary() {
+          if (!dom.bulkDownloadDialog || !dom.bulkDownloadDialog.summary) {
+            return;
+          }
+          const summary = dom.bulkDownloadDialog.summary;
+          const selectAllButton = dom.bulkDownloadDialog.selectAll;
+          const clearButton = dom.bulkDownloadDialog.clear;
+          const submitButton = dom.bulkDownloadDialog.submit;
+          summary.innerHTML = '';
+
+          let selectedCount = 0;
+          const breakdown = {
+            audio: 0,
+            txt: 0,
+            pdf: 0,
+            md: 0,
+            zip: 0,
+          };
+
+          state.bulkDownload.selections.forEach((_, key) => {
+            const meta = state.bulkDownload.meta.get(key);
+            if (!meta || !meta.available) {
+              state.bulkDownload.selections.delete(key);
+              return;
+            }
+            selectedCount += 1;
+            const assetKey = meta.assetKey;
+            breakdown[assetKey] = (breakdown[assetKey] || 0) + 1;
+          });
+
+          if (selectedCount === 0) {
+            summary.textContent = t('tasks.bulkDownload.summaryEmpty');
+          } else {
+            const totalLine = document.createElement('p');
+            const assetWord =
+              selectedCount === 1
+                ? t('tasks.bulkDownload.assetSingular')
+                : t('tasks.bulkDownload.assetPlural');
+            totalLine.textContent = t('tasks.bulkDownload.summarySelected', {
+              count: selectedCount,
+              assetWord,
+            });
+            const breakdownLine = document.createElement('p');
+            breakdownLine.textContent = t('tasks.bulkDownload.summaryBreakdown', {
+              audio: breakdown.audio || 0,
+              txt: breakdown.txt || 0,
+              pdf: breakdown.pdf || 0,
+              md: breakdown.md || 0,
+              zip: breakdown.zip || 0,
+            });
+            summary.appendChild(totalLine);
+            summary.appendChild(breakdownLine);
+          }
+
+          if (selectAllButton) {
+            selectAllButton.disabled = state.bulkDownload.availableCount === 0;
+          }
+          if (clearButton) {
+            clearButton.disabled = state.bulkDownload.selections.size === 0;
+          }
+          if (submitButton) {
+            submitButton.disabled = state.bulkDownload.selections.size === 0;
+          }
+        }
+
+        function setBulkDownloadStatus(message = '', variant = '') {
+          if (!dom.bulkDownloadDialog || !dom.bulkDownloadDialog.status) {
+            return;
+          }
+          const element = dom.bulkDownloadDialog.status;
+          element.textContent = message || '';
+          element.classList.remove('error', 'success');
+          if (variant === 'error') {
+            element.classList.add('error');
+          } else if (variant === 'success') {
+            element.classList.add('success');
+          }
+        }
+
+        function selectAllBulkDownload() {
+          state.bulkDownload.meta.forEach((meta, key) => {
+            if (!meta || !meta.available) {
+              state.bulkDownload.selections.delete(key);
+              return;
+            }
+            state.bulkDownload.selections.set(key, true);
+          });
+          refreshBulkDownloadCheckboxes();
+          updateBulkDownloadSummary();
+        }
+
+        function clearBulkDownloadSelections() {
+          if (state.bulkDownload.selections.size > 0) {
+            state.bulkDownload.selections.clear();
+          }
+          refreshBulkDownloadCheckboxes();
+          updateBulkDownloadSummary();
+        }
+
+        function handleBulkDownloadCheckboxChange(key, checked) {
+          const meta = state.bulkDownload.meta.get(key);
+          if (!meta || !meta.available) {
+            state.bulkDownload.selections.delete(key);
+          } else if (checked) {
+            state.bulkDownload.selections.set(key, true);
+          } else {
+            state.bulkDownload.selections.delete(key);
+          }
+          updateBulkDownloadCheckboxState(key);
+          updateBulkDownloadSummary();
+        }
+
+        let bulkDownloadDialogCleanup = null;
+        let bulkDownloadPreviousFocus = null;
+
+        function closeBulkDownloadDialog(options = {}) {
+          if (typeof bulkDownloadDialogCleanup === 'function') {
+            const cleanup = bulkDownloadDialogCleanup;
+            bulkDownloadDialogCleanup = null;
+            cleanup(options);
+          }
+        }
+
+        async function handleBulkDownloadSubmit(event) {
+          event?.preventDefault?.();
+          if (state.bulkDownload.selections.size === 0) {
+            setBulkDownloadStatus(t('tasks.bulkDownload.noneSelected'), 'error');
+            return;
+          }
+          const grouped = new Map();
+          state.bulkDownload.selections.forEach((_, key) => {
+            const meta = state.bulkDownload.meta.get(key);
+            if (!meta || !meta.available) {
+              return;
+            }
+            const assets = grouped.get(meta.lectureId) || [];
+            assets.push(meta.assetKey);
+            grouped.set(meta.lectureId, assets);
+          });
+          if (!grouped.size) {
+            setBulkDownloadStatus(t('tasks.bulkDownload.noneSelected'), 'error');
+            return;
+          }
+
+          const submitButton = dom.bulkDownloadDialog?.submit;
+          if (submitButton) {
+            submitButton.disabled = true;
+          }
+          setBulkDownloadStatus(t('tasks.bulkDownload.preparing'), 'info');
+
+          try {
+            const items = Array.from(grouped.entries()).map(([lectureId, assets]) => ({
+              lecture_id: lectureId,
+              assets,
+            }));
+            const response = await request('/api/download/bulk', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ items }),
+            });
+            const archive = response?.archive;
+            if (!archive || !archive.path) {
+              throw new Error(t('tasks.bulkDownload.failure'));
+            }
+            const downloadUrl = buildStorageURL(archive.path);
+            const anchor = document.createElement('a');
+            anchor.href = downloadUrl;
+            anchor.download = archive.filename || 'lecture-assets.zip';
+            anchor.rel = 'noopener';
+            document.body.appendChild(anchor);
+            anchor.click();
+            anchor.remove();
+            const filename = archive.filename || 'archive.zip';
+            setBulkDownloadStatus(t('tasks.bulkDownload.ready', { filename }), 'success');
+          } catch (error) {
+            const detail = error instanceof Error ? error.message : String(error);
+            setBulkDownloadStatus(detail || t('tasks.bulkDownload.failure'), 'error');
+          } finally {
+            if (submitButton) {
+              submitButton.disabled = state.bulkDownload.selections.size === 0;
+            }
+          }
+        }
+
+        function openBulkDownloadDialog() {
+          if (
+            dialogState.bulkDownloadActive ||
+            dialogState.bulkProcessActive ||
+            dialogState.active ||
+            dialogState.uploadActive ||
+            dialogState.bulkUploadActive ||
+            dialogState.viewerActive
+          ) {
+            return;
+          }
+          if (!dom.bulkDownloadDialog || !dom.bulkDownloadDialog.root) {
+            return;
+          }
+
+          collectBulkDownloadMeta();
+          renderBulkDownloadTree();
+          refreshBulkDownloadCheckboxes();
+          updateBulkDownloadSummary();
+          setBulkDownloadStatus('');
+
+          const root = dom.bulkDownloadDialog.root;
+          root.classList.remove('hidden');
+          root.setAttribute('aria-hidden', 'false');
+          document.body.classList.add('dialog-open');
+          dialogState.bulkDownloadActive = true;
+
+          bulkDownloadPreviousFocus =
+            document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+          const focusTargets = [
+            dom.bulkDownloadDialog.selectAll,
+            dom.bulkDownloadDialog.clear,
+            dom.bulkDownloadDialog.submit,
+            dom.bulkDownloadDialog.cancel,
+          ].filter((element) => element instanceof HTMLElement && !element.disabled);
+          if (focusTargets.length > 0) {
+            focusTargets[0].focus({ preventScroll: true });
+          }
+
+          function handleSelectAll(event) {
+            event?.preventDefault?.();
+            setBulkDownloadStatus('');
+            selectAllBulkDownload();
+          }
+
+          function handleClear(event) {
+            event?.preventDefault?.();
+            setBulkDownloadStatus('');
+            clearBulkDownloadSelections();
+          }
+
+          function handleCancel(event) {
+            event?.preventDefault?.();
+            closeBulkDownloadDialog();
+          }
+
+          function handleBackdrop(event) {
+            event?.preventDefault?.();
+            closeBulkDownloadDialog();
+          }
+
+          function handleKeyDown(event) {
+            if (event.key === 'Escape') {
+              event.preventDefault();
+              closeBulkDownloadDialog();
+              return;
+            }
+            if (event.key === 'Tab') {
+              const focusable = [
+                dom.bulkDownloadDialog.selectAll,
+                dom.bulkDownloadDialog.clear,
+                dom.bulkDownloadDialog.submit,
+                dom.bulkDownloadDialog.cancel,
+              ].filter((element) => element instanceof HTMLElement && !element.disabled);
+              if (!focusable.length) {
+                return;
+              }
+              const currentIndex = focusable.indexOf(document.activeElement);
+              const nextIndex = event.shiftKey
+                ? currentIndex <= 0
+                  ? focusable.length - 1
+                  : currentIndex - 1
+                : currentIndex === focusable.length - 1
+                ? 0
+                : currentIndex + 1;
+              focusable[nextIndex].focus({ preventScroll: true });
+              event.preventDefault();
+            }
+          }
+
+          if (dom.bulkDownloadDialog.selectAll) {
+            dom.bulkDownloadDialog.selectAll.addEventListener('click', handleSelectAll);
+          }
+          if (dom.bulkDownloadDialog.clear) {
+            dom.bulkDownloadDialog.clear.addEventListener('click', handleClear);
+          }
+          if (dom.bulkDownloadDialog.cancel) {
+            dom.bulkDownloadDialog.cancel.addEventListener('click', handleCancel);
+          }
+          if (dom.bulkDownloadDialog.backdrop) {
+            dom.bulkDownloadDialog.backdrop.addEventListener('click', handleBackdrop);
+          }
+          if (dom.bulkDownloadDialog.submit) {
+            dom.bulkDownloadDialog.submit.addEventListener('click', handleBulkDownloadSubmit);
+          }
+          if (dom.bulkDownloadDialog.window) {
+            dom.bulkDownloadDialog.window.addEventListener('keydown', handleKeyDown);
+          }
+
+          bulkDownloadDialogCleanup = (options = {}) => {
+            const { restoreFocus = true } = options;
+            if (dom.bulkDownloadDialog.selectAll) {
+              dom.bulkDownloadDialog.selectAll.removeEventListener('click', handleSelectAll);
+            }
+            if (dom.bulkDownloadDialog.clear) {
+              dom.bulkDownloadDialog.clear.removeEventListener('click', handleClear);
+            }
+            if (dom.bulkDownloadDialog.cancel) {
+              dom.bulkDownloadDialog.cancel.removeEventListener('click', handleCancel);
+            }
+            if (dom.bulkDownloadDialog.backdrop) {
+              dom.bulkDownloadDialog.backdrop.removeEventListener('click', handleBackdrop);
+            }
+            if (dom.bulkDownloadDialog.submit) {
+              dom.bulkDownloadDialog.submit.removeEventListener('click', handleBulkDownloadSubmit);
+            }
+            if (dom.bulkDownloadDialog.window) {
+              dom.bulkDownloadDialog.window.removeEventListener('keydown', handleKeyDown);
+            }
+
+            root.classList.add('hidden');
+            root.setAttribute('aria-hidden', 'true');
+            dialogState.bulkDownloadActive = false;
+            state.bulkDownload.checkboxMap.clear();
+            if (
+              !dialogState.active &&
+              !dialogState.uploadActive &&
+              !dialogState.bulkUploadActive &&
+              !dialogState.bulkProcessActive &&
+              !dialogState.viewerActive
+            ) {
+              document.body.classList.remove('dialog-open');
+            }
+            if (restoreFocus && bulkDownloadPreviousFocus) {
+              bulkDownloadPreviousFocus.focus({ preventScroll: true });
+            }
+            bulkDownloadPreviousFocus = null;
+            setBulkDownloadStatus('');
+            updateBulkDownloadSummary();
+          };
+        }
+
         async function refreshTasks({ force = false, silent = false } = {}) {
           if (state.tasks.loading && !force) {
             return;
