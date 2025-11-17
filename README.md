@@ -32,6 +32,7 @@
 - **Managed media pipeline** – Lecture audio, transcripts, and slides are automatically organized and maintained in a structured storage layout.
 - **Flexible transcription** – Run CPU-optimized [faster-whisper](https://github.com/SYSTRAN/faster-whisper) locally or enable GPU acceleration when available.
 - **Multi-language support** – Switch between **English**, **中文**, **Español**, and **Français** directly from the settings menu.
+- **Bulk processing & download workflows** – Kick off mastering/transcription tasks in batches and now export audio, transcripts, slides, notes, or slide bundles for many lectures at once via the new bulk download dialog.
 - **Cross-platform CLI** – A Typer-powered assistant for ingestion, metadata review, and automation workflows.
 
 ---
