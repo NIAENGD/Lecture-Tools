@@ -196,6 +196,19 @@ class TaskQueue:
             else:
                 break
 
+    async def clear_completed(self) -> int:
+        async with self._lock:
+            remaining: Deque[QueuedTask] = deque()
+            cleared = 0
+            for task in self._tasks:
+                if task.status in {"succeeded", "failed"}:
+                    self._index.pop(task.id, None)
+                    cleared += 1
+                else:
+                    remaining.append(task)
+            self._tasks = remaining
+            return cleared
+
 from fastapi import (
     FastAPI,
     HTTPException,
@@ -1685,6 +1698,7 @@ class LectureStorageSummary(BaseModel):
     has_notes: bool
     has_slides: bool
     eligible_audio: bool
+    storage_path: Optional[str] = None
 
 
 class ModuleStorageSummary(BaseModel):
@@ -1699,6 +1713,7 @@ class ModuleStorageSummary(BaseModel):
     slide_count: int
     eligible_audio_count: int
     lectures: List[LectureStorageSummary]
+    storage_path: Optional[str] = None
 
 
 class ClassStorageSummary(BaseModel):
@@ -1714,6 +1729,7 @@ class ClassStorageSummary(BaseModel):
     slide_count: int
     eligible_audio_count: int
     modules: List[ModuleStorageSummary]
+    storage_path: Optional[str] = None
 
 
 class StorageOverviewResponse(BaseModel):
@@ -2500,6 +2516,29 @@ def create_app(
             return None
         return candidate if candidate.exists() else None
 
+    def _relative_existing_path(
+        candidate: Optional[Path], *, root: Optional[Path] = None
+    ) -> Optional[str]:
+        if candidate is None:
+            return None
+        try:
+            resolved_candidate = candidate.resolve()
+        except (OSError, RuntimeError):  # pragma: no cover - resolution failures
+            return None
+        if not resolved_candidate.exists():
+            return None
+        base = root
+        if base is None:
+            base = _require_storage_root()
+        try:
+            resolved_root = base.resolve()
+        except (OSError, RuntimeError):  # pragma: no cover - resolution failures
+            resolved_root = base
+        try:
+            return resolved_candidate.relative_to(resolved_root).as_posix()
+        except ValueError:
+            return None
+
     def _load_asset_manifest(manifest_path: Path) -> List[Dict[str, Any]]:
         try:
             raw = manifest_path.read_text("utf-8")
@@ -2831,10 +2870,16 @@ def create_app(
         return combined_path
 
     def _summarize_lecture_storage(
-        lecture: LectureRecord, class_record: ClassRecord, module: ModuleRecord
+        lecture: LectureRecord,
+        class_record: ClassRecord,
+        module: ModuleRecord,
+        *,
+        root: Optional[Path] = None,
     ) -> LectureStorageSummary:
         total_size = 0
         counted_dirs: List[Path] = []
+        storage_root = root or _require_storage_root().resolve()
+        lecture_storage_path: Optional[str] = None
 
         def _add_directory(path: Path) -> None:
             nonlocal total_size
@@ -2856,6 +2901,8 @@ def create_app(
 
         for directory in _iter_lecture_dirs(class_record, module, lecture):
             _add_directory(directory)
+            if lecture_storage_path is None:
+                lecture_storage_path = _relative_existing_path(directory, root=storage_root)
 
         counted_files: Set[Path] = set()
 
@@ -2902,6 +2949,7 @@ def create_app(
                 (lecture.audio_path or lecture.processed_audio_path)
                 and lecture.transcript_path
             ),
+            storage_path=lecture_storage_path,
         )
 
     def _iter_class_dirs(class_record: ClassRecord) -> List[Path]:
@@ -4686,6 +4734,12 @@ def create_app(
         active_entries = _collect_progress_entries()
         return {"queue": queue_payload, "active": active_entries}
 
+    @app.delete("/api/tasks/completed")
+    async def clear_completed_tasks() -> Dict[str, Any]:
+        cleared = await task_queue.clear_completed()
+        _log_event("Cleared completed tasks", count=cleared)
+        return {"cleared": cleared}
+
     @app.post("/api/tasks", status_code=status.HTTP_201_CREATED)
     async def create_tasks(payload: TaskBatchRequest) -> Dict[str, Any]:
         definitions = payload.tasks or []
@@ -6117,6 +6171,7 @@ def create_app(
         _log_event("Building storage overview")
         classes: List[ClassStorageSummary] = []
         eligible_total = 0
+        root_path = _require_storage_root().resolve()
 
         for class_record in repository.iter_classes():
             modules: List[ModuleStorageSummary] = []
@@ -6128,6 +6183,12 @@ def create_app(
             class_notes = 0
             class_slides = 0
             class_eligible = 0
+            class_storage_path: Optional[str] = None
+
+            for class_dir in _iter_class_dirs(class_record):
+                class_storage_path = _relative_existing_path(class_dir, root=root_path)
+                if class_storage_path:
+                    break
 
             module_records = list(repository.iter_modules(class_record.id))
             for module in module_records:
@@ -6139,10 +6200,21 @@ def create_app(
                 module_notes = 0
                 module_slides = 0
                 module_eligible = 0
+                module_storage_path: Optional[str] = None
+
+                for module_dir in _iter_module_dirs(class_record, module):
+                    module_storage_path = _relative_existing_path(module_dir, root=root_path)
+                    if module_storage_path:
+                        break
 
                 lecture_records = list(repository.iter_lectures(module.id))
                 for lecture in lecture_records:
-                    summary = _summarize_lecture_storage(lecture, class_record, module)
+                    summary = _summarize_lecture_storage(
+                        lecture,
+                        class_record,
+                        module,
+                        root=root_path,
+                    )
                     lectures.append(summary)
                     module_size += summary.size
                     class_size += summary.size
@@ -6177,6 +6249,7 @@ def create_app(
                         slide_count=module_slides,
                         eligible_audio_count=module_eligible,
                         lectures=lectures,
+                        storage_path=module_storage_path,
                     )
                 )
 
@@ -6194,6 +6267,7 @@ def create_app(
                     slide_count=class_slides,
                     eligible_audio_count=class_eligible,
                     modules=modules,
+                    storage_path=class_storage_path,
                 )
             )
 
