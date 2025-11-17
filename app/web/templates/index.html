@@ -2988,87 +2988,45 @@
         font-weight: 600;
       }
 
-      .storage-largest {
-        margin-top: 16px;
-        background: var(--panel-bg);
-        border: 1px solid var(--panel-border);
-        border-radius: 10px;
-        padding: 12px 16px;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-      }
-
-      .storage-largest-title {
-        margin: 0;
-        font-size: 0.95rem;
-        font-weight: 600;
-        color: var(--muted);
-      }
-
-      .storage-largest-empty {
-        margin: 0;
-        font-size: 0.9rem;
-        color: var(--muted);
-      }
-
-      .storage-largest-list {
+      .storage-toggle {
         list-style: none;
-        margin: 0;
-        padding: 0;
-        display: grid;
-        gap: 6px;
-      }
-
-      .storage-largest-item {
-        margin: 0;
-      }
-
-      .storage-largest-button {
-        width: 100%;
         display: flex;
-        justify-content: space-between;
         align-items: center;
+        justify-content: space-between;
         gap: 12px;
-        padding: 8px 12px;
-        border-radius: 8px;
-        border: 1px solid transparent;
-        background: var(--background);
-        color: inherit;
-        font: inherit;
+        padding: 14px 16px;
         cursor: pointer;
-        transition: border-color 0.2s ease, background-color 0.2s ease;
-      }
-
-      .storage-largest-button:hover,
-      .storage-largest-button:focus-visible {
-        border-color: var(--accent);
-        outline: none;
-        background: var(--panel-bg);
-      }
-
-      .storage-largest-name {
-        flex: 1;
-        text-align: left;
         font-weight: 600;
       }
 
-      .storage-largest-meta {
-        display: flex;
-        align-items: baseline;
-        gap: 8px;
-        font-size: 0.85rem;
-        color: var(--muted);
+      .storage-toggle::-webkit-details-marker {
+        display: none;
       }
 
-      .storage-largest-size {
-        font-weight: 600;
+      .storage-toggle::after {
+        content: '';
+        width: 8px;
+        height: 8px;
+        border-right: 2px solid var(--muted);
+        border-bottom: 2px solid var(--muted);
+        transform: rotate(-45deg);
+        transition: transform 0.2s ease;
       }
 
-      .storage-largest-type {
-        font-size: 0.8rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
+      details[open] > .storage-toggle {
+        border-bottom: 1px solid var(--panel-border);
+      }
+
+      details[open] > .storage-toggle::after {
+        transform: rotate(45deg);
+      }
+
+      .storage-module-card > .storage-toggle {
+        padding: 12px 16px;
+      }
+
+      .storage-lecture-item > .storage-toggle {
+        padding: 10px 14px;
       }
 
       .storage-empty,
@@ -3119,10 +3077,7 @@
         border: 1px solid var(--panel-border);
         border-radius: 10px;
         background: var(--background);
-        padding: 14px 16px;
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
+        overflow: hidden;
       }
 
       .storage-module-card,
@@ -3130,8 +3085,57 @@
         border-radius: 8px;
       }
 
-      .storage-lecture-item {
-        padding: 12px 14px;
+      .storage-class-body,
+      .storage-module-body,
+      .storage-lecture-body {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 12px 16px 16px;
+        border-top: 1px solid var(--panel-border);
+      }
+
+      .storage-lecture-body {
+        padding: 10px 16px 14px;
+      }
+
+      .storage-resource-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .storage-resource-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .storage-resource-label {
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      .storage-reveal-button {
+        border: 1px solid var(--nav-button-border);
+        background: var(--nav-button-bg);
+        color: var(--interactive-text);
+        border-radius: 999px;
+        padding: 4px 10px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+      }
+
+      .storage-reveal-button:hover {
+        background: var(--nav-button-hover);
+        border-color: var(--accent);
+        color: var(--accent-contrast);
       }
 
       .storage-class-header,
@@ -3692,6 +3696,13 @@
         gap: 12px;
       }
 
+      .tasks-header-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
       .tasks-description {
         color: var(--muted);
         font-size: 0.95rem;
@@ -3704,12 +3715,39 @@
       }
 
       .tasks-list {
-        list-style: none;
         margin: 0;
         padding: 0;
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: 18px;
+      }
+
+      .task-section {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        border-top: 1px solid var(--panel-border);
+        padding-top: 12px;
+      }
+
+      .task-section:first-of-type {
+        border-top: none;
+        padding-top: 0;
+      }
+
+      .task-section-heading {
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        margin: 0;
+      }
+
+      .task-section-empty {
+        margin: 0;
+        font-size: 0.85rem;
+        font-style: italic;
+        color: var(--muted);
       }
 
       .task-entry {
@@ -4204,6 +4242,110 @@
         display: flex;
         flex-direction: column;
         gap: 12px;
+      }
+
+      .mini-console-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .mini-console-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .mini-console-header h2 {
+        margin: 0;
+        font-size: 1.1rem;
+      }
+
+      .mini-console-entries {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .mini-console-entry {
+        border: 1px solid var(--panel-border);
+        border-radius: 10px;
+        padding: 10px 12px;
+        box-shadow: var(--panel-shadow);
+        background: var(--panel-bg);
+        border-left: 4px solid var(--accent);
+      }
+
+      .mini-console-entry[data-variant='success'] {
+        border-left-color: var(--status-success-text);
+      }
+
+      .mini-console-entry[data-variant='error'] {
+        border-left-color: var(--status-error-text);
+      }
+
+      .mini-console-entry[data-variant='info'] {
+        border-left-color: var(--status-info-text);
+      }
+
+      .mini-console-entry-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 6px;
+      }
+
+      .mini-console-message {
+        margin: 0 0 8px;
+        font-size: 0.9rem;
+        color: var(--text);
+      }
+
+      .mini-console-meta {
+        font-size: 0.75rem;
+        color: var(--muted);
+        letter-spacing: 0.02em;
+      }
+
+      .mini-console-progress-track {
+        width: 100%;
+        height: 6px;
+        border-radius: 999px;
+        background: var(--status-progress-track);
+        overflow: hidden;
+      }
+
+      .mini-console-progress-fill {
+        height: 100%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--accent) 0%, var(--accent-highlight) 100%);
+        transition: width 0.3s ease;
+      }
+
+      .mini-console-progress-fill.indeterminate {
+        width: 100%;
+        animation: mini-console-indeterminate 1.4s linear infinite;
+        background: repeating-linear-gradient(
+          120deg,
+          var(--accent-soft) 0%,
+          var(--accent) 25%,
+          var(--accent-soft) 50%
+        );
+      }
+
+      @keyframes mini-console-indeterminate {
+        0% {
+          transform: translateX(-30%);
+        }
+        100% {
+          transform: translateX(30%);
+        }
+      }
+
+      .mini-console-empty {
+        font-size: 0.9rem;
+        color: var(--muted);
+        font-style: italic;
       }
 
       .syllabus-modules {
@@ -4747,6 +4889,25 @@
             <div class="placeholder" data-i18n="sidebar.loading">Loading…</div>
           </div>
         </section>
+        <section id="mini-console-panel" class="panel mini-console-panel">
+          <div class="mini-console-header">
+            <h2 data-i18n="sidebar.miniConsoleTitle">Mini console</h2>
+          </div>
+          <div
+            id="mini-console-empty"
+            class="mini-console-empty"
+            data-i18n="sidebar.miniConsoleEmpty"
+          >
+            No recent activity.
+          </div>
+          <div
+            id="mini-console-entries"
+            class="mini-console-entries"
+            role="log"
+            aria-live="polite"
+            aria-atomic="false"
+          ></div>
+        </section>
       </aside>
       <section class="content">
         <section class="panel content-panel">
@@ -4864,9 +5025,19 @@
             <section class="panel tasks-panel">
               <div class="tasks-header">
                 <h2 data-i18n="tasks.title">Tasks</h2>
-                <button id="tasks-refresh" type="button" class="ghost" data-i18n="tasks.refresh">
-                  Refresh
-                </button>
+                <div class="tasks-header-actions">
+                  <button
+                    id="tasks-clear-done"
+                    type="button"
+                    class="ghost"
+                    data-i18n="tasks.clearDone"
+                  >
+                    Clear done
+                  </button>
+                  <button id="tasks-refresh" type="button" class="ghost" data-i18n="tasks.refresh">
+                    Refresh
+                  </button>
+                </div>
               </div>
                 <p id="tasks-description" class="tasks-description" data-i18n="tasks.description">
                   Queue transcription and slide processing jobs to run in order.
@@ -4901,7 +5072,13 @@
               <div id="tasks-empty" class="tasks-empty" data-i18n="tasks.empty">
                 No tasks in the queue.
               </div>
-              <ul id="tasks-list" class="tasks-list" aria-live="polite" aria-busy="false"></ul>
+              <div
+                id="tasks-list"
+                class="tasks-list"
+                role="list"
+                aria-live="polite"
+                aria-busy="false"
+              ></div>
             </section>
             </div>
             <div id="view-create" class="view" data-view="create" hidden>
@@ -5043,19 +5220,6 @@
                   <span class="storage-usage-label" data-i18n="storage.usage.library">Library size</span>
                   <span id="storage-library" class="storage-usage-value">--</span>
                 </div>
-              </section>
-              <section class="storage-largest" aria-live="polite">
-                <h3 class="storage-largest-title" data-i18n="storage.usage.largest">
-                  Largest folders &amp; files
-                </h3>
-                <p
-                  id="storage-largest-empty"
-                  class="storage-largest-empty"
-                  data-i18n="storage.usage.largestEmpty"
-                >
-                  No stored items yet.
-                </p>
-                <ul id="storage-largest-list" class="storage-largest-list"></ul>
               </section>
               <p
                 id="storage-purge-summary"
@@ -5841,6 +6005,8 @@
               searchLabel: 'Search the syllabus',
               searchPlaceholder: 'Search by name',
               loading: 'Loading…',
+              miniConsoleTitle: 'Mini console',
+              miniConsoleEmpty: 'No recent activity.',
             },
             topBar: {
               details: 'Details',
@@ -5910,6 +6076,13 @@
               description: 'Queue transcription and slide processing jobs to run in order.',
               empty: 'No tasks in the queue.',
               refresh: 'Refresh',
+              clearDone: 'Clear done',
+              sections: {
+                current: 'Current',
+                queued: 'Queued',
+                done: 'Done',
+                empty: 'No tasks in this section.',
+              },
               actions: {
                 open: 'Open lecture',
                 retry: 'Retry',
@@ -6021,6 +6194,7 @@
               },
               notifications: {
                 queued: 'Task added to the queue.',
+                cleared: 'Cleared {{count}} completed tasks.',
               },
             },
             create: {
@@ -6153,8 +6327,6 @@
                 available: 'Available',
                 total: 'Total',
                 library: 'Library size',
-                largest: 'Largest folders & files',
-                largestEmpty: 'No stored items yet.',
               },
               actions: {
                 refresh: 'Refresh',
@@ -6189,6 +6361,9 @@
                 summary: 'Removed {{count}} {{itemWord}} • Freed {{freed}}',
                 none: 'No storage repairs have been run yet.',
                 noChange: 'No space reclaimed',
+              },
+              reveal: {
+                unavailable: 'Unable to locate this item in storage.',
               },
               classes: {
                 summary: '{{moduleCount}} {{moduleWord}} • {{lectureCount}} {{lectureWord}}',
@@ -6405,6 +6580,7 @@
                 exit: 'Exit',
                 close: 'Close',
                 ok: 'OK',
+                reveal: 'Reveal',
               },
             },
             viewer: {
@@ -6497,6 +6673,8 @@
               searchLabel: '搜索课程大纲',
               searchPlaceholder: '按名称搜索',
               loading: '正在加载…',
+              miniConsoleTitle: '迷你控制台',
+              miniConsoleEmpty: '暂无最新活动。',
             },
             topBar: {
               details: '详情',
@@ -6565,6 +6743,13 @@
               description: '按顺序排队音频转录和课件处理任务。',
               empty: '当前没有排队任务。',
               refresh: '刷新',
+              clearDone: '清除已完成',
+              sections: {
+                current: '当前',
+                queued: '排队中',
+                done: '已完成',
+                empty: '此分组中没有任务。',
+              },
               actions: {
                 open: '打开课次',
                 retry: '重试',
@@ -6674,6 +6859,7 @@
               },
               notifications: {
                 queued: '任务已加入队列。',
+                cleared: '已清除 {{count}} 个已完成任务。',
               },
             },
             create: {
@@ -6804,8 +6990,6 @@
                 available: '可用',
                 total: '总计',
                 library: '资料库大小',
-                largest: '最大文件/文件夹',
-                largestEmpty: '暂无存储项目。',
               },
               actions: {
                 refresh: '刷新',
@@ -6840,6 +7024,9 @@
                 summary: '已移除 {{count}} 个{{itemWord}} • 释放 {{freed}} 空间',
                 none: '尚未运行存储修复。',
                 noChange: '未释放空间',
+              },
+              reveal: {
+                unavailable: '无法在存储中找到该项目。',
               },
               classes: {
                 summary: '{{moduleCount}} 个{{moduleWord}} • {{lectureCount}} 个{{lectureWord}}',
@@ -7050,6 +7237,7 @@
                 exit: '退出',
                 close: '关闭',
                 ok: '好的',
+                reveal: '定位',
               },
             },
             viewer: {
@@ -7141,6 +7329,8 @@
               searchLabel: 'Buscar en el programa',
               searchPlaceholder: 'Buscar por nombre',
               loading: 'Cargando…',
+              miniConsoleTitle: 'Mini consola',
+              miniConsoleEmpty: 'Sin actividad reciente.',
             },
             topBar: {
               details: 'Detalles',
@@ -7209,6 +7399,13 @@
               description: 'Programa trabajos de transcripción y procesamiento de diapositivas en secuencia.',
               empty: 'No hay tareas en la cola.',
               refresh: 'Actualizar',
+              clearDone: 'Limpiar completadas',
+              sections: {
+                current: 'En curso',
+                queued: 'En cola',
+                done: 'Completadas',
+                empty: 'No hay tareas en esta sección.',
+              },
               actions: {
                 open: 'Abrir clase',
                 retry: 'Reintentar',
@@ -7320,6 +7517,7 @@
               },
               notifications: {
                 queued: 'Tarea agregada a la cola.',
+                cleared: 'Se quitaron {{count}} tareas completadas.',
               },
             },
             create: {
@@ -7452,8 +7650,6 @@
                 available: 'Disponible',
                 total: 'Total',
                 library: 'Tamaño de la biblioteca',
-                largest: 'Carpetas y archivos más grandes',
-                largestEmpty: 'Todavía no hay elementos almacenados.',
               },
               actions: {
                 refresh: 'Actualizar',
@@ -7488,6 +7684,9 @@
                 summary: 'Se eliminaron {{count}} {{itemWord}} • Se liberaron {{freed}}',
                 none: 'Aún no se ha ejecutado la reparación de almacenamiento.',
                 noChange: 'No se liberó espacio',
+              },
+              reveal: {
+                unavailable: 'No se pudo localizar este elemento en el almacenamiento.',
               },
               classes: {
                 summary: '{{moduleCount}} {{moduleWord}} • {{lectureCount}} {{lectureWord}}',
@@ -7706,6 +7905,7 @@
                 exit: 'Salir',
                 close: 'Cerrar',
                 ok: 'Aceptar',
+                reveal: 'Mostrar',
               },
             },
             viewer: {
@@ -7799,6 +7999,8 @@
               searchLabel: 'Rechercher dans le plan',
               searchPlaceholder: 'Rechercher par nom',
               loading: 'Chargement…',
+              miniConsoleTitle: 'Mini console',
+              miniConsoleEmpty: 'Aucune activité récente.',
             },
             topBar: {
               details: 'Détails',
@@ -7871,6 +8073,13 @@
                 'Planifiez les transcriptions audio et les conversions de diapositives à exécuter l’une après l’autre.',
               empty: 'Aucune tâche dans la file.',
               refresh: 'Actualiser',
+              clearDone: 'Effacer terminées',
+              sections: {
+                current: 'En cours',
+                queued: 'En file',
+                done: 'Terminées',
+                empty: 'Aucune tâche dans cette section.',
+              },
               actions: {
                 open: 'Ouvrir la leçon',
                 retry: 'Réessayer',
@@ -7983,6 +8192,7 @@
               },
               notifications: {
                 queued: 'Tâche ajoutée à la file.',
+                cleared: '{{count}} tâches terminées ont été supprimées.',
               },
             },
             create: {
@@ -8115,8 +8325,6 @@
                 available: 'Disponible',
                 total: 'Total',
                 library: 'Taille de la bibliothèque',
-                largest: 'Dossiers et fichiers les plus volumineux',
-                largestEmpty: 'Aucun élément stocké pour le moment.',
               },
               actions: {
                 refresh: 'Actualiser',
@@ -8151,6 +8359,9 @@
                 summary: '{{count}} {{itemWord}} supprimés • {{freed}} libérés',
                 none: 'Aucune réparation de stockage n’a encore été effectuée.',
                 noChange: 'Aucun espace libéré',
+              },
+              reveal: {
+                unavailable: 'Impossible de localiser cet élément dans le stockage.',
               },
               classes: {
                 summary: '{{moduleCount}} {{moduleWord}} • {{lectureCount}} {{lectureWord}}',
@@ -8369,6 +8580,7 @@
                 exit: 'Quitter',
                 close: 'Fermer',
                 ok: 'OK',
+                reveal: 'Afficher',
               },
             },
             viewer: {
@@ -8639,6 +8851,7 @@
             renderAssets(state.selectedLectureDetail.lecture);
           }
           updateTaskLectureOptions();
+          renderMiniConsole();
         }
 
         const DISPLAY_MODE_CHOICES = new Set(['system', 'bright', 'dark']);
@@ -8919,6 +9132,11 @@
           lastProgressMessage: '',
           lastProgressRatio: null,
           statusHideTimer: null,
+          miniConsole: {
+            entries: [],
+            maxEntries: 4,
+            sequence: 0,
+          },
           storage: {
             usage: null,
             detail: null,
@@ -9124,6 +9342,11 @@
             settings: document.getElementById('view-settings'),
           },
           sidebarOverview: document.getElementById('sidebar-overview'),
+          miniConsole: {
+            container: document.getElementById('mini-console-panel'),
+            entries: document.getElementById('mini-console-entries'),
+            empty: document.getElementById('mini-console-empty'),
+          },
           settingsForm: document.getElementById('settings-form'),
           settingsDisplayMode: document.getElementById('settings-display-mode'),
           settingsTheme: document.getElementById('settings-theme'),
@@ -9165,20 +9388,18 @@
           debugFilterQuery: document.getElementById('debug-filter-query'),
           debugFilterClear: document.getElementById('debug-filter-clear'),
           debugDownloadLog: document.getElementById('debug-download-log'),
-          storage: {
-            container: document.getElementById('view-storage'),
-            path: document.getElementById('storage-path'),
-            refresh: document.getElementById('storage-refresh'),
-            repair: document.getElementById('storage-repair'),
-            downloadSelected: document.getElementById('storage-download-selected'),
-            used: document.getElementById('storage-used'),
-            available: document.getElementById('storage-available'),
-            total: document.getElementById('storage-total'),
-            library: document.getElementById('storage-library'),
-            largestList: document.getElementById('storage-largest-list'),
-            largestEmpty: document.getElementById('storage-largest-empty'),
-            loading: document.getElementById('storage-loading'),
-            empty: document.getElementById('storage-empty'),
+            storage: {
+              container: document.getElementById('view-storage'),
+              path: document.getElementById('storage-path'),
+              refresh: document.getElementById('storage-refresh'),
+              repair: document.getElementById('storage-repair'),
+              downloadSelected: document.getElementById('storage-download-selected'),
+              used: document.getElementById('storage-used'),
+              available: document.getElementById('storage-available'),
+              total: document.getElementById('storage-total'),
+              library: document.getElementById('storage-library'),
+              loading: document.getElementById('storage-loading'),
+              empty: document.getElementById('storage-empty'),
             wrapper: document.getElementById('storage-class-wrapper'),
             list: document.getElementById('storage-class-list'),
             purge: document.getElementById('storage-purge'),
@@ -9199,6 +9420,7 @@
             list: document.getElementById('tasks-list'),
             empty: document.getElementById('tasks-empty'),
             refresh: document.getElementById('tasks-refresh'),
+            clearDone: document.getElementById('tasks-clear-done'),
             description: document.getElementById('tasks-description'),
             bulkProcess: document.getElementById('task-bulk-process'),
             bulkUpload: document.getElementById('task-bulk-upload'),
@@ -9592,51 +9814,6 @@
             dom.storage.library.textContent =
               detail && typeof detail.size === 'number' ? formatBytes(detail.size) : '—';
           }
-          if (dom.storage.largestList) {
-            const items = Array.isArray(detail?.largest) ? detail.largest : [];
-            dom.storage.largestList.innerHTML = '';
-            if (dom.storage.largestEmpty) {
-              dom.storage.largestEmpty.hidden = items.length > 0;
-            }
-            dom.storage.largestList.hidden = items.length === 0;
-            if (!items.length) {
-              return;
-            }
-            const limit = Math.min(items.length, 8);
-            for (let index = 0; index < limit; index += 1) {
-              const entry = items[index] || {};
-              const li = document.createElement('li');
-              li.className = 'storage-largest-item';
-              const button = document.createElement('button');
-              button.type = 'button';
-              button.className = 'storage-largest-button';
-              button.dataset.path = entry.path || '';
-              button.dataset.isDir = entry.is_dir ? '1' : '0';
-
-              const nameSpan = document.createElement('span');
-              nameSpan.className = 'storage-largest-name';
-              nameSpan.textContent = entry.name || entry.path || t('storage.browser.unnamed');
-
-              const metaSpan = document.createElement('span');
-              metaSpan.className = 'storage-largest-meta';
-
-              const sizeSpan = document.createElement('span');
-              sizeSpan.className = 'storage-largest-size';
-              sizeSpan.textContent =
-                typeof entry.size === 'number' ? formatBytes(entry.size) : '—';
-
-              const typeSpan = document.createElement('span');
-              typeSpan.className = 'storage-largest-type';
-              typeSpan.textContent = entry.is_dir
-                ? t('storage.browser.directory')
-                : t('storage.browser.file');
-
-              metaSpan.append(sizeSpan, typeSpan);
-              button.append(nameSpan, metaSpan);
-              li.append(button);
-              dom.storage.largestList.append(li);
-            }
-          }
         }
 
         function renderStoragePurgeSummary() {
@@ -9712,6 +9889,124 @@
           }
         }
 
+        function findLectureAssetRecord(lectureId) {
+          if (!Number.isFinite(lectureId)) {
+            return null;
+          }
+          for (const klass of state.classes) {
+            if (!klass || typeof klass !== 'object') {
+              continue;
+            }
+            const modules = Array.isArray(klass.modules) ? klass.modules : [];
+            for (const module of modules) {
+              if (!module || typeof module !== 'object') {
+                continue;
+              }
+              const lectures = Array.isArray(module.lectures) ? module.lectures : [];
+              for (const lecture of lectures) {
+                if (Number(lecture?.id) === lectureId) {
+                  return lecture;
+                }
+              }
+            }
+          }
+          return null;
+        }
+
+        function createRevealButton(path, type = 'directory') {
+          const normalized = typeof path === 'string' && path.trim().length > 0 ? path : '';
+          if (!normalized) {
+            return null;
+          }
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = 'storage-reveal-button';
+          button.textContent = t('common.actions.reveal');
+          button.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            revealStoragePath(normalized, { type });
+          });
+          return button;
+        }
+
+        function buildLectureResourceList(lecture) {
+          if (!lecture || typeof lecture !== 'object') {
+            return null;
+          }
+          const lectureId = Number(lecture.id);
+          if (!Number.isFinite(lectureId)) {
+            return null;
+          }
+          const assetRecord = findLectureAssetRecord(lectureId);
+          if (!assetRecord || typeof assetRecord !== 'object') {
+            return null;
+          }
+          const resources = [];
+          if (assetRecord.audio_path) {
+            resources.push({ label: t('storage.lecture.audio'), path: assetRecord.audio_path, type: 'file' });
+          }
+          if (assetRecord.processed_audio_path) {
+            resources.push({
+              label: t('storage.lecture.processedAudio'),
+              path: assetRecord.processed_audio_path,
+              type: 'file',
+            });
+          }
+          if (assetRecord.transcript_path) {
+            resources.push({ label: t('storage.lecture.transcript'), path: assetRecord.transcript_path, type: 'file' });
+          }
+          if (assetRecord.notes_path) {
+            resources.push({ label: t('storage.lecture.notes'), path: assetRecord.notes_path, type: 'file' });
+          }
+          if (assetRecord.slide_path) {
+            resources.push({ label: t('storage.lecture.slides'), path: assetRecord.slide_path, type: 'file' });
+          }
+          if (!resources.length) {
+            return null;
+          }
+          const list = document.createElement('ul');
+          list.className = 'storage-resource-list';
+          resources.forEach((resource) => {
+            if (!resource.path) {
+              return;
+            }
+            const item = document.createElement('li');
+            item.className = 'storage-resource-item';
+            const label = document.createElement('span');
+            label.className = 'storage-resource-label';
+            label.textContent = resource.label;
+            item.appendChild(label);
+            const button = createRevealButton(resource.path, resource.type);
+            if (button) {
+              item.appendChild(button);
+            }
+            list.appendChild(item);
+          });
+          return list.childElementCount > 0 ? list : null;
+        }
+
+        function revealStoragePath(path, options = {}) {
+          const rawPath = typeof path === 'string' ? path : '';
+          if (!rawPath) {
+            showStatus(t('storage.reveal.unavailable'), 'info');
+            return;
+          }
+          let normalized = rawPath.replace(/\\/g, '/').replace(/^\/+/, '').trim();
+          if (!normalized) {
+            normalized = '';
+          }
+          const type = options?.type === 'file' ? 'file' : 'directory';
+          if (type === 'file') {
+            const segments = normalized.split('/').filter(Boolean);
+            if (segments.length > 0) {
+              segments.pop();
+            }
+            normalized = segments.join('/');
+          }
+          void refreshStorage({ includeOverview: false, path: normalized, force: true });
+        }
+
         function renderStorageClasses() {
           if (!dom.storage || !dom.storage.list) {
             return;
@@ -9727,8 +10022,13 @@
             if (!klass || typeof klass !== 'object') {
               return;
             }
-            const classItem = document.createElement('li');
-            classItem.className = 'storage-class-card';
+            const listItem = document.createElement('li');
+            const classDetails = document.createElement('details');
+            classDetails.className = 'storage-class-card';
+            classDetails.open = false;
+
+            const classSummary = document.createElement('summary');
+            classSummary.className = 'storage-toggle storage-class-summary';
 
             const header = document.createElement('div');
             header.className = 'storage-class-header';
@@ -9744,7 +10044,14 @@
               typeof klass.size === 'number' && klass.size >= 0 ? formatBytes(klass.size) : '—';
             header.appendChild(classSize);
 
-            classItem.appendChild(header);
+            classSummary.appendChild(header);
+
+            const classReveal = createRevealButton(klass.storage_path, 'directory');
+            if (classReveal) {
+              classSummary.appendChild(classReveal);
+            }
+
+            classDetails.appendChild(classSummary);
 
             const moduleCount = Number(klass.module_count) || 0;
             const lectureCount = Number(klass.lecture_count) || 0;
@@ -9779,14 +10086,17 @@
             const classMeta = document.createElement('p');
             classMeta.className = 'storage-class-meta';
             classMeta.textContent = classSummaryParts.filter(Boolean).join(' • ');
-            classItem.appendChild(classMeta);
+
+            const body = document.createElement('div');
+            body.className = 'storage-class-body';
+            body.appendChild(classMeta);
 
             const modules = Array.isArray(klass.modules) ? klass.modules : [];
             if (!modules.length) {
               const empty = document.createElement('p');
               empty.className = 'storage-class-meta';
               empty.textContent = t('storage.classes.empty');
-              classItem.appendChild(empty);
+              body.appendChild(empty);
             } else {
               const moduleList = document.createElement('ul');
               moduleList.className = 'storage-module-list';
@@ -9795,7 +10105,12 @@
                   return;
                 }
                 const moduleItem = document.createElement('li');
-                moduleItem.className = 'storage-module-card';
+                const moduleDetails = document.createElement('details');
+                moduleDetails.className = 'storage-module-card';
+                moduleDetails.open = false;
+
+                const moduleSummary = document.createElement('summary');
+                moduleSummary.className = 'storage-toggle storage-module-summary';
 
                 const moduleHeader = document.createElement('div');
                 moduleHeader.className = 'storage-module-header';
@@ -9813,7 +10128,14 @@
                     : '—';
                 moduleHeader.appendChild(moduleSize);
 
-                moduleItem.appendChild(moduleHeader);
+                moduleSummary.appendChild(moduleHeader);
+
+                const moduleReveal = createRevealButton(module.storage_path, 'directory');
+                if (moduleReveal) {
+                  moduleSummary.appendChild(moduleReveal);
+                }
+
+                moduleDetails.appendChild(moduleSummary);
 
                 const moduleLectureCount = Number(module.lecture_count) || 0;
                 const moduleLectureWord = pluralize(
@@ -9848,14 +10170,17 @@
                 const moduleMeta = document.createElement('p');
                 moduleMeta.className = 'storage-module-meta';
                 moduleMeta.textContent = moduleSummaryParts.filter(Boolean).join(' • ');
-                moduleItem.appendChild(moduleMeta);
+
+                const moduleBody = document.createElement('div');
+                moduleBody.className = 'storage-module-body';
+                moduleBody.appendChild(moduleMeta);
 
                 const lectures = Array.isArray(module.lectures) ? module.lectures : [];
                 if (!lectures.length) {
                   const emptyLecture = document.createElement('p');
                   emptyLecture.className = 'storage-module-meta';
                   emptyLecture.textContent = t('storage.modules.empty');
-                  moduleItem.appendChild(emptyLecture);
+                  moduleBody.appendChild(emptyLecture);
                 } else {
                   const lectureList = document.createElement('ul');
                   lectureList.className = 'storage-lecture-list';
@@ -9863,8 +10188,13 @@
                     if (!lecture || typeof lecture !== 'object') {
                       return;
                     }
-                    const lectureItem = document.createElement('li');
-                    lectureItem.className = 'storage-lecture-item';
+                    const lectureEntry = document.createElement('li');
+                    const lectureDetails = document.createElement('details');
+                    lectureDetails.className = 'storage-lecture-item';
+                    lectureDetails.open = false;
+
+                    const lectureSummary = document.createElement('summary');
+                    lectureSummary.className = 'storage-toggle storage-lecture-summary';
 
                     const lectureHeader = document.createElement('div');
                     lectureHeader.className = 'storage-lecture-header';
@@ -9882,7 +10212,14 @@
                         : '—';
                     lectureHeader.appendChild(lectureSize);
 
-                    lectureItem.appendChild(lectureHeader);
+                    lectureSummary.appendChild(lectureHeader);
+
+                    const lectureReveal = createRevealButton(lecture.storage_path, 'directory');
+                    if (lectureReveal) {
+                      lectureSummary.appendChild(lectureReveal);
+                    }
+
+                    lectureDetails.appendChild(lectureSummary);
 
                     const lectureMeta = document.createElement('p');
                     lectureMeta.className = 'storage-lecture-meta';
@@ -9905,7 +10242,10 @@
                     lectureMeta.textContent = assetLabels.length
                       ? assetLabels.join(' • ')
                       : t('storage.lecture.empty');
-                    lectureItem.appendChild(lectureMeta);
+
+                    const lectureBody = document.createElement('div');
+                    lectureBody.className = 'storage-lecture-body';
+                    lectureBody.appendChild(lectureMeta);
 
                     const badgeContainer = document.createElement('div');
                     badgeContainer.className = 'storage-lecture-badges';
@@ -9925,20 +10265,31 @@
                     }
 
                     if (badgeContainer.childElementCount > 0) {
-                      lectureItem.appendChild(badgeContainer);
+                      lectureBody.appendChild(badgeContainer);
                     }
 
-                    lectureList.appendChild(lectureItem);
+                    const resourceList = buildLectureResourceList(lecture);
+                    if (resourceList) {
+                      lectureBody.appendChild(resourceList);
+                    }
+
+                    lectureDetails.appendChild(lectureBody);
+                    lectureEntry.appendChild(lectureDetails);
+                    lectureList.appendChild(lectureEntry);
                   });
-                  moduleItem.appendChild(lectureList);
+                  moduleBody.appendChild(lectureList);
                 }
 
+                moduleDetails.appendChild(moduleBody);
+                moduleItem.appendChild(moduleDetails);
                 moduleList.appendChild(moduleItem);
               });
-              classItem.appendChild(moduleList);
+              body.appendChild(moduleList);
             }
 
-            container.appendChild(classItem);
+            classDetails.appendChild(body);
+            listItem.appendChild(classDetails);
+            container.appendChild(listItem);
           });
         }
 
@@ -10730,6 +11081,192 @@
           return t('tasks.labels.generic');
         }
 
+        function createActiveTaskElement(entry) {
+          if (!entry || typeof entry !== 'object') {
+            return null;
+          }
+          const lectureId = Number(entry?.lecture_id);
+          const listItem = document.createElement('div');
+          listItem.className = 'task-entry';
+          listItem.dataset.taskSection = 'current';
+          listItem.setAttribute('role', 'listitem');
+          const statusKey = entry?.error
+            ? 'failed'
+            : entry?.finished
+            ? 'finished'
+            : entry?.active
+            ? 'running'
+            : 'pending';
+          listItem.dataset.status = entry?.error
+            ? 'error'
+            : entry?.finished
+            ? 'finished'
+            : 'running';
+          listItem.dataset.taskType = entry?.type || '';
+          listItem.dataset.lectureId = Number.isFinite(lectureId) ? String(lectureId) : '';
+
+          const title = document.createElement('div');
+          title.className = 'task-entry-title';
+          const heading = document.createElement('h3');
+          const lectureName = entry?.lecture?.name || t('tasks.labels.untitled');
+          heading.textContent = lectureName;
+          const statusLabel = document.createElement('span');
+          statusLabel.className = 'task-entry-status';
+          statusLabel.textContent = t(`tasks.status.${statusKey}`);
+          title.appendChild(heading);
+          title.appendChild(statusLabel);
+          listItem.appendChild(title);
+
+          const meta = document.createElement('div');
+          meta.className = 'task-entry-meta';
+          const typeLabel = document.createElement('span');
+          typeLabel.textContent = resolveTaskOperationLabel(entry);
+          meta.appendChild(typeLabel);
+          const locationParts = [];
+          if (entry?.lecture?.class) {
+            locationParts.push(entry.lecture.class);
+          }
+          if (entry?.lecture?.module) {
+            locationParts.push(entry.lecture.module);
+          }
+          if (locationParts.length > 0) {
+            const location = document.createElement('span');
+            location.textContent = locationParts.join(' • ');
+            meta.appendChild(location);
+          }
+          listItem.appendChild(meta);
+
+          const messageText = entry?.message || '';
+          if (messageText) {
+            const message = document.createElement('p');
+            message.className = 'task-entry-message';
+            message.textContent = messageText;
+            listItem.appendChild(message);
+          }
+
+          const actions = document.createElement('div');
+          actions.className = 'task-entry-actions';
+          if (Number.isFinite(lectureId)) {
+            const openButton = document.createElement('button');
+            openButton.type = 'button';
+            openButton.className = 'text';
+            openButton.dataset.taskAction = 'open';
+            openButton.dataset.lectureId = String(lectureId);
+            openButton.textContent = t('tasks.actions.open');
+            actions.appendChild(openButton);
+          }
+
+          if (entry?.error && Number.isFinite(lectureId)) {
+            const retryButton = document.createElement('button');
+            retryButton.type = 'button';
+            retryButton.dataset.taskAction = 'retry';
+            retryButton.dataset.lectureId = String(lectureId);
+            retryButton.dataset.taskType = entry?.type || '';
+            retryButton.textContent = t('tasks.actions.retry');
+            actions.appendChild(retryButton);
+
+            const dismissButton = document.createElement('button');
+            dismissButton.type = 'button';
+            dismissButton.dataset.taskAction = 'dismiss';
+            dismissButton.dataset.lectureId = String(lectureId);
+            dismissButton.dataset.taskType = entry?.type || '';
+            dismissButton.textContent = t('tasks.actions.dismiss');
+            actions.appendChild(dismissButton);
+          } else if (entry?.finished && Number.isFinite(lectureId)) {
+            const dismissButton = document.createElement('button');
+            dismissButton.type = 'button';
+            dismissButton.dataset.taskAction = 'dismiss';
+            dismissButton.dataset.lectureId = String(lectureId);
+            dismissButton.dataset.taskType = entry?.type || '';
+            dismissButton.textContent = t('tasks.actions.dismiss');
+            actions.appendChild(dismissButton);
+          }
+
+          listItem.appendChild(actions);
+          return listItem;
+        }
+
+        function createQueueTaskElement(task, sectionKey) {
+          if (!task || typeof task !== 'object') {
+            return null;
+          }
+          const lectureId = Number(task?.lecture_id);
+          const listItem = document.createElement('div');
+          listItem.className = 'task-entry';
+          listItem.dataset.taskSection = sectionKey;
+          listItem.dataset.taskSource = sectionKey;
+          listItem.setAttribute('role', 'listitem');
+          const statusKey =
+            task.status === 'failed'
+              ? 'failed'
+              : task.status === 'succeeded'
+              ? 'finished'
+              : 'pending';
+          listItem.dataset.status =
+            task.status === 'failed'
+              ? 'error'
+              : task.status === 'succeeded'
+              ? 'finished'
+              : 'pending';
+          listItem.dataset.taskType = task?.type || '';
+          listItem.dataset.lectureId = Number.isFinite(lectureId) ? String(lectureId) : '';
+
+          const title = document.createElement('div');
+          title.className = 'task-entry-title';
+          const heading = document.createElement('h3');
+          heading.textContent = task?.lecture?.name || t('tasks.labels.untitled');
+          const statusLabel = document.createElement('span');
+          statusLabel.className = 'task-entry-status';
+          statusLabel.textContent = t(`tasks.status.${statusKey}`);
+          title.appendChild(heading);
+          title.appendChild(statusLabel);
+          listItem.appendChild(title);
+
+          const meta = document.createElement('div');
+          meta.className = 'task-entry-meta';
+          const typeLabel = document.createElement('span');
+          typeLabel.textContent = resolveTaskOperationLabel(task);
+          meta.appendChild(typeLabel);
+          const locationParts = [];
+          if (task?.lecture?.class) {
+            locationParts.push(task.lecture.class);
+          }
+          if (task?.lecture?.module) {
+            locationParts.push(task.lecture.module);
+          }
+          if (locationParts.length > 0) {
+            const location = document.createElement('span');
+            location.textContent = locationParts.join(' • ');
+            meta.appendChild(location);
+          }
+          listItem.appendChild(meta);
+
+          const message = document.createElement('p');
+          message.className = 'task-entry-message';
+          if (task.status === 'failed' && task.error) {
+            message.textContent = String(task.error);
+          } else if (task.status === 'succeeded') {
+            message.textContent = t('tasks.messages.completed');
+          } else {
+            message.textContent = t('tasks.messages.pending');
+          }
+          listItem.appendChild(message);
+
+          const actions = document.createElement('div');
+          actions.className = 'task-entry-actions';
+          if (Number.isFinite(lectureId)) {
+            const openButton = document.createElement('button');
+            openButton.type = 'button';
+            openButton.className = 'text';
+            openButton.dataset.taskAction = 'open';
+            openButton.dataset.lectureId = String(lectureId);
+            openButton.textContent = t('tasks.actions.open');
+            actions.appendChild(openButton);
+          }
+          listItem.appendChild(actions);
+          return listItem;
+        }
+
         function renderTasks() {
           if (!dom.tasks || !dom.tasks.list) {
             return;
@@ -10742,36 +11279,39 @@
 
           const queueEntries = Array.isArray(state.tasks.queue) ? state.tasks.queue : [];
           const activeEntries = Array.isArray(state.tasks.active) ? state.tasks.active : [];
-          const items = [];
+          const hasCompletedEntries = queueEntries.some(
+            (task) => task && (task.status === 'succeeded' || task.status === 'failed'),
+          );
+          if (dom.tasks.clearDone) {
+            dom.tasks.clearDone.disabled = state.tasks.loading || !hasCompletedEntries;
+          }
+          const sections = [
+            {
+              key: 'current',
+              label: t('tasks.sections.current'),
+              entries: activeEntries
+                .map((entry) => ({ entry }))
+                .filter((item) => item.entry && typeof item.entry === 'object'),
+            },
+            {
+              key: 'queued',
+              label: t('tasks.sections.queued'),
+              entries: queueEntries
+                .filter((task) => task && task.status !== 'succeeded' && task.status !== 'failed')
+                .map((task) => ({ task })),
+            },
+            {
+              key: 'done',
+              label: t('tasks.sections.done'),
+              entries: queueEntries
+                .filter((task) => task && task.status !== 'pending' && task.status !== 'running')
+                .map((task) => ({ task })),
+            },
+          ];
 
-          queueEntries.forEach((task) => {
-            if (!task || typeof task !== 'object') {
-              return;
-            }
-            if (task.status === 'running') {
-              return;
-            }
-            items.push({ kind: 'queue', task });
-          });
+          const hasItems = sections.some((section) => section.entries.length > 0);
 
-          activeEntries.forEach((entry) => {
-            if (!entry || typeof entry !== 'object') {
-              return;
-            }
-            items.push({ kind: 'active', entry });
-          });
-
-          queueEntries.forEach((task) => {
-            if (!task || typeof task !== 'object') {
-              return;
-            }
-            if (task.status === 'pending' || task.status === 'running') {
-              return;
-            }
-            items.push({ kind: 'history', task });
-          });
-
-          if (!items.length) {
+          if (!hasItems) {
             if (dom.tasks.empty) {
               dom.tasks.empty.classList.remove('hidden');
             }
@@ -10782,182 +11322,35 @@
             dom.tasks.empty.classList.add('hidden');
           }
 
-          items.forEach((item) => {
-            if (item.kind === 'active') {
-              const entry = item.entry;
-              const lectureId = Number(entry?.lecture_id);
-              const listItem = document.createElement('li');
-              listItem.className = 'task-entry';
-              const statusKey = entry?.error
-                ? 'failed'
-                : entry?.finished
-                ? 'finished'
-                : entry?.active
-                ? 'running'
-                : 'pending';
-              listItem.dataset.status = entry?.error
-                ? 'error'
-                : entry?.finished
-                ? 'finished'
-                : 'running';
-              listItem.dataset.taskType = entry?.type || '';
-              listItem.dataset.lectureId = Number.isFinite(lectureId) ? String(lectureId) : '';
+          sections.forEach((section) => {
+            const sectionBlock = document.createElement('div');
+            sectionBlock.className = 'task-section';
+            sectionBlock.setAttribute('role', 'presentation');
+            const heading = document.createElement('div');
+            heading.className = 'task-section-heading';
+            heading.textContent = section.label;
+            sectionBlock.appendChild(heading);
 
-              const title = document.createElement('div');
-              title.className = 'task-entry-title';
-              const heading = document.createElement('h3');
-              const lectureName = entry?.lecture?.name || t('tasks.labels.untitled');
-              heading.textContent = lectureName;
-              const statusLabel = document.createElement('span');
-              statusLabel.className = 'task-entry-status';
-              statusLabel.textContent = t(`tasks.status.${statusKey}`);
-              title.appendChild(heading);
-              title.appendChild(statusLabel);
-              listItem.appendChild(title);
-
-              const meta = document.createElement('div');
-              meta.className = 'task-entry-meta';
-              const typeLabel = document.createElement('span');
-              typeLabel.textContent = resolveTaskOperationLabel(entry);
-              meta.appendChild(typeLabel);
-              const locationParts = [];
-              if (entry?.lecture?.class) {
-                locationParts.push(entry.lecture.class);
-              }
-              if (entry?.lecture?.module) {
-                locationParts.push(entry.lecture.module);
-              }
-              if (locationParts.length > 0) {
-                const location = document.createElement('span');
-                location.textContent = locationParts.join(' • ');
-                meta.appendChild(location);
-              }
-              listItem.appendChild(meta);
-
-              const messageText = entry?.message || '';
-              if (messageText) {
-                const message = document.createElement('p');
-                message.className = 'task-entry-message';
-                message.textContent = messageText;
-                listItem.appendChild(message);
-              }
-
-              const actions = document.createElement('div');
-              actions.className = 'task-entry-actions';
-              if (Number.isFinite(lectureId)) {
-                const openButton = document.createElement('button');
-                openButton.type = 'button';
-                openButton.className = 'text';
-                openButton.dataset.taskAction = 'open';
-                openButton.dataset.lectureId = String(lectureId);
-                openButton.textContent = t('tasks.actions.open');
-                actions.appendChild(openButton);
-              }
-
-              if (entry?.error && Number.isFinite(lectureId)) {
-                const retryButton = document.createElement('button');
-                retryButton.type = 'button';
-                retryButton.dataset.taskAction = 'retry';
-                retryButton.dataset.lectureId = String(lectureId);
-                retryButton.dataset.taskType = entry?.type || '';
-                retryButton.textContent = t('tasks.actions.retry');
-                actions.appendChild(retryButton);
-
-                const dismissButton = document.createElement('button');
-                dismissButton.type = 'button';
-                dismissButton.dataset.taskAction = 'dismiss';
-                dismissButton.dataset.lectureId = String(lectureId);
-                dismissButton.dataset.taskType = entry?.type || '';
-                dismissButton.textContent = t('tasks.actions.dismiss');
-                actions.appendChild(dismissButton);
-              } else if (entry?.finished && Number.isFinite(lectureId)) {
-                const dismissButton = document.createElement('button');
-                dismissButton.type = 'button';
-                dismissButton.dataset.taskAction = 'dismiss';
-                dismissButton.dataset.lectureId = String(lectureId);
-                dismissButton.dataset.taskType = entry?.type || '';
-                dismissButton.textContent = t('tasks.actions.dismiss');
-                actions.appendChild(dismissButton);
-              }
-
-              listItem.appendChild(actions);
-              dom.tasks.list.appendChild(listItem);
-              return;
-            }
-
-            const task = item.task;
-            const lectureId = Number(task?.lecture_id);
-            const listItem = document.createElement('li');
-            listItem.className = 'task-entry';
-            listItem.dataset.taskSource = item.kind;
-            listItem.dataset.lectureId = Number.isFinite(lectureId) ? String(lectureId) : '';
-            listItem.dataset.status =
-              task.status === 'failed'
-                ? 'error'
-                : task.status === 'succeeded'
-                ? 'finished'
-                : 'pending';
-
-            const title = document.createElement('div');
-            title.className = 'task-entry-title';
-            const heading = document.createElement('h3');
-            heading.textContent = task?.lecture?.name || t('tasks.labels.untitled');
-            const statusLabel = document.createElement('span');
-            statusLabel.className = 'task-entry-status';
-            const statusKey =
-              task.status === 'failed'
-                ? 'failed'
-                : task.status === 'succeeded'
-                ? 'finished'
-                : 'pending';
-            statusLabel.textContent = t(`tasks.status.${statusKey}`);
-            title.appendChild(heading);
-            title.appendChild(statusLabel);
-            listItem.appendChild(title);
-
-            const meta = document.createElement('div');
-            meta.className = 'task-entry-meta';
-            const typeLabel = document.createElement('span');
-            typeLabel.textContent = resolveTaskOperationLabel(task);
-            meta.appendChild(typeLabel);
-            const locationParts = [];
-            if (task?.lecture?.class) {
-              locationParts.push(task.lecture.class);
-            }
-            if (task?.lecture?.module) {
-              locationParts.push(task.lecture.module);
-            }
-            if (locationParts.length > 0) {
-              const location = document.createElement('span');
-              location.textContent = locationParts.join(' • ');
-              meta.appendChild(location);
-            }
-            listItem.appendChild(meta);
-
-            const message = document.createElement('p');
-            message.className = 'task-entry-message';
-            if (task.status === 'failed' && task.error) {
-              message.textContent = String(task.error);
-            } else if (task.status === 'succeeded') {
-              message.textContent = t('tasks.messages.completed');
+            if (!section.entries.length) {
+              const placeholder = document.createElement('p');
+              placeholder.className = 'task-section-empty';
+              placeholder.textContent = t('tasks.sections.empty');
+              sectionBlock.appendChild(placeholder);
             } else {
-              message.textContent = t('tasks.messages.pending');
+              section.entries.forEach((entry) => {
+                let element = null;
+                if (section.key === 'current') {
+                  element = createActiveTaskElement(entry.entry);
+                } else {
+                  element = createQueueTaskElement(entry.task, section.key);
+                }
+                if (element) {
+                  sectionBlock.appendChild(element);
+                }
+              });
             }
-            listItem.appendChild(message);
 
-            const actions = document.createElement('div');
-            actions.className = 'task-entry-actions';
-            if (Number.isFinite(lectureId)) {
-              const openButton = document.createElement('button');
-              openButton.type = 'button';
-              openButton.className = 'text';
-              openButton.dataset.taskAction = 'open';
-              openButton.dataset.lectureId = String(lectureId);
-              openButton.textContent = t('tasks.actions.open');
-              actions.appendChild(openButton);
-            }
-            listItem.appendChild(actions);
-            dom.tasks.list.appendChild(listItem);
+            dom.tasks.list.appendChild(sectionBlock);
           });
         }
 
@@ -12358,6 +12751,27 @@
           }
         }
 
+        async function clearCompletedTasks() {
+          if (!dom.tasks || state.tasks.loading) {
+            return;
+          }
+          if (dom.tasks.clearDone) {
+            dom.tasks.clearDone.disabled = true;
+          }
+          try {
+            const payload = await request('/api/tasks/completed', { method: 'DELETE' });
+            const cleared = Number(payload?.cleared) || 0;
+            await refreshTasks({ force: true, silent: true });
+            if (cleared > 0) {
+              showStatus(t('tasks.notifications.cleared', { count: cleared }), 'success');
+            }
+          } catch (error) {
+            const detail = error instanceof Error ? error.message : String(error);
+            showStatus(detail || t('status.processing'), 'error');
+            renderTasks();
+          }
+        }
+
         function stopTaskPolling() {
           if (state.tasks.timer !== null) {
             window.clearInterval(state.tasks.timer);
@@ -12402,6 +12816,26 @@
             state.tasks.active = state.tasks.active.filter(
               (item) => !(Number(item?.lecture_id) === lectureId && item?.type === entry.type),
             );
+            if (Array.isArray(state.tasks.queue)) {
+              const entryOperation =
+                (entry?.task && typeof entry.task.operation === 'string' && entry.task.operation)
+                  || (entry?.type === 'processing'
+                    ? entry?.context?.operation || entry?.context?.type
+                    : entry?.type)
+                  || '';
+              state.tasks.queue = state.tasks.queue.filter((queueEntry) => {
+                if (!queueEntry || Number(queueEntry.lecture_id) !== lectureId) {
+                  return true;
+                }
+                if (queueEntry.status !== 'succeeded' && queueEntry.status !== 'failed') {
+                  return true;
+                }
+                if (!entryOperation) {
+                  return false;
+                }
+                return queueEntry.operation !== entryOperation;
+              });
+            }
             renderTasks();
           } catch (error) {
             const detail = error instanceof Error ? error.message : String(error);
@@ -12525,7 +12959,173 @@
         renderStorage();
         renderSystemUpdate();
         renderTasks();
+        renderMiniConsole();
         void refreshTasks({ silent: true });
+
+        function formatMiniConsoleTimestamp(timestamp) {
+          if (!Number.isFinite(timestamp)) {
+            return '';
+          }
+          const date = new Date(timestamp);
+          try {
+            return new Intl.DateTimeFormat(currentLanguage || undefined, {
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+            }).format(date);
+          } catch (error) {
+            return date.toLocaleTimeString();
+          }
+        }
+
+        function renderMiniConsole() {
+          if (!dom.miniConsole || !dom.miniConsole.entries) {
+            return;
+          }
+          const consoleState = state.miniConsole || {};
+          const entries = Array.isArray(consoleState.entries) ? consoleState.entries : [];
+          const container = dom.miniConsole.entries;
+          container.innerHTML = '';
+          const hasEntries = entries.length > 0;
+          if (dom.miniConsole.empty) {
+            dom.miniConsole.empty.hidden = hasEntries;
+          }
+          container.hidden = !hasEntries;
+          if (!hasEntries) {
+            return;
+          }
+          entries.forEach((entry) => {
+            if (!entry || typeof entry !== 'object') {
+              return;
+            }
+            const item = document.createElement('div');
+            item.className = 'mini-console-entry';
+            item.dataset.variant = entry.variant || 'info';
+
+            const header = document.createElement('div');
+            header.className = 'mini-console-entry-header';
+            const timestamp = formatMiniConsoleTimestamp(entry.timestamp);
+            if (timestamp) {
+              const timeLabel = document.createElement('span');
+              timeLabel.className = 'mini-console-meta';
+              timeLabel.textContent = timestamp;
+              header.appendChild(timeLabel);
+            }
+            if (entry.progressMode === 'ratio' && typeof entry.progressRatio === 'number') {
+              const ratioLabel = document.createElement('span');
+              ratioLabel.className = 'mini-console-meta';
+              const ratioPercent = Math.round(entry.progressRatio * 1000) / 10;
+              ratioLabel.textContent = Number.isInteger(ratioPercent)
+                ? `${ratioPercent}%`
+                : `${ratioPercent.toFixed(1)}%`;
+              header.appendChild(ratioLabel);
+            }
+            item.appendChild(header);
+
+            const message = document.createElement('p');
+            message.className = 'mini-console-message';
+            message.textContent = entry.message || '';
+            item.appendChild(message);
+
+            if (entry.progressMode === 'ratio' && typeof entry.progressRatio === 'number') {
+              const track = document.createElement('div');
+              track.className = 'mini-console-progress-track';
+              const fill = document.createElement('div');
+              fill.className = 'mini-console-progress-fill';
+              const bounded = Math.max(0, Math.min(entry.progressRatio, 1));
+              fill.style.width = `${bounded * 100}%`;
+              track.appendChild(fill);
+              item.appendChild(track);
+            } else if (entry.progressMode === 'indeterminate') {
+              const track = document.createElement('div');
+              track.className = 'mini-console-progress-track';
+              const fill = document.createElement('div');
+              fill.className = 'mini-console-progress-fill indeterminate';
+              track.appendChild(fill);
+              item.appendChild(track);
+            }
+
+            container.appendChild(item);
+          });
+        }
+
+        function recordMiniConsoleEntry(message, variant = 'info', options = {}) {
+          const consoleState = state.miniConsole;
+          if (!consoleState || typeof message !== 'string') {
+            return;
+          }
+          const normalizedMessage = message.trim();
+          if (!normalizedMessage) {
+            return;
+          }
+          if (!Array.isArray(consoleState.entries)) {
+            consoleState.entries = [];
+          }
+          const entries = consoleState.entries;
+          const ratioValue =
+            typeof options.progressRatio === 'number' && Number.isFinite(options.progressRatio)
+              ? Math.max(0, Math.min(options.progressRatio, 1))
+              : null;
+          const indeterminate = ratioValue === null && Boolean(options.persist);
+          const key =
+            typeof options.consoleKey === 'string' && options.consoleKey.trim().length > 0
+              ? options.consoleKey.trim()
+              : null;
+          const timestamp = Date.now();
+          let entryIndex = -1;
+          if (key) {
+            entryIndex = entries.findIndex((item) => item && item.key === key);
+          }
+          if (entryIndex === -1 && ratioValue !== null) {
+            entryIndex = entries.findIndex(
+              (item) =>
+                item &&
+                item.message === normalizedMessage &&
+                item.variant === variant &&
+                item.progressMode === 'ratio',
+            );
+          }
+          if (entryIndex === -1 && indeterminate) {
+            entryIndex = entries.findIndex(
+              (item) =>
+                item &&
+                item.message === normalizedMessage &&
+                item.variant === variant &&
+                item.progressMode === 'indeterminate',
+            );
+          }
+          let entry;
+          if (entryIndex >= 0) {
+            entry = entries[entryIndex];
+            entry.message = normalizedMessage;
+            entry.variant = variant;
+            entry.timestamp = timestamp;
+            entry.key = key || entry.key || null;
+            entry.progressRatio = ratioValue;
+            entry.progressMode = ratioValue !== null ? 'ratio' : indeterminate ? 'indeterminate' : null;
+            if (entryIndex > 0) {
+              entries.splice(entryIndex, 1);
+              entries.unshift(entry);
+            }
+          } else {
+            consoleState.sequence = (consoleState.sequence || 0) + 1;
+            entry = {
+              id: consoleState.sequence,
+              key,
+              message: normalizedMessage,
+              variant,
+              timestamp,
+              progressRatio: ratioValue,
+              progressMode: ratioValue !== null ? 'ratio' : indeterminate ? 'indeterminate' : null,
+            };
+            entries.unshift(entry);
+          }
+          const limit = Number(consoleState.maxEntries) || 4;
+          while (entries.length > limit) {
+            entries.pop();
+          }
+          renderMiniConsole();
+        }
 
         const STATUS_DEFAULT_TIMEOUT = 5000;
 
@@ -12590,6 +13190,12 @@
           } else {
             dom.status.textContent = message;
           }
+
+          const miniConsoleOptions = {
+            ...(options || {}),
+            progressRatio: clampedRatio,
+          };
+          recordMiniConsoleEntry(message, variant, miniConsoleOptions);
 
           if (clampedRatio !== null) {
             const percentValue = Math.round(clampedRatio * 1000) / 10;
@@ -17146,11 +17752,19 @@
               : null;
           const shouldUpdate =
             message !== state.lastProgressMessage || ratio !== state.lastProgressRatio;
+          const progressTaskId = progress?.task?.task_id;
+          const consoleKey =
+            typeof progressTaskId === 'string' && progressTaskId
+              ? progressTaskId
+              : Number.isFinite(lectureId)
+              ? `${source}:${lectureId}`
+              : null;
           if (shouldUpdate) {
             const displayMessage = message || state.lastProgressMessage || t('status.processing');
             showStatus(displayMessage, variant, {
               progressRatio: ratio,
               persist: !finished,
+              consoleKey: consoleKey || undefined,
             });
             state.lastProgressMessage = message;
             state.lastProgressRatio = ratio;
@@ -20625,23 +21239,6 @@
           });
         }
 
-        if (dom.storage && dom.storage.largestList) {
-          dom.storage.largestList.addEventListener('click', (event) => {
-            const button = event.target.closest('button[data-path]');
-            if (!button) {
-              return;
-            }
-            const isDirectory = button.dataset.isDir === '1';
-            let targetPath = button.dataset.path || '';
-            if (!isDirectory) {
-              const parts = targetPath.split('/').filter(Boolean);
-              parts.pop();
-              targetPath = parts.join('/') || '';
-            }
-            void refreshStorage({ includeOverview: false, path: targetPath, force: true });
-          });
-        }
-
         if (dom.storage && dom.storage.browser && dom.storage.browser.tableBody) {
           dom.storage.browser.tableBody.addEventListener('click', (event) => {
             void handleStorageBrowserAction(event);
@@ -20678,6 +21275,12 @@
         if (dom.tasks && dom.tasks.refresh) {
           dom.tasks.refresh.addEventListener('click', () => {
             void refreshTasks({ force: true });
+          });
+        }
+
+        if (dom.tasks && dom.tasks.clearDone) {
+          dom.tasks.clearDone.addEventListener('click', () => {
+            void clearCompletedTasks();
           });
         }
 
