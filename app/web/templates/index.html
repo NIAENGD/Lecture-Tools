@@ -1364,10 +1364,6 @@
         right: min(33vw, 520px);
       }
 
-      body.debug-enabled .status-bar {
-        margin-right: min(33vw, 520px);
-      }
-
       .debug-pane {
         position: fixed;
         inset: 0 0 0 auto;
@@ -3955,77 +3951,6 @@
         border-radius: 999px;
       }
 
-      .status-bar {
-        background: var(--panel-bg);
-        border: 1px solid var(--panel-border);
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 10px 14px;
-        border-radius: 6px;
-        font-size: 0.9rem;
-        display: none;
-      }
-
-      .status-message {
-        margin: 0;
-        word-break: break-word;
-      }
-
-      .status-progress {
-        margin-top: 8px;
-        display: none;
-      }
-
-      .status-progress[hidden] {
-        display: none;
-      }
-
-      .status-progress:not([hidden]) {
-        display: block;
-      }
-
-      .status-progress-track {
-        width: 100%;
-        height: 6px;
-        border-radius: 999px;
-        background: var(--status-progress-track);
-        overflow: hidden;
-      }
-
-      .status-progress-fill {
-        width: 0%;
-        height: 100%;
-        background: currentColor;
-        opacity: 0.85;
-        transition: width 0.25s ease-out;
-      }
-
-      .status-progress-text {
-        display: block;
-        margin-top: 4px;
-        font-size: 0.75rem;
-        text-align: right;
-        opacity: 0.85;
-      }
-
-      .status-bar[data-variant='error'] {
-        background: var(--status-error-bg);
-        color: var(--status-error-text);
-        border-color: var(--status-error-bg);
-      }
-
-      .status-bar[data-variant='success'] {
-        background: var(--status-success-bg);
-        color: var(--status-success-text);
-        border-color: var(--status-success-bg);
-      }
-
-      .status-bar[data-variant='info'] {
-        background: var(--status-info-bg);
-        color: var(--status-info-text);
-        border-color: var(--status-info-bg);
-      }
-
       .stats-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
@@ -4847,15 +4772,6 @@
     </style>
   </head>
   <body data-display-mode="system" data-theme="vibrant" data-effects="none">
-    <div id="status-bar" class="status-bar" role="status">
-      <div id="status-bar-message" class="status-message"></div>
-      <div id="status-bar-progress" class="status-progress" hidden>
-        <div class="status-progress-track">
-          <div id="status-bar-progress-fill" class="status-progress-fill"></div>
-        </div>
-        <span id="status-bar-progress-text" class="status-progress-text"></span>
-      </div>
-    </div>
     <main class="layout">
       <aside class="sidebar">
         <section class="panel">
@@ -9131,7 +9047,6 @@
           processingProgressLectureId: null,
           lastProgressMessage: '',
           lastProgressRatio: null,
-          statusHideTimer: null,
           miniConsole: {
             entries: [],
             maxEntries: 4,
@@ -9308,11 +9223,6 @@
         }
 
         const dom = {
-          status: document.getElementById('status-bar'),
-          statusMessage: document.getElementById('status-bar-message'),
-          statusProgress: document.getElementById('status-bar-progress'),
-          statusProgressFill: document.getElementById('status-bar-progress-fill'),
-          statusProgressText: document.getElementById('status-bar-progress-text'),
           stats: document.getElementById('stats'),
           curriculum: document.getElementById('curriculum'),
           curriculumEditorHost: document.getElementById('curriculum-editor-host'),
@@ -13127,50 +13037,12 @@
           renderMiniConsole();
         }
 
-        const STATUS_DEFAULT_TIMEOUT = 5000;
-
-        function resetStatusProgress() {
-          if (dom.statusProgress) {
-            dom.statusProgress.hidden = true;
-          }
-          if (dom.statusProgressFill) {
-            dom.statusProgressFill.style.width = '0%';
-          }
-          if (dom.statusProgressText) {
-            dom.statusProgressText.textContent = '';
-          }
-        }
-
-        function hideStatus() {
-          if (state.statusHideTimer !== null) {
-            window.clearTimeout(state.statusHideTimer);
-            state.statusHideTimer = null;
-          }
-          if (!dom.status) {
-            return;
-          }
-          dom.status.style.display = 'none';
-          dom.status.removeAttribute('data-variant');
-          if (dom.statusMessage) {
-            dom.statusMessage.textContent = '';
-          } else {
-            dom.status.textContent = '';
-          }
-          resetStatusProgress();
-        }
-
         function showStatus(message, variant = 'info', options = {}) {
-          if (!dom.status) {
+          if (typeof message !== 'string') {
             return;
           }
-
-          if (state.statusHideTimer !== null) {
-            window.clearTimeout(state.statusHideTimer);
-            state.statusHideTimer = null;
-          }
-
-          if (!message) {
-            hideStatus();
+          const normalizedMessage = message.trim();
+          if (!normalizedMessage) {
             return;
           }
 
@@ -13183,54 +13055,11 @@
             ? Math.max(0, Math.min(Number(ratioValue), 1))
             : null;
 
-          dom.status.dataset.variant = variant;
-          dom.status.style.display = 'block';
-          if (dom.statusMessage) {
-            dom.statusMessage.textContent = message;
-          } else {
-            dom.status.textContent = message;
-          }
-
           const miniConsoleOptions = {
             ...(options || {}),
             progressRatio: clampedRatio,
           };
-          recordMiniConsoleEntry(message, variant, miniConsoleOptions);
-
-          if (clampedRatio !== null) {
-            const percentValue = Math.round(clampedRatio * 1000) / 10;
-            const label = Number.isInteger(percentValue)
-              ? `${percentValue}%`
-              : `${percentValue.toFixed(1)}%`;
-            if (dom.statusProgress) {
-              dom.statusProgress.hidden = false;
-            }
-            if (dom.statusProgressFill) {
-              dom.statusProgressFill.style.width = `${percentValue}%`;
-            }
-            if (dom.statusProgressText) {
-              dom.statusProgressText.textContent = label;
-            }
-          } else {
-            resetStatusProgress();
-          }
-
-          const progressActive = clampedRatio !== null && clampedRatio < 1;
-          const persistOption =
-            options && Object.prototype.hasOwnProperty.call(options, 'persist')
-              ? Boolean(options.persist)
-              : progressActive;
-          const timeoutMs =
-            options && typeof options.timeoutMs === 'number' && Number.isFinite(options.timeoutMs)
-              ? Math.max(0, options.timeoutMs)
-              : STATUS_DEFAULT_TIMEOUT;
-
-          if (!persistOption) {
-            state.statusHideTimer = window.setTimeout(() => {
-              state.statusHideTimer = null;
-              hideStatus();
-            }, timeoutMs);
-          }
+          recordMiniConsoleEntry(normalizedMessage, variant, miniConsoleOptions);
         }
 
         function updateGpuWhisperUI(status = {}) {
@@ -17720,7 +17549,6 @@
           if (!preserveMessage) {
             state.lastProgressMessage = '';
             state.lastProgressRatio = null;
-            resetStatusProgress();
           }
         }
 
@@ -17733,7 +17561,6 @@
           if (!preserveMessage) {
             state.lastProgressMessage = '';
             state.lastProgressRatio = null;
-            resetStatusProgress();
           }
         }
 
