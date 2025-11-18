@@ -125,3 +125,58 @@ def test_reorder_lectures(temp_config: AppConfig) -> None:
 
     assert early_order == [second]
     assert modern_order == [third, first]
+
+
+def test_insert_and_rename_lectures(temp_config: AppConfig) -> None:
+    repository = LectureRepository(temp_config)
+
+    class_id = repository.add_class("STAT 3470")
+    module_id = repository.add_module(class_id, "Midterm2")
+
+    initial_lectures = [
+        "Week 1",
+        "Week 2",
+        "Week 3",
+        "Week 4",
+        "Week 6",
+        "Week 7",
+        "Week 9",
+        "Week 10",
+        "Week 11",
+        "Midterm2 review",
+    ]
+    for name in initial_lectures:
+        repository.add_lecture(module_id, name)
+
+    name_to_id = {lecture.name: lecture.id for lecture in repository.iter_lectures(module_id)}
+    week_three_id = name_to_id["Week 3"]
+    week_four_id = name_to_id["Week 4"]
+
+    repository.update_lecture(week_three_id, name="Week 3 (temp placeholder)")
+    repository.update_lecture(week_four_id, name="Week 5")
+
+    inserted_week_three = repository.add_lecture(module_id, "Week 3")
+    assert inserted_week_three not in {week_three_id, week_four_id}
+
+    repository.update_lecture(week_three_id, name="Week 4")
+
+    desired_order = [
+        "Week 1",
+        "Week 2",
+        "Week 3",
+        "Week 4",
+        "Week 5",
+        "Week 6",
+        "Week 7",
+        "Week 9",
+        "Week 10",
+        "Week 11",
+        "Midterm2 review",
+    ]
+
+    updated_lookup = {lecture.name: lecture.id for lecture in repository.iter_lectures(module_id)}
+    lecture_order = [updated_lookup[name] for name in desired_order]
+    repository.reorder_lectures({module_id: lecture_order})
+
+    final_names = [lecture.name for lecture in repository.iter_lectures(module_id)]
+    assert final_names == desired_order

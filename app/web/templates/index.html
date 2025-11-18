@@ -19665,12 +19665,19 @@
               const lectureOrder = [];
               for (const lectureNode of moduleNode.lectures) {
                 if (lectureNode.id === null) {
+                  const lectureName =
+                    typeof lectureNode.name === 'string'
+                      ? lectureNode.name
+                      : String(lectureNode.name ?? '').trim();
+                  if (lectureName) {
+                    await ensureLectureNameAvailable(moduleId, null, lectureName);
+                  }
                   const payload = await request('/api/lectures', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                       module_id: moduleId,
-                      name: lectureNode.name,
+                      name: lectureName,
                       description: '',
                     }),
                   });
@@ -19682,13 +19689,13 @@
                   lectureMap.set(lectureNode.id, {
                     lecture: {
                       id: lectureNode.id,
-                      name: lectureNode.name,
+                      name: lectureName,
                       module_id: moduleId,
                     },
                     moduleId: moduleId,
                     classId: classId,
                   });
-                  assignLectureName(moduleId, lectureNode.name, lectureNode.id);
+                  assignLectureName(moduleId, lectureName, lectureNode.id);
                 } else {
                   const existingLecture = lectureMap.get(lectureNode.id);
                   if (existingLecture) {
