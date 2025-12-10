@@ -174,9 +174,14 @@ def preprocess_audio(
     compressor_release_ms: float = 120.0,
     target_peak_db: float = -1.0,
     target_lufs_db: float = -20.0,
+    chunk_duration_s: float = 300.0,
     progress_callback: Optional[Callable[[int, int, str, bool], None]] = None,
 ) -> np.ndarray:
-    """Apply a lightweight mastering chain for speech intelligibility."""
+    """Apply a lightweight mastering chain for speech intelligibility.
+
+    For long recordings, the processing runs in fixed-duration chunks to keep
+    memory use bounded on small servers.
+    """
 
     description = describe_preprocess_audio_stage(
         highpass_hz=highpass_hz,
@@ -196,79 +201,109 @@ def preprocess_audio(
     stage_messages = list(description.detail_lines)
     stage_count = max(len(stage_messages), 1)
 
-    def _notify(stage_index: int, completed: bool) -> None:
-        if progress_callback is None:
-            return
-        label_index = max(0, min(stage_index - 1, len(stage_messages) - 1))
-        label = stage_messages[label_index] if stage_messages else "Applying mastering step"
-        try:
-            progress_callback(stage_index, stage_count, label, completed)
-        except Exception:  # pragma: no cover - defensive logging
-            LOGGER.exception("Audio preprocessing progress callback failed")
+    def _run_pipeline(signal: np.ndarray, callback: Optional[Callable[[int, int, str, bool], None]]) -> np.ndarray:
+        def _notify(stage_index: int, completed: bool) -> None:
+            if callback is None:
+                return
+            label_index = max(0, min(stage_index - 1, len(stage_messages) - 1))
+            label = stage_messages[label_index] if stage_messages else "Applying mastering step"
+            try:
+                callback(stage_index, stage_count, label, completed)
+            except Exception:  # pragma: no cover - defensive logging
+                LOGGER.exception("Audio preprocessing progress callback failed")
 
-    stage_index = 1
-    _notify(stage_index, False)
+        stage_index = 1
+        _notify(stage_index, False)
 
-    if audio.ndim == 2 and audio.shape[1] > 1:
-        mono = np.mean(audio, axis=1)
-    else:
-        mono = np.squeeze(audio)
-    mono = np.asarray(mono, dtype=np.float32)
+        if signal.ndim == 2 and signal.shape[1] > 1:
+            mono = np.mean(signal, axis=1)
+        else:
+            mono = np.squeeze(signal)
+        mono = np.asarray(mono, dtype=np.float32)
 
-    _notify(stage_index, True)
-    stage_index += 1
-    _notify(stage_index, False)
+        _notify(stage_index, True)
+        stage_index += 1
+        _notify(stage_index, False)
 
-    if mono.size:
-        mono = mono - float(np.mean(mono))
+        if mono.size:
+            mono = mono - float(np.mean(mono))
 
-    _notify(stage_index, True)
-    stage_index += 1
-    _notify(stage_index, False)
+        _notify(stage_index, True)
+        stage_index += 1
+        _notify(stage_index, False)
 
-    mono = _shape_frequency_response(
-        mono,
-        sample_rate,
-        highpass_hz=highpass_hz,
-        lowpass_hz=lowpass_hz,
-        presence_low_hz=presence_low_hz,
-        presence_high_hz=presence_high_hz,
-        presence_gain_db=presence_gain_db,
-    )
+        mono = _shape_frequency_response(
+            mono,
+            sample_rate,
+            highpass_hz=highpass_hz,
+            lowpass_hz=lowpass_hz,
+            presence_low_hz=presence_low_hz,
+            presence_high_hz=presence_high_hz,
+            presence_gain_db=presence_gain_db,
+        )
 
-    _notify(stage_index, True)
-    stage_index += 1
-    _notify(stage_index, False)
+        _notify(stage_index, True)
+        stage_index += 1
+        _notify(stage_index, False)
 
-    mono = _reduce_noise(
-        mono,
-        sample_rate,
-        reduction_db=noise_reduction_db,
-        sensitivity=noise_sensitivity,
-    )
+        mono = _reduce_noise(
+            mono,
+            sample_rate,
+            reduction_db=noise_reduction_db,
+            sensitivity=noise_sensitivity,
+        )
 
-    _notify(stage_index, True)
-    stage_index += 1
-    _notify(stage_index, False)
+        _notify(stage_index, True)
+        stage_index += 1
+        _notify(stage_index, False)
 
-    mono = _compress_signal(
-        mono,
-        sample_rate,
-        threshold_db=compressor_threshold_db,
-        ratio=compressor_ratio,
-        attack_ms=compressor_attack_ms,
-        release_ms=compressor_release_ms,
-    )
+        mono = _compress_signal(
+            mono,
+            sample_rate,
+            threshold_db=compressor_threshold_db,
+            ratio=compressor_ratio,
+            attack_ms=compressor_attack_ms,
+            release_ms=compressor_release_ms,
+        )
 
-    _notify(stage_index, True)
-    stage_index += 1
-    _notify(stage_index, False)
+        _notify(stage_index, True)
+        stage_index += 1
+        _notify(stage_index, False)
 
-    mono = _normalise_signal(mono, target_peak_db=target_peak_db, target_lufs_db=target_lufs_db)
-    mono = np.clip(mono, -1.0, 1.0)
+        mono = _normalise_signal(mono, target_peak_db=target_peak_db, target_lufs_db=target_lufs_db)
+        mono = np.clip(mono, -1.0, 1.0)
 
-    _notify(stage_index, True)
-    return mono.astype(np.float32)
+        _notify(stage_index, True)
+        return mono.astype(np.float32)
+
+    chunk_size = None
+    if chunk_duration_s > 0:
+        chunk_size = max(int(sample_rate * chunk_duration_s), 1)
+
+    total_frames = audio.shape[0] if audio.ndim else int(audio.size)
+
+    if chunk_size is None or total_frames <= chunk_size:
+        return _run_pipeline(audio, progress_callback)
+
+    chunk_count = math.ceil(total_frames / chunk_size)
+    processed_chunks = []
+
+    for chunk_index in range(chunk_count):
+        start = chunk_index * chunk_size
+        stop = min(start + chunk_size, total_frames)
+        chunk = audio[start:stop]
+
+        def _chunk_callback(step_index: int, step_count: int, detail: str, finished: bool) -> None:
+            if progress_callback is None:
+                return
+            overall_step_count = step_count * chunk_count
+            overall_step_index = (chunk_index * step_count) + step_index
+            detail_with_chunk = f"{detail} (chunk {chunk_index + 1}/{chunk_count})"
+            progress_callback(overall_step_index, overall_step_count, detail_with_chunk, finished)
+
+        processed_chunks.append(_run_pipeline(chunk, _chunk_callback))
+
+    return np.concatenate(processed_chunks).astype(np.float32)
 
 
 @dataclass(frozen=True)

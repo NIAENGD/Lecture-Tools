@@ -44,6 +44,33 @@ def test_preprocess_audio_generates_balanced_mono(tmp_path: Path) -> None:
         assert frames  # ensure data was written
 
 
+def test_preprocess_audio_handles_long_recordings_in_chunks() -> None:
+    sample_rate = 16_000
+    duration = 2.0
+    times = np.linspace(0, duration, int(sample_rate * duration), endpoint=False)
+    stereo = np.stack([np.sin(2 * np.pi * 440 * times), np.cos(2 * np.pi * 440 * times)], axis=1).astype(
+        np.float32
+    )
+
+    events = []
+
+    def _progress(step_index: int, step_count: int, detail: str, completed: bool) -> None:
+        events.append((step_index, step_count, detail, completed))
+
+    processed = preprocess_audio(stereo, sample_rate, chunk_duration_s=0.5, progress_callback=_progress)
+
+    assert processed.shape == (stereo.shape[0],)
+    assert processed.dtype == np.float32
+
+    # An 0.5s chunk size over a 2s clip should produce four chunks and scale
+    # the progress counters accordingly.
+    assert events
+    step_count = events[-1][1]
+    assert step_count == 24  # 4 chunks x 6 stages
+    assert events[-1][0] == step_count
+    assert "chunk 4/4" in events[-1][2]
+
+
 def test_load_wav_file_round_trip(tmp_path: Path) -> None:
     sample_rate = 16_000
     duration = 0.2
