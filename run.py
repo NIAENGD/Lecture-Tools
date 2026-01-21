@@ -212,10 +212,11 @@ def test_mastering(
     extras = list(ctx.args)
 
     if audio is not None and audio_option is not None:
-        raise typer.BadParameter(
-            "Provide the audio file either as a positional argument or via --audio, not both.",
-            param_hint="AUDIO",
+        message = (
+            "Provide the audio file either as a positional argument or via --audio, not both."
         )
+        typer.echo(message)
+        raise typer.BadParameter(message, param_hint="AUDIO")
 
     if extras:
         if audio is not None or audio_option is not None:

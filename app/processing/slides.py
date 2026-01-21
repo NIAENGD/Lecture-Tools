@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import inspect
 import json
 import logging
+import math
 import shutil
 import sys
 import time
@@ -13,6 +15,8 @@ from pathlib import Path
 from statistics import fmean
 from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional, Tuple, Union
 from zipfile import ZIP_DEFLATED, ZipFile
+
+from PIL import Image, ImageFilter, ImageOps
 
 from ..services.ingestion import SlideConversionResult, SlideConverter
 
@@ -35,6 +39,24 @@ class _OCRBackendInfo:
     engine: Any
     label: str
     version: Optional[str]
+
+
+@dataclass
+class _OCRVariant:
+    """Describes a preprocessed image variant for OCR."""
+
+    label: str
+    image: Image.Image
+
+
+@dataclass
+class _OCRCandidate:
+    """Captures the best OCR result for a backend/variant pair."""
+
+    label: str
+    entries: List[Tuple[List[Any], str, float]]
+    recognition: Any
+    score: float
 
 
 class SlideConversionError(RuntimeError):
@@ -173,7 +195,7 @@ class _EasyOCREngine:
 class _TesseractOCREngine:
     """Adapter that mimics PaddleOCR's interface using Tesseract OCR."""
 
-    def __init__(self, language: str) -> None:
+    def __init__(self, language: str, *, config: Optional[str] = None) -> None:
         try:
             import pytesseract  # type: ignore
         except ImportError as exc:  # pragma: no cover - import guard
@@ -210,6 +232,7 @@ class _TesseractOCREngine:
         self._pytesseract = pytesseract
         self._language = language
         self._output_dict = output_config
+        self._config = config or "--oem 1 --psm 6"
         version_value = str(version_info)
         self.version = version_value
         self.name = f"Tesseract {version_value}".strip()
@@ -232,11 +255,14 @@ class _TesseractOCREngine:
             except Exception as error:  # pragma: no cover - defensive fallback
                 raise SlideConversionError("Unable to convert image for Tesseract OCR") from error
 
-        data = self._pytesseract.image_to_data(
-            pil_image,
-            lang=self._language,
-            output_type=self._output_dict,
-        )
+        ocr_kwargs = {
+            "lang": self._language,
+            "output_type": self._output_dict,
+        }
+        if "config" in inspect.signature(self._pytesseract.image_to_data).parameters:
+            ocr_kwargs["config"] = self._config
+
+        data = self._pytesseract.image_to_data(pil_image, **ocr_kwargs)
 
         entries: List[Mapping[str, Any]] = []
         total = len(data.get("text", []))
@@ -288,19 +314,30 @@ class PyMuPDFSlideConverter(SlideConverter):
         dpi: int = 200,
         *,
         ocr_language: str = "en",
+        ocr_dpi: int = 320,
+        ocr_preprocess: bool = True,
+        ocr_upscale_factor: float = 1.5,
+        tesseract_config: Optional[str] = None,
         retain_debug_assets: bool = False,
     ) -> None:
         self._dpi = dpi
         self._ocr_language = ocr_language
+        self._ocr_dpi = ocr_dpi
+        self._ocr_preprocess = ocr_preprocess
+        self._ocr_upscale_factor = max(1.0, ocr_upscale_factor)
+        self._tesseract_config = tesseract_config or "--oem 1 --psm 6"
         self._ocr_backends: List[_OCRBackendInfo] = []
         self._ocr_backends_initialized = False
         self._ocr_engine_label: str = "text-layer-only"
         self._ocr_engine_version: Optional[str] = None
         self._retain_debug_assets = bool(retain_debug_assets)
         LOGGER.debug(
-            "PyMuPDFSlideConverter initialised with dpi=%s, ocr_language=%s, retain_debug_assets=%s",
+            "PyMuPDFSlideConverter initialised with dpi=%s, ocr_language=%s, ocr_dpi=%s, "
+            "ocr_preprocess=%s, retain_debug_assets=%s",
             dpi,
             ocr_language,
+            ocr_dpi,
+            ocr_preprocess,
             self._retain_debug_assets,
         )
 
@@ -311,14 +348,18 @@ class PyMuPDFSlideConverter(SlideConverter):
         available: List[_OCRBackendInfo] = []
         initialization_errors: List[str] = []
         candidates = [
-            ("PaddleOCR", _PaddleOCREngine),
-            ("EasyOCR", _EasyOCREngine),
-            ("Tesseract OCR", _TesseractOCREngine),
+            ("PaddleOCR", _PaddleOCREngine, {}),
+            ("EasyOCR", _EasyOCREngine, {}),
+            (
+                "Tesseract OCR",
+                _TesseractOCREngine,
+                {"config": self._tesseract_config},
+            ),
         ]
 
-        for label, factory in candidates:
+        for label, factory, kwargs in candidates:
             try:
-                engine = factory(self._ocr_language)
+                engine = factory(self._ocr_language, **kwargs)
             except SlideConversionDependencyError as error:
                 LOGGER.warning("%s backend unavailable: %s", label, error)
                 initialization_errors.append(f"{label}: {error}")
@@ -358,6 +399,82 @@ class PyMuPDFSlideConverter(SlideConverter):
         self._ocr_engine_version = ", ".join(versions) if versions else None
         return self._ocr_backends
 
+    @staticmethod
+    def _estimate_binarization_threshold(image: Image.Image) -> int:
+        histogram = image.histogram()
+        total = sum(histogram)
+        if total == 0:
+            return 127
+        sum_total = sum(index * count for index, count in enumerate(histogram))
+        sum_background = 0.0
+        weight_background = 0.0
+        max_variance = -1.0
+        threshold = 127
+        for index, count in enumerate(histogram):
+            weight_background += count
+            if weight_background == 0:
+                continue
+            weight_foreground = total - weight_background
+            if weight_foreground == 0:
+                break
+            sum_background += index * count
+            mean_background = sum_background / weight_background
+            mean_foreground = (sum_total - sum_background) / weight_foreground
+            variance = weight_background * weight_foreground * (
+                mean_background - mean_foreground
+            ) ** 2
+            if variance > max_variance:
+                max_variance = variance
+                threshold = index
+        return int(threshold)
+
+    def _build_ocr_variants(self, image: Image.Image) -> List[_OCRVariant]:
+        variants: List[_OCRVariant] = []
+        base_image = ImageOps.exif_transpose(image)
+        variants.append(_OCRVariant(label="original", image=base_image))
+
+        gray = ImageOps.grayscale(base_image)
+        variants.append(_OCRVariant(label="grayscale", image=gray))
+
+        autocontrast = ImageOps.autocontrast(gray)
+        variants.append(_OCRVariant(label="autocontrast", image=autocontrast))
+
+        sharpened = autocontrast.filter(
+            ImageFilter.UnsharpMask(radius=2, percent=180, threshold=3)
+        )
+        variants.append(_OCRVariant(label="sharpened", image=sharpened))
+
+        threshold = self._estimate_binarization_threshold(autocontrast)
+        binarized = autocontrast.point(lambda value: 255 if value >= threshold else 0)
+        variants.append(_OCRVariant(label="binarized", image=binarized))
+
+        if self._ocr_upscale_factor > 1.0:
+            max_dim = max(base_image.size)
+            if max_dim < 2400:
+                scale = self._ocr_upscale_factor
+                new_size = (
+                    int(math.ceil(base_image.width * scale)),
+                    int(math.ceil(base_image.height * scale)),
+                )
+                upscaled = base_image.resize(new_size, Image.Resampling.LANCZOS)
+                variants.append(_OCRVariant(label="upscaled", image=upscaled))
+
+        return variants
+
+    @staticmethod
+    def _variant_to_array(variant: _OCRVariant, array_module: Any) -> Any:
+        rgb_image = variant.image.convert("RGB")
+        return array_module.asarray(rgb_image)
+
+    @staticmethod
+    def _score_recognition_entries(
+        entries: Iterable[Tuple[List[Any], str, float]]
+    ) -> float:
+        confidences = [max(0.0, min(1.0, float(entry[2]))) for entry in entries]
+        if not confidences:
+            return 0.0
+        return len(confidences) * fmean(confidences)
+
     def convert(
         self,
         slide_path: Path,
@@ -388,13 +505,6 @@ class PyMuPDFSlideConverter(SlideConverter):
                 "NumPy is required for slide conversion"
             ) from exc
 
-        try:
-            from PIL import Image  # type: ignore
-        except ImportError as exc:  # pragma: no cover - runtime dependency check
-            raise SlideConversionDependencyError(
-                "Pillow is required for slide conversion"
-            ) from exc
-
         LOGGER.debug(
             "Slide OCR pipeline ready (language=%s); OCR backends will be prepared on demand",
             self._ocr_language,
@@ -417,6 +527,7 @@ class PyMuPDFSlideConverter(SlideConverter):
             markdown_path.unlink()
 
         matrix = fitz.Matrix(self._dpi / 72, self._dpi / 72)
+        ocr_matrix = fitz.Matrix(self._ocr_dpi / 72, self._ocr_dpi / 72)
         render_dpi = self._dpi
         generated_at = datetime.now(timezone.utc).isoformat()
         page_sections: List[str] = []
@@ -580,8 +691,10 @@ class PyMuPDFSlideConverter(SlideConverter):
                 groups: List[Tuple[float, List[str]]] = []
                 entries: List[str] = []
                 backend_used: Optional[_OCRBackendInfo] = None
+                ocr_variant_used: Optional[str] = None
                 backend_attempts: List[str] = []
                 backend_failures: List[str] = []
+                ocr_variant_attempts: List[str] = []
                 ocr_elapsed = 0.0
                 ocr_status = "text-detected"
                 no_text_reason: Optional[str] = None
@@ -595,6 +708,23 @@ class PyMuPDFSlideConverter(SlideConverter):
                 else:
                     if ocr_backends is None:
                         ocr_backends = self._prepare_ocr_backends()
+
+                    if self._ocr_dpi == self._dpi:
+                        ocr_image = full_image
+                    else:
+                        ocr_pix = page.get_pixmap(matrix=ocr_matrix, alpha=False)
+                        ocr_image = Image.frombytes(
+                            "RGB",
+                            [ocr_pix.width, ocr_pix.height],
+                            ocr_pix.samples,
+                        )
+
+                    ocr_variants = (
+                        self._build_ocr_variants(ocr_image)
+                        if self._ocr_preprocess
+                        else [_OCRVariant(label="original", image=ocr_image)]
+                    )
+
                     for backend in ocr_backends:
                         backend_attempts.append(backend.label)
                         LOGGER.debug(
@@ -602,36 +732,58 @@ class PyMuPDFSlideConverter(SlideConverter):
                             page_number + 1,
                             backend.label,
                         )
-                        ocr_started = time.perf_counter()
-                        try:
-                            candidate = backend.engine.ocr(array)
-                        except Exception as error:  # noqa: BLE001 - OCR may raise arbitrary errors
-                            elapsed = time.perf_counter() - ocr_started
-                            backend_failures.append(f"{backend.label}: {error}")
-                            LOGGER.warning(
-                                "Slide %s OCR backend %s failed after %.3fs: %s",
-                                page_number + 1,
-                                backend.label,
-                                elapsed,
-                                error,
-                                exc_info=True,
-                            )
-                            continue
+                        best_candidate: Optional[_OCRCandidate] = None
+                        backend_elapsed = 0.0
 
-                        elapsed = time.perf_counter() - ocr_started
-                        candidate_entries = self._parse_recognition_entries(candidate)
-                        if candidate_entries:
-                            recognition = candidate
-                            parsed_entries = candidate_entries
+                        for variant in ocr_variants:
+                            ocr_variant_attempts.append(f"{backend.label}:{variant.label}")
+                            ocr_started = time.perf_counter()
+                            try:
+                                variant_array = self._variant_to_array(variant, np)
+                                candidate = backend.engine.ocr(variant_array)
+                            except Exception as error:  # noqa: BLE001 - OCR may raise arbitrary errors
+                                elapsed = time.perf_counter() - ocr_started
+                                backend_elapsed += elapsed
+                                backend_failures.append(
+                                    f"{backend.label} ({variant.label}): {error}"
+                                )
+                                LOGGER.warning(
+                                    "Slide %s OCR backend %s (%s) failed after %.3fs: %s",
+                                    page_number + 1,
+                                    backend.label,
+                                    variant.label,
+                                    elapsed,
+                                    error,
+                                    exc_info=True,
+                                )
+                                continue
+
+                            elapsed = time.perf_counter() - ocr_started
+                            backend_elapsed += elapsed
+                            candidate_entries = self._parse_recognition_entries(candidate)
+                            candidate_score = self._score_recognition_entries(candidate_entries)
+                            if best_candidate is None or candidate_score > best_candidate.score:
+                                best_candidate = _OCRCandidate(
+                                    label=variant.label,
+                                    entries=candidate_entries,
+                                    recognition=candidate,
+                                    score=candidate_score,
+                                )
+
+                        if best_candidate and best_candidate.entries:
+                            recognition = best_candidate.recognition
+                            parsed_entries = best_candidate.entries
                             backend_used = backend
-                            ocr_elapsed = elapsed
+                            ocr_variant_used = best_candidate.label
+                            ocr_elapsed = backend_elapsed
                             if backend.label not in used_backend_labels:
                                 used_backend_labels.append(backend.label)
                             LOGGER.info(
-                                "Slide %s OCR succeeded with %s in %.3fs",
+                                "Slide %s OCR succeeded with %s (%s) in %.3fs",
                                 page_number + 1,
                                 backend.label,
-                                elapsed,
+                                best_candidate.label,
+                                backend_elapsed,
                             )
                             break
 
@@ -647,6 +799,7 @@ class PyMuPDFSlideConverter(SlideConverter):
                         ocr_elapsed = 0.0
 
                 if parsed_entries:
+                    ocr_status = "ocr-cascade"
                     threshold = 24.0
                     for box, text, confidence in parsed_entries:
                         if not text or confidence < 0.3:
@@ -759,8 +912,11 @@ class PyMuPDFSlideConverter(SlideConverter):
                     "page": page_number + 1,
                     "ocr_engine": self._ocr_engine_label,
                     "ocr_engine_version": self._ocr_engine_version,
+                    "ocr_dpi": self._ocr_dpi,
                     "ocr_duration_ms": round(ocr_elapsed * 1000, 3),
                     "ocr_status": ocr_status,
+                    "ocr_preprocess": self._ocr_preprocess,
+                    "ocr_variant_used": ocr_variant_used,
                     "raw_recognition_count": len(recognition or []),
                     "accepted_entry_count": len(debug_entries),
                     "fallback_line_count": len(fallback_lines),
@@ -792,12 +948,16 @@ class PyMuPDFSlideConverter(SlideConverter):
                         "page": page_number + 1,
                         "ocr_engine": self._ocr_engine_label,
                         "ocr_engine_version": self._ocr_engine_version,
+                        "ocr_dpi": self._ocr_dpi,
                         "ocr_duration_ms": round(ocr_elapsed * 1000, 3),
                         "ocr_status": ocr_status,
                         "ocr_backend_used": backend_used_label,
                         "ocr_backend_version": backend_used_version,
                         "ocr_backend_attempts": backend_attempts,
                         "ocr_backend_failures": backend_failures,
+                        "ocr_preprocess": self._ocr_preprocess,
+                        "ocr_variant_used": ocr_variant_used,
+                        "ocr_variant_attempts": ocr_variant_attempts,
                         "raw_recognition_count": len(recognition or []),
                         "accepted_entry_count": len(debug_entries),
                         "group_count": len(groups),
@@ -905,6 +1065,8 @@ class PyMuPDFSlideConverter(SlideConverter):
             "generator: Lecture Tools Slide Converter",
             f"generated_at: {generated_at}",
             f"render_dpi: {render_dpi}",
+            f"ocr_dpi: {self._ocr_dpi}",
+            f"ocr_preprocess: {self._ocr_preprocess}",
             f"ocr_engine: {self._ocr_engine_label}",
             f"source_pdf: {slide_path.name}",
             f"page_range: {page_range_label}",
