@@ -484,6 +484,50 @@ if command -v readlink >/dev/null 2>&1; then
 fi
 HELPER_PATH="${HELPER_PATH:-$SCRIPT_PATH}"
 
+log() {
+  printf '[lecture-tools] %s\n' "$*"
+}
+
+warn() {
+  printf '[lecture-tools] warning: %s\n' "$*" >&2
+}
+
+fatal() {
+  printf '[lecture-tools] error: %s\n' "$*" >&2
+  exit 1
+}
+
+ensure_packages() {
+  local packages=(
+    python3.11
+    python3.11-venv
+    python3-pip
+    git
+    ffmpeg
+    libportaudio2
+    build-essential
+    tesseract-ocr
+    libtesseract-dev
+    libgl1
+  )
+  local missing_packages=()
+
+  for pkg in "${packages[@]}"; do
+    if ! dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "install ok installed"; then
+      missing_packages+=("$pkg")
+    fi
+  done
+
+  if [[ ${#missing_packages[@]} -eq 0 ]]; then
+    log "All required system packages already present."
+    return
+  fi
+
+  log "Installing system dependencies (${missing_packages[*]})..."
+  apt-get update >/dev/null
+  DEBIAN_FRONTEND=noninteractive apt-get install -y "${missing_packages[@]}" >/dev/null
+}
+
 usage() {
   cat <<'EOU'
 Usage: lecturetool <command>

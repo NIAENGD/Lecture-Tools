@@ -1503,6 +1503,21 @@ class UpdateManager:
         helper_cli = shutil.which("lecturetool")
         if helper_cli:
             sudo_cli = shutil.which("sudo")
+            systemd_run = shutil.which("systemd-run")
+            if sudo_cli and systemd_run:
+                return [
+                    [
+                        sudo_cli,
+                        "-n",
+                        systemd_run,
+                        "--unit=lecturetools-update",
+                        "--collect",
+                        "--wait",
+                        "--pipe",
+                        helper_cli,
+                        "update",
+                    ]
+                ]
             if sudo_cli:
                 return [[sudo_cli, "-n", helper_cli, "update"]]
             return [[helper_cli, "update"]]
