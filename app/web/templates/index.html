@@ -57,6 +57,12 @@
         --bright-panel-border: rgba(199, 186, 255, 0.65);
         --bright-panel-shadow: 0 18px 36px rgba(119, 103, 187, 0.18);
         --bright-panel-shadow-high: 0 28px 60px rgba(119, 103, 187, 0.28);
+        --bright-panel-sheen: linear-gradient(
+          140deg,
+          rgba(255, 255, 255, 0.85) 0%,
+          rgba(255, 255, 255, 0.45) 45%,
+          rgba(255, 255, 255, 0) 100%
+        );
         --bright-accent: #c9afff;
         --bright-accent-contrast: #1f163b;
         --bright-accent-muted: rgba(201, 175, 255, 0.24);
@@ -93,6 +99,9 @@
         --bright-nav-button-active-shadow: 0 24px 46px rgba(58, 28, 120, 0.32);
         --bright-chrome-radius: 26px;
         --bright-nav-button-radius: 18px;
+        --bright-ambient-1: rgba(114, 174, 255, 0.35);
+        --bright-ambient-2: rgba(216, 171, 255, 0.32);
+        --bright-ambient-3: rgba(255, 186, 233, 0.3);
 
         --dark-background: #081321;
         --dark-background-gradient: linear-gradient(150deg, #071421 0%, #0f2737 48%, #13404a 100%);
@@ -102,6 +111,12 @@
         --dark-panel-border: rgba(73, 111, 149, 0.55);
         --dark-panel-shadow: 0 24px 46px rgba(6, 20, 32, 0.6);
         --dark-panel-shadow-high: 0 32px 68px rgba(6, 20, 32, 0.72);
+        --dark-panel-sheen: linear-gradient(
+          140deg,
+          rgba(18, 32, 52, 0.9) 0%,
+          rgba(14, 26, 42, 0.55) 55%,
+          rgba(10, 20, 32, 0) 100%
+        );
         --dark-accent: #6fe1ff;
         --dark-accent-contrast: #041019;
         --dark-accent-muted: rgba(111, 225, 255, 0.24);
@@ -138,6 +153,9 @@
         --dark-nav-button-active-shadow: 0 32px 58px rgba(6, 16, 36, 0.78);
         --dark-chrome-radius: 26px;
         --dark-nav-button-radius: 18px;
+        --dark-ambient-1: rgba(72, 150, 255, 0.25);
+        --dark-ambient-2: rgba(120, 200, 255, 0.22);
+        --dark-ambient-3: rgba(152, 140, 255, 0.25);
 
         --background: var(--bright-background);
         --background-gradient: var(--bright-background-gradient);
@@ -147,6 +165,7 @@
         --panel-border: var(--bright-panel-border);
         --panel-shadow: var(--bright-panel-shadow);
         --panel-shadow-high: var(--bright-panel-shadow-high);
+        --panel-sheen: var(--bright-panel-sheen);
         --accent: var(--bright-accent);
         --accent-contrast: var(--bright-accent-contrast);
         --accent-muted: var(--bright-accent-muted);
@@ -169,6 +188,7 @@
           --bright-interactive-subtle,
           var(--bright-muted)
         );
+        --panel-radius: 16px;
         --chrome-radius: var(--bright-chrome-radius, 22px);
         --nav-button-radius: var(--bright-nav-button-radius, 16px);
         --nav-button-clip: var(--bright-nav-button-clip, none);
@@ -204,6 +224,9 @@
           --bright-nav-button-active-shadow,
           0 18px 38px rgba(32, 24, 82, 0.26)
         );
+        --ambient-1: var(--bright-ambient-1);
+        --ambient-2: var(--bright-ambient-2);
+        --ambient-3: var(--bright-ambient-3);
       }
 
       body[data-display-mode='bright'] {
@@ -220,6 +243,7 @@
         --panel-border: var(--dark-panel-border);
         --panel-shadow: var(--dark-panel-shadow);
         --panel-shadow-high: var(--dark-panel-shadow-high);
+        --panel-sheen: var(--dark-panel-sheen);
         --accent: var(--dark-accent);
         --accent-contrast: var(--dark-accent-contrast);
         --accent-muted: var(--dark-accent-muted);
@@ -277,6 +301,9 @@
           --dark-nav-button-active-shadow,
           0 28px 52px rgba(6, 18, 38, 0.72)
         );
+        --ambient-1: var(--dark-ambient-1);
+        --ambient-2: var(--dark-ambient-2);
+        --ambient-3: var(--dark-ambient-3);
       }
 
       body[data-display-mode='system'] {
@@ -294,6 +321,7 @@
           --panel-border: var(--dark-panel-border);
           --panel-shadow: var(--dark-panel-shadow);
           --panel-shadow-high: var(--dark-panel-shadow-high);
+          --panel-sheen: var(--dark-panel-sheen);
           --accent: var(--dark-accent);
           --accent-contrast: var(--dark-accent-contrast);
           --accent-muted: var(--dark-accent-muted);
@@ -351,6 +379,9 @@
             --dark-nav-button-active-shadow,
             0 28px 52px rgba(6, 18, 38, 0.72)
           );
+          --ambient-1: var(--dark-ambient-1);
+          --ambient-2: var(--dark-ambient-2);
+          --ambient-3: var(--dark-ambient-3);
         }
       }
 
@@ -1062,17 +1093,37 @@
         --background-gradient: var(--background);
         --panel-shadow: none;
         --panel-shadow-high: none;
+        --panel-sheen: none;
         --accent-glow: rgba(0, 0, 0, 0);
+        --ambient-opacity: 0;
+        --ambient-blur: 0px;
+        --ambient-animation: none;
+        --ambient-vignette: 0;
       }
 
       body[data-effects='low'] {
         --background-gradient: var(--background);
         --accent-glow: rgba(0, 0, 0, 0);
+        --ambient-opacity: 0.18;
+        --ambient-blur: 70px;
+        --ambient-animation: ambient-drift 42s ease-in-out infinite;
+        --ambient-vignette: 0.15;
+      }
+
+      body[data-effects='mid'] {
+        --ambient-opacity: 0.38;
+        --ambient-blur: 90px;
+        --ambient-animation: ambient-drift 34s ease-in-out infinite;
+        --ambient-vignette: 0.28;
       }
 
       body[data-effects='high'] {
         --panel-shadow: var(--panel-shadow-high);
         --accent-glow: var(--accent-highlight);
+        --ambient-opacity: 0.62;
+        --ambient-blur: 120px;
+        --ambient-animation: ambient-drift 26s ease-in-out infinite;
+        --ambient-vignette: 0.35;
       }
       * {
         box-sizing: border-box;
@@ -1106,6 +1157,68 @@
         color: var(--text);
         transition: background 0.2s ease, color 0.2s ease;
         min-height: 100vh;
+        position: relative;
+        overflow-x: hidden;
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      body::before {
+        content: '';
+        position: fixed;
+        inset: -30% -20%;
+        background:
+          radial-gradient(
+            38% 38% at 18% 16%,
+            var(--ambient-1) 0%,
+            transparent 65%
+          ),
+          radial-gradient(
+            34% 34% at 85% 20%,
+            var(--ambient-2) 0%,
+            transparent 70%
+          ),
+          radial-gradient(
+            42% 42% at 55% 80%,
+            var(--ambient-3) 0%,
+            transparent 65%
+          );
+        opacity: var(--ambient-opacity, 0);
+        filter: blur(var(--ambient-blur, 0px));
+        animation: var(--ambient-animation, none);
+        z-index: 0;
+        pointer-events: none;
+        transform: translateZ(0);
+      }
+
+      body::after {
+        content: '';
+        position: fixed;
+        inset: 0;
+        background: radial-gradient(
+          circle at 50% 30%,
+          rgba(255, 255, 255, 0) 0%,
+          rgba(6, 12, 24, var(--ambient-vignette, 0)) 70%,
+          rgba(6, 12, 24, calc(var(--ambient-vignette, 0) + 0.12)) 100%
+        );
+        mix-blend-mode: multiply;
+        z-index: 0;
+        pointer-events: none;
+      }
+
+      @keyframes ambient-drift {
+        0% {
+          transform: translate3d(0%, 0%, 0) scale(1);
+        }
+        40% {
+          transform: translate3d(-4%, 3%, 0) scale(1.03);
+        }
+        70% {
+          transform: translate3d(5%, -2%, 0) scale(1.05);
+        }
+        100% {
+          transform: translate3d(0%, 0%, 0) scale(1);
+        }
       }
 
       body.dialog-open {
@@ -1113,7 +1226,7 @@
       }
 
       main.layout {
-        max-width: 1200px;
+        max-width: 1280px;
         margin: 0 auto;
         padding: 24px;
         display: flex;
@@ -1121,6 +1234,8 @@
         align-items: stretch;
         min-height: 100vh;
         box-sizing: border-box;
+        position: relative;
+        z-index: 1;
       }
 
       .sidebar {
@@ -1141,10 +1256,14 @@
 
       .panel {
         background: var(--panel-bg);
+        background-image: var(--panel-sheen);
         border: 1px solid var(--panel-border);
-        border-radius: 8px;
+        border-radius: var(--panel-radius);
         padding: 18px 20px;
         box-shadow: var(--panel-shadow);
+        backdrop-filter: blur(18px);
+        position: relative;
+        overflow: hidden;
         transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
       }
 
@@ -3422,7 +3541,11 @@
       }
 
       .top-bar button.active {
-        background: var(--nav-button-active);
+        background: linear-gradient(
+          135deg,
+          var(--nav-button-active) 0%,
+          var(--accent-highlight) 100%
+        );
         border-color: transparent;
         color: var(--accent-contrast);
         box-shadow: var(--nav-button-active-shadow);
@@ -3459,6 +3582,7 @@
         border-radius: calc(var(--chrome-radius) - 6px);
         border: 1px solid var(--panel-border);
         background: var(--panel-bg);
+        background-image: var(--panel-sheen);
         box-shadow: var(--panel-shadow-high);
         backdrop-filter: blur(18px);
         min-height: 360px;
@@ -3493,6 +3617,7 @@
         display: grid;
         grid-auto-rows: minmax(0, 1fr);
         align-items: stretch;
+        --view-direction: 1;
       }
 
       .content-panel .view {
@@ -3505,10 +3630,27 @@
         pointer-events: none;
         transform: var(
           --view-enter-transform,
-          translateY(26px) scale(0.97) rotateX(2deg)
+          translate3d(
+            var(--view-enter-x, 0px),
+            var(--view-enter-y, 24px),
+            var(--view-enter-z, 0px)
+          )
+            scale(var(--view-enter-scale, 0.98))
+            rotateX(var(--view-enter-tilt, 2deg))
         );
         filter: var(--view-enter-filter, blur(18px) saturate(1.08));
         --view-filter-duration: 340ms;
+        --view-slide-distance: 56px;
+        --view-enter-x: calc(var(--view-direction, 1) * var(--view-slide-distance));
+        --view-exit-x: calc(var(--view-direction, 1) * -1 * var(--view-slide-distance));
+        --view-enter-y: 24px;
+        --view-exit-y: -18px;
+        --view-enter-z: 0px;
+        --view-exit-z: 0px;
+        --view-enter-scale: 0.98;
+        --view-exit-scale: 0.98;
+        --view-enter-tilt: 2deg;
+        --view-exit-tilt: -2deg;
         transition:
           opacity var(--view-transition-duration, 380ms)
             var(--view-transition-easing, cubic-bezier(0.25, 0.8, 0.25, 1)),
@@ -3537,7 +3679,10 @@
       .view.active {
         opacity: var(--view-active-opacity, 1);
         pointer-events: auto;
-        transform: var(--view-active-transform, translateZ(0) scale(1) rotateX(0deg));
+        transform: var(
+          --view-active-transform,
+          translate3d(0, 0, 0) scale(1) rotateX(0deg)
+        );
         filter: var(--view-active-filter, blur(0) saturate(1.02));
         z-index: 2;
       }
@@ -3545,7 +3690,16 @@
       .view.leaving {
         opacity: var(--view-exit-opacity, 0);
         pointer-events: none;
-        transform: var(--view-exit-transform, translateY(-22px) scale(0.97) rotateX(-3deg));
+        transform: var(
+          --view-exit-transform,
+          translate3d(
+            var(--view-exit-x, 0px),
+            var(--view-exit-y, -18px),
+            var(--view-exit-z, 0px)
+          )
+            scale(var(--view-exit-scale, 0.98))
+            rotateX(var(--view-exit-tilt, -2deg))
+        );
         filter: var(--view-exit-filter, blur(16px) saturate(0.94));
         z-index: 1;
       }
@@ -3578,10 +3732,14 @@
       body[data-effects='low'] .content-panel .view {
         --view-transition-duration: 260ms;
         --view-transition-easing: cubic-bezier(0.33, 1, 0.68, 1);
-        --view-filter-duration: 220ms;
-        --view-enter-transform: translateY(14px) scale(0.99);
-        --view-active-transform: translateY(0) scale(1);
-        --view-exit-transform: translateY(-10px) scale(0.995);
+        --view-filter-duration: 200ms;
+        --view-slide-distance: 32px;
+        --view-enter-y: 12px;
+        --view-exit-y: -8px;
+        --view-enter-scale: 0.99;
+        --view-exit-scale: 0.995;
+        --view-enter-tilt: 0deg;
+        --view-exit-tilt: 0deg;
         --view-enter-filter: blur(6px) saturate(1.02);
         --view-active-filter: none;
         --view-exit-filter: blur(6px) saturate(0.98);
@@ -3594,14 +3752,18 @@
 
       body[data-effects='mid'] .content-panel .view {
         --view-transition-duration: 380ms;
-        --view-transition-easing: cubic-bezier(0.2, 0.8, 0.2, 1);
+        --view-transition-easing: cubic-bezier(0.24, 0.9, 0.25, 1);
         --view-filter-duration: 320ms;
-        --view-enter-transform: translateY(28px) scale(0.965) rotateX(4deg);
-        --view-active-transform: translateZ(0) scale(1) rotateX(0deg);
-        --view-exit-transform: translateY(-18px) scale(0.975) rotateX(-3deg);
-        --view-enter-filter: blur(20px) saturate(1.12);
+        --view-slide-distance: 48px;
+        --view-enter-y: 20px;
+        --view-exit-y: -14px;
+        --view-enter-scale: 0.97;
+        --view-exit-scale: 0.985;
+        --view-enter-tilt: 3deg;
+        --view-exit-tilt: -2deg;
+        --view-enter-filter: blur(18px) saturate(1.1);
         --view-active-filter: blur(0) saturate(1.02);
-        --view-exit-filter: blur(14px) saturate(0.95);
+        --view-exit-filter: blur(12px) saturate(0.96);
         --view-transform-origin: 50% 44%;
       }
 
@@ -3612,13 +3774,19 @@
       body[data-effects='high'] .content-panel .view {
         --view-transition-duration: 520ms;
         --view-transition-easing: cubic-bezier(0.16, 1, 0.3, 1);
-        --view-filter-duration: 480ms;
-        --view-enter-transform: translateZ(-140px) rotateX(14deg) scale(0.9);
-        --view-active-transform: translateZ(0) rotateX(0deg) scale(1);
-        --view-exit-transform: translateZ(160px) rotateX(-12deg) scale(0.9);
-        --view-enter-filter: blur(36px) saturate(1.35) brightness(1.05);
+        --view-filter-duration: 460ms;
+        --view-slide-distance: 70px;
+        --view-enter-y: 16px;
+        --view-exit-y: -16px;
+        --view-enter-z: -120px;
+        --view-exit-z: 140px;
+        --view-enter-scale: 0.92;
+        --view-exit-scale: 0.94;
+        --view-enter-tilt: 8deg;
+        --view-exit-tilt: -6deg;
+        --view-enter-filter: blur(32px) saturate(1.28) brightness(1.06);
         --view-active-filter: blur(0) saturate(1.08) brightness(1);
-        --view-exit-filter: blur(28px) saturate(0.88) brightness(0.92);
+        --view-exit-filter: blur(24px) saturate(0.9) brightness(0.92);
         --view-transform-origin: 50% 42%;
       }
 
@@ -3662,6 +3830,9 @@
       }
 
       @media (prefers-reduced-motion: reduce) {
+        body::before {
+          animation: none !important;
+        }
         .content-panel .view {
           transition: none !important;
           filter: none !important;
@@ -4771,7 +4942,7 @@
       }
     </style>
   </head>
-  <body data-display-mode="system" data-theme="vibrant" data-effects="none">
+  <body data-display-mode="system" data-theme="vibrant" data-effects="mid">
     <main class="layout">
       <aside class="sidebar">
         <section class="panel">
@@ -4885,7 +5056,7 @@
               </button>
             </div>
           </div>
-          <div class="view-stack">
+          <div id="view-stack" class="view-stack">
             <div id="view-details" class="view active" data-view="details">
             <header style="display: flex; justify-content: space-between; align-items: center;">
               <h2 data-i18n="details.title">Lecture details</h2>
@@ -8800,7 +8971,7 @@
         const EFFECTS_CHOICES = new Set(['none', 'low', 'mid', 'high']);
         const EFFECTS_ALIASES = new Map([
           ['medium', 'mid'],
-          ['default', 'none'],
+          ['default', 'mid'],
           ['off', 'none'],
           ['disable', 'none'],
           ['disabled', 'none'],
@@ -8821,7 +8992,8 @@
         ]);
         const DEFAULT_DISPLAY_MODE = 'system';
         const DEFAULT_THEME = 'vibrant';
-        const DEFAULT_VISUAL_EFFECTS = 'none';
+        const DEFAULT_VISUAL_EFFECTS = 'mid';
+        const VIEW_SEQUENCE = ['details', 'tasks', 'create', 'storage', 'settings'];
         const WHISPER_MODEL_CHOICES = new Set([
           'tiny',
           'base',
@@ -9028,6 +9200,7 @@
           expandedModules: new Map(),
           editMode: false,
           activeView: 'details',
+          viewDirection: 1,
           settings: null,
           draggingLectureId: null,
           draggingSourceModuleId: null,
@@ -9244,6 +9417,7 @@
           createDescription: document.getElementById('create-description'),
           createSubmit: document.getElementById('create-submit'),
           viewButtons: Array.from(document.querySelectorAll('.top-bar [data-view]')),
+          viewStack: document.getElementById('view-stack'),
           views: {
             details: document.getElementById('view-details'),
             tasks: document.getElementById('view-tasks'),
@@ -17711,10 +17885,29 @@
           updateEditControlsAvailability();
         }
 
+        function updateViewDirection(targetView) {
+          const previousIndex = VIEW_SEQUENCE.indexOf(state.activeView);
+          const nextIndex = VIEW_SEQUENCE.indexOf(targetView);
+          let direction = state.viewDirection || 1;
+          if (previousIndex !== -1 && nextIndex !== -1) {
+            if (nextIndex > previousIndex) {
+              direction = 1;
+            } else if (nextIndex < previousIndex) {
+              direction = -1;
+            }
+          }
+          state.viewDirection = direction;
+          if (dom.viewStack) {
+            dom.viewStack.style.setProperty('--view-direction', String(direction));
+            dom.viewStack.dataset.direction = direction === 1 ? 'forward' : 'backward';
+          }
+        }
+
         function setActiveView(view) {
           if (!dom.views[view]) {
             return;
           }
+          updateViewDirection(view);
           state.activeView = view;
           dom.viewButtons.forEach((button) => {
             const isActive = button.dataset.view === view;
