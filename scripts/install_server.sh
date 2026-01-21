@@ -1439,6 +1439,7 @@ case $1 in
     ;;
   update)
     require_root
+    ensure_packages
     systemctl stop "$SERVICE_NAME" || true
     if [[ -n ${GIT_REMOTE_URL:-} ]]; then
       run_as_service_user git -C "$INSTALL_DIR" remote set-url "$GIT_REMOTE" "$GIT_REMOTE_URL"

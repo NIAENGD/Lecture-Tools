@@ -6,6 +6,7 @@ from typing import Any, Dict, List
 
 import numpy as np
 import pytest
+from PIL import Image
 
 from app.processing.slides import (
     PyMuPDFSlideConverter,
@@ -293,3 +294,30 @@ def test_extract_text_candidates_reports_absent_text_layer():
 
     assert result.lines == []
     assert result.had_text_layer is False
+
+
+def test_build_ocr_variants_includes_expected_labels():
+    converter = PyMuPDFSlideConverter(dpi=72, ocr_preprocess=True, ocr_upscale_factor=1.5)
+    image = Image.new("RGB", (100, 100), color="white")
+
+    variants = converter._build_ocr_variants(image)
+    labels = {variant.label for variant in variants}
+
+    assert "original" in labels
+    assert "grayscale" in labels
+    assert "autocontrast" in labels
+    assert "sharpened" in labels
+    assert "binarized" in labels
+    assert "upscaled" in labels
+
+
+def test_score_recognition_entries():
+    entries = [
+        ([], "Hello", 0.9),
+        ([], "World", 0.8),
+        ([], "!", 0.7),
+    ]
+
+    score = PyMuPDFSlideConverter._score_recognition_entries(entries)
+
+    assert score == pytest.approx(3 * ((0.9 + 0.8 + 0.7) / 3))
