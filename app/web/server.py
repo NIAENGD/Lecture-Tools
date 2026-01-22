@@ -1535,6 +1535,20 @@ class UpdateManager:
             commands.append([sys.executable, "-m", "pip", "install", "-r", str(requirements)])
         return commands
 
+    @staticmethod
+    def _fallback_for_systemd_run(command: List[str]) -> Optional[List[str]]:
+        if "systemd-run" not in command:
+            return None
+        if len(command) < 2:
+            return None
+        helper_cli = command[-2]
+        helper_action = command[-1]
+        if helper_action != "update":
+            return None
+        if command[0] == "sudo":
+            return ["sudo", "-n", helper_cli, helper_action]
+        return [helper_cli, helper_action]
+
     def _finalize(
         self,
         *,
@@ -1570,34 +1584,43 @@ class UpdateManager:
         error_message: Optional[str] = None
 
         for command in commands:
-            display = " ".join(shlex.quote(part) for part in command)
-            self._append_log(f"$ {display}")
-            try:
-                process = subprocess.Popen(
-                    command,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                    text=True,
-                    cwd=str(self._project_root),
-                    env=env,
-                    stdin=subprocess.DEVNULL,
-                )
-            except OSError as error:
-                error_message = str(error)
-                self._append_log(f"Failed to start command: {error_message}")
-                success = False
-                exit_code = None
-                break
+            current_command = command
+            while True:
+                display = " ".join(shlex.quote(part) for part in current_command)
+                self._append_log(f"$ {display}")
+                try:
+                    process = subprocess.Popen(
+                        current_command,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,
+                        text=True,
+                        cwd=str(self._project_root),
+                        env=env,
+                        stdin=subprocess.DEVNULL,
+                    )
+                except OSError as error:
+                    error_message = str(error)
+                    self._append_log(f"Failed to start command: {error_message}")
+                    success = False
+                    exit_code = None
+                    break
 
-            assert process.stdout is not None
-            for raw_line in process.stdout:
-                self._append_log(raw_line.rstrip("\n"))
-            return_code = process.wait()
-            if return_code != 0:
-                exit_code = return_code
-                error_message = f"Command exited with status {return_code}"
-                self._append_log(error_message)
-                success = False
+                assert process.stdout is not None
+                for raw_line in process.stdout:
+                    self._append_log(raw_line.rstrip("\n"))
+                return_code = process.wait()
+                if return_code != 0:
+                    fallback = self._fallback_for_systemd_run(current_command)
+                    if fallback:
+                        self._append_log("systemd-run failed; retrying without systemd-run.")
+                        current_command = fallback
+                        continue
+                    exit_code = return_code
+                    error_message = f"Command exited with status {return_code}"
+                    self._append_log(error_message)
+                    success = False
+                break
+            if not success:
                 break
 
         if success:
