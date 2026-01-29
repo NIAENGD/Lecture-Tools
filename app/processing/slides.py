@@ -1093,6 +1093,8 @@ class PyMuPDFSlideConverter(SlideConverter):
         sections = ["\n".join(metadata_lines), "# Slide Notes", *page_sections]
         content = "\n\n".join(section for section in sections if section)
         markdown_path.write_text(content, encoding="utf-8")
+        text_path = markdown_path.with_suffix(".txt")
+        text_path.write_text(content, encoding="utf-8")
 
         existing_archives = list(bundle_dir.glob("*.zip"))
         for leftover in existing_archives:
@@ -1104,6 +1106,7 @@ class PyMuPDFSlideConverter(SlideConverter):
         bundle_path = self._prepare_destination(bundle_dir, stem)
         with ZipFile(bundle_path, "w", compression=ZIP_DEFLATED) as archive:
             archive.write(markdown_path, arcname=markdown_path.name)
+            archive.write(text_path, arcname=text_path.name)
             for image_file in sorted(asset_dir.iterdir()):
                 if not image_file.is_file():
                     continue
