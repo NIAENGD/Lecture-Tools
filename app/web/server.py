@@ -1538,6 +1538,12 @@ class UpdateManager:
         return commands
 
     @staticmethod
+    def _is_sudo_command(command: List[str]) -> bool:
+        if not command:
+            return False
+        return Path(command[0]).name == "sudo"
+
+    @staticmethod
     def _fallback_for_systemd_run(
         command: List[str],
         *,
@@ -1551,7 +1557,7 @@ class UpdateManager:
         helper_action = command[-1]
         if helper_action != "update":
             return None
-        if command[0] == "sudo":
+        if UpdateManager._is_sudo_command(command):
             sudo_arg = "-S" if allow_sudo_prompt else "-n"
             return ["sudo", sudo_arg, helper_cli, helper_action]
         return [helper_cli, helper_action]
@@ -1593,14 +1599,14 @@ class UpdateManager:
         for command in commands:
             current_command = command
             while True:
-                if sudo_password and current_command[:1] == ["sudo"] and "-n" in current_command:
+                if sudo_password and self._is_sudo_command(current_command) and "-n" in current_command:
                     current_command = [
                         "-S" if part == "-n" else part for part in current_command
                     ]
                 display = " ".join(shlex.quote(part) for part in current_command)
                 self._append_log(f"$ {display}")
                 try:
-                    needs_sudo_input = bool(sudo_password) and current_command[:1] == ["sudo"]
+                    needs_sudo_input = bool(sudo_password) and self._is_sudo_command(current_command)
                     process = subprocess.Popen(
                         current_command,
                         stdout=subprocess.PIPE,
