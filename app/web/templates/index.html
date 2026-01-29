@@ -4830,6 +4830,12 @@
         gap: 16px;
       }
 
+      #settings-form .field-inline.local-boost-status {
+        flex-direction: row;
+        align-items: center;
+        gap: 16px;
+      }
+
       .update-status {
         display: flex;
         flex-direction: column;
@@ -4923,6 +4929,16 @@
       }
 
       #settings-whisper-gpu-test {
+        white-space: nowrap;
+      }
+
+      #settings-local-boost-status {
+        margin: 0;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      #settings-local-boost-test {
         white-space: nowrap;
       }
 
@@ -5468,6 +5484,39 @@
                     <span data-i18n="settings.whisper.gpu.test">Test support</span>
                   </button>
                 </div>
+              </fieldset>
+              <fieldset>
+                <legend data-i18n="settings.localBoost.legend">Local Boost</legend>
+                <label class="field-inline" for="settings-local-boost-enabled">
+                  <input id="settings-local-boost-enabled" type="checkbox" />
+                  <span data-i18n="settings.localBoost.enable">Enable Local Boost</span>
+                </label>
+                <div class="field-inline">
+                  <label for="settings-local-boost-url" data-i18n="settings.localBoost.urlLabel">
+                    Local helper URL
+                  </label>
+                  <input
+                    id="settings-local-boost-url"
+                    type="url"
+                    inputmode="url"
+                    placeholder="http://localhost:8000"
+                  />
+                </div>
+                <div class="field-inline local-boost-status">
+                  <div class="gpu-support-info">
+                    <label data-i18n="settings.localBoost.statusLabel">Connection status</label>
+                    <p id="settings-local-boost-status" data-i18n="settings.localBoost.status.idle">
+                      Not tested.
+                    </p>
+                  </div>
+                  <button id="settings-local-boost-test" type="button" class="secondary">
+                    <span data-i18n="settings.localBoost.test">Test connection</span>
+                  </button>
+                </div>
+                <p class="field-help" data-i18n="settings.localBoost.description">
+                  Route processing tasks to a local helper running on your machine. If the helper
+                  disconnects, queued local tasks are cancelled and cloud jobs stay untouched.
+                </p>
               </fieldset>
               <fieldset>
                 <legend data-i18n="settings.audio.legend">Audio</legend>
@@ -6389,6 +6438,29 @@
                   retry: 'Re-run test',
                 },
               },
+              localBoost: {
+                legend: 'Local Boost',
+                enable: 'Enable Local Boost',
+                urlLabel: 'Local helper URL',
+                statusLabel: 'Connection status',
+                status: {
+                  idle: 'Not tested.',
+                  connected: 'Connected.',
+                  disconnected: 'Disconnected.',
+                  disabled: 'Disabled.',
+                },
+                test: 'Test connection',
+                description:
+                  'Route processing tasks to a local helper running on your machine. If the helper disconnects, queued local tasks are cancelled and cloud jobs stay untouched.',
+                cancelReason: 'Local Boost session ended.',
+                notifications: {
+                  connected: 'Local Boost connected.',
+                },
+                errors: {
+                  unavailable: 'Local Boost helper is unavailable.',
+                  disconnected: 'Local Boost is enabled but the helper is unavailable.',
+                },
+              },
               audio: {
                 legend: 'Audio',
                 masteringLabel: 'Enable mastered audio',
@@ -7060,6 +7132,29 @@
                   retry: '重新测试',
                 },
               },
+              localBoost: {
+                legend: '本地加速',
+                enable: '启用本地加速',
+                urlLabel: '本地助手地址',
+                statusLabel: '连接状态',
+                status: {
+                  idle: '未测试。',
+                  connected: '已连接。',
+                  disconnected: '已断开。',
+                  disabled: '已禁用。',
+                },
+                test: '测试连接',
+                description:
+                  '将处理任务路由到本地助手。如果助手断开连接，本地排队任务会被取消，云端任务保持不变。',
+                cancelReason: '本地加速会话已结束。',
+                notifications: {
+                  connected: '本地加速已连接。',
+                },
+                errors: {
+                  unavailable: '本地加速助手不可用。',
+                  disconnected: '已启用本地加速，但助手不可用。',
+                },
+              },
               audio: {
                 legend: '音频',
                 masteringLabel: '启用音频优化',
@@ -7723,6 +7818,29 @@
                   status: 'Aceleración GPU no probada.',
                   test: 'Probar compatibilidad',
                   retry: 'Volver a probar',
+                },
+              },
+              localBoost: {
+                legend: 'Local Boost',
+                enable: 'Activar Local Boost',
+                urlLabel: 'URL del asistente local',
+                statusLabel: 'Estado de conexión',
+                status: {
+                  idle: 'No probado.',
+                  connected: 'Conectado.',
+                  disconnected: 'Desconectado.',
+                  disabled: 'Desactivado.',
+                },
+                test: 'Probar conexión',
+                description:
+                  'Dirige las tareas de procesamiento a un asistente local. Si se desconecta, las tareas locales en cola se cancelan y las tareas en la nube no se tocan.',
+                cancelReason: 'La sesión de Local Boost terminó.',
+                notifications: {
+                  connected: 'Local Boost conectado.',
+                },
+                errors: {
+                  unavailable: 'El asistente de Local Boost no está disponible.',
+                  disconnected: 'Local Boost está activado pero el asistente no está disponible.',
                 },
               },
               audio: {
@@ -8407,6 +8525,29 @@
                   retry: 'Relancer le test',
                 },
               },
+              localBoost: {
+                legend: 'Local Boost',
+                enable: 'Activer Local Boost',
+                urlLabel: 'URL de l’assistant local',
+                statusLabel: 'État de connexion',
+                status: {
+                  idle: 'Non testé.',
+                  connected: 'Connecté.',
+                  disconnected: 'Déconnecté.',
+                  disabled: 'Désactivé.',
+                },
+                test: 'Tester la connexion',
+                description:
+                  'Achemine les tâches de traitement vers un assistant local. En cas de déconnexion, les tâches locales en attente sont annulées et les tâches cloud restent intactes.',
+                cancelReason: 'La session Local Boost est terminée.',
+                notifications: {
+                  connected: 'Local Boost connecté.',
+                },
+                errors: {
+                  unavailable: 'L’assistant Local Boost est indisponible.',
+                  disconnected: 'Local Boost est activé mais l’assistant est indisponible.',
+                },
+              },
               audio: {
                 legend: 'Audio',
                 masteringLabel: 'Activer l’audio optimisé',
@@ -9055,6 +9196,7 @@
         const DEFAULT_DISPLAY_MODE = 'system';
         const DEFAULT_THEME = 'vibrant';
         const DEFAULT_VISUAL_EFFECTS = 'mid';
+        const DEFAULT_LOCAL_BOOST_URL = 'http://localhost:8000';
         const VIEW_SEQUENCE = ['details', 'tasks', 'create', 'storage', 'settings'];
         const WHISPER_MODEL_CHOICES = new Set([
           'tiny',
@@ -9251,6 +9393,20 @@
           return DEFAULT_LANGUAGE;
         }
 
+        function normalizeLocalBoostUrl(value) {
+          if (typeof value !== 'string') {
+            return DEFAULT_LOCAL_BOOST_URL;
+          }
+          let trimmed = value.trim();
+          if (!trimmed) {
+            return DEFAULT_LOCAL_BOOST_URL;
+          }
+          if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(trimmed)) {
+            trimmed = `http://${trimmed}`;
+          }
+          return trimmed.replace(/\/+$/, '');
+        }
+
         const state = {
           classes: [],
           stats: {},
@@ -9275,6 +9431,12 @@
             output: '',
             lastChecked: null,
             unavailable: false,
+          },
+          localBoost: {
+            enabled: false,
+            connected: false,
+            url: DEFAULT_LOCAL_BOOST_URL,
+            statusKey: 'idle',
           },
           transcriptionProgressTimer: null,
           transcriptionProgressLectureId: null,
@@ -9503,6 +9665,10 @@
           settingsWhisperBeam: document.getElementById('settings-whisper-beam'),
           settingsWhisperGpuStatus: document.getElementById('settings-whisper-gpu-status'),
           settingsWhisperGpuTest: document.getElementById('settings-whisper-gpu-test'),
+          settingsLocalBoostEnabled: document.getElementById('settings-local-boost-enabled'),
+          settingsLocalBoostUrl: document.getElementById('settings-local-boost-url'),
+          settingsLocalBoostStatus: document.getElementById('settings-local-boost-status'),
+          settingsLocalBoostTest: document.getElementById('settings-local-boost-test'),
           settingsSlideDpi: document.getElementById('settings-slide-dpi'),
           settingsSlideForceOcr: document.getElementById('settings-slide-force-ocr'),
           settingsAudioMastering: document.getElementById('settings-audio-mastering'),
@@ -13364,7 +13530,7 @@
               state.settings.whisper_model = dom.settingsWhisperModel
                 ? dom.settingsWhisperModel.value
                 : DEFAULT_WHISPER_MODEL;
-          }
+            }
           } else if (requestedModel === GPU_MODEL) {
             if (dom.settingsWhisperModel) {
               dom.settingsWhisperModel.value = GPU_MODEL;
@@ -13373,6 +13539,139 @@
             if (state.settings) {
               state.settings.whisper_model = GPU_MODEL;
             }
+          }
+        }
+
+        function updateLocalBoostStatus(statusKey, overrideMessage = null) {
+          const normalizedKey = typeof statusKey === 'string' ? statusKey : 'idle';
+          state.localBoost.statusKey = normalizedKey;
+          if (overrideMessage && dom.settingsLocalBoostStatus) {
+            dom.settingsLocalBoostStatus.textContent = overrideMessage;
+            return;
+          }
+          if (dom.settingsLocalBoostStatus) {
+            dom.settingsLocalBoostStatus.textContent = t(
+              `settings.localBoost.status.${normalizedKey}`,
+            );
+          }
+        }
+
+        function shouldRouteToLocalBoost(target) {
+          if (typeof target !== 'string') {
+            return false;
+          }
+          if (!target.startsWith('/api/')) {
+            return false;
+          }
+          if (target.startsWith('/api/tasks')) {
+            return true;
+          }
+          return (
+            target.includes('/transcription-progress') ||
+            target.includes('/processing-progress')
+          );
+        }
+
+        function resolveLocalBoostUrl(target) {
+          if (!target || typeof target !== 'string') {
+            return target;
+          }
+          if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(target) || target.startsWith('//')) {
+            return target;
+          }
+          const base = normalizeLocalBoostUrl(state.localBoost.url);
+          try {
+            const normalized = target.startsWith('/') ? target : `/${target}`;
+            return new URL(normalized, `${base}/`).toString();
+          } catch (error) {
+            return target;
+          }
+        }
+
+        async function testLocalBoostConnection({ silent = false } = {}) {
+          const baseUrl = normalizeLocalBoostUrl(
+            dom.settingsLocalBoostUrl?.value || state.localBoost.url,
+          );
+          state.localBoost.url = baseUrl;
+          const pingUrl = resolveLocalBoostUrl('/api/local-boost/ping');
+          if (!silent && dom.settingsLocalBoostTest) {
+            dom.settingsLocalBoostTest.disabled = true;
+          }
+          try {
+            const response = await fetch(pingUrl, { method: 'GET' });
+            if (!response.ok) {
+              throw new Error(`${response.status} ${response.statusText}`.trim());
+            }
+            state.localBoost.connected = true;
+            updateLocalBoostStatus('connected');
+            if (!silent) {
+              showStatus(t('settings.localBoost.notifications.connected'), 'success');
+            }
+            return true;
+          } catch (error) {
+            state.localBoost.connected = false;
+            updateLocalBoostStatus('disconnected');
+            if (!silent) {
+              const detail =
+                error instanceof Error && error.message
+                  ? error.message
+                  : t('settings.localBoost.errors.unavailable');
+              showStatus(detail, 'error');
+            }
+            return false;
+          } finally {
+            if (dom.settingsLocalBoostTest) {
+              dom.settingsLocalBoostTest.disabled = false;
+            }
+          }
+        }
+
+        async function cancelLocalBoostTasks({ reason, silent = false, force = false } = {}) {
+          if (!state.localBoost.enabled || (!state.localBoost.connected && !force)) {
+            return;
+          }
+          const payload = JSON.stringify({
+            reason: typeof reason === 'string' ? reason : t('settings.localBoost.cancelReason'),
+          });
+          const url = resolveLocalBoostUrl('/api/tasks/cancel');
+          if (navigator.sendBeacon) {
+            try {
+              const blob = new Blob([payload], { type: 'application/json' });
+              navigator.sendBeacon(url, blob);
+              return;
+            } catch (error) {
+              // Fall back to fetch.
+            }
+          }
+          try {
+            await fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: payload,
+              keepalive: true,
+            });
+          } catch (error) {
+            if (!silent) {
+              console.warn('Unable to cancel Local Boost tasks', error);
+            }
+          }
+        }
+
+        async function handleLocalBoostDisconnect(error) {
+          if (!state.localBoost.enabled) {
+            return;
+          }
+          state.localBoost.connected = false;
+          updateLocalBoostStatus('disconnected');
+          await cancelLocalBoostTasks({
+            reason: t('settings.localBoost.cancelReason'),
+            force: true,
+          });
+          const detail =
+            error instanceof Error && error.message
+              ? error.message
+              : t('settings.localBoost.errors.unavailable');
+          showStatus(detail, 'error');
         }
       }
 
@@ -14908,6 +15207,8 @@
           const masteringEnabled = settings?.audio_mastering_enabled !== false;
           const debugEnabled = Boolean(settings?.debug_enabled);
           const updatePasswordSet = Boolean(settings?.update_sudo_password_set);
+          const localBoostEnabled = Boolean(settings?.local_boost_enabled);
+          const localBoostUrl = normalizeLocalBoostUrl(settings?.local_boost_url);
 
           const effectiveModel =
             requestedModel === GPU_MODEL && !state.gpuWhisper.supported
@@ -14935,6 +15236,12 @@
           if (dom.settingsDebugEnabled) {
             dom.settingsDebugEnabled.checked = debugEnabled;
           }
+          if (dom.settingsLocalBoostEnabled) {
+            dom.settingsLocalBoostEnabled.checked = localBoostEnabled;
+          }
+          if (dom.settingsLocalBoostUrl) {
+            dom.settingsLocalBoostUrl.value = localBoostUrl;
+          }
           if (dom.settingsUpdatePassword) {
             dom.settingsUpdatePassword.value = '';
           }
@@ -14960,7 +15267,20 @@
             audio_mastering_enabled: masteringEnabled,
             debug_enabled: debugEnabled,
             update_sudo_password_set: updatePasswordSet,
+            local_boost_enabled: localBoostEnabled,
+            local_boost_url: localBoostUrl,
           };
+
+          state.localBoost.enabled = localBoostEnabled;
+          state.localBoost.url = localBoostUrl;
+          if (!localBoostEnabled) {
+            state.localBoost.connected = false;
+            updateLocalBoostStatus('disabled');
+          } else if (state.localBoost.connected) {
+            updateLocalBoostStatus('connected');
+          } else {
+            updateLocalBoostStatus('idle');
+          }
 
           applyAppearance(displayModeValue, themeValue, effectsValue);
           updateGpuWhisperUI({ ...state.gpuWhisper });
@@ -17676,28 +17996,45 @@
         }
 
         async function request(url, options = {}) {
-          const resolvedUrl = resolveAppUrl(url);
-          const response = await fetch(resolvedUrl, options);
-          if (!response.ok) {
-            let detail = `${response.status} ${response.statusText}`;
-            try {
-              const payload = await response.json();
-              if (payload && payload.detail) {
-                detail = payload.detail;
-              }
-            } catch (error) {
-              // Ignore JSON parsing errors.
+          const useLocalBoost =
+            state.localBoost.enabled && shouldRouteToLocalBoost(url);
+          if (useLocalBoost && !state.localBoost.connected) {
+            const ok = await testLocalBoostConnection({ silent: true });
+            if (!ok) {
+              throw new Error(t('settings.localBoost.errors.disconnected'));
             }
-            throw new Error(detail);
           }
-          if (response.status === 204) {
+          const resolvedUrl = useLocalBoost
+            ? resolveLocalBoostUrl(url)
+            : resolveAppUrl(url);
+          try {
+            const response = await fetch(resolvedUrl, options);
+            if (!response.ok) {
+              let detail = `${response.status} ${response.statusText}`;
+              try {
+                const payload = await response.json();
+                if (payload && payload.detail) {
+                  detail = payload.detail;
+                }
+              } catch (error) {
+                // Ignore JSON parsing errors.
+              }
+              throw new Error(detail);
+            }
+            if (response.status === 204) {
+              return null;
+            }
+            const contentType = response.headers.get('content-type') || '';
+            if (contentType.includes('application/json')) {
+              return await response.json();
+            }
             return null;
+          } catch (error) {
+            if (useLocalBoost) {
+              await handleLocalBoostDisconnect(error);
+            }
+            throw error;
           }
-          const contentType = response.headers.get('content-type') || '';
-          if (contentType.includes('application/json')) {
-            return await response.json();
-          }
-          return null;
         }
 
         async function createSlidePreview(lectureId, file, options = {}) {
@@ -20685,6 +21022,9 @@
               return;
             }
             syncSettingsForm(settings);
+            if (settings.local_boost_enabled) {
+              await testLocalBoostConnection({ silent: true });
+            }
           } catch (error) {
             showStatus(error.message, 'error');
           }
@@ -21690,6 +22030,12 @@
           });
         }
 
+        if (dom.settingsLocalBoostTest) {
+          dom.settingsLocalBoostTest.addEventListener('click', async () => {
+            await testLocalBoostConnection();
+          });
+        }
+
         if (dom.settingsUpdateRun) {
           dom.settingsUpdateRun.addEventListener('click', () => {
             void triggerSystemUpdate();
@@ -21868,6 +22214,28 @@
           });
         }
 
+        if (dom.settingsLocalBoostEnabled) {
+          dom.settingsLocalBoostEnabled.addEventListener('change', (event) => {
+            state.localBoost.enabled = Boolean(event.target.checked);
+            if (!state.localBoost.enabled) {
+              state.localBoost.connected = false;
+              updateLocalBoostStatus('disabled');
+              return;
+            }
+            updateLocalBoostStatus(state.localBoost.connected ? 'connected' : 'idle');
+          });
+        }
+
+        if (dom.settingsLocalBoostUrl) {
+          dom.settingsLocalBoostUrl.addEventListener('change', (event) => {
+            const normalized = normalizeLocalBoostUrl(event.target.value);
+            state.localBoost.url = normalized;
+            event.target.value = normalized;
+            state.localBoost.connected = false;
+            updateLocalBoostStatus(state.localBoost.enabled ? 'idle' : 'disabled');
+          });
+        }
+
         if (dom.settingsForm) {
           dom.settingsForm.addEventListener('submit', async (event) => {
             event.preventDefault();
@@ -21896,6 +22264,12 @@
             const debugEnabled = dom.settingsDebugEnabled
               ? Boolean(dom.settingsDebugEnabled.checked)
               : false;
+            const localBoostEnabled = dom.settingsLocalBoostEnabled
+              ? Boolean(dom.settingsLocalBoostEnabled.checked)
+              : false;
+            const localBoostUrl = dom.settingsLocalBoostUrl
+              ? normalizeLocalBoostUrl(dom.settingsLocalBoostUrl.value)
+              : DEFAULT_LOCAL_BOOST_URL;
             const updatePasswordValue = dom.settingsUpdatePassword
               ? dom.settingsUpdatePassword.value
               : '';
@@ -21922,6 +22296,8 @@
                 slide_force_ocr: slideForceOcr,
                 audio_mastering_enabled: masteringEnabled,
                 debug_enabled: debugEnabled,
+                local_boost_enabled: localBoostEnabled,
+                local_boost_url: localBoostUrl,
               };
               if (updatePasswordPayload !== null) {
                 payload.update_sudo_password = updatePasswordPayload;
@@ -21947,6 +22323,8 @@
                 slide_force_ocr: slideForceOcr,
                 audio_mastering_enabled: masteringEnabled,
                 debug_enabled: debugEnabled,
+                local_boost_enabled: localBoostEnabled,
+                local_boost_url: localBoostUrl,
                 update_sudo_password_set: fallbackUpdatePasswordSet,
               };
               syncSettingsForm(updatedSettings);
@@ -21961,6 +22339,7 @@
         }
         window.addEventListener('beforeunload', () => {
           stopDebugPolling();
+          void cancelLocalBoostTasks({ force: true });
         });
         setActiveView(state.activeView);
         updateEditModeUI();
