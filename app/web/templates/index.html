@@ -5503,6 +5503,15 @@
                     </option>
                   </select>
                 </div>
+                <label class="field-inline" for="settings-slide-force-ocr">
+                  <input id="settings-slide-force-ocr" type="checkbox" />
+                  <span data-i18n="settings.slides.forceOcrLabel">
+                    Force OCR even when text is detected
+                  </span>
+                </label>
+                <p class="field-help" data-i18n="settings.slides.forceOcrDescription">
+                  Always run OCR on slide PDFs, even if a text layer is present.
+                </p>
               </fieldset>
               <fieldset>
                 <legend data-i18n="settings.update.legend">System updates</legend>
@@ -6388,6 +6397,8 @@
               slides: {
                 legend: 'Slides',
                 dpiLabel: 'Rendering DPI',
+                forceOcrLabel: 'Force OCR even when text is detected',
+                forceOcrDescription: 'Always run OCR on slide PDFs, even if a text layer is present.',
                 dpi: {
                   150: '150 dpi (fastest)',
                   200: '200 dpi (balanced)',
@@ -7057,6 +7068,8 @@
               slides: {
                 legend: '课件',
                 dpiLabel: '渲染 DPI',
+                forceOcrLabel: '即使检测到文字也强制 OCR',
+                forceOcrDescription: '即使 PDF 包含文本层，也始终对课件运行 OCR。',
                 dpi: {
                   150: '150 dpi（最快）',
                   200: '200 dpi（均衡）',
@@ -7720,6 +7733,8 @@
               slides: {
                 legend: 'Diapositivas',
                 dpiLabel: 'DPI de renderizado',
+                forceOcrLabel: 'Forzar OCR incluso cuando se detecta texto',
+                forceOcrDescription: 'Siempre ejecuta OCR en PDFs de diapositivas, incluso si hay una capa de texto.',
                 dpi: {
                   150: '150 dpi (más rápido)',
                   200: '200 dpi (equilibrado)',
@@ -8400,6 +8415,9 @@
               slides: {
                 legend: 'Diapositives',
                 dpiLabel: 'DPI de rendu',
+                forceOcrLabel: 'Forcer l’OCR même si du texte est détecté',
+                forceOcrDescription:
+                  'Toujours exécuter l’OCR sur les PDF de diapositives, même s’une couche de texte est présente.',
                 dpi: {
                   150: '150 dpi (plus rapide)',
                   200: '200 dpi (équilibré)',
@@ -9486,6 +9504,7 @@
           settingsWhisperGpuStatus: document.getElementById('settings-whisper-gpu-status'),
           settingsWhisperGpuTest: document.getElementById('settings-whisper-gpu-test'),
           settingsSlideDpi: document.getElementById('settings-slide-dpi'),
+          settingsSlideForceOcr: document.getElementById('settings-slide-force-ocr'),
           settingsAudioMastering: document.getElementById('settings-audio-mastering'),
           settingsDebugEnabled: document.getElementById('settings-debug-enabled'),
           settingsExitApp: document.getElementById('settings-exit-app'),
@@ -14885,6 +14904,7 @@
             Math.min(10, Number(settings?.whisper_beam_size) || 5),
           );
           const dpiValue = normalizeSlideDpi(settings?.slide_dpi);
+          const slideForceOcr = Boolean(settings?.slide_force_ocr);
           const masteringEnabled = settings?.audio_mastering_enabled !== false;
           const debugEnabled = Boolean(settings?.debug_enabled);
           const updatePasswordSet = Boolean(settings?.update_sudo_password_set);
@@ -14906,6 +14926,9 @@
           dom.settingsWhisperCompute.value = computeValue;
           dom.settingsWhisperBeam.value = String(beamNumber);
           dom.settingsSlideDpi.value = dpiValue;
+          if (dom.settingsSlideForceOcr) {
+            dom.settingsSlideForceOcr.checked = slideForceOcr;
+          }
           if (dom.settingsAudioMastering) {
             dom.settingsAudioMastering.checked = masteringEnabled;
           }
@@ -14933,6 +14956,7 @@
             whisper_compute_type: computeValue,
             whisper_beam_size: beamNumber,
             slide_dpi: Number(dpiValue),
+            slide_force_ocr: slideForceOcr,
             audio_mastering_enabled: masteringEnabled,
             debug_enabled: debugEnabled,
             update_sudo_password_set: updatePasswordSet,
@@ -21863,6 +21887,9 @@
               Math.min(10, Number(dom.settingsWhisperBeam.value) || 5),
             );
             const dpiValue = Number(normalizeSlideDpi(dom.settingsSlideDpi.value));
+            const slideForceOcr = dom.settingsSlideForceOcr
+              ? Boolean(dom.settingsSlideForceOcr.checked)
+              : false;
             const masteringEnabled = dom.settingsAudioMastering
               ? Boolean(dom.settingsAudioMastering.checked)
               : true;
@@ -21892,6 +21919,7 @@
                 whisper_compute_type: computeValue,
                 whisper_beam_size: beamValue,
                 slide_dpi: dpiValue,
+                slide_force_ocr: slideForceOcr,
                 audio_mastering_enabled: masteringEnabled,
                 debug_enabled: debugEnabled,
               };
@@ -21916,6 +21944,7 @@
                 whisper_compute_type: computeValue,
                 whisper_beam_size: beamValue,
                 slide_dpi: dpiValue,
+                slide_force_ocr: slideForceOcr,
                 audio_mastering_enabled: masteringEnabled,
                 debug_enabled: debugEnabled,
                 update_sudo_password_set: fallbackUpdatePasswordSet,

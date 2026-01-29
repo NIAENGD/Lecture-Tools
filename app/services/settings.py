@@ -171,6 +171,7 @@ class UISettings:
     whisper_compute_type: str = "int8"
     whisper_beam_size: int = 5
     slide_dpi: int = 200
+    slide_force_ocr: bool = False
     audio_mastering_enabled: bool = True
     debug_enabled: bool = False
     update_sudo_password: str | None = None

@@ -1848,6 +1848,7 @@ class SettingsPayload(BaseModel):
     whisper_compute_type: str = Field("int8", min_length=1)
     whisper_beam_size: int = Field(5, ge=1, le=10)
     slide_dpi: Literal[*_SLIDE_DPI_OPTIONS] = 200
+    slide_force_ocr: bool = False
     language: Literal[*_LANGUAGE_OPTIONS] = _DEFAULT_UI_SETTINGS.language
     audio_mastering_enabled: bool = True
     debug_enabled: bool = False
@@ -2384,6 +2385,7 @@ def create_app(
             settings = UISettings()
         settings.whisper_model = _normalize_whisper_model(settings.whisper_model)
         settings.slide_dpi = _normalize_slide_dpi(settings.slide_dpi)
+        settings.slide_force_ocr = bool(getattr(settings, "slide_force_ocr", False))
         settings.language = _normalize_language(getattr(settings, "language", None))
         settings.debug_enabled = bool(getattr(settings, "debug_enabled", False))
         return settings
@@ -2416,6 +2418,7 @@ def create_app(
         try:
             return converter_cls(
                 dpi=settings.slide_dpi,
+                force_ocr=settings.slide_force_ocr,
                 retain_debug_assets=settings.debug_enabled,
             )
         except TypeError:  # pragma: no cover - allows monkeypatched callables without kwargs
@@ -4501,6 +4504,7 @@ def create_app(
         )
         settings.whisper_beam_size = payload.whisper_beam_size
         settings.slide_dpi = _normalize_slide_dpi(payload.slide_dpi)
+        settings.slide_force_ocr = bool(payload.slide_force_ocr)
         settings.audio_mastering_enabled = bool(payload.audio_mastering_enabled)
         settings.debug_enabled = bool(payload.debug_enabled)
         if payload.update_sudo_password is not None:

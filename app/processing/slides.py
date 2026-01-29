@@ -318,6 +318,7 @@ class PyMuPDFSlideConverter(SlideConverter):
         ocr_preprocess: bool = True,
         ocr_upscale_factor: float = 1.5,
         tesseract_config: Optional[str] = None,
+        force_ocr: bool = False,
         retain_debug_assets: bool = False,
     ) -> None:
         self._dpi = dpi
@@ -326,6 +327,7 @@ class PyMuPDFSlideConverter(SlideConverter):
         self._ocr_preprocess = ocr_preprocess
         self._ocr_upscale_factor = max(1.0, ocr_upscale_factor)
         self._tesseract_config = tesseract_config or "--oem 1 --psm 6"
+        self._force_ocr = bool(force_ocr)
         self._ocr_backends: List[_OCRBackendInfo] = []
         self._ocr_backends_initialized = False
         self._ocr_engine_label: str = "text-layer-only"
@@ -333,11 +335,12 @@ class PyMuPDFSlideConverter(SlideConverter):
         self._retain_debug_assets = bool(retain_debug_assets)
         LOGGER.debug(
             "PyMuPDFSlideConverter initialised with dpi=%s, ocr_language=%s, ocr_dpi=%s, "
-            "ocr_preprocess=%s, retain_debug_assets=%s",
+            "ocr_preprocess=%s, force_ocr=%s, retain_debug_assets=%s",
             dpi,
             ocr_language,
             ocr_dpi,
             ocr_preprocess,
+            self._force_ocr,
             self._retain_debug_assets,
         )
 
@@ -699,7 +702,7 @@ class PyMuPDFSlideConverter(SlideConverter):
                 ocr_status = "text-detected"
                 no_text_reason: Optional[str] = None
 
-                if fallback_lines and had_text_layer:
+                if fallback_lines and had_text_layer and not self._force_ocr:
                     ocr_status = "text-layer"
                     for fallback in fallback_lines:
                         sanitized_fallback = fallback.strip()
@@ -1067,6 +1070,7 @@ class PyMuPDFSlideConverter(SlideConverter):
             f"render_dpi: {render_dpi}",
             f"ocr_dpi: {self._ocr_dpi}",
             f"ocr_preprocess: {self._ocr_preprocess}",
+            f"ocr_force: {self._force_ocr}",
             f"ocr_engine: {self._ocr_engine_label}",
             f"source_pdf: {slide_path.name}",
             f"page_range: {page_range_label}",
