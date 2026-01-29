@@ -5509,6 +5509,31 @@
                 <p class="field-help" data-i18n="settings.update.description">
                   Update Lecture Tools without leaving the browser.
                 </p>
+                <label for="settings-update-password" data-i18n="settings.update.passwordLabel">
+                  Sudo password
+                </label>
+                <input
+                  id="settings-update-password"
+                  type="password"
+                  autocomplete="new-password"
+                />
+                <div class="field-inline">
+                  <label class="inline" for="settings-update-password-clear">
+                    <input id="settings-update-password-clear" type="checkbox" />
+                    <span data-i18n="settings.update.passwordClear">Clear saved password</span>
+                  </label>
+                  <span
+                    id="settings-update-password-status"
+                    class="field-help"
+                    data-i18n="settings.update.passwordSaved"
+                    hidden
+                  >
+                    Password saved.
+                  </span>
+                </div>
+                <p class="field-help" data-i18n="settings.update.passwordHelp">
+                  Passwords are hidden after saving. Enter a new password to replace the saved one.
+                </p>
                 <div class="field-inline">
                   <button id="settings-update-run" type="button" class="secondary" data-i18n="settings.update.run">
                     Run update
@@ -6374,6 +6399,11 @@
               update: {
                 legend: 'System updates',
                 description: 'Update Lecture Tools without leaving the browser.',
+                passwordLabel: 'Sudo password',
+                passwordHelp:
+                  'Passwords are hidden after saving. Enter a new password to replace the saved one.',
+                passwordSaved: 'Password saved.',
+                passwordClear: 'Clear saved password',
                 run: 'Run update',
                 refresh: 'Refresh status',
                 status: {
@@ -7038,6 +7068,10 @@
               update: {
                 legend: '系统更新',
                 description: '在浏览器内更新 Lecture Tools。',
+                passwordLabel: 'Sudo 密码',
+                passwordHelp: '保存后密码将被隐藏。输入新密码以替换已保存的密码。',
+                passwordSaved: '密码已保存。',
+                passwordClear: '清除已保存的密码',
                 run: '运行更新',
                 refresh: '刷新状态',
                 status: {
@@ -7697,6 +7731,11 @@
               update: {
                 legend: 'Actualizaciones del sistema',
                 description: 'Actualiza Lecture Tools sin salir del navegador.',
+                passwordLabel: 'Contraseña de sudo',
+                passwordHelp:
+                  'Las contraseñas se ocultan después de guardar. Ingresa una nueva para reemplazar la guardada.',
+                passwordSaved: 'Contraseña guardada.',
+                passwordClear: 'Borrar contraseña guardada',
                 run: 'Ejecutar actualización',
                 refresh: 'Actualizar estado',
                 status: {
@@ -8372,6 +8411,11 @@
               update: {
                 legend: 'Mises à jour du système',
                 description: 'Mettez Lecture Tools à jour sans quitter le navigateur.',
+                passwordLabel: 'Mot de passe sudo',
+                passwordHelp:
+                  'Les mots de passe sont masqués après l’enregistrement. Saisissez-en un nouveau pour remplacer celui enregistré.',
+                passwordSaved: 'Mot de passe enregistré.',
+                passwordClear: 'Supprimer le mot de passe enregistré',
                 run: 'Lancer la mise à jour',
                 refresh: 'Actualiser l’état',
                 status: {
@@ -9448,6 +9492,9 @@
           settingsExport: document.getElementById('settings-export'),
           settingsImport: document.getElementById('settings-import'),
           settingsImportMode: document.getElementById('settings-import-mode'),
+          settingsUpdatePassword: document.getElementById('settings-update-password'),
+          settingsUpdatePasswordClear: document.getElementById('settings-update-password-clear'),
+          settingsUpdatePasswordStatus: document.getElementById('settings-update-password-status'),
           settingsUpdateRun: document.getElementById('settings-update-run'),
           settingsUpdateRefresh: document.getElementById('settings-update-refresh'),
           settingsUpdateStatus: document.getElementById('settings-update-status'),
@@ -14840,6 +14887,7 @@
           const dpiValue = normalizeSlideDpi(settings?.slide_dpi);
           const masteringEnabled = settings?.audio_mastering_enabled !== false;
           const debugEnabled = Boolean(settings?.debug_enabled);
+          const updatePasswordSet = Boolean(settings?.update_sudo_password_set);
 
           const effectiveModel =
             requestedModel === GPU_MODEL && !state.gpuWhisper.supported
@@ -14864,6 +14912,15 @@
           if (dom.settingsDebugEnabled) {
             dom.settingsDebugEnabled.checked = debugEnabled;
           }
+          if (dom.settingsUpdatePassword) {
+            dom.settingsUpdatePassword.value = '';
+          }
+          if (dom.settingsUpdatePasswordClear) {
+            dom.settingsUpdatePasswordClear.checked = false;
+          }
+          if (dom.settingsUpdatePasswordStatus) {
+            dom.settingsUpdatePasswordStatus.hidden = !updatePasswordSet;
+          }
           setTranscribeModelValue(effectiveModel);
 
           state.settings = {
@@ -14878,6 +14935,7 @@
             slide_dpi: Number(dpiValue),
             audio_mastering_enabled: masteringEnabled,
             debug_enabled: debugEnabled,
+            update_sudo_password_set: updatePasswordSet,
           };
 
           applyAppearance(displayModeValue, themeValue, effectsValue);
@@ -21811,24 +21869,44 @@
             const debugEnabled = dom.settingsDebugEnabled
               ? Boolean(dom.settingsDebugEnabled.checked)
               : false;
+            const updatePasswordValue = dom.settingsUpdatePassword
+              ? dom.settingsUpdatePassword.value
+              : '';
+            const updatePasswordClear = dom.settingsUpdatePasswordClear
+              ? dom.settingsUpdatePasswordClear.checked
+              : false;
+            let updatePasswordPayload = null;
+            if (updatePasswordValue && updatePasswordValue.trim() !== '') {
+              updatePasswordPayload = updatePasswordValue;
+            } else if (updatePasswordClear) {
+              updatePasswordPayload = '';
+            }
 
             try {
+              const payload = {
+                display_mode: displayModeValue,
+                theme: themeValue,
+                visual_effects: effectsValue,
+                language: languageValue,
+                whisper_model: modelValue,
+                whisper_compute_type: computeValue,
+                whisper_beam_size: beamValue,
+                slide_dpi: dpiValue,
+                audio_mastering_enabled: masteringEnabled,
+                debug_enabled: debugEnabled,
+              };
+              if (updatePasswordPayload !== null) {
+                payload.update_sudo_password = updatePasswordPayload;
+              }
               const response = await request('/api/settings', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  display_mode: displayModeValue,
-                  theme: themeValue,
-                  visual_effects: effectsValue,
-                  language: languageValue,
-                  whisper_model: modelValue,
-                  whisper_compute_type: computeValue,
-                  whisper_beam_size: beamValue,
-                  slide_dpi: dpiValue,
-                  audio_mastering_enabled: masteringEnabled,
-                  debug_enabled: debugEnabled,
-                }),
+                body: JSON.stringify(payload),
               });
+              const fallbackUpdatePasswordSet =
+                updatePasswordPayload === null
+                  ? Boolean(state.settings?.update_sudo_password_set)
+                  : updatePasswordPayload !== '';
               const updatedSettings = response?.settings ?? {
                 display_mode: displayModeValue,
                 theme: themeValue,
@@ -21840,6 +21918,7 @@
                 slide_dpi: dpiValue,
                 audio_mastering_enabled: masteringEnabled,
                 debug_enabled: debugEnabled,
+                update_sudo_password_set: fallbackUpdatePasswordSet,
               };
               syncSettingsForm(updatedSettings);
               if (modelValue === GPU_MODEL) {
