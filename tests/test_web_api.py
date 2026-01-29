@@ -2480,6 +2480,7 @@ def test_get_settings_coerces_invalid_choices(temp_config):
     assert payload["visual_effects"] == "mid"
     assert payload["whisper_model"] == "base"
     assert payload["slide_dpi"] == 200
+    assert payload["slide_force_ocr"] is False
     assert payload["language"] == "en"
     assert payload["audio_mastering_enabled"] is True
 
@@ -2516,6 +2517,7 @@ def test_update_settings_enforces_choices(temp_config):
         "whisper_compute_type": "float16",
         "whisper_beam_size": 6,
         "slide_dpi": 300,
+        "slide_force_ocr": True,
     }
 
     response = client.put("/api/settings", json=valid_payload)
@@ -2526,6 +2528,7 @@ def test_update_settings_enforces_choices(temp_config):
     assert payload["visual_effects"] == "high"
     assert payload["whisper_model"] == "small"
     assert payload["slide_dpi"] == 300
+    assert payload["slide_force_ocr"] is True
     assert payload["language"] == "fr"
 
     none_response = client.put(
