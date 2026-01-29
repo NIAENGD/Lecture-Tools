@@ -156,6 +156,7 @@ LanguageCode = Literal["en", "zh", "es", "fr"]
 
 
 LOGGER = logging.getLogger(__name__)
+_SENSITIVE_SETTINGS_FIELDS = {"update_sudo_password"}
 
 
 @dataclass
@@ -172,6 +173,7 @@ class UISettings:
     slide_dpi: int = 200
     audio_mastering_enabled: bool = True
     debug_enabled: bool = False
+    update_sudo_password: str | None = None
 
 
 class SettingsStore:
@@ -200,7 +202,10 @@ class SettingsStore:
         for field, value in payload.items():
             if hasattr(settings, field):
                 setattr(settings, field, value)
-                LOGGER.debug("Loaded UI setting %s=%s", field, value)
+                if field in _SENSITIVE_SETTINGS_FIELDS:
+                    LOGGER.debug("Loaded UI setting %s=<hidden>", field)
+                else:
+                    LOGGER.debug("Loaded UI setting %s=%s", field, value)
         display_mode, theme = resolve_theme_preferences(
             payload.get("theme", settings.theme), payload.get("display_mode", settings.display_mode)
         )

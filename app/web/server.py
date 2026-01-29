@@ -1470,8 +1470,9 @@ def _open_in_file_manager(path: Path, *, select: bool = False) -> None:
 class UpdateManager:
     """Track and execute application update commands."""
 
-    def __init__(self, project_root: Path) -> None:
+    def __init__(self, project_root: Path, settings_store: SettingsStore) -> None:
         self._project_root = project_root
+        self._settings_store = settings_store
         self._lock = threading.Lock()
         self._running = False
         self._started_at: datetime | None = None
@@ -1490,7 +1491,7 @@ class UpdateManager:
         with self._lock:
             self._log.append(entry)
 
-    def _build_commands(self) -> List[List[str]]:
+    def _build_commands(self, *, allow_sudo_prompt: bool) -> List[List[str]]:
         env_command = os.environ.get("LECTURE_TOOLS_UPDATE_COMMAND", "").strip()
         if env_command:
             try:
@@ -1504,11 +1505,12 @@ class UpdateManager:
         if helper_cli:
             sudo_cli = shutil.which("sudo")
             systemd_run = shutil.which("systemd-run")
+            sudo_arg = "-S" if allow_sudo_prompt else "-n"
             if sudo_cli and systemd_run:
                 return [
                     [
                         sudo_cli,
-                        "-n",
+                        sudo_arg,
                         systemd_run,
                         "--unit=lecturetools-update",
                         "--collect",
@@ -1519,7 +1521,7 @@ class UpdateManager:
                     ]
                 ]
             if sudo_cli:
-                return [[sudo_cli, "-n", helper_cli, "update"]]
+                return [[sudo_cli, sudo_arg, helper_cli, "update"]]
             return [[helper_cli, "update"]]
 
         helper_script = self._project_root / "scripts" / "install_server.sh"
@@ -1536,7 +1538,11 @@ class UpdateManager:
         return commands
 
     @staticmethod
-    def _fallback_for_systemd_run(command: List[str]) -> Optional[List[str]]:
+    def _fallback_for_systemd_run(
+        command: List[str],
+        *,
+        allow_sudo_prompt: bool,
+    ) -> Optional[List[str]]:
         if "systemd-run" not in command:
             return None
         if len(command) < 2:
@@ -1546,7 +1552,8 @@ class UpdateManager:
         if helper_action != "update":
             return None
         if command[0] == "sudo":
-            return ["sudo", "-n", helper_cli, helper_action]
+            sudo_arg = "-S" if allow_sudo_prompt else "-n"
+            return ["sudo", sudo_arg, helper_cli, helper_action]
         return [helper_cli, helper_action]
 
     def _finalize(
@@ -1564,7 +1571,7 @@ class UpdateManager:
             self._error = error_message
             self._thread = None
 
-    def _execute(self, commands: List[List[str]]) -> None:
+    def _execute(self, commands: List[List[str]], *, sudo_password: Optional[str]) -> None:
         env = os.environ.copy()
         env.setdefault("PYTHONUNBUFFERED", "1")
         env.setdefault("PIP_DISABLE_PIP_VERSION_CHECK", "1")
@@ -1586,9 +1593,14 @@ class UpdateManager:
         for command in commands:
             current_command = command
             while True:
+                if sudo_password and current_command[:1] == ["sudo"] and "-n" in current_command:
+                    current_command = [
+                        "-S" if part == "-n" else part for part in current_command
+                    ]
                 display = " ".join(shlex.quote(part) for part in current_command)
                 self._append_log(f"$ {display}")
                 try:
+                    needs_sudo_input = bool(sudo_password) and current_command[:1] == ["sudo"]
                     process = subprocess.Popen(
                         current_command,
                         stdout=subprocess.PIPE,
@@ -1596,7 +1608,7 @@ class UpdateManager:
                         text=True,
                         cwd=str(self._project_root),
                         env=env,
-                        stdin=subprocess.DEVNULL,
+                        stdin=subprocess.PIPE if needs_sudo_input else subprocess.DEVNULL,
                     )
                 except OSError as error:
                     error_message = str(error)
@@ -1604,13 +1616,22 @@ class UpdateManager:
                     success = False
                     exit_code = None
                     break
+                if needs_sudo_input and process.stdin is not None:
+                    try:
+                        process.stdin.write(f"{sudo_password}\n")
+                        process.stdin.flush()
+                    finally:
+                        process.stdin.close()
 
                 assert process.stdout is not None
                 for raw_line in process.stdout:
                     self._append_log(raw_line.rstrip("\n"))
                 return_code = process.wait()
                 if return_code != 0:
-                    fallback = self._fallback_for_systemd_run(current_command)
+                    fallback = self._fallback_for_systemd_run(
+                        current_command,
+                        allow_sudo_prompt=bool(sudo_password),
+                    )
                     if fallback:
                         self._append_log("systemd-run failed; retrying without systemd-run.")
                         current_command = fallback
@@ -1646,7 +1667,9 @@ class UpdateManager:
         with self._lock:
             if self._running:
                 raise RuntimeError("Update already in progress")
-            commands = self._build_commands()
+            settings = self._settings_store.load()
+            sudo_password = getattr(settings, "update_sudo_password", None)
+            commands = self._build_commands(allow_sudo_prompt=bool(sudo_password))
             self._running = True
             self._started_at = datetime.now(timezone.utc)
             self._finished_at = None
@@ -1657,6 +1680,7 @@ class UpdateManager:
             thread = threading.Thread(
                 target=self._execute,
                 args=(commands,),
+                kwargs={"sudo_password": sudo_password},
                 daemon=True,
             )
             self._thread = thread
@@ -1821,6 +1845,7 @@ class SettingsPayload(BaseModel):
     language: Literal[*_LANGUAGE_OPTIONS] = _DEFAULT_UI_SETTINGS.language
     audio_mastering_enabled: bool = True
     debug_enabled: bool = False
+    update_sudo_password: Optional[str] = None
 
 
 class TaskDefinition(BaseModel):
@@ -2048,7 +2073,7 @@ def create_app(
     processing_tracker = TranscriptionProgressTracker(name="processing")
 
     project_root = Path(__file__).resolve().parents[2]
-    update_manager = UpdateManager(project_root)
+    update_manager = UpdateManager(project_root, settings_store)
     app.state.update_manager = update_manager
 
     background_executor = ThreadPoolExecutor(
@@ -2356,6 +2381,12 @@ def create_app(
         settings.language = _normalize_language(getattr(settings, "language", None))
         settings.debug_enabled = bool(getattr(settings, "debug_enabled", False))
         return settings
+
+    def _serialize_ui_settings(settings: UISettings) -> Dict[str, Any]:
+        payload = asdict(settings)
+        password = payload.pop("update_sudo_password", None)
+        payload["update_sudo_password_set"] = bool(password)
+        return payload
 
     def _record_gpu_probe(probe: Dict[str, Any], *, checked: bool = True) -> Dict[str, Any]:
         timestamp = datetime.now(timezone.utc).isoformat()
@@ -4390,7 +4421,7 @@ def create_app(
             whisper_model=settings.whisper_model,
             debug_enabled=settings.debug_enabled,
         )
-        return {"settings": asdict(settings)}
+        return {"settings": _serialize_ui_settings(settings)}
 
     @app.get("/api/debug/logs")
     async def get_debug_logs(after: Optional[int] = None) -> Dict[str, Any]:
@@ -4466,6 +4497,11 @@ def create_app(
         settings.slide_dpi = _normalize_slide_dpi(payload.slide_dpi)
         settings.audio_mastering_enabled = bool(payload.audio_mastering_enabled)
         settings.debug_enabled = bool(payload.debug_enabled)
+        if payload.update_sudo_password is not None:
+            if payload.update_sudo_password == "":
+                settings.update_sudo_password = None
+            else:
+                settings.update_sudo_password = payload.update_sudo_password
         settings_store.save(settings)
         _update_debug_state(settings.debug_enabled)
         _log_event(
@@ -4477,7 +4513,7 @@ def create_app(
             whisper_model=settings.whisper_model,
             debug_enabled=settings.debug_enabled,
         )
-        return {"settings": asdict(settings)}
+        return {"settings": _serialize_ui_settings(settings)}
 
     @app.post("/api/settings/export")
     async def export_archive() -> Dict[str, Any]:
