@@ -31,6 +31,7 @@
 - **Dashboard navigation** – Move from classes to modules to lectures with a unified interface that keeps relevant actions and statistics close at hand.
 - **Managed media pipeline** – Lecture audio, transcripts, and slides are automatically organized and maintained in a structured storage layout.
 - **Flexible transcription** – Run CPU-optimized [faster-whisper](https://github.com/SYSTRAN/faster-whisper) locally or enable GPU acceleration when available.
+- **Local Boost** – Offload processing tasks to a local helper at `http://localhost:8000`, complete with a settings toggle and connection test.
 - **Multi-language support** – Switch between **English**, **中文**, **Español**, and **Français** directly from the settings menu.
 - **Bulk processing & download workflows** – Kick off mastering/transcription tasks in batches and now export audio, transcripts, slides, notes, or slide bundles for many lectures at once via the new bulk download dialog.
 - **Cross-platform CLI** – A Typer-powered assistant for ingestion, metadata review, and automation workflows.
@@ -48,7 +49,7 @@
    python -m venv .venv && source .venv/bin/activate  # PowerShell: .\.venv\\Scripts\\Activate.ps1
    ```
 2. **Bootstrap with my launcher**
-   - Windows: `start.bat`
+   - Windows: `launcher.bat` (choose local deployment, cloud UI, or Local Boost helper)
    - macOS/Linux: `./start.sh`
 
    Both scripts pamper your environment by creating a virtualenv (if needed), installing from `requirements-dev.txt`, and launching the CLI so you can immediately explore commands like `overview` or `ingest`.

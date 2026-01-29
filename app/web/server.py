@@ -209,6 +209,24 @@ class TaskQueue:
             self._tasks = remaining
             return cleared
 
+    async def cancel_all(self, reason: str = "Cancelled") -> int:
+        async with self._lock:
+            cancelled = 0
+            for task in self._tasks:
+                if task.status in {"pending", "running"}:
+                    task.mark_failed(reason)
+                    cancelled += 1
+            self._pending.clear()
+            self._stopping = True
+            self._pending_event.set()
+            worker = self._worker
+            self._worker = None
+        if worker is not None:
+            worker.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await worker
+        return cancelled
+
 from fastapi import (
     FastAPI,
     HTTPException,
@@ -1271,6 +1289,23 @@ def _normalize_language(value: Any) -> str:
     return candidate if candidate in _LANGUAGE_SET else _DEFAULT_UI_SETTINGS.language
 
 
+def _normalize_local_boost_url(value: Any) -> str:
+    """Return a normalized local boost base URL."""
+
+    if isinstance(value, str):
+        candidate = value.strip()
+    else:
+        candidate = str(value or "").strip()
+
+    if not candidate:
+        return _DEFAULT_UI_SETTINGS.local_boost_url
+
+    if not re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*://", candidate):
+        candidate = f"http://{candidate}"
+
+    return candidate.rstrip("/")
+
+
 def _format_asset_counts(lectures: List[Dict[str, Any]]) -> Dict[str, int]:
     """Return aggregated asset availability counts for a collection of lectures."""
 
@@ -1853,6 +1888,8 @@ class SettingsPayload(BaseModel):
     audio_mastering_enabled: bool = True
     debug_enabled: bool = False
     update_sudo_password: Optional[str] = None
+    local_boost_enabled: bool = False
+    local_boost_url: str = _DEFAULT_UI_SETTINGS.local_boost_url
 
 
 class TaskDefinition(BaseModel):
@@ -1863,6 +1900,10 @@ class TaskDefinition(BaseModel):
 
 class TaskBatchRequest(BaseModel):
     tasks: List[TaskDefinition] = Field(default_factory=list)
+
+
+class TaskCancelRequest(BaseModel):
+    reason: Optional[str] = None
 
 
 class ForwardedRootPathMiddleware:
@@ -2388,6 +2429,10 @@ def create_app(
         settings.slide_force_ocr = bool(getattr(settings, "slide_force_ocr", False))
         settings.language = _normalize_language(getattr(settings, "language", None))
         settings.debug_enabled = bool(getattr(settings, "debug_enabled", False))
+        settings.local_boost_enabled = bool(getattr(settings, "local_boost_enabled", False))
+        settings.local_boost_url = _normalize_local_boost_url(
+            getattr(settings, "local_boost_url", None)
+        )
         return settings
 
     def _serialize_ui_settings(settings: UISettings) -> Dict[str, Any]:
@@ -4507,6 +4552,8 @@ def create_app(
         settings.slide_force_ocr = bool(payload.slide_force_ocr)
         settings.audio_mastering_enabled = bool(payload.audio_mastering_enabled)
         settings.debug_enabled = bool(payload.debug_enabled)
+        settings.local_boost_enabled = bool(payload.local_boost_enabled)
+        settings.local_boost_url = _normalize_local_boost_url(payload.local_boost_url)
         if payload.update_sudo_password is not None:
             if payload.update_sudo_password == "":
                 settings.update_sudo_password = None
@@ -4811,12 +4858,27 @@ def create_app(
         progress = processing_tracker.get(lecture_id)
         return {"progress": progress}
 
+    @app.get("/api/local-boost/ping")
+    async def local_boost_ping() -> Dict[str, Any]:
+        return {
+            "ok": True,
+            "name": "Lecture Tools Local Boost",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+
     @app.get("/api/tasks")
     async def list_tasks() -> Dict[str, Any]:
         queue_entries = await task_queue.list()
         queue_payload = [_serialize_task_entry(entry) for entry in queue_entries]
         active_entries = _collect_progress_entries()
         return {"queue": queue_payload, "active": active_entries}
+
+    @app.post("/api/tasks/cancel")
+    async def cancel_tasks(payload: TaskCancelRequest) -> Dict[str, Any]:
+        reason = (payload.reason or "").strip() or "Cancelled by client"
+        cancelled = await task_queue.cancel_all(reason)
+        _log_event("Cancelled queued tasks", count=cancelled, reason=reason)
+        return {"cancelled": cancelled}
 
     @app.delete("/api/tasks/completed")
     async def clear_completed_tasks() -> Dict[str, Any]:

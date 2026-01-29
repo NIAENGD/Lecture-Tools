@@ -175,6 +175,8 @@ class UISettings:
     audio_mastering_enabled: bool = True
     debug_enabled: bool = False
     update_sudo_password: str | None = None
+    local_boost_enabled: bool = False
+    local_boost_url: str = "http://localhost:8000"
 
 
 class SettingsStore:
