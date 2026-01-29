@@ -45,6 +45,8 @@ class DummySlideConverter(SlideConverter):
 
         markdown_path = notes_dir / "slides.md"
         markdown_path.write_text("# Dummy slides\n", encoding="utf-8")
+        text_path = notes_dir / "slides.txt"
+        text_path.write_text(markdown_path.read_text(encoding="utf-8"), encoding="utf-8")
 
         archive_path = bundle_dir / "slides.zip"
         image = Image.new("RGB", (100, 200), color=(255, 255, 255))
@@ -53,6 +55,7 @@ class DummySlideConverter(SlideConverter):
         buffer.seek(0)
         with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
             archive.writestr("slides.md", markdown_path.read_text(encoding="utf-8"))
+            archive.writestr("slides.txt", text_path.read_text(encoding="utf-8"))
             archive.writestr("page_001.png", buffer.read())
 
         return SlideConversionResult(bundle_path=archive_path, markdown_path=markdown_path)
@@ -97,6 +100,7 @@ def test_ingestion_pipeline(temp_config: AppConfig, tmp_path: Path) -> None:
     with zipfile.ZipFile(slide_asset, "r") as archive:
         names = archive.namelist()
         assert any(name.endswith('.md') for name in names)
+        assert any(name.endswith('.txt') for name in names)
         assert any(name.lower().endswith('.png') for name in names)
 
 
