@@ -2792,6 +2792,91 @@ def create_app(
             return None
         return destination
 
+    def _cloud_processing_local_settings() -> Tuple[bool, str]:
+        settings = _load_ui_settings()
+        if not settings.cloud_connection_enabled:
+            return False, ""
+        if settings.cloud_processing_target != "local":
+            return False, ""
+        base_url = _normalize_cloud_server_url(settings.cloud_server_url)
+        if not base_url:
+            return False, ""
+        return True, base_url
+
+    def _content_type_for_asset(path: Path) -> str:
+        suffix = path.suffix.lower()
+        if suffix == ".zip":
+            return "application/zip"
+        if suffix in {".md", ".markdown"}:
+            return "text/markdown"
+        if suffix == ".txt":
+            return "text/plain"
+        return "application/octet-stream"
+
+    async def _upload_cloud_asset(
+        lecture_id: int,
+        asset_type: str,
+        file_path: Path,
+    ) -> None:
+        enabled, base_url = _cloud_processing_local_settings()
+        if not enabled:
+            return
+        if not file_path.exists():
+            raise HTTPException(
+                status_code=404,
+                detail=f"Generated asset not found: {file_path.name}",
+            )
+        url = f"{base_url}/api/lectures/{lecture_id}/assets/{asset_type}"
+        content_type = _content_type_for_asset(file_path)
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                with file_path.open("rb") as handle:
+                    response = await client.post(
+                        url,
+                        files={"file": (file_path.name, handle, content_type)},
+                    )
+            if response.status_code != status.HTTP_200_OK:
+                detail = response.text.strip() or response.reason_phrase
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Cloud upload failed ({response.status_code}): {detail}",
+                )
+        except HTTPException:
+            raise
+        except Exception as error:  # pragma: no cover - network failures
+            raise HTTPException(
+                status_code=502,
+                detail=f"Cloud upload failed: {error}",
+            ) from error
+
+    async def _sync_cloud_processing_assets(
+        lecture_id: int,
+        slide_bundle_relative: Optional[str],
+        notes_relative: Optional[str],
+    ) -> None:
+        enabled, _ = _cloud_processing_local_settings()
+        if not enabled:
+            return
+        storage_root = _require_storage_root()
+        if slide_bundle_relative:
+            try:
+                bundle_path = _resolve_storage_path(storage_root, slide_bundle_relative)
+            except ValueError as error:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Slide bundle path is outside storage root: {error}",
+                ) from error
+            await _upload_cloud_asset(lecture_id, "slide_bundle", bundle_path)
+        if notes_relative:
+            try:
+                notes_path = _resolve_storage_path(storage_root, notes_relative)
+            except ValueError as error:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Notes path is outside storage root: {error}",
+                ) from error
+            await _upload_cloud_asset(lecture_id, "notes", notes_path)
+
     def _relative_existing_path(
         candidate: Optional[Path], *, root: Optional[Path] = None
     ) -> Optional[str]:
@@ -3811,7 +3896,22 @@ def create_app(
             if notes_relative is not None:
                 update_kwargs["notes_path"] = notes_relative
             repository.update_lecture_assets(lecture_id, **update_kwargs)
-            processing_tracker.finish(lecture_id, completion_message, context=context)
+            try:
+                await _sync_cloud_processing_assets(
+                    lecture_id,
+                    slide_bundle_relative,
+                    notes_relative,
+                )
+            except HTTPException as error:
+                processing_tracker.fail(
+                    lecture_id,
+                    f"====> {error.detail}",
+                    context=context,
+                    exception=error,
+                )
+                raise RuntimeError(error.detail) from error
+            else:
+                processing_tracker.finish(lecture_id, completion_message, context=context)
             _log_event(
                 "Slide bundle task completed",
                 lecture_id=lecture_id,
@@ -4395,6 +4495,7 @@ def create_app(
             "slides": ("slide_path", lecture_paths.raw_dir),
             "transcript": ("transcript_path", lecture_paths.transcript_dir),
             "notes": ("notes_path", lecture_paths.notes_dir),
+            "slide_bundle": ("slide_image_dir", lecture_paths.slide_dir),
         }
         if asset_key not in destinations:
             raise HTTPException(status_code=400, detail="Unsupported asset type")
@@ -4468,6 +4569,10 @@ def create_app(
                 _delete_asset_path(lecture.slide_image_dir)
             update_kwargs["slide_path"] = None
             update_kwargs["slide_image_dir"] = None
+        elif asset_key == "slide_bundle":
+            if lecture.slide_image_dir:
+                _delete_asset_path(lecture.slide_image_dir)
+            update_kwargs["slide_image_dir"] = relative
 
         else:
             update_kwargs[attribute] = relative
@@ -4494,6 +4599,8 @@ def create_app(
             response["slide_image_dir"] = update_kwargs.get("slide_image_dir")
             response["raw_slide_files"] = raw_slide_payload
             response["raw_slide_file_count"] = len(raw_slide_payload)
+        if asset_key == "slide_bundle":
+            response["slide_image_dir"] = update_kwargs.get("slide_image_dir")
         response["processing"] = bool(processing_queued)
         if processing_operations:
             response["processing_operations"] = sorted(processing_operations)
@@ -6148,8 +6255,7 @@ def create_app(
                     )
                 else:
                     completion_message = completion_label
-                processing_tracker.finish(lecture_id, completion_message)
-    
+
             update_kwargs: Dict[str, Optional[str]] = {"slide_path": slide_relative}
             if slide_bundle_relative is not None:
                 update_kwargs["slide_image_dir"] = slide_bundle_relative
@@ -6164,7 +6270,23 @@ def create_app(
             updated = repository.get_lecture(lecture_id)
             if updated is None:
                 raise HTTPException(status_code=500, detail="Lecture update failed")
-    
+
+            try:
+                await _sync_cloud_processing_assets(
+                    lecture_id,
+                    slide_bundle_relative,
+                    notes_relative,
+                )
+            except HTTPException as error:
+                processing_tracker.fail(
+                    lecture_id,
+                    f"====> {error.detail}",
+                    exception=error,
+                )
+                raise
+            else:
+                processing_tracker.finish(lecture_id, completion_message)
+
             _log_event(
                 "Slides processed",
                 lecture_id=lecture_id,
