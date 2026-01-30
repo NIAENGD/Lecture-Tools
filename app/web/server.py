@@ -23,6 +23,7 @@ import time
 import traceback
 import uuid
 import zipfile
+from urllib.parse import quote
 from collections import Counter, defaultdict, deque
 from collections.abc import Mapping, Sequence, Set as AbstractSet
 from dataclasses import asdict, dataclass, field
@@ -45,6 +46,8 @@ from typing import (
 )
 
 from concurrent.futures import Future, ThreadPoolExecutor
+
+import httpx
 
 T = TypeVar("T")
 
@@ -2746,6 +2749,48 @@ def create_app(
         except ValueError:
             return None
         return candidate if candidate.exists() else None
+
+    async def _fetch_cloud_asset(relative: Optional[str]) -> Optional[Path]:
+        if not relative:
+            return None
+        settings = _load_ui_settings()
+        if not settings.cloud_connection_enabled:
+            return None
+        if settings.cloud_processing_target != "local":
+            return None
+        storage_root = _require_storage_root()
+        try:
+            destination = _resolve_storage_path(storage_root, relative)
+        except ValueError:
+            return None
+        if destination.exists():
+            return destination
+        base_url = _normalize_cloud_server_url(settings.cloud_server_url)
+        if not base_url:
+            return None
+        encoded_path = "/".join(quote(segment) for segment in relative.split("/") if segment)
+        remote_url = f"{base_url}/storage/{encoded_path}"
+        temp_path = destination.with_suffix(f"{destination.suffix}.download-{uuid.uuid4().hex}")
+        temp_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                async with client.stream("GET", remote_url) as response:
+                    if response.status_code != 200:
+                        return None
+                    with temp_path.open("wb") as handle:
+                        async for chunk in response.aiter_bytes():
+                            handle.write(chunk)
+        except Exception as error:  # pragma: no cover - network failures
+            LOGGER.warning("Failed to download cloud asset %s: %s", relative, error)
+            temp_path.unlink(missing_ok=True)
+            return None
+        try:
+            temp_path.replace(destination)
+        except OSError as error:
+            LOGGER.warning("Failed to store cloud asset %s: %s", relative, error)
+            temp_path.unlink(missing_ok=True)
+            return None
+        return destination
 
     def _relative_existing_path(
         candidate: Optional[Path], *, root: Optional[Path] = None
@@ -5917,6 +5962,8 @@ def create_app(
 
         preview_dir = lecture_paths.raw_dir / _SLIDE_PREVIEW_DIR_NAME
         existing_slide = _resolve_existing_asset(lecture.slide_path)
+        if existing_slide is None and lecture.slide_path:
+            existing_slide = await _fetch_cloud_asset(lecture.slide_path)
         use_existing_flag = False
         if use_existing is not None:
             use_existing_flag = str(use_existing).strip().lower() in {"1", "true", "yes", "on"}
