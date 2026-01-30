@@ -175,8 +175,10 @@ class UISettings:
     audio_mastering_enabled: bool = True
     debug_enabled: bool = False
     update_sudo_password: str | None = None
-    local_boost_enabled: bool = False
-    local_boost_url: str = "http://localhost:8000"
+    cloud_connection_enabled: bool = False
+    cloud_server_url: str = "http://localhost:8000"
+    cloud_auto_connect: bool = False
+    cloud_processing_target: str = "cloud"
 
 
 class SettingsStore:
@@ -209,6 +211,12 @@ class SettingsStore:
                     LOGGER.debug("Loaded UI setting %s=<hidden>", field)
                 else:
                     LOGGER.debug("Loaded UI setting %s=%s", field, value)
+        if "cloud_connection_enabled" not in payload and "local_boost_enabled" in payload:
+            settings.cloud_connection_enabled = bool(payload.get("local_boost_enabled"))
+        if "cloud_server_url" not in payload and "local_boost_url" in payload:
+            settings.cloud_server_url = str(
+                payload.get("local_boost_url") or settings.cloud_server_url
+            )
         display_mode, theme = resolve_theme_preferences(
             payload.get("theme", settings.theme), payload.get("display_mode", settings.display_mode)
         )

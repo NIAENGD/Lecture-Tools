@@ -326,6 +326,8 @@ _THEME_INPUT_OPTIONS: Tuple[str, ...] = _THEME_OPTIONS + (
 )
 _DISPLAY_MODE_OPTIONS: Tuple[str, ...] = tuple(DISPLAY_MODE_OPTIONS)
 _VISUAL_EFFECT_OPTIONS: Tuple[str, ...] = tuple(EFFECTS_LEVEL_OPTIONS)
+_CLOUD_PROCESSING_TARGET_OPTIONS: Tuple[str, ...] = ("cloud", "local")
+_CLOUD_PROCESSING_TARGET_SET = set(_CLOUD_PROCESSING_TARGET_OPTIONS)
 _DEFAULT_UI_SETTINGS = UISettings()
 _SERVER_LOGGER_PREFIXES: Tuple[str, ...] = ("uvicorn", "gunicorn", "hypercorn", "werkzeug")
 _SLIDE_PREVIEW_DIR_NAME = ".previews"
@@ -1289,8 +1291,8 @@ def _normalize_language(value: Any) -> str:
     return candidate if candidate in _LANGUAGE_SET else _DEFAULT_UI_SETTINGS.language
 
 
-def _normalize_local_boost_url(value: Any) -> str:
-    """Return a normalized local boost base URL."""
+def _normalize_cloud_server_url(value: Any) -> str:
+    """Return a normalized cloud server base URL."""
 
     if isinstance(value, str):
         candidate = value.strip()
@@ -1298,12 +1300,24 @@ def _normalize_local_boost_url(value: Any) -> str:
         candidate = str(value or "").strip()
 
     if not candidate:
-        return _DEFAULT_UI_SETTINGS.local_boost_url
+        return _DEFAULT_UI_SETTINGS.cloud_server_url
 
     if not re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*://", candidate):
         candidate = f"http://{candidate}"
 
     return candidate.rstrip("/")
+
+
+def _normalize_cloud_processing_target(value: Any) -> str:
+    """Return the normalized cloud processing target."""
+
+    if isinstance(value, str):
+        candidate = value.strip().lower()
+    else:
+        candidate = str(value or "").strip().lower()
+    if candidate in _CLOUD_PROCESSING_TARGET_SET:
+        return candidate
+    return _DEFAULT_UI_SETTINGS.cloud_processing_target
 
 
 def _format_asset_counts(lectures: List[Dict[str, Any]]) -> Dict[str, int]:
@@ -1888,8 +1902,12 @@ class SettingsPayload(BaseModel):
     audio_mastering_enabled: bool = True
     debug_enabled: bool = False
     update_sudo_password: Optional[str] = None
-    local_boost_enabled: bool = False
-    local_boost_url: str = _DEFAULT_UI_SETTINGS.local_boost_url
+    cloud_connection_enabled: bool = False
+    cloud_server_url: str = _DEFAULT_UI_SETTINGS.cloud_server_url
+    cloud_auto_connect: bool = False
+    cloud_processing_target: Literal[*_CLOUD_PROCESSING_TARGET_OPTIONS] = (
+        _DEFAULT_UI_SETTINGS.cloud_processing_target
+    )
 
 
 class TaskDefinition(BaseModel):
@@ -2429,9 +2447,15 @@ def create_app(
         settings.slide_force_ocr = bool(getattr(settings, "slide_force_ocr", False))
         settings.language = _normalize_language(getattr(settings, "language", None))
         settings.debug_enabled = bool(getattr(settings, "debug_enabled", False))
-        settings.local_boost_enabled = bool(getattr(settings, "local_boost_enabled", False))
-        settings.local_boost_url = _normalize_local_boost_url(
-            getattr(settings, "local_boost_url", None)
+        settings.cloud_connection_enabled = bool(
+            getattr(settings, "cloud_connection_enabled", False)
+        )
+        settings.cloud_server_url = _normalize_cloud_server_url(
+            getattr(settings, "cloud_server_url", None)
+        )
+        settings.cloud_auto_connect = bool(getattr(settings, "cloud_auto_connect", False))
+        settings.cloud_processing_target = _normalize_cloud_processing_target(
+            getattr(settings, "cloud_processing_target", None)
         )
         return settings
 
@@ -4552,8 +4576,12 @@ def create_app(
         settings.slide_force_ocr = bool(payload.slide_force_ocr)
         settings.audio_mastering_enabled = bool(payload.audio_mastering_enabled)
         settings.debug_enabled = bool(payload.debug_enabled)
-        settings.local_boost_enabled = bool(payload.local_boost_enabled)
-        settings.local_boost_url = _normalize_local_boost_url(payload.local_boost_url)
+        settings.cloud_connection_enabled = bool(payload.cloud_connection_enabled)
+        settings.cloud_server_url = _normalize_cloud_server_url(payload.cloud_server_url)
+        settings.cloud_auto_connect = bool(payload.cloud_auto_connect)
+        settings.cloud_processing_target = _normalize_cloud_processing_target(
+            payload.cloud_processing_target
+        )
         if payload.update_sudo_password is not None:
             if payload.update_sudo_password == "":
                 settings.update_sudo_password = None
@@ -4858,11 +4886,11 @@ def create_app(
         progress = processing_tracker.get(lecture_id)
         return {"progress": progress}
 
-    @app.get("/api/local-boost/ping")
-    async def local_boost_ping() -> Dict[str, Any]:
+    @app.get("/api/cloud-connection/ping")
+    async def cloud_connection_ping() -> Dict[str, Any]:
         return {
             "ok": True,
-            "name": "Lecture Tools Local Boost",
+            "name": "Lecture Tools Cloud Connection",
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 

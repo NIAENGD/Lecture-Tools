@@ -4830,7 +4830,7 @@
         gap: 16px;
       }
 
-      #settings-form .field-inline.local-boost-status {
+      #settings-form .field-inline.cloud-connection-status {
         flex-direction: row;
         align-items: center;
         gap: 16px;
@@ -5486,36 +5486,56 @@
                 </div>
               </fieldset>
               <fieldset>
-                <legend data-i18n="settings.localBoost.legend">Local Boost</legend>
-                <label class="field-inline" for="settings-local-boost-enabled">
-                  <input id="settings-local-boost-enabled" type="checkbox" />
-                  <span data-i18n="settings.localBoost.enable">Enable Local Boost</span>
+                <legend data-i18n="settings.cloudConnection.legend">Cloud connection</legend>
+                <label class="field-inline" for="settings-cloud-connection-enabled">
+                  <input id="settings-cloud-connection-enabled" type="checkbox" />
+                  <span data-i18n="settings.cloudConnection.enable">Connect to cloud server</span>
                 </label>
                 <div class="field-inline">
-                  <label for="settings-local-boost-url" data-i18n="settings.localBoost.urlLabel">
-                    Local helper URL
+                  <label for="settings-cloud-server-url" data-i18n="settings.cloudConnection.urlLabel">
+                    Cloud server URL
                   </label>
                   <input
-                    id="settings-local-boost-url"
+                    id="settings-cloud-server-url"
                     type="url"
                     inputmode="url"
-                    placeholder="http://localhost:8000"
+                    placeholder="https://cloud.example.com"
                   />
                 </div>
-                <div class="field-inline local-boost-status">
+                <label class="field-inline" for="settings-cloud-auto-connect">
+                  <input id="settings-cloud-auto-connect" type="checkbox" />
+                  <span data-i18n="settings.cloudConnection.autoConnect">
+                    Always auto-connect on launch
+                  </span>
+                </label>
+                <div class="field-inline">
+                  <label for="settings-cloud-processing-target" data-i18n="settings.cloudConnection.processingLabel">
+                    Process tasks
+                  </label>
+                  <select id="settings-cloud-processing-target" required>
+                    <option value="cloud" data-i18n="settings.cloudConnection.processing.cloud">
+                      In the cloud
+                    </option>
+                    <option value="local" data-i18n="settings.cloudConnection.processing.local">
+                      On this machine
+                    </option>
+                  </select>
+                </div>
+                <div class="field-inline cloud-connection-status">
                   <div class="gpu-support-info">
-                    <label data-i18n="settings.localBoost.statusLabel">Connection status</label>
-                    <p id="settings-local-boost-status" data-i18n="settings.localBoost.status.idle">
+                    <label data-i18n="settings.cloudConnection.statusLabel">Connection status</label>
+                    <p id="settings-cloud-connection-status" data-i18n="settings.cloudConnection.status.idle">
                       Not tested.
                     </p>
                   </div>
-                  <button id="settings-local-boost-test" type="button" class="secondary">
-                    <span data-i18n="settings.localBoost.test">Test connection</span>
+                  <button id="settings-cloud-connection-test" type="button" class="secondary">
+                    <span data-i18n="settings.cloudConnection.test">Test connection</span>
                   </button>
                 </div>
-                <p class="field-help" data-i18n="settings.localBoost.description">
-                  Route processing tasks to a local helper running on your machine. If the helper
-                  disconnects, queued local tasks are cancelled and cloud jobs stay untouched.
+                <p class="field-help" data-i18n="settings.cloudConnection.description">
+                  Connect your local UI to a cloud server. Cloud mode streams structures and assets
+                  from the server and only pulls files when needed. When you disconnect or restart,
+                  cloud files are cleared locally.
                 </p>
               </fieldset>
               <fieldset>
@@ -6438,10 +6458,16 @@
                   retry: 'Re-run test',
                 },
               },
-              localBoost: {
-                legend: 'Local Boost',
-                enable: 'Enable Local Boost',
-                urlLabel: 'Local helper URL',
+              cloudConnection: {
+                legend: 'Cloud connection',
+                enable: 'Connect to cloud server',
+                urlLabel: 'Cloud server URL',
+                autoConnect: 'Always auto-connect on launch',
+                processingLabel: 'Process tasks',
+                processing: {
+                  cloud: 'In the cloud',
+                  local: 'On this machine',
+                },
                 statusLabel: 'Connection status',
                 status: {
                   idle: 'Not tested.',
@@ -6451,14 +6477,14 @@
                 },
                 test: 'Test connection',
                 description:
-                  'Route processing tasks to a local helper running on your machine. If the helper disconnects, queued local tasks are cancelled and cloud jobs stay untouched.',
-                cancelReason: 'Local Boost session ended.',
+                  'Connect your local UI to a cloud server. Cloud mode streams structures and assets from the server and only pulls files when needed. When you disconnect or restart, cloud files are cleared locally.',
+                cancelReason: 'Cloud connection session ended.',
                 notifications: {
-                  connected: 'Local Boost connected.',
+                  connected: 'Cloud connection established.',
                 },
                 errors: {
-                  unavailable: 'Local Boost helper is unavailable.',
-                  disconnected: 'Local Boost is enabled but the helper is unavailable.',
+                  unavailable: 'Cloud server is unavailable.',
+                  disconnected: 'Cloud connection is enabled but the server is unavailable.',
                 },
               },
               audio: {
@@ -7132,10 +7158,16 @@
                   retry: '重新测试',
                 },
               },
-              localBoost: {
-                legend: '本地加速',
-                enable: '启用本地加速',
-                urlLabel: '本地助手地址',
+              cloudConnection: {
+                legend: '云端连接',
+                enable: '连接到云端服务器',
+                urlLabel: '云端服务器地址',
+                autoConnect: '启动时自动连接',
+                processingLabel: '处理任务',
+                processing: {
+                  cloud: '在云端处理',
+                  local: '在本机处理',
+                },
                 statusLabel: '连接状态',
                 status: {
                   idle: '未测试。',
@@ -7145,14 +7177,14 @@
                 },
                 test: '测试连接',
                 description:
-                  '将处理任务路由到本地助手。如果助手断开连接，本地排队任务会被取消，云端任务保持不变。',
-                cancelReason: '本地加速会话已结束。',
+                  '将本地界面连接到云端服务器。云端模式会按需拉取结构与资源，断开或重启后会清理本地缓存的云端文件。',
+                cancelReason: '云端连接会话已结束。',
                 notifications: {
-                  connected: '本地加速已连接。',
+                  connected: '云端连接已建立。',
                 },
                 errors: {
-                  unavailable: '本地加速助手不可用。',
-                  disconnected: '已启用本地加速，但助手不可用。',
+                  unavailable: '云端服务器不可用。',
+                  disconnected: '已启用云端连接，但服务器不可用。',
                 },
               },
               audio: {
@@ -7820,10 +7852,16 @@
                   retry: 'Volver a probar',
                 },
               },
-              localBoost: {
-                legend: 'Local Boost',
-                enable: 'Activar Local Boost',
-                urlLabel: 'URL del asistente local',
+              cloudConnection: {
+                legend: 'Conexión a la nube',
+                enable: 'Conectarse al servidor en la nube',
+                urlLabel: 'URL del servidor en la nube',
+                autoConnect: 'Conectar automáticamente al iniciar',
+                processingLabel: 'Procesar tareas',
+                processing: {
+                  cloud: 'En la nube',
+                  local: 'En esta máquina',
+                },
                 statusLabel: 'Estado de conexión',
                 status: {
                   idle: 'No probado.',
@@ -7833,14 +7871,14 @@
                 },
                 test: 'Probar conexión',
                 description:
-                  'Dirige las tareas de procesamiento a un asistente local. Si se desconecta, las tareas locales en cola se cancelan y las tareas en la nube no se tocan.',
-                cancelReason: 'La sesión de Local Boost terminó.',
+                  'Conecta la interfaz local a un servidor en la nube. El modo en la nube transmite estructuras y recursos bajo demanda y limpia los archivos al desconectar o reiniciar.',
+                cancelReason: 'La sesión de conexión a la nube terminó.',
                 notifications: {
-                  connected: 'Local Boost conectado.',
+                  connected: 'Conexión a la nube establecida.',
                 },
                 errors: {
-                  unavailable: 'El asistente de Local Boost no está disponible.',
-                  disconnected: 'Local Boost está activado pero el asistente no está disponible.',
+                  unavailable: 'El servidor en la nube no está disponible.',
+                  disconnected: 'La conexión a la nube está activada pero el servidor no está disponible.',
                 },
               },
               audio: {
@@ -8525,10 +8563,16 @@
                   retry: 'Relancer le test',
                 },
               },
-              localBoost: {
-                legend: 'Local Boost',
-                enable: 'Activer Local Boost',
-                urlLabel: 'URL de l’assistant local',
+              cloudConnection: {
+                legend: 'Connexion cloud',
+                enable: 'Se connecter au serveur cloud',
+                urlLabel: 'URL du serveur cloud',
+                autoConnect: 'Connexion automatique au démarrage',
+                processingLabel: 'Traiter les tâches',
+                processing: {
+                  cloud: 'Dans le cloud',
+                  local: 'Sur cette machine',
+                },
                 statusLabel: 'État de connexion',
                 status: {
                   idle: 'Non testé.',
@@ -8538,14 +8582,14 @@
                 },
                 test: 'Tester la connexion',
                 description:
-                  'Achemine les tâches de traitement vers un assistant local. En cas de déconnexion, les tâches locales en attente sont annulées et les tâches cloud restent intactes.',
-                cancelReason: 'La session Local Boost est terminée.',
+                  'Connecte l’interface locale à un serveur cloud. Le mode cloud diffuse les structures et ressources à la demande et nettoie les fichiers lors de la déconnexion ou du redémarrage.',
+                cancelReason: 'La session de connexion cloud est terminée.',
                 notifications: {
-                  connected: 'Local Boost connecté.',
+                  connected: 'Connexion cloud établie.',
                 },
                 errors: {
-                  unavailable: 'L’assistant Local Boost est indisponible.',
-                  disconnected: 'Local Boost est activé mais l’assistant est indisponible.',
+                  unavailable: 'Le serveur cloud est indisponible.',
+                  disconnected: 'La connexion cloud est activée mais le serveur est indisponible.',
                 },
               },
               audio: {
@@ -9196,7 +9240,7 @@
         const DEFAULT_DISPLAY_MODE = 'system';
         const DEFAULT_THEME = 'vibrant';
         const DEFAULT_VISUAL_EFFECTS = 'mid';
-        const DEFAULT_LOCAL_BOOST_URL = 'http://localhost:8000';
+        const DEFAULT_CLOUD_SERVER_URL = 'http://localhost:8000';
         const VIEW_SEQUENCE = ['details', 'tasks', 'create', 'storage', 'settings'];
         const WHISPER_MODEL_CHOICES = new Set([
           'tiny',
@@ -9393,13 +9437,13 @@
           return DEFAULT_LANGUAGE;
         }
 
-        function normalizeLocalBoostUrl(value) {
+        function normalizeCloudServerUrl(value) {
           if (typeof value !== 'string') {
-            return DEFAULT_LOCAL_BOOST_URL;
+            return DEFAULT_CLOUD_SERVER_URL;
           }
           let trimmed = value.trim();
           if (!trimmed) {
-            return DEFAULT_LOCAL_BOOST_URL;
+            return DEFAULT_CLOUD_SERVER_URL;
           }
           if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(trimmed)) {
             trimmed = `http://${trimmed}`;
@@ -9432,10 +9476,12 @@
             lastChecked: null,
             unavailable: false,
           },
-          localBoost: {
+          cloudConnection: {
             enabled: false,
             connected: false,
-            url: DEFAULT_LOCAL_BOOST_URL,
+            url: DEFAULT_CLOUD_SERVER_URL,
+            autoConnect: false,
+            processingTarget: 'cloud',
             statusKey: 'idle',
           },
           transcriptionProgressTimer: null,
@@ -9665,10 +9711,20 @@
           settingsWhisperBeam: document.getElementById('settings-whisper-beam'),
           settingsWhisperGpuStatus: document.getElementById('settings-whisper-gpu-status'),
           settingsWhisperGpuTest: document.getElementById('settings-whisper-gpu-test'),
-          settingsLocalBoostEnabled: document.getElementById('settings-local-boost-enabled'),
-          settingsLocalBoostUrl: document.getElementById('settings-local-boost-url'),
-          settingsLocalBoostStatus: document.getElementById('settings-local-boost-status'),
-          settingsLocalBoostTest: document.getElementById('settings-local-boost-test'),
+          settingsCloudConnectionEnabled: document.getElementById(
+            'settings-cloud-connection-enabled',
+          ),
+          settingsCloudServerUrl: document.getElementById('settings-cloud-server-url'),
+          settingsCloudAutoConnect: document.getElementById('settings-cloud-auto-connect'),
+          settingsCloudProcessingTarget: document.getElementById(
+            'settings-cloud-processing-target',
+          ),
+          settingsCloudConnectionStatus: document.getElementById(
+            'settings-cloud-connection-status',
+          ),
+          settingsCloudConnectionTest: document.getElementById(
+            'settings-cloud-connection-test',
+          ),
           settingsSlideDpi: document.getElementById('settings-slide-dpi'),
           settingsSlideForceOcr: document.getElementById('settings-slide-force-ocr'),
           settingsAudioMastering: document.getElementById('settings-audio-mastering'),
@@ -13542,25 +13598,37 @@
           }
         }
 
-        function updateLocalBoostStatus(statusKey, overrideMessage = null) {
+        function updateCloudConnectionStatus(statusKey, overrideMessage = null) {
           const normalizedKey = typeof statusKey === 'string' ? statusKey : 'idle';
-          state.localBoost.statusKey = normalizedKey;
-          if (overrideMessage && dom.settingsLocalBoostStatus) {
-            dom.settingsLocalBoostStatus.textContent = overrideMessage;
+          state.cloudConnection.statusKey = normalizedKey;
+          if (overrideMessage && dom.settingsCloudConnectionStatus) {
+            dom.settingsCloudConnectionStatus.textContent = overrideMessage;
             return;
           }
-          if (dom.settingsLocalBoostStatus) {
-            dom.settingsLocalBoostStatus.textContent = t(
-              `settings.localBoost.status.${normalizedKey}`,
+          if (dom.settingsCloudConnectionStatus) {
+            dom.settingsCloudConnectionStatus.textContent = t(
+              `settings.cloudConnection.status.${normalizedKey}`,
             );
           }
         }
 
-        function shouldRouteToLocalBoost(target) {
+        const CLOUD_LOCAL_ONLY_PREFIXES = ['/api/settings', '/api/system', '/api/debug'];
+
+        function shouldRouteToCloud(target) {
           if (typeof target !== 'string') {
             return false;
           }
+          if (target.startsWith('/storage/')) {
+            return true;
+          }
           if (!target.startsWith('/api/')) {
+            return false;
+          }
+          return !CLOUD_LOCAL_ONLY_PREFIXES.some((prefix) => target.startsWith(prefix));
+        }
+
+        function isProcessingEndpoint(target) {
+          if (typeof target !== 'string' || !target.startsWith('/api/')) {
             return false;
           }
           if (target.startsWith('/api/tasks')) {
@@ -13568,18 +13636,20 @@
           }
           return (
             target.includes('/transcription-progress') ||
-            target.includes('/processing-progress')
+            target.includes('/processing-progress') ||
+            target.includes('/transcribe') ||
+            target.includes('/process-slides')
           );
         }
 
-        function resolveLocalBoostUrl(target) {
+        function resolveCloudServerUrl(target) {
           if (!target || typeof target !== 'string') {
             return target;
           }
           if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(target) || target.startsWith('//')) {
             return target;
           }
-          const base = normalizeLocalBoostUrl(state.localBoost.url);
+          const base = normalizeCloudServerUrl(state.cloudConnection.url);
           try {
             const normalized = target.startsWith('/') ? target : `/${target}`;
             return new URL(normalized, `${base}/`).toString();
@@ -13588,52 +13658,56 @@
           }
         }
 
-        async function testLocalBoostConnection({ silent = false } = {}) {
-          const baseUrl = normalizeLocalBoostUrl(
-            dom.settingsLocalBoostUrl?.value || state.localBoost.url,
+        async function testCloudConnection({ silent = false } = {}) {
+          const baseUrl = normalizeCloudServerUrl(
+            dom.settingsCloudServerUrl?.value || state.cloudConnection.url,
           );
-          state.localBoost.url = baseUrl;
-          const pingUrl = resolveLocalBoostUrl('/api/local-boost/ping');
-          if (!silent && dom.settingsLocalBoostTest) {
-            dom.settingsLocalBoostTest.disabled = true;
+          state.cloudConnection.url = baseUrl;
+          const pingUrl = resolveCloudServerUrl('/api/cloud-connection/ping');
+          if (!silent && dom.settingsCloudConnectionTest) {
+            dom.settingsCloudConnectionTest.disabled = true;
           }
           try {
             const response = await fetch(pingUrl, { method: 'GET' });
             if (!response.ok) {
               throw new Error(`${response.status} ${response.statusText}`.trim());
             }
-            state.localBoost.connected = true;
-            updateLocalBoostStatus('connected');
+            state.cloudConnection.connected = true;
+            updateCloudConnectionStatus('connected');
             if (!silent) {
-              showStatus(t('settings.localBoost.notifications.connected'), 'success');
+              showStatus(t('settings.cloudConnection.notifications.connected'), 'success');
             }
             return true;
           } catch (error) {
-            state.localBoost.connected = false;
-            updateLocalBoostStatus('disconnected');
+            state.cloudConnection.connected = false;
+            updateCloudConnectionStatus('disconnected');
             if (!silent) {
               const detail =
                 error instanceof Error && error.message
                   ? error.message
-                  : t('settings.localBoost.errors.unavailable');
+                  : t('settings.cloudConnection.errors.unavailable');
               showStatus(detail, 'error');
             }
             return false;
           } finally {
-            if (dom.settingsLocalBoostTest) {
-              dom.settingsLocalBoostTest.disabled = false;
+            if (dom.settingsCloudConnectionTest) {
+              dom.settingsCloudConnectionTest.disabled = false;
             }
           }
         }
 
-        async function cancelLocalBoostTasks({ reason, silent = false, force = false } = {}) {
-          if (!state.localBoost.enabled || (!state.localBoost.connected && !force)) {
+        async function cancelCloudProcessingTasks({ reason, silent = false, force = false } = {}) {
+          if (
+            !state.cloudConnection.enabled ||
+            state.cloudConnection.processingTarget !== 'local' ||
+            (!state.cloudConnection.connected && !force)
+          ) {
             return;
           }
           const payload = JSON.stringify({
-            reason: typeof reason === 'string' ? reason : t('settings.localBoost.cancelReason'),
+            reason: typeof reason === 'string' ? reason : t('settings.cloudConnection.cancelReason'),
           });
-          const url = resolveLocalBoostUrl('/api/tasks/cancel');
+          const url = resolveAppUrl('/api/tasks/cancel');
           if (navigator.sendBeacon) {
             try {
               const blob = new Blob([payload], { type: 'application/json' });
@@ -13652,112 +13726,114 @@
             });
           } catch (error) {
             if (!silent) {
-              console.warn('Unable to cancel Local Boost tasks', error);
+              console.warn('Unable to cancel cloud connection local tasks', error);
             }
           }
         }
 
-        async function handleLocalBoostDisconnect(error) {
-          if (!state.localBoost.enabled) {
+        async function handleCloudConnectionDisconnect(error) {
+          if (!state.cloudConnection.enabled) {
             return;
           }
-          state.localBoost.connected = false;
-          updateLocalBoostStatus('disconnected');
-          await cancelLocalBoostTasks({
-            reason: t('settings.localBoost.cancelReason'),
-            force: true,
-          });
+          state.cloudConnection.connected = false;
+          updateCloudConnectionStatus('disconnected');
           const detail =
             error instanceof Error && error.message
               ? error.message
-              : t('settings.localBoost.errors.unavailable');
+              : t('settings.cloudConnection.errors.unavailable');
           showStatus(detail, 'error');
         }
 
-      function ensureDebugPlaceholder() {
-        if (!dom.debugLog || !dom.debugEmpty) {
-          return;
+        function ensureDebugPlaceholder() {
+          if (!dom.debugLog || !dom.debugEmpty) {
+            return;
+          }
+          if (!dom.debugEmpty.parentElement) {
+            dom.debugLog.appendChild(dom.debugEmpty);
+          }
         }
-        if (!dom.debugEmpty.parentElement) {
-          dom.debugLog.appendChild(dom.debugEmpty);
-        }
-      }
 
-      function normalizeCorrelationValue(value) {
-        if (typeof value === 'string') {
-          return value.trim();
+        function normalizeCorrelationValue(value) {
+          if (typeof value === 'string') {
+            return value.trim();
+          }
+          if (value == null) {
+            return '';
+          }
+          return String(value).trim();
         }
-        if (value == null) {
+
+        function getEntryCorrelation(entry, key) {
+          if (!entry || typeof entry !== 'object') {
+            return '';
+          }
+          const sources = [entry[key], entry?.context?.[key], entry?.payload?.[key]];
+          for (const source of sources) {
+            const normalized = normalizeCorrelationValue(source);
+            if (normalized) {
+              return normalized;
+            }
+          }
           return '';
         }
-        return String(value).trim();
-      }
 
-      function getEntryCorrelation(entry, key) {
-        if (!entry || typeof entry !== 'object') {
+        function normalizeFilterValue(value) {
+          if (typeof value === 'string') {
+            return value.trim().toLowerCase();
+          }
+          if (typeof value === 'number' || typeof value === 'boolean') {
+            return String(value).trim().toLowerCase();
+          }
           return '';
         }
-        const sources = [entry[key], entry?.context?.[key], entry?.payload?.[key]];
-        for (const source of sources) {
-          const normalized = normalizeCorrelationValue(source);
-          if (normalized) {
-            return normalized;
+
+        function hasActiveFilters() {
+          const filters = state.debug.filters || {};
+          if (
+            normalizeFilterValue(filters.severity) &&
+            normalizeFilterValue(filters.severity) !== 'all'
+          ) {
+            return true;
           }
+          if (
+            normalizeFilterValue(filters.category) &&
+            normalizeFilterValue(filters.category) !== 'all'
+          ) {
+            return true;
+          }
+          return Boolean(
+            normalizeFilterValue(filters.correlationId) ||
+              normalizeFilterValue(filters.taskId) ||
+              normalizeFilterValue(filters.query),
+          );
         }
-        return '';
-      }
 
-      function normalizeFilterValue(value) {
-        if (typeof value === 'string') {
-          return value.trim().toLowerCase();
-        }
-        if (typeof value === 'number' || typeof value === 'boolean') {
-          return String(value).trim().toLowerCase();
-        }
-        return '';
-      }
-
-      function hasActiveFilters() {
-        const filters = state.debug.filters || {};
-        if (normalizeFilterValue(filters.severity) && normalizeFilterValue(filters.severity) !== 'all') {
-          return true;
-        }
-        if (normalizeFilterValue(filters.category) && normalizeFilterValue(filters.category) !== 'all') {
-          return true;
-        }
-        return Boolean(
-          normalizeFilterValue(filters.correlationId) ||
-            normalizeFilterValue(filters.taskId) ||
-            normalizeFilterValue(filters.query),
-        );
-      }
-
-      function getEntrySeverity(entry) {
-        const sources = [entry?.severity, entry?.level, entry?.status];
-        for (const source of sources) {
-          if (typeof source === 'string') {
-            const normalized = source.trim().toLowerCase();
-            if (!normalized) {
-              continue;
+        function getEntrySeverity(entry) {
+          const sources = [entry?.severity, entry?.level, entry?.status];
+          for (const source of sources) {
+            if (typeof source === 'string') {
+              const normalized = source.trim().toLowerCase();
+              if (!normalized) {
+                continue;
+              }
+              if (normalized === 'failed' || normalized === 'failure') {
+                return 'error';
+              }
+              return normalized;
             }
-            if (normalized === 'failed' || normalized === 'failure') {
-              return 'error';
+          }
+          if (typeof entry?.context?.severity === 'string') {
+            const normalized = entry.context.severity.trim().toLowerCase();
+            if (normalized) {
+              return normalized;
             }
-            return normalized;
           }
-        }
-        if (typeof entry?.context?.severity === 'string') {
-          const normalized = entry.context.severity.trim().toLowerCase();
-          if (normalized) {
-            return normalized;
+          if (typeof entry?.payload?.severity === 'string') {
+            const normalized = entry.payload.severity.trim().toLowerCase();
+            if (normalized) {
+              return normalized;
+            }
           }
-        }
-        if (typeof entry?.payload?.severity === 'string') {
-          const normalized = entry.payload.severity.trim().toLowerCase();
-          if (normalized) {
-            return normalized;
-          }
-        }
         return 'info';
       }
 
@@ -15206,8 +15282,11 @@
           const masteringEnabled = settings?.audio_mastering_enabled !== false;
           const debugEnabled = Boolean(settings?.debug_enabled);
           const updatePasswordSet = Boolean(settings?.update_sudo_password_set);
-          const localBoostEnabled = Boolean(settings?.local_boost_enabled);
-          const localBoostUrl = normalizeLocalBoostUrl(settings?.local_boost_url);
+          const cloudConnectionEnabled = Boolean(settings?.cloud_connection_enabled);
+          const cloudServerUrl = normalizeCloudServerUrl(settings?.cloud_server_url);
+          const cloudAutoConnect = Boolean(settings?.cloud_auto_connect);
+          const cloudProcessingTarget =
+            settings?.cloud_processing_target === 'local' ? 'local' : 'cloud';
 
           const effectiveModel =
             requestedModel === GPU_MODEL && !state.gpuWhisper.supported
@@ -15235,11 +15314,17 @@
           if (dom.settingsDebugEnabled) {
             dom.settingsDebugEnabled.checked = debugEnabled;
           }
-          if (dom.settingsLocalBoostEnabled) {
-            dom.settingsLocalBoostEnabled.checked = localBoostEnabled;
+          if (dom.settingsCloudConnectionEnabled) {
+            dom.settingsCloudConnectionEnabled.checked = cloudConnectionEnabled;
           }
-          if (dom.settingsLocalBoostUrl) {
-            dom.settingsLocalBoostUrl.value = localBoostUrl;
+          if (dom.settingsCloudServerUrl) {
+            dom.settingsCloudServerUrl.value = cloudServerUrl;
+          }
+          if (dom.settingsCloudAutoConnect) {
+            dom.settingsCloudAutoConnect.checked = cloudAutoConnect;
+          }
+          if (dom.settingsCloudProcessingTarget) {
+            dom.settingsCloudProcessingTarget.value = cloudProcessingTarget;
           }
           if (dom.settingsUpdatePassword) {
             dom.settingsUpdatePassword.value = '';
@@ -15266,19 +15351,23 @@
             audio_mastering_enabled: masteringEnabled,
             debug_enabled: debugEnabled,
             update_sudo_password_set: updatePasswordSet,
-            local_boost_enabled: localBoostEnabled,
-            local_boost_url: localBoostUrl,
+            cloud_connection_enabled: cloudConnectionEnabled,
+            cloud_server_url: cloudServerUrl,
+            cloud_auto_connect: cloudAutoConnect,
+            cloud_processing_target: cloudProcessingTarget,
           };
 
-          state.localBoost.enabled = localBoostEnabled;
-          state.localBoost.url = localBoostUrl;
-          if (!localBoostEnabled) {
-            state.localBoost.connected = false;
-            updateLocalBoostStatus('disabled');
-          } else if (state.localBoost.connected) {
-            updateLocalBoostStatus('connected');
+          state.cloudConnection.enabled = cloudConnectionEnabled;
+          state.cloudConnection.url = cloudServerUrl;
+          state.cloudConnection.autoConnect = cloudAutoConnect;
+          state.cloudConnection.processingTarget = cloudProcessingTarget;
+          if (!cloudConnectionEnabled) {
+            state.cloudConnection.connected = false;
+            updateCloudConnectionStatus('disabled');
+          } else if (state.cloudConnection.connected) {
+            updateCloudConnectionStatus('connected');
           } else {
-            updateLocalBoostStatus('idle');
+            updateCloudConnectionStatus('idle');
           }
 
           applyAppearance(displayModeValue, themeValue, effectsValue);
@@ -17910,7 +17999,11 @@
             .split('/')
             .map((segment) => encodeURIComponent(segment))
             .join('/');
-          return resolveAppUrl(`/storage/${encodedPath}`);
+          const url = `/storage/${encodedPath}`;
+          if (state.cloudConnection.enabled && state.cloudConnection.connected && shouldRouteToCloud(url)) {
+            return resolveCloudServerUrl(url);
+          }
+          return resolveAppUrl(url);
         }
 
         function buildStorageListUrl(path) {
@@ -17995,17 +18088,19 @@
         }
 
         async function request(url, options = {}) {
-          const useLocalBoost =
-            state.localBoost.enabled && shouldRouteToLocalBoost(url);
-          if (useLocalBoost && !state.localBoost.connected) {
-            const ok = await testLocalBoostConnection({ silent: true });
+          const shouldUseCloud =
+            state.cloudConnection.enabled && shouldRouteToCloud(url);
+          const useCloud =
+            shouldUseCloud &&
+            (!isProcessingEndpoint(url) ||
+              state.cloudConnection.processingTarget === 'cloud');
+          if (useCloud && !state.cloudConnection.connected) {
+            const ok = await testCloudConnection({ silent: true });
             if (!ok) {
-              throw new Error(t('settings.localBoost.errors.disconnected'));
+              throw new Error(t('settings.cloudConnection.errors.disconnected'));
             }
           }
-          const resolvedUrl = useLocalBoost
-            ? resolveLocalBoostUrl(url)
-            : resolveAppUrl(url);
+          const resolvedUrl = useCloud ? resolveCloudServerUrl(url) : resolveAppUrl(url);
           try {
             const response = await fetch(resolvedUrl, options);
             if (!response.ok) {
@@ -18029,8 +18124,8 @@
             }
             return null;
           } catch (error) {
-            if (useLocalBoost) {
-              await handleLocalBoostDisconnect(error);
+            if (useCloud) {
+              await handleCloudConnectionDisconnect(error);
             }
             throw error;
           }
@@ -21021,8 +21116,8 @@
               return;
             }
             syncSettingsForm(settings);
-            if (settings.local_boost_enabled) {
-              await testLocalBoostConnection({ silent: true });
+            if (settings.cloud_connection_enabled && settings.cloud_auto_connect) {
+              await testCloudConnection({ silent: true });
             }
           } catch (error) {
             showStatus(error.message, 'error');
@@ -22029,9 +22124,9 @@
           });
         }
 
-        if (dom.settingsLocalBoostTest) {
-          dom.settingsLocalBoostTest.addEventListener('click', async () => {
-            await testLocalBoostConnection();
+        if (dom.settingsCloudConnectionTest) {
+          dom.settingsCloudConnectionTest.addEventListener('click', async () => {
+            await testCloudConnection();
           });
         }
 
@@ -22213,25 +22308,38 @@
           });
         }
 
-        if (dom.settingsLocalBoostEnabled) {
-          dom.settingsLocalBoostEnabled.addEventListener('change', (event) => {
-            state.localBoost.enabled = Boolean(event.target.checked);
-            if (!state.localBoost.enabled) {
-              state.localBoost.connected = false;
-              updateLocalBoostStatus('disabled');
+        if (dom.settingsCloudConnectionEnabled) {
+          dom.settingsCloudConnectionEnabled.addEventListener('change', (event) => {
+            state.cloudConnection.enabled = Boolean(event.target.checked);
+            if (!state.cloudConnection.enabled) {
+              state.cloudConnection.connected = false;
+              updateCloudConnectionStatus('disabled');
               return;
             }
-            updateLocalBoostStatus(state.localBoost.connected ? 'connected' : 'idle');
+            updateCloudConnectionStatus(state.cloudConnection.connected ? 'connected' : 'idle');
           });
         }
 
-        if (dom.settingsLocalBoostUrl) {
-          dom.settingsLocalBoostUrl.addEventListener('change', (event) => {
-            const normalized = normalizeLocalBoostUrl(event.target.value);
-            state.localBoost.url = normalized;
+        if (dom.settingsCloudServerUrl) {
+          dom.settingsCloudServerUrl.addEventListener('change', (event) => {
+            const normalized = normalizeCloudServerUrl(event.target.value);
+            state.cloudConnection.url = normalized;
             event.target.value = normalized;
-            state.localBoost.connected = false;
-            updateLocalBoostStatus(state.localBoost.enabled ? 'idle' : 'disabled');
+            state.cloudConnection.connected = false;
+            updateCloudConnectionStatus(state.cloudConnection.enabled ? 'idle' : 'disabled');
+          });
+        }
+
+        if (dom.settingsCloudAutoConnect) {
+          dom.settingsCloudAutoConnect.addEventListener('change', (event) => {
+            state.cloudConnection.autoConnect = Boolean(event.target.checked);
+          });
+        }
+
+        if (dom.settingsCloudProcessingTarget) {
+          dom.settingsCloudProcessingTarget.addEventListener('change', (event) => {
+            const value = typeof event.target.value === 'string' ? event.target.value : 'cloud';
+            state.cloudConnection.processingTarget = value === 'local' ? 'local' : 'cloud';
           });
         }
 
@@ -22263,12 +22371,18 @@
             const debugEnabled = dom.settingsDebugEnabled
               ? Boolean(dom.settingsDebugEnabled.checked)
               : false;
-            const localBoostEnabled = dom.settingsLocalBoostEnabled
-              ? Boolean(dom.settingsLocalBoostEnabled.checked)
+            const cloudConnectionEnabled = dom.settingsCloudConnectionEnabled
+              ? Boolean(dom.settingsCloudConnectionEnabled.checked)
               : false;
-            const localBoostUrl = dom.settingsLocalBoostUrl
-              ? normalizeLocalBoostUrl(dom.settingsLocalBoostUrl.value)
-              : DEFAULT_LOCAL_BOOST_URL;
+            const cloudServerUrl = dom.settingsCloudServerUrl
+              ? normalizeCloudServerUrl(dom.settingsCloudServerUrl.value)
+              : DEFAULT_CLOUD_SERVER_URL;
+            const cloudAutoConnect = dom.settingsCloudAutoConnect
+              ? Boolean(dom.settingsCloudAutoConnect.checked)
+              : false;
+            const cloudProcessingTarget = dom.settingsCloudProcessingTarget
+              ? dom.settingsCloudProcessingTarget.value
+              : 'cloud';
             const updatePasswordValue = dom.settingsUpdatePassword
               ? dom.settingsUpdatePassword.value
               : '';
@@ -22295,8 +22409,10 @@
                 slide_force_ocr: slideForceOcr,
                 audio_mastering_enabled: masteringEnabled,
                 debug_enabled: debugEnabled,
-                local_boost_enabled: localBoostEnabled,
-                local_boost_url: localBoostUrl,
+                cloud_connection_enabled: cloudConnectionEnabled,
+                cloud_server_url: cloudServerUrl,
+                cloud_auto_connect: cloudAutoConnect,
+                cloud_processing_target: cloudProcessingTarget,
               };
               if (updatePasswordPayload !== null) {
                 payload.update_sudo_password = updatePasswordPayload;
@@ -22322,8 +22438,10 @@
                 slide_force_ocr: slideForceOcr,
                 audio_mastering_enabled: masteringEnabled,
                 debug_enabled: debugEnabled,
-                local_boost_enabled: localBoostEnabled,
-                local_boost_url: localBoostUrl,
+                cloud_connection_enabled: cloudConnectionEnabled,
+                cloud_server_url: cloudServerUrl,
+                cloud_auto_connect: cloudAutoConnect,
+                cloud_processing_target: cloudProcessingTarget,
                 update_sudo_password_set: fallbackUpdatePasswordSet,
               };
               syncSettingsForm(updatedSettings);
@@ -22338,7 +22456,7 @@
         }
         window.addEventListener('beforeunload', () => {
           stopDebugPolling();
-          void cancelLocalBoostTasks({ force: true });
+          void cancelCloudProcessingTasks({ force: true });
         });
         setActiveView(state.activeView);
         updateEditModeUI();
