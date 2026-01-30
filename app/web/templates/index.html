@@ -13658,7 +13658,15 @@
           }
         }
 
-        async function testCloudConnection({ silent = false } = {}) {
+        async function refreshCloudConnectionData() {
+          const selectedLectureId = state.selectedLectureId;
+          await refreshData();
+          if (selectedLectureId && state.selectedLectureId === selectedLectureId) {
+            await selectLecture(selectedLectureId);
+          }
+        }
+
+        async function testCloudConnection({ silent = false, refresh = false } = {}) {
           const baseUrl = normalizeCloudServerUrl(
             dom.settingsCloudServerUrl?.value || state.cloudConnection.url,
           );
@@ -13676,6 +13684,9 @@
             updateCloudConnectionStatus('connected');
             if (!silent) {
               showStatus(t('settings.cloudConnection.notifications.connected'), 'success');
+            }
+            if (refresh && state.cloudConnection.enabled) {
+              await refreshCloudConnectionData();
             }
             return true;
           } catch (error) {
@@ -22126,7 +22137,7 @@
 
         if (dom.settingsCloudConnectionTest) {
           dom.settingsCloudConnectionTest.addEventListener('click', async () => {
-            await testCloudConnection();
+            await testCloudConnection({ refresh: true });
           });
         }
 
@@ -22309,14 +22320,16 @@
         }
 
         if (dom.settingsCloudConnectionEnabled) {
-          dom.settingsCloudConnectionEnabled.addEventListener('change', (event) => {
+          dom.settingsCloudConnectionEnabled.addEventListener('change', async (event) => {
             state.cloudConnection.enabled = Boolean(event.target.checked);
             if (!state.cloudConnection.enabled) {
               state.cloudConnection.connected = false;
               updateCloudConnectionStatus('disabled');
+              await refreshCloudConnectionData();
               return;
             }
             updateCloudConnectionStatus(state.cloudConnection.connected ? 'connected' : 'idle');
+            await testCloudConnection({ refresh: true });
           });
         }
 
