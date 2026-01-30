@@ -12255,55 +12255,51 @@
             return;
           }
           const tasks = [];
-          const includeMetadata =
-            state.cloudConnection.enabled && state.cloudConnection.processingTarget === 'local';
           state.bulkProcess.selections.forEach((_, key) => {
             const meta = state.bulkProcess.meta.get(key);
             if (meta && meta.available) {
               const task = { lecture_id: meta.lectureId, operation: meta.operation };
-              if (includeMetadata) {
-                if (Number.isFinite(meta.classId)) {
-                  task.class_id = meta.classId;
-                }
-                if (typeof meta.className === 'string' && meta.className) {
-                  task.class_name = meta.className;
-                }
-                if (typeof meta.classDescription === 'string') {
-                  task.class_description = meta.classDescription;
-                }
-                if (Number.isFinite(meta.moduleId)) {
-                  task.module_id = meta.moduleId;
-                }
-                if (typeof meta.moduleName === 'string' && meta.moduleName) {
-                  task.module_name = meta.moduleName;
-                }
-                if (typeof meta.moduleDescription === 'string') {
-                  task.module_description = meta.moduleDescription;
-                }
-                if (typeof meta.lectureName === 'string' && meta.lectureName) {
-                  task.lecture_name = meta.lectureName;
-                }
-                if (typeof meta.lectureDescription === 'string') {
-                  task.lecture_description = meta.lectureDescription;
-                }
-                if (typeof meta.audioPath === 'string' && meta.audioPath) {
-                  task.audio_path = meta.audioPath;
-                }
-                if (typeof meta.processedAudioPath === 'string' && meta.processedAudioPath) {
-                  task.processed_audio_path = meta.processedAudioPath;
-                }
-                if (typeof meta.slidePath === 'string' && meta.slidePath) {
-                  task.slide_path = meta.slidePath;
-                }
-                if (typeof meta.transcriptPath === 'string' && meta.transcriptPath) {
-                  task.transcript_path = meta.transcriptPath;
-                }
-                if (typeof meta.notesPath === 'string' && meta.notesPath) {
-                  task.notes_path = meta.notesPath;
-                }
-                if (typeof meta.slideImageDir === 'string' && meta.slideImageDir) {
-                  task.slide_image_dir = meta.slideImageDir;
-                }
+              if (Number.isFinite(meta.classId)) {
+                task.class_id = meta.classId;
+              }
+              if (typeof meta.className === 'string' && meta.className) {
+                task.class_name = meta.className;
+              }
+              if (typeof meta.classDescription === 'string') {
+                task.class_description = meta.classDescription;
+              }
+              if (Number.isFinite(meta.moduleId)) {
+                task.module_id = meta.moduleId;
+              }
+              if (typeof meta.moduleName === 'string' && meta.moduleName) {
+                task.module_name = meta.moduleName;
+              }
+              if (typeof meta.moduleDescription === 'string') {
+                task.module_description = meta.moduleDescription;
+              }
+              if (typeof meta.lectureName === 'string' && meta.lectureName) {
+                task.lecture_name = meta.lectureName;
+              }
+              if (typeof meta.lectureDescription === 'string') {
+                task.lecture_description = meta.lectureDescription;
+              }
+              if (typeof meta.audioPath === 'string' && meta.audioPath) {
+                task.audio_path = meta.audioPath;
+              }
+              if (typeof meta.processedAudioPath === 'string' && meta.processedAudioPath) {
+                task.processed_audio_path = meta.processedAudioPath;
+              }
+              if (typeof meta.slidePath === 'string' && meta.slidePath) {
+                task.slide_path = meta.slidePath;
+              }
+              if (typeof meta.transcriptPath === 'string' && meta.transcriptPath) {
+                task.transcript_path = meta.transcriptPath;
+              }
+              if (typeof meta.notesPath === 'string' && meta.notesPath) {
+                task.notes_path = meta.notesPath;
+              }
+              if (typeof meta.slideImageDir === 'string' && meta.slideImageDir) {
+                task.slide_image_dir = meta.slideImageDir;
               }
               if (meta.options && typeof meta.options === 'object') {
                 task.options = meta.options;
