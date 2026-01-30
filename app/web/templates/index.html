@@ -18166,13 +18166,20 @@
           if (!payload || !payload.preview_id || !payload.preview_url) {
             return null;
           }
+          const previewUrl = payload.preview_url;
+          const resolvedPreviewUrl =
+            state.cloudConnection.enabled &&
+            state.cloudConnection.connected &&
+            shouldRouteToCloud(previewUrl)
+              ? resolveCloudServerUrl(previewUrl)
+              : resolveAppUrl(previewUrl);
           const providedName =
             (typeof payload.filename === 'string' && payload.filename) ||
             (file && typeof file.name === 'string' && file.name) ||
             'slides.pdf';
           return {
             id: payload.preview_id,
-            url: resolveAppUrl(payload.preview_url),
+            url: resolvedPreviewUrl,
             filename: providedName,
             pageCount:
               typeof payload.page_count === 'number' && Number.isFinite(payload.page_count)
@@ -21680,6 +21687,63 @@
           }
         }
 
+        function appendProcessingLectureMetadata(formData, detail) {
+          if (!(formData instanceof FormData) || !detail) {
+            return;
+          }
+          if (!state.cloudConnection.enabled || state.cloudConnection.processingTarget !== 'local') {
+            return;
+          }
+          const lecture = detail?.lecture;
+          const module = detail?.module;
+          const classRecord = detail?.class;
+          if (!lecture || !module || !classRecord) {
+            return;
+          }
+          if (Number.isFinite(classRecord.id)) {
+            formData.append('class_id', String(classRecord.id));
+          }
+          if (typeof classRecord.name === 'string') {
+            formData.append('class_name', classRecord.name);
+          }
+          if (typeof classRecord.description === 'string') {
+            formData.append('class_description', classRecord.description);
+          }
+          if (Number.isFinite(module.id)) {
+            formData.append('module_id', String(module.id));
+          }
+          if (typeof module.name === 'string') {
+            formData.append('module_name', module.name);
+          }
+          if (typeof module.description === 'string') {
+            formData.append('module_description', module.description);
+          }
+          if (typeof lecture.name === 'string') {
+            formData.append('lecture_name', lecture.name);
+          }
+          if (typeof lecture.description === 'string') {
+            formData.append('lecture_description', lecture.description);
+          }
+          if (typeof lecture.audio_path === 'string') {
+            formData.append('audio_path', lecture.audio_path);
+          }
+          if (typeof lecture.processed_audio_path === 'string') {
+            formData.append('processed_audio_path', lecture.processed_audio_path);
+          }
+          if (typeof lecture.slide_path === 'string') {
+            formData.append('slide_path', lecture.slide_path);
+          }
+          if (typeof lecture.transcript_path === 'string') {
+            formData.append('transcript_path', lecture.transcript_path);
+          }
+          if (typeof lecture.notes_path === 'string') {
+            formData.append('notes_path', lecture.notes_path);
+          }
+          if (typeof lecture.slide_image_dir === 'string') {
+            formData.append('slide_image_dir', lecture.slide_image_dir);
+          }
+        }
+
         async function handleSlideProcessing(definition) {
           if (!definition || definition.type !== 'slides' || !state.selectedLectureId) {
             return;
@@ -21743,6 +21807,7 @@
           if (typeof selection.pageEnd === 'number' && Number.isFinite(selection.pageEnd)) {
             formData.append('page_end', String(selection.pageEnd));
           }
+          appendProcessingLectureMetadata(formData, detail);
           try {
             await deleteSlidePreview(lectureId, preview.id);
           } catch (error) {

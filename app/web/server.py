@@ -1390,6 +1390,90 @@ def _serialize_class(repository: LectureRepository, class_record: ClassRecord) -
     }
 
 
+def _ensure_processing_lecture(
+    lecture_id: int,
+    *,
+    class_id: Optional[int],
+    class_name: Optional[str],
+    class_description: Optional[str],
+    module_id: Optional[int],
+    module_name: Optional[str],
+    module_description: Optional[str],
+    lecture_name: Optional[str],
+    lecture_description: Optional[str],
+    audio_path: Optional[str],
+    processed_audio_path: Optional[str],
+    slide_path: Optional[str],
+    transcript_path: Optional[str],
+    notes_path: Optional[str],
+    slide_image_dir: Optional[str],
+    repository: LectureRepository,
+) -> Optional[LectureRecord]:
+    lecture = repository.get_lecture(lecture_id)
+    if lecture is not None:
+        return lecture
+    if not class_name or not module_name or not lecture_name:
+        return None
+
+    class_record = repository.get_class(class_id) if class_id is not None else None
+    if class_record is None:
+        class_record = repository.find_class_by_name(class_name)
+    if class_record is None:
+        try:
+            created_id = repository.add_class(
+                class_name.strip(),
+                (class_description or "").strip(),
+                class_id=class_id,
+            )
+            class_record = repository.get_class(created_id)
+        except sqlite3.IntegrityError:
+            class_record = repository.find_class_by_name(class_name)
+
+    if class_record is None:
+        return None
+
+    module = repository.get_module(module_id) if module_id is not None else None
+    if module is None:
+        module = repository.find_module_by_name(class_record.id, module_name)
+    if module is None:
+        try:
+            created_id = repository.add_module(
+                class_record.id,
+                module_name.strip(),
+                (module_description or "").strip(),
+                module_id=module_id,
+            )
+            module = repository.get_module(created_id)
+        except sqlite3.IntegrityError:
+            module = repository.find_module_by_name(class_record.id, module_name)
+
+    if module is None:
+        return None
+
+    lecture = repository.get_lecture(lecture_id)
+    if lecture is not None:
+        return lecture
+
+    try:
+        repository.add_lecture(
+            module.id,
+            lecture_name.strip(),
+            (lecture_description or "").strip(),
+            lecture_id=lecture_id,
+            audio_path=audio_path,
+            processed_audio_path=processed_audio_path,
+            slide_path=slide_path,
+            transcript_path=transcript_path,
+            notes_path=notes_path,
+            slide_image_dir=slide_image_dir,
+        )
+    except sqlite3.IntegrityError:
+        lecture = repository.find_lecture_by_name(module.id, lecture_name)
+    else:
+        lecture = repository.get_lecture(lecture_id)
+    return lecture
+
+
 def _annotate_slide_manifest_counts(
     classes: List[Dict[str, Any]], storage_root: Path
 ) -> None:
@@ -5776,6 +5860,20 @@ def create_app(
         page_end: Optional[int] = Form(None),
         preview_token: Optional[str] = Form(None),
         use_existing: Optional[str] = Form(None),
+        class_id: Optional[int] = Form(None),
+        class_name: Optional[str] = Form(None),
+        class_description: Optional[str] = Form(None),
+        module_id: Optional[int] = Form(None),
+        module_name: Optional[str] = Form(None),
+        module_description: Optional[str] = Form(None),
+        lecture_name: Optional[str] = Form(None),
+        lecture_description: Optional[str] = Form(None),
+        audio_path: Optional[str] = Form(None),
+        processed_audio_path: Optional[str] = Form(None),
+        slide_path: Optional[str] = Form(None),
+        transcript_path: Optional[str] = Form(None),
+        notes_path: Optional[str] = Form(None),
+        slide_image_dir: Optional[str] = Form(None),
     ) -> Dict[str, Any]:
         _log_event(
             "Processing slides",
@@ -5785,6 +5883,25 @@ def create_app(
             preview_token=preview_token,
         )
         lecture = repository.get_lecture(lecture_id)
+        if lecture is None:
+            lecture = _ensure_processing_lecture(
+                lecture_id,
+                class_id=class_id,
+                class_name=class_name,
+                class_description=class_description,
+                module_id=module_id,
+                module_name=module_name,
+                module_description=module_description,
+                lecture_name=lecture_name,
+                lecture_description=lecture_description,
+                audio_path=audio_path,
+                processed_audio_path=processed_audio_path,
+                slide_path=slide_path,
+                transcript_path=transcript_path,
+                notes_path=notes_path,
+                slide_image_dir=slide_image_dir,
+                repository=repository,
+            )
         if lecture is None:
             raise HTTPException(status_code=404, detail="Lecture not found")
 

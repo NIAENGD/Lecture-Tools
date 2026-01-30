@@ -196,7 +196,13 @@ class LectureRepository:
     # ---------------------------------------------------------------------
     # Creation helpers
     # ---------------------------------------------------------------------
-    def add_class(self, name: str, description: str = "") -> int:
+    def add_class(
+        self,
+        name: str,
+        description: str = "",
+        *,
+        class_id: Optional[int] = None,
+    ) -> int:
         description_length = len(description or "")
         LOGGER.debug(
             "Adding class '%s' (description length=%s)",
@@ -211,26 +217,37 @@ class LectureRepository:
         ) as event:
             with self._connect() as connection:
                 position = self._next_position(connection, "classes")
-                cursor = self._execute(
-                    connection,
-                    "INSERT INTO classes(name, description, position) VALUES (?, ?, ?)",
-                    (name, description, position),
-                    action="classes.insert",
-                    table="classes",
-                )
+                if class_id is None:
+                    cursor = self._execute(
+                        connection,
+                        "INSERT INTO classes(name, description, position) VALUES (?, ?, ?)",
+                        (name, description, position),
+                        action="classes.insert",
+                        table="classes",
+                    )
+                    inserted_id = int(cursor.lastrowid)
+                else:
+                    cursor = self._execute(
+                        connection,
+                        "INSERT INTO classes(id, name, description, position) VALUES (?, ?, ?, ?)",
+                        (class_id, name, description, position),
+                        action="classes.insert",
+                        table="classes",
+                    )
+                    inserted_id = class_id
                 rowcount = cursor.rowcount if cursor.rowcount and cursor.rowcount > 0 else 1
                 event.update({
-                    "class_id": int(cursor.lastrowid),
+                    "class_id": inserted_id,
                     "position": position,
                     "rowcount": int(rowcount),
                 })
                 LOGGER.debug(
                     "Class '%s' inserted with id=%s at position=%s",
                     name,
-                    cursor.lastrowid,
+                    inserted_id,
                     position,
                 )
-                return int(cursor.lastrowid)
+                return int(inserted_id)
 
     def update_class(
         self,
@@ -307,7 +324,14 @@ class LectureRepository:
                     LOGGER.debug("Class '%s' not found", name)
                 return ClassRecord(**row) if row else None
 
-    def add_module(self, class_id: int, name: str, description: str = "") -> int:
+    def add_module(
+        self,
+        class_id: int,
+        name: str,
+        description: str = "",
+        *,
+        module_id: Optional[int] = None,
+    ) -> int:
         description_length = len(description or "")
         LOGGER.debug(
             "Adding module '%s' for class_id=%s (description length=%s)",
@@ -326,27 +350,38 @@ class LectureRepository:
                 position = self._next_position(
                     connection, "modules", filter_field="class_id", filter_value=class_id
                 )
-                cursor = self._execute(
-                    connection,
-                    "INSERT INTO modules(class_id, name, description, position) VALUES (?, ?, ?, ?)",
-                    (class_id, name, description, position),
-                    action="modules.insert",
-                    table="modules",
-                )
+                if module_id is None:
+                    cursor = self._execute(
+                        connection,
+                        "INSERT INTO modules(class_id, name, description, position) VALUES (?, ?, ?, ?)",
+                        (class_id, name, description, position),
+                        action="modules.insert",
+                        table="modules",
+                    )
+                    inserted_id = int(cursor.lastrowid)
+                else:
+                    cursor = self._execute(
+                        connection,
+                        "INSERT INTO modules(id, class_id, name, description, position) VALUES (?, ?, ?, ?, ?)",
+                        (module_id, class_id, name, description, position),
+                        action="modules.insert",
+                        table="modules",
+                    )
+                    inserted_id = module_id
                 rowcount = cursor.rowcount if cursor.rowcount and cursor.rowcount > 0 else 1
                 event.update({
-                    "module_id": int(cursor.lastrowid),
+                    "module_id": inserted_id,
                     "position": position,
                     "rowcount": int(rowcount),
                 })
                 LOGGER.debug(
                     "Module '%s' inserted with id=%s at position=%s for class_id=%s",
                     name,
-                    cursor.lastrowid,
+                    inserted_id,
                     position,
                     class_id,
                 )
-                return int(cursor.lastrowid)
+                return int(inserted_id)
 
     def update_module(
         self,
@@ -443,6 +478,7 @@ class LectureRepository:
         name: str,
         description: str = "",
         *,
+        lecture_id: Optional[int] = None,
         audio_path: Optional[str] = None,
         processed_audio_path: Optional[str] = None,
         slide_path: Optional[str] = None,
@@ -474,51 +510,88 @@ class LectureRepository:
                 position = self._next_position(
                     connection, "lectures", filter_field="module_id", filter_value=module_id
                 )
-                cursor = self._execute(
-                    connection,
-                    """
-                    INSERT INTO lectures(
-                        module_id,
-                        name,
-                        description,
-                        position,
-                        audio_path,
-                        processed_audio_path,
-                        slide_path,
-                        transcript_path,
-                        notes_path,
-                        slide_image_dir
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        module_id,
-                        name,
-                        description,
-                        position,
-                        audio_path,
-                        processed_audio_path,
-                        slide_path,
-                        transcript_path,
-                        notes_path,
-                        slide_image_dir,
-                    ),
-                    action="lectures.insert",
-                    table="lectures",
-                )
+                if lecture_id is None:
+                    cursor = self._execute(
+                        connection,
+                        """
+                        INSERT INTO lectures(
+                            module_id,
+                            name,
+                            description,
+                            position,
+                            audio_path,
+                            processed_audio_path,
+                            slide_path,
+                            transcript_path,
+                            notes_path,
+                            slide_image_dir
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            module_id,
+                            name,
+                            description,
+                            position,
+                            audio_path,
+                            processed_audio_path,
+                            slide_path,
+                            transcript_path,
+                            notes_path,
+                            slide_image_dir,
+                        ),
+                        action="lectures.insert",
+                        table="lectures",
+                    )
+                    inserted_id = int(cursor.lastrowid)
+                else:
+                    cursor = self._execute(
+                        connection,
+                        """
+                        INSERT INTO lectures(
+                            id,
+                            module_id,
+                            name,
+                            description,
+                            position,
+                            audio_path,
+                            processed_audio_path,
+                            slide_path,
+                            transcript_path,
+                            notes_path,
+                            slide_image_dir
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        (
+                            lecture_id,
+                            module_id,
+                            name,
+                            description,
+                            position,
+                            audio_path,
+                            processed_audio_path,
+                            slide_path,
+                            transcript_path,
+                            notes_path,
+                            slide_image_dir,
+                        ),
+                        action="lectures.insert",
+                        table="lectures",
+                    )
+                    inserted_id = lecture_id
                 rowcount = cursor.rowcount if cursor.rowcount and cursor.rowcount > 0 else 1
                 event.update({
-                    "lecture_id": int(cursor.lastrowid),
+                    "lecture_id": inserted_id,
                     "position": position,
                     "rowcount": int(rowcount),
                 })
                 LOGGER.debug(
                     "Lecture '%s' inserted with id=%s at position=%s for module_id=%s",
                     name,
-                    cursor.lastrowid,
+                    inserted_id,
                     position,
                     module_id,
                 )
-                return int(cursor.lastrowid)
+                return int(inserted_id)
 
     def find_lecture_by_name(self, module_id: int, name: str) -> Optional[LectureRecord]:
         LOGGER.debug("Looking up lecture '%s' for module_id=%s", name, module_id)
