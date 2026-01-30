@@ -2001,6 +2001,20 @@ class TaskDefinition(BaseModel):
     lecture_id: int = Field(..., ge=1)
     operation: TaskOperation
     options: Optional[Dict[str, Any]] = None
+    class_id: Optional[int] = None
+    class_name: Optional[str] = None
+    class_description: Optional[str] = None
+    module_id: Optional[int] = None
+    module_name: Optional[str] = None
+    module_description: Optional[str] = None
+    lecture_name: Optional[str] = None
+    lecture_description: Optional[str] = None
+    audio_path: Optional[str] = None
+    processed_audio_path: Optional[str] = None
+    slide_path: Optional[str] = None
+    transcript_path: Optional[str] = None
+    notes_path: Optional[str] = None
+    slide_image_dir: Optional[str] = None
 
 
 class TaskBatchRequest(BaseModel):
@@ -5160,6 +5174,25 @@ def create_app(
         for definition in definitions:
             lecture_id = definition.lecture_id
             lecture = repository.get_lecture(lecture_id)
+            if lecture is None:
+                lecture = _ensure_processing_lecture(
+                    lecture_id,
+                    class_id=definition.class_id,
+                    class_name=definition.class_name,
+                    class_description=definition.class_description,
+                    module_id=definition.module_id,
+                    module_name=definition.module_name,
+                    module_description=definition.module_description,
+                    lecture_name=definition.lecture_name,
+                    lecture_description=definition.lecture_description,
+                    audio_path=definition.audio_path,
+                    processed_audio_path=definition.processed_audio_path,
+                    slide_path=definition.slide_path,
+                    transcript_path=definition.transcript_path,
+                    notes_path=definition.notes_path,
+                    slide_image_dir=definition.slide_image_dir,
+                    repository=repository,
+                )
             if lecture is None:
                 raise HTTPException(status_code=404, detail="Lecture not found")
             operation = definition.operation
