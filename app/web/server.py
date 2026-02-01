@@ -3080,6 +3080,29 @@ def create_app(
             )
         return described
 
+    async def _prefetch_slide_manifest_assets(
+        lecture_paths: LecturePaths,
+        storage_root: Path,
+    ) -> None:
+        manifest_path = lecture_paths.raw_dir / _SLIDE_MANIFEST_FILENAME
+        if not manifest_path.exists():
+            return
+        entries = _load_asset_manifest(manifest_path)
+        if not entries:
+            return
+        for entry in entries:
+            relative = entry.get("path")
+            if not isinstance(relative, str) or not relative:
+                continue
+            try:
+                candidate = _resolve_storage_path(storage_root, relative)
+            except ValueError:
+                continue
+            if candidate.exists():
+                continue
+            await _fetch_cloud_asset(relative)
+        _prune_manifest_entries(manifest_path, storage_root)
+
     def _ensure_slide_source(
         lecture_id: int,
         lecture: LectureRecord,
@@ -3771,15 +3794,38 @@ def create_app(
         lecture = repository.get_lecture(lecture_id)
         if lecture is None:
             raise RuntimeError("Lecture not found")
-        if not lecture.slide_path:
-            raise RuntimeError("Upload a PDF before processing slides.")
 
         class_record, module = _require_hierarchy(lecture)
         storage_root = _require_storage_root()
-        try:
-            slide_source = _resolve_storage_path(storage_root, lecture.slide_path)
-        except Exception as error:  # pragma: no cover - defensive
-            raise RuntimeError("Slide file not found") from error
+        slide_source = None
+        if lecture.slide_path:
+            try:
+                slide_source = _resolve_storage_path(storage_root, lecture.slide_path)
+            except Exception as error:  # pragma: no cover - defensive
+                raise RuntimeError("Slide file not found") from error
+            if not slide_source.exists():
+                slide_source = await _fetch_cloud_asset(lecture.slide_path)
+        if slide_source is None:
+            lecture_paths = LecturePaths.build(
+                storage_root,
+                class_record.name,
+                module.name,
+                lecture.name,
+            )
+            await _prefetch_slide_manifest_assets(lecture_paths, storage_root)
+            try:
+                slide_source = _ensure_slide_source(
+                    lecture_id,
+                    lecture,
+                    lecture_paths,
+                    storage_root,
+                    class_name=class_record.name,
+                    module_name=module.name,
+                )
+            except HTTPException as error:
+                raise RuntimeError(error.detail or str(error)) from error
+        if slide_source is None:
+            raise RuntimeError("Upload a PDF before processing slides.")
         if not slide_source.exists():
             raise RuntimeError("Slide file not found")
 
@@ -3965,6 +4011,7 @@ def create_app(
         job_token = _JOB_ID_VAR.set(job_id)
         processing_tracker.start(lecture_id, start_message, context=context)
         try:
+            await _prefetch_slide_manifest_assets(lecture_paths, storage_root)
             combined_slide = _ensure_slide_source(
                 lecture_id,
                 lecture,
@@ -5828,7 +5875,10 @@ def create_app(
         existing_slide: Optional[Path] = None
         if source_mode == "existing":
             existing_slide = _resolve_existing_asset(lecture.slide_path)
+            if existing_slide is None and lecture.slide_path:
+                existing_slide = await _fetch_cloud_asset(lecture.slide_path)
             if existing_slide is None:
+                await _prefetch_slide_manifest_assets(lecture_paths, storage_root)
                 existing_slide = _ensure_slide_source(
                     lecture_id,
                     lecture,
@@ -6162,6 +6212,7 @@ def create_app(
             slide_destination = existing_slide
             slide_relative = lecture.slide_path
         else:
+            await _prefetch_slide_manifest_assets(lecture_paths, storage_root)
             combined_slide = _ensure_slide_source(
                 lecture_id,
                 lecture,
