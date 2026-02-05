@@ -5944,6 +5944,7 @@
           </div>
           <div class="asset-viewer-actions">
             <button id="asset-viewer-download" type="button" class="text-button"></button>
+            <button id="asset-viewer-copy" type="button" class="text-button hidden"></button>
             <button id="asset-viewer-close" type="button" class="text-button"></button>
           </div>
         </div>
@@ -6807,11 +6808,14 @@
                 close: 'Close',
                 ok: 'OK',
                 reveal: 'Reveal',
+                copy: 'Copy',
               },
             },
             viewer: {
               loading: 'Loading…',
               failed: 'Unable to load file.',
+              copied: 'Copied to clipboard.',
+              copyFailed: 'Unable to copy text.',
               unsupported: 'This file type cannot be viewed inline.',
               types: {
                 pdf: 'PDF',
@@ -7499,11 +7503,14 @@
                 close: '关闭',
                 ok: '好的',
                 reveal: '定位',
+                copy: '复制',
               },
             },
             viewer: {
               loading: '加载中…',
               failed: '无法加载文件。',
+              copied: '已复制到剪贴板。',
+              copyFailed: '无法复制文本。',
               unsupported: '此文件类型不支持在线预览。',
               types: {
                 pdf: 'PDF',
@@ -8203,11 +8210,14 @@
                 close: 'Cerrar',
                 ok: 'Aceptar',
                 reveal: 'Mostrar',
+                copy: 'Copiar',
               },
             },
             viewer: {
               loading: 'Cargando…',
               failed: 'No se pudo cargar el archivo.',
+              copied: 'Copiado al portapapeles.',
+              copyFailed: 'No se pudo copiar el texto.',
               unsupported: 'Este tipo de archivo no se puede visualizar en línea.',
               types: {
                 pdf: 'PDF',
@@ -8915,11 +8925,14 @@
                 close: 'Fermer',
                 ok: 'OK',
                 reveal: 'Afficher',
+                copy: 'Copier',
               },
             },
             viewer: {
               loading: 'Chargement…',
               failed: 'Impossible de charger le fichier.',
+              copied: 'Copié dans le presse-papiers.',
+              copyFailed: 'Impossible de copier le texte.',
               unsupported: 'Ce type de fichier ne peut pas être affiché en ligne.',
               types: {
                 pdf: 'PDF',
@@ -9564,6 +9577,7 @@
             url: null,
             filename: '',
             type: null,
+            textContent: '',
             previousActive: null,
           },
           debug: {
@@ -9850,6 +9864,7 @@
             status: document.getElementById('asset-viewer-status'),
             content: document.getElementById('asset-viewer-content'),
             download: document.getElementById('asset-viewer-download'),
+            copy: document.getElementById('asset-viewer-copy'),
             close: document.getElementById('asset-viewer-close'),
           },
           uploadDialog: {
@@ -9959,6 +9974,30 @@
             document.body.appendChild(anchor);
             anchor.click();
             anchor.remove();
+          });
+        }
+
+        if (dom.viewer?.copy) {
+          dom.viewer.copy.addEventListener('click', async (event) => {
+            event.preventDefault();
+            const text = state.viewer.textContent;
+            if (!text) {
+              setAssetViewerStatus(t('viewer.copyFailed'));
+              return;
+            }
+            const loadId = state.viewer.loadId;
+            try {
+              await copyTextToClipboard(text);
+              setAssetViewerStatus(t('viewer.copied'));
+              window.setTimeout(() => {
+                if (state.viewer.loadId === loadId) {
+                  setAssetViewerStatus('');
+                }
+              }, 2000);
+            } catch (error) {
+              console.warn('Unable to copy asset text', error);
+              setAssetViewerStatus(t('viewer.copyFailed'));
+            }
           });
         }
 
@@ -17901,12 +17940,17 @@
           state.viewer.url = null;
           state.viewer.filename = '';
           state.viewer.type = null;
+          state.viewer.textContent = '';
           state.viewer.previousActive = null;
           if (viewer?.content) {
             viewer.content.innerHTML = '';
             viewer.content.classList.remove('pdf-mode', 'text-mode', 'markdown-mode');
             viewer.content.scrollTop = 0;
             viewer.content.scrollLeft = 0;
+          }
+          if (viewer?.copy) {
+            viewer.copy.classList.add('hidden');
+            viewer.copy.disabled = true;
           }
           setAssetViewerStatus('');
           setAssetViewerMeta('');
@@ -17966,6 +18010,7 @@
           state.viewer.url = url;
           state.viewer.filename = fileName;
           state.viewer.type = type;
+          state.viewer.textContent = '';
           state.viewer.previousActive = previousActive;
           state.viewer.loadId += 1;
           const loadId = state.viewer.loadId;
@@ -17977,6 +18022,12 @@
           if (viewer.download) {
             viewer.download.textContent = t('assets.actions.download');
             viewer.download.disabled = !url;
+          }
+          const canCopy = type === 'text' || type === 'markdown';
+          if (viewer.copy) {
+            viewer.copy.textContent = t('common.actions.copy');
+            viewer.copy.disabled = !canCopy;
+            viewer.copy.classList.toggle('hidden', !canCopy);
           }
           if (viewer.close) {
             viewer.close.textContent = t('common.actions.close');
@@ -18041,6 +18092,10 @@
               if (state.viewer.loadId !== loadId) {
                 return;
               }
+              state.viewer.textContent = text;
+              if (viewer.copy && (type === 'text' || type === 'markdown')) {
+                viewer.copy.disabled = false;
+              }
               if (type === 'text') {
                 const pre = document.createElement('pre');
                 pre.textContent = text;
@@ -18057,6 +18112,10 @@
             } catch (error) {
               if (state.viewer.loadId !== loadId) {
                 return;
+              }
+              state.viewer.textContent = '';
+              if (viewer.copy) {
+                viewer.copy.disabled = true;
               }
               console.warn('Unable to load asset preview', error);
               setAssetViewerStatus(t('viewer.failed'));
