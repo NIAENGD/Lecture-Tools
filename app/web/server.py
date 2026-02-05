@@ -2817,6 +2817,80 @@ def create_app(
             return False, ""
         return True, base_url
 
+    async def _sync_cloud_lecture(
+        lecture_id: int, repository: LectureRepository
+    ) -> Optional[LectureRecord]:
+        enabled, base_url = _cloud_processing_local_settings()
+        if not enabled:
+            return None
+        url = f"{base_url}/api/lectures/{lecture_id}"
+        try:
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.get(url)
+        except Exception as error:  # pragma: no cover - network failures
+            LOGGER.warning("Failed to sync lecture %s from cloud: %s", lecture_id, error)
+            return None
+        if response.status_code != status.HTTP_200_OK:
+            return None
+        try:
+            payload = response.json()
+        except ValueError:
+            return None
+        lecture_payload = payload.get("lecture") if isinstance(payload, dict) else None
+        module_payload = payload.get("module") if isinstance(payload, dict) else None
+        class_payload = payload.get("class") if isinstance(payload, dict) else None
+        if not isinstance(lecture_payload, dict):
+            return None
+        lecture = _ensure_processing_lecture(
+            lecture_id,
+            class_id=class_payload.get("id") if isinstance(class_payload, dict) else None,
+            class_name=class_payload.get("name") if isinstance(class_payload, dict) else None,
+            class_description=class_payload.get("description")
+            if isinstance(class_payload, dict)
+            else None,
+            module_id=module_payload.get("id") if isinstance(module_payload, dict) else None,
+            module_name=module_payload.get("name") if isinstance(module_payload, dict) else None,
+            module_description=module_payload.get("description")
+            if isinstance(module_payload, dict)
+            else None,
+            lecture_name=lecture_payload.get("name"),
+            lecture_description=lecture_payload.get("description"),
+            audio_path=lecture_payload.get("audio_path"),
+            processed_audio_path=lecture_payload.get("processed_audio_path"),
+            slide_path=lecture_payload.get("slide_path"),
+            transcript_path=lecture_payload.get("transcript_path"),
+            notes_path=lecture_payload.get("notes_path"),
+            slide_image_dir=lecture_payload.get("slide_image_dir"),
+            repository=repository,
+        )
+        if lecture is None:
+            return None
+        module_id = (
+            module_payload.get("id") if isinstance(module_payload, dict) else None
+        )
+        try:
+            repository.update_lecture(
+                lecture_id,
+                name=lecture_payload.get("name"),
+                description=lecture_payload.get("description"),
+                module_id=module_id,
+            )
+        except Exception:  # noqa: BLE001 - best effort sync
+            LOGGER.exception("Failed to update lecture metadata for %s", lecture_id)
+        try:
+            repository.update_lecture_assets(
+                lecture_id,
+                audio_path=lecture_payload.get("audio_path"),
+                processed_audio_path=lecture_payload.get("processed_audio_path"),
+                slide_path=lecture_payload.get("slide_path"),
+                transcript_path=lecture_payload.get("transcript_path"),
+                notes_path=lecture_payload.get("notes_path"),
+                slide_image_dir=lecture_payload.get("slide_image_dir"),
+            )
+        except Exception:  # noqa: BLE001 - best effort sync
+            LOGGER.exception("Failed to update lecture assets for %s", lecture_id)
+        return repository.get_lecture(lecture_id)
+
     def _content_type_for_asset(path: Path) -> str:
         suffix = path.suffix.lower()
         if suffix == ".zip":
@@ -5390,6 +5464,8 @@ def create_app(
         _log_event("Starting transcription", lecture_id=lecture_id, model=payload.model)
         lecture = repository.get_lecture(lecture_id)
         if lecture is None:
+            lecture = await _sync_cloud_lecture(lecture_id, repository)
+        if lecture is None:
             raise HTTPException(status_code=404, detail="Lecture not found")
         if FasterWhisperTranscription is None:
             raise HTTPException(
@@ -5432,17 +5508,22 @@ def create_app(
             if processed_candidate.exists():
                 audio_file = processed_candidate
             else:
-                processed_relative = None
-                audio_mastering_required = audio_mastering_enabled
-                try:
-                    repository.update_lecture_assets(
-                        lecture_id,
-                        processed_audio_path=None,
-                    )
-                except Exception:  # noqa: BLE001 - repository update may fail
-                    LOGGER.exception(
-                        "Failed to clear missing processed audio path for lecture %s", lecture_id
-                    )
+                fetched = await _fetch_cloud_asset(processed_relative)
+                if fetched is not None:
+                    audio_file = fetched
+                else:
+                    processed_relative = None
+                    audio_mastering_required = audio_mastering_enabled
+                    try:
+                        repository.update_lecture_assets(
+                            lecture_id,
+                            processed_audio_path=None,
+                        )
+                    except Exception:  # noqa: BLE001 - repository update may fail
+                        LOGGER.exception(
+                            "Failed to clear missing processed audio path for lecture %s",
+                            lecture_id,
+                        )
         else:
             audio_mastering_required = audio_mastering_enabled
 
@@ -5451,7 +5532,7 @@ def create_app(
             if candidate.exists():
                 audio_file = candidate
             else:
-                audio_file = None
+                audio_file = await _fetch_cloud_asset(lecture.audio_path)
 
         if audio_file is None and has_raw_audio:
             combined = _combine_audio_sources(

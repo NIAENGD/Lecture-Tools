@@ -18148,7 +18148,15 @@
         }
 
         async function uploadWithProgress(url, options = {}) {
-          const resolvedUrl = resolveAppUrl(url);
+          const shouldUseCloud = state.cloudConnection.enabled && shouldRouteToCloud(url);
+          let useCloud = shouldUseCloud;
+          if (useCloud && !state.cloudConnection.connected) {
+            const ok = await testCloudConnection({ silent: true });
+            if (!ok) {
+              throw new Error(t('settings.cloudConnection.errors.disconnected'));
+            }
+          }
+          const resolvedUrl = useCloud ? resolveCloudServerUrl(url) : resolveAppUrl(url);
           const method = typeof options.method === 'string' ? options.method.toUpperCase() : 'POST';
           const headers = options.headers && typeof options.headers === 'object' ? options.headers : {};
           const body = options.body ?? null;
