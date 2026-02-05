@@ -6176,6 +6176,7 @@ def create_app(
         page_end: Optional[int] = Form(None),
         preview_token: Optional[str] = Form(None),
         use_existing: Optional[str] = Form(None),
+        raw_slide_files: Optional[str] = Form(None),
         class_id: Optional[int] = Form(None),
         class_name: Optional[str] = Form(None),
         class_description: Optional[str] = Form(None),
@@ -6230,6 +6231,30 @@ def create_app(
             lecture.name,
         )
         lecture_paths.ensure()
+
+        if raw_slide_files:
+            try:
+                parsed_raw_slides = json.loads(raw_slide_files)
+            except json.JSONDecodeError:
+                parsed_raw_slides = None
+            if isinstance(parsed_raw_slides, list):
+                manifest_path = lecture_paths.raw_dir / _SLIDE_MANIFEST_FILENAME
+                existing_entries = _load_asset_manifest(manifest_path)
+                if not existing_entries:
+                    for entry in parsed_raw_slides:
+                        if not isinstance(entry, dict):
+                            continue
+                        raw_path = entry.get("path")
+                        if not isinstance(raw_path, str) or not raw_path:
+                            continue
+                        raw_name = entry.get("name")
+                        uploaded_at = entry.get("uploaded_at")
+                        _upsert_manifest_entry(
+                            manifest_path,
+                            path=raw_path,
+                            name=raw_name or Path(raw_path).name,
+                            uploaded_at=uploaded_at or datetime.now(timezone.utc).isoformat(),
+                        )
 
         preview_dir = lecture_paths.raw_dir / _SLIDE_PREVIEW_DIR_NAME
         existing_slide = _resolve_existing_asset(lecture.slide_path)
