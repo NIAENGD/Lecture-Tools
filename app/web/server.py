@@ -3869,48 +3869,6 @@ def create_app(
         if lecture is None:
             raise RuntimeError("Lecture not found")
 
-        class_record, module = _require_hierarchy(lecture)
-        storage_root = _require_storage_root()
-        slide_source = None
-        if lecture.slide_path:
-            try:
-                slide_source = _resolve_storage_path(storage_root, lecture.slide_path)
-            except Exception as error:  # pragma: no cover - defensive
-                raise RuntimeError("Slide file not found") from error
-            if not slide_source.exists():
-                slide_source = await _fetch_cloud_asset(lecture.slide_path)
-        if slide_source is None:
-            lecture_paths = LecturePaths.build(
-                storage_root,
-                class_record.name,
-                module.name,
-                lecture.name,
-            )
-            await _prefetch_slide_manifest_assets(lecture_paths, storage_root)
-            try:
-                slide_source = _ensure_slide_source(
-                    lecture_id,
-                    lecture,
-                    lecture_paths,
-                    storage_root,
-                    class_name=class_record.name,
-                    module_name=module.name,
-                )
-            except HTTPException as error:
-                raise RuntimeError(error.detail or str(error)) from error
-        if slide_source is None:
-            raise RuntimeError("Upload a PDF before processing slides.")
-        if not slide_source.exists():
-            raise RuntimeError("Slide file not found")
-
-        lecture_paths = LecturePaths.build(
-            storage_root,
-            class_record.name,
-            module.name,
-            lecture.name,
-        )
-        lecture_paths.ensure()
-
         options = task.options or {}
         page_range: Optional[Tuple[int, int]] = None
         start_value = options.get("page_start")
@@ -3938,13 +3896,92 @@ def create_app(
             if page_range
             else None,
         }
+        local_processing_enabled, _ = _cloud_processing_local_settings()
+
+        class_record, module = _require_hierarchy(lecture)
+        storage_root = _require_storage_root()
+        if local_processing_enabled:
+            processing_tracker.start(
+                lecture_id,
+                "====> Local processing requested.",
+                context=context,
+            )
+
+        slide_source = None
+        if lecture.slide_path:
+            try:
+                slide_source = _resolve_storage_path(storage_root, lecture.slide_path)
+            except Exception as error:  # pragma: no cover - defensive
+                raise RuntimeError("Slide file not found") from error
+            if not slide_source.exists():
+                if local_processing_enabled:
+                    processing_tracker.note(
+                        lecture_id,
+                        "====> Fetching slide file from online server…",
+                        context=context,
+                    )
+                slide_source = await _fetch_cloud_asset(lecture.slide_path)
+        if slide_source is None:
+            lecture_paths = LecturePaths.build(
+                storage_root,
+                class_record.name,
+                module.name,
+                lecture.name,
+            )
+            if local_processing_enabled:
+                processing_tracker.note(
+                    lecture_id,
+                    "====> Fetching slide file from online server…",
+                    context=context,
+                )
+            await _prefetch_slide_manifest_assets(lecture_paths, storage_root)
+            try:
+                slide_source = _ensure_slide_source(
+                    lecture_id,
+                    lecture,
+                    lecture_paths,
+                    storage_root,
+                    class_name=class_record.name,
+                    module_name=module.name,
+                )
+            except HTTPException as error:
+                raise RuntimeError(error.detail or str(error)) from error
+        if slide_source is None:
+            message = "Upload a PDF before processing slides."
+            if local_processing_enabled:
+                message = "Slide file could not be fetched from the online server."
+                processing_tracker.fail(
+                    lecture_id,
+                    f"====> {message}",
+                    context=context,
+                )
+            raise RuntimeError(message)
+        if not slide_source.exists():
+            message = "Slide file not found"
+            if local_processing_enabled:
+                processing_tracker.fail(
+                    lecture_id,
+                    f"====> {message}",
+                    context=context,
+                )
+            raise RuntimeError(message)
+
+        lecture_paths = LecturePaths.build(
+            storage_root,
+            class_record.name,
+            module.name,
+            lecture.name,
+        )
+        lecture_paths.ensure()
+
         start_message = "====> Preparing slide bundle…"
         progress_label = "====> Extracting slide images and text…"
         completion_label = "====> Slide bundle completed."
 
         job_id = _new_correlation_id()
         job_token = _JOB_ID_VAR.set(job_id)
-        processing_tracker.start(lecture_id, start_message, context=context)
+        if not local_processing_enabled:
+            processing_tracker.start(lecture_id, start_message, context=context)
         progress_total: Optional[float] = None
 
         def _handle_slide_progress(processed: int, total: Optional[int]) -> None:
@@ -3966,6 +4003,12 @@ def create_app(
         generator = globals().get("_generate_slide_bundle", _generate_slide_bundle)
 
         try:
+            if local_processing_enabled:
+                processing_tracker.note(
+                    lecture_id,
+                    "====> Processing slides locally…",
+                    context=context,
+                )
             slide_bundle_relative, notes_relative = await _run_serialized_background_task(
                 lambda: generator(
                     slide_source,
@@ -4031,6 +4074,12 @@ def create_app(
                 update_kwargs["notes_path"] = notes_relative
             repository.update_lecture_assets(lecture_id, **update_kwargs)
             try:
+                if local_processing_enabled:
+                    processing_tracker.note(
+                        lecture_id,
+                        "====> Uploading processed slides to online server…",
+                        context=context,
+                    )
                 await _sync_cloud_processing_assets(
                     lecture_id,
                     slide_bundle_relative,
@@ -6232,106 +6281,6 @@ def create_app(
         )
         lecture_paths.ensure()
 
-        if raw_slide_files:
-            try:
-                parsed_raw_slides = json.loads(raw_slide_files)
-            except json.JSONDecodeError:
-                parsed_raw_slides = None
-            if isinstance(parsed_raw_slides, list):
-                manifest_path = lecture_paths.raw_dir / _SLIDE_MANIFEST_FILENAME
-                existing_entries = _load_asset_manifest(manifest_path)
-                if not existing_entries:
-                    for entry in parsed_raw_slides:
-                        if not isinstance(entry, dict):
-                            continue
-                        raw_path = entry.get("path")
-                        if not isinstance(raw_path, str) or not raw_path:
-                            continue
-                        raw_name = entry.get("name")
-                        uploaded_at = entry.get("uploaded_at")
-                        _upsert_manifest_entry(
-                            manifest_path,
-                            path=raw_path,
-                            name=raw_name or Path(raw_path).name,
-                            uploaded_at=uploaded_at or datetime.now(timezone.utc).isoformat(),
-                        )
-
-        preview_dir = lecture_paths.raw_dir / _SLIDE_PREVIEW_DIR_NAME
-        existing_slide = _resolve_existing_asset(lecture.slide_path)
-        if existing_slide is None and lecture.slide_path:
-            existing_slide = await _fetch_cloud_asset(lecture.slide_path)
-        use_existing_flag = False
-        if use_existing is not None:
-            use_existing_flag = str(use_existing).strip().lower() in {"1", "true", "yes", "on"}
-
-        slide_destination: Optional[Path] = None
-        slide_relative: Optional[str] = None
-
-        if preview_token:
-            preview_path = _resolve_preview_file(preview_dir, preview_token)
-            if preview_path is None or not preview_path.exists():
-                raise HTTPException(status_code=404, detail="Slide preview not found")
-            if file is not None:
-                await file.close()
-                file = None
-            timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-            slide_stem = build_asset_stem(
-                class_record.name,
-                module.name,
-                lecture.name,
-                "slides",
-            )
-            slide_filename = build_timestamped_name(
-                slide_stem, timestamp=timestamp, extension=".pdf"
-            )
-            slide_destination = lecture_paths.raw_dir / slide_filename
-            slide_destination.parent.mkdir(parents=True, exist_ok=True)
-            try:
-                preview_path.replace(slide_destination)
-            except OSError as error:
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Failed to store slide preview: {error}",
-                ) from error
-            _prune_preview_dir(preview_dir)
-            slide_relative = slide_destination.relative_to(storage_root).as_posix()
-        elif file is not None:
-            timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-            slide_stem = build_asset_stem(
-                class_record.name,
-                module.name,
-                lecture.name,
-                "slides",
-            )
-            slide_filename = build_timestamped_name(
-                slide_stem, timestamp=timestamp, extension=".pdf"
-            )
-            slide_destination = lecture_paths.raw_dir / slide_filename
-            slide_destination.parent.mkdir(parents=True, exist_ok=True)
-            try:
-                with slide_destination.open("wb") as buffer:
-                    shutil.copyfileobj(file.file, buffer)
-            finally:
-                await file.close()
-            slide_relative = slide_destination.relative_to(storage_root).as_posix()
-        elif (use_existing_flag or not preview_token) and existing_slide is not None:
-            slide_destination = existing_slide
-            slide_relative = lecture.slide_path
-        else:
-            await _prefetch_slide_manifest_assets(lecture_paths, storage_root)
-            combined_slide = _ensure_slide_source(
-                lecture_id,
-                lecture,
-                lecture_paths,
-                storage_root,
-                class_name=class_record.name,
-                module_name=module.name,
-            )
-            if combined_slide is None:
-                raise HTTPException(status_code=400, detail="Slide file is required")
-            slide_destination = combined_slide
-            slide_relative = combined_slide.relative_to(storage_root).as_posix()
-
         selected_range: Optional[Tuple[int, int]] = None
         if page_start is not None or page_end is not None:
             start = page_start if page_start and page_start > 0 else 1
@@ -6340,31 +6289,160 @@ def create_app(
                 start, end = end, start
             selected_range = (start, end)
 
-        assert slide_destination is not None and slide_relative is not None
         operation_label = "slide_bundle"
         start_message = "====> Preparing slide bundle…"
         progress_label = "====> Extracting slide images and text…"
         completion_label = "====> Slide bundle completed."
         context_label = "slide bundle"
+        context = {
+            "operation": operation_label,
+            "preview_token": preview_token,
+            "page_range": {
+                "start": selected_range[0],
+                "end": selected_range[1],
+            }
+            if selected_range
+            else None,
+        }
+        local_processing_enabled, _ = _cloud_processing_local_settings()
+
+        def _note_local(message: str) -> None:
+            if local_processing_enabled:
+                processing_tracker.note(lecture_id, message, context=context)
+
+        def _fail_local(message: str) -> None:
+            if local_processing_enabled:
+                processing_tracker.fail(lecture_id, message, context=context)
 
         job_id = _new_correlation_id()
         job_token = _JOB_ID_VAR.set(job_id)
         try:
-            processing_tracker.start(
-                lecture_id,
-                start_message,
-                context={
-                    "operation": operation_label,
-                    "preview_token": preview_token,
-                    "page_range": {
-                        "start": selected_range[0],
-                        "end": selected_range[1],
-                    }
-                    if selected_range
-                    else None,
-                },
-            )
-    
+            if local_processing_enabled:
+                processing_tracker.start(
+                    lecture_id,
+                    "====> Local processing requested.",
+                    context=context,
+                )
+
+            if raw_slide_files:
+                try:
+                    parsed_raw_slides = json.loads(raw_slide_files)
+                except json.JSONDecodeError:
+                    parsed_raw_slides = None
+                if isinstance(parsed_raw_slides, list):
+                    manifest_path = lecture_paths.raw_dir / _SLIDE_MANIFEST_FILENAME
+                    existing_entries = _load_asset_manifest(manifest_path)
+                    if not existing_entries:
+                        for entry in parsed_raw_slides:
+                            if not isinstance(entry, dict):
+                                continue
+                            raw_path = entry.get("path")
+                            if not isinstance(raw_path, str) or not raw_path:
+                                continue
+                            raw_name = entry.get("name")
+                            uploaded_at = entry.get("uploaded_at")
+                            _upsert_manifest_entry(
+                                manifest_path,
+                                path=raw_path,
+                                name=raw_name or Path(raw_path).name,
+                                uploaded_at=uploaded_at or datetime.now(timezone.utc).isoformat(),
+                            )
+
+            preview_dir = lecture_paths.raw_dir / _SLIDE_PREVIEW_DIR_NAME
+            existing_slide = _resolve_existing_asset(lecture.slide_path)
+            if existing_slide is None and lecture.slide_path:
+                _note_local("====> Fetching slide file from online server…")
+                existing_slide = await _fetch_cloud_asset(lecture.slide_path)
+            use_existing_flag = False
+            if use_existing is not None:
+                use_existing_flag = str(use_existing).strip().lower() in {
+                    "1",
+                    "true",
+                    "yes",
+                    "on",
+                }
+
+            slide_destination: Optional[Path] = None
+            slide_relative: Optional[str] = None
+
+            if preview_token:
+                preview_path = _resolve_preview_file(preview_dir, preview_token)
+                if preview_path is None or not preview_path.exists():
+                    raise HTTPException(status_code=404, detail="Slide preview not found")
+                if file is not None:
+                    await file.close()
+                    file = None
+                timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+                slide_stem = build_asset_stem(
+                    class_record.name,
+                    module.name,
+                    lecture.name,
+                    "slides",
+                )
+                slide_filename = build_timestamped_name(
+                    slide_stem, timestamp=timestamp, extension=".pdf"
+                )
+                slide_destination = lecture_paths.raw_dir / slide_filename
+                slide_destination.parent.mkdir(parents=True, exist_ok=True)
+                try:
+                    preview_path.replace(slide_destination)
+                except OSError as error:
+                    raise HTTPException(
+                        status_code=500,
+                        detail=f"Failed to store slide preview: {error}",
+                    ) from error
+                _prune_preview_dir(preview_dir)
+                slide_relative = slide_destination.relative_to(storage_root).as_posix()
+            elif file is not None:
+                timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+                slide_stem = build_asset_stem(
+                    class_record.name,
+                    module.name,
+                    lecture.name,
+                    "slides",
+                )
+                slide_filename = build_timestamped_name(
+                    slide_stem, timestamp=timestamp, extension=".pdf"
+                )
+                slide_destination = lecture_paths.raw_dir / slide_filename
+                slide_destination.parent.mkdir(parents=True, exist_ok=True)
+                try:
+                    with slide_destination.open("wb") as buffer:
+                        shutil.copyfileobj(file.file, buffer)
+                finally:
+                    await file.close()
+                slide_relative = slide_destination.relative_to(storage_root).as_posix()
+            elif (use_existing_flag or not preview_token) and existing_slide is not None:
+                slide_destination = existing_slide
+                slide_relative = lecture.slide_path
+            else:
+                _note_local("====> Fetching slide file from online server…")
+                await _prefetch_slide_manifest_assets(lecture_paths, storage_root)
+                combined_slide = _ensure_slide_source(
+                    lecture_id,
+                    lecture,
+                    lecture_paths,
+                    storage_root,
+                    class_name=class_record.name,
+                    module_name=module.name,
+                )
+                if combined_slide is None:
+                    detail = "Slide file is required"
+                    if local_processing_enabled:
+                        detail = "Slide file could not be fetched from the online server."
+                        _fail_local(f"====> {detail}")
+                    raise HTTPException(status_code=400, detail=detail)
+                slide_destination = combined_slide
+                slide_relative = combined_slide.relative_to(storage_root).as_posix()
+
+            assert slide_destination is not None and slide_relative is not None
+            if not local_processing_enabled:
+                processing_tracker.start(
+                    lecture_id,
+                    start_message,
+                    context=context,
+                )
+
             progress_total: Optional[float] = None
     
             def _handle_slide_progress(processed: int, total: Optional[int]) -> None:
@@ -6388,10 +6466,11 @@ def create_app(
     
             slide_bundle_relative: Optional[str] = None
             notes_relative: Optional[str] = None
-
+    
             generator = globals().get("_generate_slide_bundle", _generate_slide_bundle)
 
             try:
+                _note_local("====> Processing slides locally…")
                 slide_bundle_relative, notes_relative = await _run_serialized_background_task(
                     lambda: generator(
                         slide_destination,
@@ -6462,6 +6541,12 @@ def create_app(
                 raise HTTPException(status_code=500, detail="Lecture update failed")
 
             try:
+                if local_processing_enabled:
+                    processing_tracker.note(
+                        lecture_id,
+                        "====> Uploading processed slides to online server…",
+                        context=context,
+                    )
                 await _sync_cloud_processing_assets(
                     lecture_id,
                     slide_bundle_relative,
@@ -6484,14 +6569,14 @@ def create_app(
                 slide_image_dir=slide_bundle_relative,
                 notes_path=notes_relative,
             )
+            return {
+                "lecture": _serialize_lecture(updated),
+                "slide_path": slide_relative,
+                "slide_image_dir": slide_bundle_relative,
+                "notes_path": notes_relative,
+            }
         finally:
             _JOB_ID_VAR.reset(job_token)
-        return {
-            "lecture": _serialize_lecture(updated),
-            "slide_path": slide_relative,
-            "slide_image_dir": slide_bundle_relative,
-            "notes_path": notes_relative,
-        }
 
     @app.get("/api/storage/usage")
     async def get_storage_usage() -> Dict[str, Any]:
