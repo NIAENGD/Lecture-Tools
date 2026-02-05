@@ -21862,6 +21862,13 @@
           if (typeof lecture.slide_path === 'string') {
             formData.append('slide_path', lecture.slide_path);
           }
+          if (
+            !lecture.slide_path &&
+            Array.isArray(lecture.raw_slide_files) &&
+            lecture.raw_slide_files.length
+          ) {
+            formData.append('raw_slide_files', JSON.stringify(lecture.raw_slide_files));
+          }
           if (typeof lecture.transcript_path === 'string') {
             formData.append('transcript_path', lecture.transcript_path);
           }
