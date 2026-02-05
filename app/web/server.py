@@ -1571,8 +1571,19 @@ def _safe_preview_for_path(storage_root: Path, relative_path: Optional[str]) -> 
     }
 
 
+def _normalize_storage_relative_path(value: str) -> str:
+    cleaned = value.strip()
+    if not cleaned:
+        return cleaned
+    cleaned = cleaned.replace("\\", "/")
+    while cleaned.startswith("/"):
+        cleaned = cleaned[1:]
+    return cleaned
+
+
 def _resolve_storage_path(_storage_root: Path, relative_path: str) -> Path:
     root_path = _storage_root.resolve()
+    relative_path = _normalize_storage_relative_path(relative_path)
     candidate = Path(relative_path)
     if not candidate.is_absolute():
         candidate = (root_path / candidate).resolve()
@@ -2765,6 +2776,9 @@ def create_app(
         return candidate if candidate.exists() else None
 
     async def _fetch_cloud_asset(relative: Optional[str]) -> Optional[Path]:
+        if not relative:
+            return None
+        relative = _normalize_storage_relative_path(relative)
         if not relative:
             return None
         settings = _load_ui_settings()
