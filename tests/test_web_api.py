@@ -2616,3 +2616,56 @@ def test_reveal_asset_uses_helper(monkeypatch, temp_config):
     assert response.status_code == 204
     assert calls["path"] == target_file.resolve()
     assert calls["select"] is True
+
+def test_whisper_model_uninstall_endpoint_removes_model_files(temp_config):
+    repository = LectureRepository(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    model_dir = temp_config.assets_root / "models"
+    model_dir.mkdir(parents=True, exist_ok=True)
+    target = model_dir / "ggml-base.bin"
+    target.write_bytes(b"model")
+
+    response = client.delete("/api/settings/whisper-models/base")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["model"] == "base"
+    assert any(path.endswith("ggml-base.bin") for path in payload["removed"])
+    assert not target.exists()
+
+
+def test_whisper_benchmark_endpoint_runs_all_models_with_stub_engine(temp_config, monkeypatch):
+    repository = LectureRepository(temp_config)
+
+    benchmark_audio = temp_config.assets_root / "benchmarks" / "public_domain_sample.mp3"
+    benchmark_audio.parent.mkdir(parents=True, exist_ok=True)
+    benchmark_audio.write_bytes(b"audio")
+
+    class StubEngine:
+        def __init__(self, model_size, **_kwargs):
+            self.model_size = model_size
+
+        def transcribe(self, _audio_path, output_dir):
+            output_dir.mkdir(parents=True, exist_ok=True)
+            transcript = output_dir / "transcript.txt"
+            transcript.write_text(f"model={self.model_size}", encoding="utf-8")
+            return TranscriptResult(text=f"model={self.model_size}", transcript_path=transcript)
+
+    monkeypatch.setattr(web_server, "FasterWhisperTranscription", StubEngine)
+
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    response = client.post("/api/settings/whisper/benchmark")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["sample"]["path"] == "benchmarks/public_domain_sample.mp3"
+    assert len(payload["results"]) == 5
+    assert {row["model"] for row in payload["results"]} == {
+        "tiny",
+        "base",
+        "small",
+        "medium",
+        "large",
+    }
