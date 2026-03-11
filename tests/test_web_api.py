@@ -402,6 +402,41 @@ def test_bulk_download_endpoint_prepares_archive(temp_config):
         assert archive.get("count") == 5
 
 
+
+
+def test_bulk_download_can_combine_text_assets(temp_config):
+    repository, lecture_id, _module_id = _create_sample_data(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    payload = {
+        "items": [
+            {
+                "lecture_id": lecture_id,
+                "assets": ["txt", "md"],
+            }
+        ],
+        "combine_text_assets": True,
+    }
+
+    response = client.post("/api/download/bulk", json=payload)
+    assert response.status_code == 200
+    archive = response.json().get("archive") or {}
+    archive_path = temp_config.storage_root / archive.get("path", "")
+    assert archive_path.exists()
+
+    with zipfile.ZipFile(archive_path, "r") as bundle:
+        names = set(bundle.namelist())
+        combined_files = [name for name in names if name.startswith("lectures/combined-text-assets") and name.endswith(".txt")]
+        assert len(combined_files) == 1
+        combined_content = bundle.read(combined_files[0]).decode("utf-8")
+        assert "Class: Astronomy" in combined_content
+        assert "Module: Stellar Physics" in combined_content
+        assert "Lecture: Stellar Evolution" in combined_content
+        assert "Line one" in combined_content
+        assert "# Notes" in combined_content
+        assert archive.get("count") == 3
+
 def test_bulk_download_requires_valid_selection(temp_config):
     repository, lecture_id, _module_id = _create_sample_data(temp_config)
     app = create_app(repository, config=temp_config)

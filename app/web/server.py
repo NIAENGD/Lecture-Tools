@@ -1901,6 +1901,7 @@ class BulkDownloadItem(BaseModel):
 
 class BulkDownloadRequest(BaseModel):
     items: List[BulkDownloadItem] = Field(default_factory=list)
+    combine_text_assets: bool = False
 
 
 class LectureStorageSummary(BaseModel):
@@ -6812,6 +6813,7 @@ def create_app(
     @app.post("/api/download/bulk")
     async def download_bulk_assets(payload: BulkDownloadRequest) -> Dict[str, Any]:
         normalized: Dict[int, Set[str]] = {}
+        combine_text_assets = bool(payload.combine_text_assets)
         raw_items = payload.items if isinstance(payload.items, list) else []
         for item in raw_items:
             lecture_id = int(getattr(item, "lecture_id", 0))
@@ -6841,6 +6843,7 @@ def create_app(
         archive_path = archive_root / filename
         file_count = 0
         written: Set[str] = set()
+        text_entries: List[Dict[str, Any]] = []
 
         try:
             with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as bundle:
@@ -6885,6 +6888,80 @@ def create_app(
                         bundle.write(source, arcname)
                         written.add(arcname)
                         file_count += 1
+                        if combine_text_assets and asset_key in {"txt", "md"}:
+                            text_entries.append(
+                                {
+                                    "source": source,
+                                    "asset_key": asset_key,
+                                    "class_name": class_record.name if class_record else "",
+                                    "class_id": class_record.id if class_record else None,
+                                    "module_name": module.name if module else "",
+                                    "module_id": module.id if module else None,
+                                    "lecture_name": lecture.name,
+                                    "lecture_id": lecture.id,
+                                    "class_position": (
+                                        class_record.position
+                                        if class_record and class_record.position is not None
+                                        else 0
+                                    ),
+                                    "module_position": (
+                                        module.position
+                                        if module and module.position is not None
+                                        else 0
+                                    ),
+                                    "lecture_position": (
+                                        lecture.position if lecture.position is not None else 0
+                                    ),
+                                }
+                            )
+
+                if combine_text_assets and text_entries:
+                    text_entries.sort(
+                        key=lambda entry: (
+                            int(entry.get("class_position", 0)),
+                            str(entry.get("class_name", "")).lower(),
+                            int(entry.get("module_position", 0)),
+                            str(entry.get("module_name", "")).lower(),
+                            int(entry.get("lecture_position", 0)),
+                            str(entry.get("lecture_name", "")).lower(),
+                            0 if entry.get("asset_key") == "txt" else 1,
+                        )
+                    )
+
+                    combined_lines: List[str] = [
+                        "# Lecture Tools Combined Text Export",
+                        "",
+                    ]
+                    for index, entry in enumerate(text_entries, start=1):
+                        class_name = entry.get("class_name") or f"Class {entry.get('class_id') or '?'}"
+                        module_name = entry.get("module_name") or f"Module {entry.get('module_id') or '?'}"
+                        lecture_name = entry.get("lecture_name") or f"Lecture {entry.get('lecture_id') or '?'}"
+                        asset_label = "Transcript (TXT)" if entry.get("asset_key") == "txt" else "Notes (MD)"
+                        source_name = entry.get("source").name if entry.get("source") else "unknown"
+                        combined_lines.extend(
+                            [
+                                f"\n\n========== ITEM {index:04d} ==========",
+                                f"Class: {class_name}",
+                                f"Module: {module_name}",
+                                f"Lecture: {lecture_name}",
+                                f"Asset: {asset_label}",
+                                f"Source: {source_name}",
+                                "----------------------------------------",
+                            ]
+                        )
+                        source_path = entry.get("source")
+                        try:
+                            content = Path(source_path).read_text(encoding="utf-8")
+                        except UnicodeDecodeError:
+                            content = Path(source_path).read_text(encoding="utf-8", errors="replace")
+                        except OSError:
+                            content = ""
+                        combined_lines.append(content.rstrip("\n"))
+
+                    combined_name = build_timestamped_name("combined-text-assets", extension="txt")
+                    combined_payload = "\n".join(combined_lines).rstrip("\n") + "\n"
+                    bundle.writestr((Path("lectures") / combined_name).as_posix(), combined_payload)
+                    file_count += 1
         except OSError as error:
             with contextlib.suppress(OSError):
                 archive_path.unlink()

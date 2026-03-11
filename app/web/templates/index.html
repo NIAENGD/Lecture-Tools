@@ -6163,9 +6163,19 @@
             <button id="bulk-download-clear" type="button" class="dialog-button" data-i18n="tasks.bulkDownload.clear">
               Clear selections
             </button>
+            <button id="bulk-download-select-all-txt" type="button" class="dialog-button" data-i18n="tasks.bulkDownload.selectAllTxt">
+              Select all TXT
+            </button>
+            <button id="bulk-download-select-all-txt-md" type="button" class="dialog-button" data-i18n="tasks.bulkDownload.selectAllTxtMd">
+              Select all TXT + MD
+            </button>
           </div>
         </div>
         <div id="bulk-download-content" class="bulk-process-content"></div>
+        <label class="field-inline" for="bulk-download-combine-text">
+          <input id="bulk-download-combine-text" type="checkbox" />
+          <span data-i18n="tasks.bulkDownload.combineText">Combine selected TXT/MD assets into one ordered TXT file</span>
+        </label>
         <div id="bulk-download-empty" class="bulk-process-empty hidden" data-i18n="tasks.bulkDownload.empty">
           No assets available.
         </div>
@@ -6326,19 +6336,28 @@
                 subtitle: 'Select lectures and asset formats to download.',
                 selectAll: 'Select all',
                 clear: 'Clear selections',
+                selectAllTxt: 'Select all TXT',
+                selectAllTxtMd: 'Select all TXT + MD',
                 empty: 'No downloadable assets available.',
                 cancel: 'Cancel',
                 submit: 'Prepare download',
+                combineText: 'Combine selected TXT/MD assets into one ordered TXT file',
                 summaryEmpty: 'No assets selected.',
                 summarySelected: '{{count}} {{assetWord}} selected.',
                 summaryBreakdown:
                   'Audio: {{audio}} • Transcript (TXT): {{txt}} • Slides (PDF): {{pdf}} • Notes (MD): {{md}} • Bundles (ZIP): {{zip}}.',
+                combineEnabled: 'Combined TXT/MD export enabled.',
                 assetSingular: 'asset',
                 assetPlural: 'assets',
                 status: {
                   available: 'Available',
                   selected: 'Selected',
                   unavailable: 'Missing',
+                },
+                classActions: {
+                  all: 'All assets in class',
+                  txt: 'TXT in class',
+                  txtMd: 'TXT + MD in class',
                 },
                 assets: {
                   audio: 'Audio',
@@ -7031,18 +7050,27 @@
                 subtitle: '选择要下载的讲座和资源格式。',
                 selectAll: '全选',
                 clear: '清除选择',
+                selectAllTxt: 'Select all TXT',
+                selectAllTxtMd: 'Select all TXT + MD',
                 empty: '没有可下载的资源。',
                 cancel: '取消',
                 submit: '准备下载',
+                combineText: 'Combine selected TXT/MD assets into one ordered TXT file',
                 summaryEmpty: '未选择任何资源。',
                 summarySelected: '已选择 {{count}} 个{{assetWord}}。',
                 summaryBreakdown: '音频：{{audio}} • 文本 (TXT)：{{txt}} • 幻灯片 (PDF)：{{pdf}} • 笔记 (MD)：{{md}} • 打包 (ZIP)：{{zip}}。',
+                combineEnabled: 'Combined TXT/MD export enabled.',
                 assetSingular: '资源',
                 assetPlural: '资源',
                 status: {
                   available: '可用',
                   selected: '已选择',
                   unavailable: '缺失',
+                },
+                classActions: {
+                  all: 'All assets in class',
+                  txt: 'TXT in class',
+                  txtMd: 'TXT + MD in class',
                 },
                 assets: {
                   audio: '音频',
@@ -7685,6 +7713,8 @@
                 subtitle: 'Selecciona clases y recursos para añadir a la cola de procesamiento.',
                 selectAll: 'Seleccionar todo',
                 clear: 'Limpiar selección',
+                selectAllTxt: 'Select all TXT',
+                selectAllTxtMd: 'Select all TXT + MD',
                 empty: 'No hay clases disponibles para procesar.',
                 cancel: 'Cancelar',
                 submit: 'Añadir a la cola',
@@ -7726,19 +7756,28 @@
                 subtitle: 'Selecciona clases y formatos para descargar.',
                 selectAll: 'Seleccionar todo',
                 clear: 'Limpiar selección',
+                selectAllTxt: 'Select all TXT',
+                selectAllTxtMd: 'Select all TXT + MD',
                 empty: 'No hay recursos disponibles para descargar.',
                 cancel: 'Cancelar',
                 submit: 'Preparar descarga',
+                combineText: 'Combine selected TXT/MD assets into one ordered TXT file',
                 summaryEmpty: 'No hay recursos seleccionados.',
                 summarySelected: '{{count}} {{assetWord}} seleccionados.',
                 summaryBreakdown:
                   'Audio: {{audio}} • Transcripción (TXT): {{txt}} • Diapositivas (PDF): {{pdf}} • Notas (MD): {{md}} • Paquetes (ZIP): {{zip}}.',
+                combineEnabled: 'Combined TXT/MD export enabled.',
                 assetSingular: 'recurso',
                 assetPlural: 'recursos',
                 status: {
                   available: 'Disponible',
                   selected: 'Seleccionado',
                   unavailable: 'No disponible',
+                },
+                classActions: {
+                  all: 'All assets in class',
+                  txt: 'TXT in class',
+                  txtMd: 'TXT + MD in class',
                 },
                 assets: {
                   audio: 'Audio',
@@ -8440,9 +8479,12 @@
                 subtitle: 'Sélectionnez les cours et formats à télécharger.',
                 selectAll: 'Tout sélectionner',
                 clear: 'Effacer la sélection',
+                selectAllTxt: 'Select all TXT',
+                selectAllTxtMd: 'Select all TXT + MD',
                 empty: 'Aucune ressource disponible pour le téléchargement.',
                 cancel: 'Annuler',
                 submit: 'Préparer le téléchargement',
+                combineText: 'Combine selected TXT/MD assets into one ordered TXT file',
                 summaryEmpty: 'Aucune ressource sélectionnée.',
                 summarySelected: '{{count}} {{assetWord}} sélectionné(s).',
                 summaryBreakdown:
@@ -8453,6 +8495,11 @@
                   available: 'Disponible',
                   selected: 'Sélectionné',
                   unavailable: 'Manquant',
+                },
+                classActions: {
+                  all: 'All assets in class',
+                  txt: 'TXT in class',
+                  txtMd: 'TXT + MD in class',
                 },
                 assets: {
                   audio: 'Audio',
@@ -9555,6 +9602,7 @@
             expandedModules: new Map(),
             availableCount: 0,
             lectureCount: 0,
+            combineTextAssets: false,
           },
           systemUpdate: {
             running: false,
@@ -9936,8 +9984,11 @@
             summary: document.getElementById('bulk-download-summary'),
             selectAll: document.getElementById('bulk-download-select-all'),
             clear: document.getElementById('bulk-download-clear'),
+            selectAllTxt: document.getElementById('bulk-download-select-all-txt'),
+            selectAllTxtMd: document.getElementById('bulk-download-select-all-txt-md'),
             cancel: document.getElementById('bulk-download-cancel'),
             submit: document.getElementById('bulk-download-submit'),
+            combineText: document.getElementById('bulk-download-combine-text'),
           },
         };
 
@@ -12554,6 +12605,41 @@
           return `${lectureId}:${assetKey}`;
         }
 
+        function selectBulkDownloadWhere(predicate) {
+          state.bulkDownload.meta.forEach((meta, key) => {
+            if (!meta || !meta.available) {
+              state.bulkDownload.selections.delete(key);
+              return;
+            }
+            if (typeof predicate === 'function' && predicate(meta)) {
+              state.bulkDownload.selections.set(key, true);
+            }
+          });
+          refreshBulkDownloadCheckboxes();
+          updateBulkDownloadSummary();
+        }
+
+        function handleBulkDownloadQuickSelect(assetKeys) {
+          const target = new Set(Array.isArray(assetKeys) ? assetKeys : []);
+          if (!target.size) {
+            return;
+          }
+          selectBulkDownloadWhere((meta) => target.has(meta.assetKey));
+        }
+
+        function selectBulkDownloadForClass(classId, assetKeys = null) {
+          const target = assetKeys ? new Set(assetKeys) : null;
+          selectBulkDownloadWhere((meta) => {
+            if (meta.classId !== classId) {
+              return false;
+            }
+            if (!target) {
+              return true;
+            }
+            return target.has(meta.assetKey);
+          });
+        }
+
         function collectBulkDownloadMeta() {
           const meta = state.bulkDownload.meta;
           meta.clear();
@@ -12696,6 +12782,44 @@
               lectureWord,
             });
             classSummary.appendChild(classMeta);
+
+            const classActions = document.createElement('div');
+            classActions.className = 'asset-actions';
+
+            const selectClassAll = document.createElement('button');
+            selectClassAll.type = 'button';
+            selectClassAll.className = 'secondary';
+            selectClassAll.textContent = t('tasks.bulkDownload.classActions.all');
+            selectClassAll.addEventListener('click', (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              selectBulkDownloadForClass(classId);
+            });
+            classActions.appendChild(selectClassAll);
+
+            const selectClassTxt = document.createElement('button');
+            selectClassTxt.type = 'button';
+            selectClassTxt.className = 'secondary';
+            selectClassTxt.textContent = t('tasks.bulkDownload.classActions.txt');
+            selectClassTxt.addEventListener('click', (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              selectBulkDownloadForClass(classId, ['txt']);
+            });
+            classActions.appendChild(selectClassTxt);
+
+            const selectClassTxtMd = document.createElement('button');
+            selectClassTxtMd.type = 'button';
+            selectClassTxtMd.className = 'secondary';
+            selectClassTxtMd.textContent = t('tasks.bulkDownload.classActions.txtMd');
+            selectClassTxtMd.addEventListener('click', (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              selectBulkDownloadForClass(classId, ['txt', 'md']);
+            });
+            classActions.appendChild(selectClassTxtMd);
+
+            classSummary.appendChild(classActions);
 
             classDetails.appendChild(classSummary);
 
@@ -12913,6 +13037,11 @@
             });
             summary.appendChild(totalLine);
             summary.appendChild(breakdownLine);
+            if (state.bulkDownload.combineTextAssets) {
+              const combineLine = document.createElement('p');
+              combineLine.textContent = t('tasks.bulkDownload.combineEnabled');
+              summary.appendChild(combineLine);
+            }
           }
 
           if (selectAllButton) {
@@ -12920,6 +13049,12 @@
           }
           if (clearButton) {
             clearButton.disabled = state.bulkDownload.selections.size === 0;
+          }
+          if (dom.bulkDownloadDialog?.selectAllTxt) {
+            dom.bulkDownloadDialog.selectAllTxt.disabled = state.bulkDownload.availableCount === 0;
+          }
+          if (dom.bulkDownloadDialog?.selectAllTxtMd) {
+            dom.bulkDownloadDialog.selectAllTxtMd.disabled = state.bulkDownload.availableCount === 0;
           }
           if (submitButton) {
             submitButton.disabled = state.bulkDownload.selections.size === 0;
@@ -13019,7 +13154,7 @@
             const response = await request('/api/download/bulk', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ items }),
+              body: JSON.stringify({ items, combine_text_assets: state.bulkDownload.combineTextAssets }),
             });
             const archive = response?.archive;
             if (!archive || !archive.path) {
@@ -13075,6 +13210,10 @@
           bulkDownloadPreviousFocus =
             document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
+          if (dom.bulkDownloadDialog.combineText) {
+            dom.bulkDownloadDialog.combineText.checked = state.bulkDownload.combineTextAssets;
+          }
+
           const focusTargets = [
             dom.bulkDownloadDialog.selectAll,
             dom.bulkDownloadDialog.clear,
@@ -13091,10 +13230,27 @@
             selectAllBulkDownload();
           }
 
+          function handleCombineTextChange(event) {
+            state.bulkDownload.combineTextAssets = Boolean(event?.target?.checked);
+            updateBulkDownloadSummary();
+          }
+
           function handleClear(event) {
             event?.preventDefault?.();
             setBulkDownloadStatus('');
             clearBulkDownloadSelections();
+          }
+
+          function handleSelectAllTxt(event) {
+            event?.preventDefault?.();
+            setBulkDownloadStatus('');
+            handleBulkDownloadQuickSelect(['txt']);
+          }
+
+          function handleSelectAllTxtMd(event) {
+            event?.preventDefault?.();
+            setBulkDownloadStatus('');
+            handleBulkDownloadQuickSelect(['txt', 'md']);
           }
 
           function handleCancel(event) {
@@ -13142,8 +13298,17 @@
           if (dom.bulkDownloadDialog.clear) {
             dom.bulkDownloadDialog.clear.addEventListener('click', handleClear);
           }
+          if (dom.bulkDownloadDialog.selectAllTxt) {
+            dom.bulkDownloadDialog.selectAllTxt.addEventListener('click', handleSelectAllTxt);
+          }
+          if (dom.bulkDownloadDialog.selectAllTxtMd) {
+            dom.bulkDownloadDialog.selectAllTxtMd.addEventListener('click', handleSelectAllTxtMd);
+          }
           if (dom.bulkDownloadDialog.cancel) {
             dom.bulkDownloadDialog.cancel.addEventListener('click', handleCancel);
+          }
+          if (dom.bulkDownloadDialog.combineText) {
+            dom.bulkDownloadDialog.combineText.addEventListener('change', handleCombineTextChange);
           }
           if (dom.bulkDownloadDialog.backdrop) {
             dom.bulkDownloadDialog.backdrop.addEventListener('click', handleBackdrop);
@@ -13163,8 +13328,17 @@
             if (dom.bulkDownloadDialog.clear) {
               dom.bulkDownloadDialog.clear.removeEventListener('click', handleClear);
             }
+            if (dom.bulkDownloadDialog.selectAllTxt) {
+              dom.bulkDownloadDialog.selectAllTxt.removeEventListener('click', handleSelectAllTxt);
+            }
+            if (dom.bulkDownloadDialog.selectAllTxtMd) {
+              dom.bulkDownloadDialog.selectAllTxtMd.removeEventListener('click', handleSelectAllTxtMd);
+            }
             if (dom.bulkDownloadDialog.cancel) {
               dom.bulkDownloadDialog.cancel.removeEventListener('click', handleCancel);
+            }
+            if (dom.bulkDownloadDialog.combineText) {
+              dom.bulkDownloadDialog.combineText.removeEventListener('change', handleCombineTextChange);
             }
             if (dom.bulkDownloadDialog.backdrop) {
               dom.bulkDownloadDialog.backdrop.removeEventListener('click', handleBackdrop);
