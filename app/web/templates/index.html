@@ -5484,6 +5484,33 @@
                     <span data-i18n="settings.whisper.gpu.test">Test support</span>
                   </button>
                 </div>
+                <div class="field-inline gpu-support">
+                  <div class="gpu-support-info">
+                    <label data-i18n="settings.whisper.benchmark.label">Model benchmark</label>
+                    <p id="settings-whisper-benchmark-status" data-i18n="settings.whisper.benchmark.status">
+                      Run benchmark to compare models on the bundled public-domain sample.
+                    </p>
+                  </div>
+                  <button id="settings-whisper-benchmark-run" type="button" class="secondary">
+                    <span data-i18n="settings.whisper.benchmark.run">Run benchmark</span>
+                  </button>
+                </div>
+                <div class="field-inline">
+                  <label for="settings-whisper-model-uninstall" data-i18n="settings.whisper.uninstall.label">
+                    Uninstall local model
+                  </label>
+                  <select id="settings-whisper-model-uninstall">
+                    <option value="tiny">tiny</option>
+                    <option value="base">base</option>
+                    <option value="small">small</option>
+                    <option value="medium">medium</option>
+                    <option value="large">large</option>
+                    <option value="gpu">gpu</option>
+                  </select>
+                  <button id="settings-whisper-model-uninstall-run" type="button" class="secondary">
+                    <span data-i18n="settings.whisper.uninstall.run">Uninstall</span>
+                  </button>
+                </div>
               </fieldset>
               <fieldset>
                 <legend data-i18n="settings.cloudConnection.legend">Cloud connection</legend>
@@ -6476,6 +6503,15 @@
                   status: 'GPU acceleration not tested.',
                   test: 'Test support',
                   retry: 'Re-run test',
+                },
+                benchmark: {
+                  label: 'Model benchmark',
+                  status: 'Run benchmark to compare models on the bundled public-domain sample.',
+                  run: 'Run benchmark',
+                },
+                uninstall: {
+                  label: 'Uninstall local model',
+                  run: 'Uninstall',
                 },
               },
               cloudConnection: {
@@ -9773,6 +9809,10 @@
           settingsWhisperBeam: document.getElementById('settings-whisper-beam'),
           settingsWhisperGpuStatus: document.getElementById('settings-whisper-gpu-status'),
           settingsWhisperGpuTest: document.getElementById('settings-whisper-gpu-test'),
+          settingsWhisperBenchmarkStatus: document.getElementById('settings-whisper-benchmark-status'),
+          settingsWhisperBenchmarkRun: document.getElementById('settings-whisper-benchmark-run'),
+          settingsWhisperModelUninstall: document.getElementById('settings-whisper-model-uninstall'),
+          settingsWhisperModelUninstallRun: document.getElementById('settings-whisper-model-uninstall-run'),
           settingsCloudConnectionEnabled: document.getElementById(
             'settings-cloud-connection-enabled',
           ),
@@ -13978,6 +14018,67 @@
           } finally {
             if (dom.settingsCloudConnectionTest) {
               dom.settingsCloudConnectionTest.disabled = false;
+            }
+          }
+        }
+
+        async function runWhisperBenchmark() {
+          if (!dom.settingsWhisperBenchmarkRun) {
+            return;
+          }
+          dom.settingsWhisperBenchmarkRun.disabled = true;
+          if (dom.settingsWhisperBenchmarkStatus) {
+            dom.settingsWhisperBenchmarkStatus.textContent = 'Benchmark running…';
+          }
+          try {
+            const response = await request('/api/settings/whisper/benchmark', { method: 'POST' });
+            const rows = Array.isArray(response?.results) ? response.results : [];
+            const summary = rows
+              .map((row) => {
+                if (row?.ok) {
+                  return `${row.model}: ${row.seconds}s`;
+                }
+                return `${row?.model ?? 'unknown'}: failed`;
+              })
+              .join(' • ');
+            const recommendation = response?.recommended_model
+              ? ` Best: ${response.recommended_model}.`
+              : '';
+            if (dom.settingsWhisperBenchmarkStatus) {
+              dom.settingsWhisperBenchmarkStatus.textContent = `${summary || 'No benchmark results.'}${recommendation}`;
+            }
+            showStatus('Whisper benchmark completed.', 'success');
+          } catch (error) {
+            const detail = error instanceof Error ? error.message : 'Benchmark failed.';
+            if (dom.settingsWhisperBenchmarkStatus) {
+              dom.settingsWhisperBenchmarkStatus.textContent = detail;
+            }
+            showStatus(detail, 'error');
+          } finally {
+            dom.settingsWhisperBenchmarkRun.disabled = false;
+          }
+        }
+
+        async function uninstallWhisperModel() {
+          const model = dom.settingsWhisperModelUninstall?.value || 'base';
+          if (!model) {
+            return;
+          }
+          if (dom.settingsWhisperModelUninstallRun) {
+            dom.settingsWhisperModelUninstallRun.disabled = true;
+          }
+          try {
+            const response = await request(`/api/settings/whisper-models/${encodeURIComponent(model)}`, {
+              method: 'DELETE',
+            });
+            const removedCount = Array.isArray(response?.removed) ? response.removed.length : 0;
+            showStatus(`Removed ${removedCount} file(s) for model ${model}.`, 'success');
+          } catch (error) {
+            const detail = error instanceof Error ? error.message : 'Model uninstall failed.';
+            showStatus(detail, 'error');
+          } finally {
+            if (dom.settingsWhisperModelUninstallRun) {
+              dom.settingsWhisperModelUninstallRun.disabled = false;
             }
           }
         }
@@ -22691,6 +22792,18 @@
         if (dom.settingsVisualEffects) {
           dom.settingsVisualEffects.addEventListener('change', () => {
             previewAppearance();
+          });
+        }
+
+        if (dom.settingsWhisperBenchmarkRun) {
+          dom.settingsWhisperBenchmarkRun.addEventListener('click', async () => {
+            await runWhisperBenchmark();
+          });
+        }
+
+        if (dom.settingsWhisperModelUninstallRun) {
+          dom.settingsWhisperModelUninstallRun.addEventListener('click', async () => {
+            await uninstallWhisperModel();
           });
         }
 

@@ -312,6 +312,7 @@ _TEMPLATE_PATH = Path(__file__).parent / "templates" / "index.html"
 _PREVIEW_LIMIT = 1200
 _WHISPER_MODEL_OPTIONS: Tuple[str, ...] = ("tiny", "base", "small", "medium", "large", "gpu")
 _WHISPER_MODEL_SET = set(_WHISPER_MODEL_OPTIONS)
+_WHISPER_BENCHMARK_MODELS: Tuple[str, ...] = ("tiny", "base", "small", "medium", "large")
 _SLIDE_DPI_OPTIONS: Tuple[int, ...] = (150, 200, 300, 400, 600)
 _SLIDE_DPI_SET = set(_SLIDE_DPI_OPTIONS)
 _LANGUAGE_OPTIONS: Tuple[str, ...] = ("en", "zh", "es", "fr")
@@ -350,6 +351,13 @@ except ValueError:
     _MAX_UPLOAD_BYTES = _DEFAULT_MAX_UPLOAD_BYTES
 
 _DEFAULT_UPLOAD_CHUNK_SIZE = 1024 * 1024
+_WHISPER_BENCHMARK_AUDIO_URL = (
+    "https://archive.org/download/horse_and_pony_1906_librivox/horseandpony_01_sewell_64kb.mp3"
+)
+_WHISPER_BENCHMARK_AUDIO_NAME = "public_domain_sample.mp3"
+_WHISPER_BENCHMARK_AUDIO_TRANSCRIPT_HINT = (
+    "Opening chapter of Anna Sewell's Horse and Pony from LibriVox (public domain)."
+)
 
 def get_max_upload_bytes() -> int:
     """Return the configured maximum upload size in bytes."""
@@ -2931,26 +2939,24 @@ def create_app(
             )
         url = f"{base_url}/api/lectures/{lecture_id}/assets/{asset_type}"
         content_type = _content_type_for_asset(file_path)
-        try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                with file_path.open("rb") as handle:
-                    response = await client.post(
-                        url,
-                        files={"file": (file_path.name, handle, content_type)},
-                    )
-            if response.status_code != status.HTTP_200_OK:
+        last_error: Optional[str] = None
+        for attempt in range(1, 4):
+            try:
+                async with httpx.AsyncClient(timeout=60.0) as client:
+                    with file_path.open("rb") as handle:
+                        response = await client.post(
+                            url,
+                            files={"file": (file_path.name, handle, content_type)},
+                        )
+                if response.status_code == status.HTTP_200_OK:
+                    return
                 detail = response.text.strip() or response.reason_phrase
-                raise HTTPException(
-                    status_code=502,
-                    detail=f"Cloud upload failed ({response.status_code}): {detail}",
-                )
-        except HTTPException:
-            raise
-        except Exception as error:  # pragma: no cover - network failures
-            raise HTTPException(
-                status_code=502,
-                detail=f"Cloud upload failed: {error}",
-            ) from error
+                last_error = f"Cloud upload failed ({response.status_code}): {detail}"
+            except Exception as error:  # pragma: no cover - network failures
+                last_error = f"Cloud upload failed: {error}"
+            if attempt < 3:
+                await asyncio.sleep(0.5 * attempt)
+        raise HTTPException(status_code=502, detail=last_error or "Cloud upload failed")
 
     async def _sync_cloud_processing_assets(
         lecture_id: int,
@@ -2979,6 +2985,46 @@ def create_app(
                     detail=f"Notes path is outside storage root: {error}",
                 ) from error
             await _upload_cloud_asset(lecture_id, "notes", notes_path)
+
+    async def _ensure_whisper_benchmark_audio() -> Path:
+        audio_dir = config.assets_root / "benchmarks"
+        audio_dir.mkdir(parents=True, exist_ok=True)
+        audio_path = audio_dir / _WHISPER_BENCHMARK_AUDIO_NAME
+        if audio_path.exists() and audio_path.stat().st_size > 0:
+            return audio_path
+        temp_path = audio_path.with_suffix(f"{audio_path.suffix}.download-{uuid.uuid4().hex}")
+        async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as client:
+            response = await client.get(_WHISPER_BENCHMARK_AUDIO_URL)
+            response.raise_for_status()
+            temp_path.write_bytes(response.content)
+        if temp_path.stat().st_size == 0:
+            temp_path.unlink(missing_ok=True)
+            raise HTTPException(status_code=502, detail="Benchmark audio download returned empty data")
+        temp_path.replace(audio_path)
+        return audio_path
+
+    def _whisper_model_directory() -> Path:
+        return config.assets_root / "models"
+
+    def _model_files_for_name(model_name: str) -> List[Path]:
+        model_dir = _whisper_model_directory()
+        if not model_dir.exists():
+            return []
+        normal = model_name.strip().lower()
+        prefixes = [
+            f"ggml-{normal}",
+            f"ggml-{normal}.en",
+            f"{normal}",
+            f"{normal}.en",
+        ]
+        matches: List[Path] = []
+        for entry in model_dir.iterdir():
+            if not entry.is_file():
+                continue
+            stem = entry.stem.lower()
+            if any(stem == prefix or stem.startswith(f"{prefix}.") for prefix in prefixes):
+                matches.append(entry)
+        return matches
 
     def _relative_existing_path(
         candidate: Optional[Path], *, root: Optional[Path] = None
@@ -4918,6 +4964,83 @@ def create_app(
         state = _record_gpu_probe(probe)
         _log_event("GPU probe completed", supported=state.get("supported"))
         return {"status": state}
+
+    @app.post("/api/settings/whisper/benchmark")
+    async def benchmark_whisper_models() -> Dict[str, Any]:
+        if FasterWhisperTranscription is None:
+            raise HTTPException(status_code=503, detail="Transcription backend is unavailable.")
+        sample_audio = await _ensure_whisper_benchmark_audio()
+        benchmark_root = config.assets_root / "benchmarks"
+        benchmark_root.mkdir(parents=True, exist_ok=True)
+        results: List[Dict[str, Any]] = []
+
+        for model_name in _WHISPER_BENCHMARK_MODELS:
+            started = time.perf_counter()
+            output_dir = benchmark_root / f"run-{model_name}-{int(time.time())}"
+            output_dir.mkdir(parents=True, exist_ok=True)
+            try:
+                engine = FasterWhisperTranscription(
+                    model_name,
+                    download_root=config.assets_root,
+                    compute_type=_DEFAULT_UI_SETTINGS.whisper_compute_type,
+                    beam_size=_DEFAULT_UI_SETTINGS.whisper_beam_size,
+                )
+                result = await asyncio.to_thread(engine.transcribe, sample_audio, output_dir)
+                duration = time.perf_counter() - started
+                preview = result.transcript_path.read_text(encoding="utf-8")[:220].strip()
+                results.append(
+                    {
+                        "model": model_name,
+                        "ok": True,
+                        "seconds": round(duration, 3),
+                        "transcript_chars": len(result.text),
+                        "preview": preview,
+                    }
+                )
+            except Exception as error:  # noqa: BLE001 - benchmark must continue
+                duration = time.perf_counter() - started
+                results.append(
+                    {
+                        "model": model_name,
+                        "ok": False,
+                        "seconds": round(duration, 3),
+                        "error": str(error),
+                    }
+                )
+        successful = [row for row in results if row.get("ok")]
+        recommended = min(successful, key=lambda row: float(row.get("seconds") or 0.0))["model"] if successful else None
+        return {
+            "sample": {
+                "path": sample_audio.relative_to(config.assets_root).as_posix(),
+                "source": _WHISPER_BENCHMARK_AUDIO_URL,
+                "description": _WHISPER_BENCHMARK_AUDIO_TRANSCRIPT_HINT,
+            },
+            "recommended_model": recommended,
+            "results": results,
+        }
+
+    @app.delete("/api/settings/whisper-models/{model_name}")
+    async def uninstall_whisper_model(model_name: str) -> Dict[str, Any]:
+        normalized = (model_name or "").strip().lower()
+        if not normalized:
+            raise HTTPException(status_code=400, detail="Model name is required")
+        if normalized == "gpu":
+            targets = [
+                config.assets_root / "models" / "ggml-medium.en.bin",
+            ]
+        else:
+            targets = _model_files_for_name(normalized)
+        removed: List[str] = []
+        missing: List[str] = []
+        for path in targets:
+            if path.exists():
+                path.unlink(missing_ok=True)
+                removed.append(path.relative_to(config.assets_root).as_posix())
+            else:
+                missing.append(path.name)
+        if not removed and normalized != "gpu":
+            raise HTTPException(status_code=404, detail=f"No local files found for model '{normalized}'")
+        return {"model": normalized, "removed": removed, "missing": missing}
 
     @app.get("/api/settings")
     async def get_settings() -> Dict[str, Any]:
