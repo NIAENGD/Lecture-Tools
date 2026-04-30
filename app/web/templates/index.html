@@ -2223,6 +2223,14 @@
       .upload-dialog-hidden {
         display: none !important;
       }
+      .transcript-edit-window {
+        width: min(760px, 92vw);
+      }
+      .transcript-edit-area {
+        width: 100%;
+        min-height: 320px;
+        resize: vertical;
+      }
 
       .bulk-upload-window {
         width: min(460px, 100%);
@@ -6057,6 +6065,25 @@
         </div>
       </div>
     </div>
+    <div id="transcript-edit-dialog" class="dialog hidden" aria-hidden="true" tabindex="-1">
+      <div id="transcript-edit-backdrop" class="dialog-backdrop"></div>
+      <div
+        id="transcript-edit-window"
+        class="dialog-window transcript-edit-window"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="transcript-edit-title"
+      >
+        <div class="dialog-header">
+          <h2 id="transcript-edit-title" class="dialog-title"></h2>
+        </div>
+        <textarea id="transcript-edit-text" class="transcript-edit-area"></textarea>
+        <div class="dialog-actions">
+          <button id="transcript-edit-discard" type="button" class="secondary"></button>
+          <button id="transcript-edit-save" type="button"></button>
+        </div>
+      </div>
+    </div>
     <div id="bulk-upload-dialog" class="dialog hidden" aria-hidden="true" tabindex="-1">
       <div id="bulk-upload-backdrop" class="dialog-backdrop"></div>
       <div
@@ -6293,11 +6320,17 @@
               },
               actions: {
                 upload: 'Upload',
+                edit: 'Edit',
                 processSlides: 'Process slides',
                 view: 'View',
                 download: 'Download',
                 remove: 'Remove',
               },
+            },
+            transcriptEditor: {
+              title: 'Edit transcript',
+              save: 'Save',
+              discard: 'Discard',
             },
             tasks: {
               title: 'Tasks',
@@ -6900,6 +6933,9 @@
               processingSlides: 'Processing slides…',
               audioProcessingQueued: 'Audio uploaded. Mastering will continue in the background.',
               assetUploaded: 'Asset uploaded successfully.',
+              transcriptCreated: 'Transcript saved as a new text file.',
+              transcriptUpdated: 'Transcript updated.',
+              transcriptEditDiscarded: 'Transcript edit discarded.',
               assetRemoved: 'Asset removed.',
               transcriptionPreparing: '====> Preparing transcription…',
               transcriptionCompleted: 'Transcription completed.',
@@ -9978,6 +10014,15 @@
             status: document.getElementById('upload-status-message'),
             cancel: document.getElementById('upload-cancel'),
             confirm: document.getElementById('upload-confirm'),
+          },
+          transcriptEditDialog: {
+            root: document.getElementById('transcript-edit-dialog'),
+            backdrop: document.getElementById('transcript-edit-backdrop'),
+            window: document.getElementById('transcript-edit-window'),
+            title: document.getElementById('transcript-edit-title'),
+            text: document.getElementById('transcript-edit-text'),
+            discard: document.getElementById('transcript-edit-discard'),
+            save: document.getElementById('transcript-edit-save'),
           },
           bulkUploadDialog: {
             root: document.getElementById('bulk-upload-dialog'),
@@ -21688,6 +21733,16 @@
               });
               actions.appendChild(uploadButton);
             }
+            if (definition.type === 'transcript') {
+              const editButton = document.createElement('button');
+              editButton.type = 'button';
+              editButton.className = 'secondary';
+              editButton.textContent = t('assets.actions.edit');
+              editButton.addEventListener('click', () => {
+                handleTranscriptEdit(definition);
+              });
+              actions.appendChild(editButton);
+            }
 
             if (definition.type === 'audio') {
               transcribeButton = document.createElement('button');
@@ -22088,6 +22143,85 @@
           if (kind === 'audio' && audioProcessingStarted && !backgroundProcessingActive) {
             stopProcessingProgress({ preserveMessage: true });
             audioProcessingStarted = false;
+          }
+        }
+
+        function showTranscriptEditDialog(initialText) {
+          return new Promise((resolve) => {
+            const dialog = dom.transcriptEditDialog;
+            if (!dialog?.root || !dialog.window || !dialog.text || !dialog.save || !dialog.discard) {
+              resolve({ action: 'discard' });
+              return;
+            }
+
+            dialog.title.textContent = t('transcriptEditor.title');
+            dialog.save.textContent = t('transcriptEditor.save');
+            dialog.discard.textContent = t('transcriptEditor.discard');
+            dialog.text.value = typeof initialText === 'string' ? initialText : '';
+
+            const cleanup = (result) => {
+              dialog.save.removeEventListener('click', onSave);
+              dialog.discard.removeEventListener('click', onDiscard);
+              dialog.backdrop?.removeEventListener('click', onDiscard);
+              dialog.window.removeEventListener('keydown', onKeyDown);
+              dialog.root.classList.add('hidden');
+              dialog.root.setAttribute('aria-hidden', 'true');
+              dialogState.active = false;
+              document.body.classList.remove('dialog-open');
+              resolve(result);
+            };
+            const onSave = () => cleanup({ action: 'save', text: dialog.text.value || '' });
+            const onDiscard = () => cleanup({ action: 'discard' });
+            const onKeyDown = (event) => {
+              if (event.key === 'Escape') {
+                event.preventDefault();
+                onDiscard();
+              }
+            };
+            dialog.save.addEventListener('click', onSave);
+            dialog.discard.addEventListener('click', onDiscard);
+            dialog.backdrop?.addEventListener('click', onDiscard);
+            dialog.window.addEventListener('keydown', onKeyDown);
+            dialog.root.classList.remove('hidden');
+            dialog.root.setAttribute('aria-hidden', 'false');
+            dialogState.active = true;
+            document.body.classList.add('dialog-open');
+            window.setTimeout(() => dialog.text.focus(), 10);
+          });
+        }
+
+        async function handleTranscriptEdit(definition) {
+          if (!definition || !state.selectedLectureId) {
+            return;
+          }
+          const lectureId = state.selectedLectureId;
+          const detail = state.selectedLectureDetail?.lecture;
+          const transcriptPath = detail?.transcript_path;
+          let existingText = '';
+          if (transcriptPath) {
+            try {
+              existingText = await request(`/api/storage/file?path=${encodeURIComponent(transcriptPath)}`);
+            } catch (error) {
+              showStatus(error.message, 'error');
+              return;
+            }
+          }
+          const result = await showTranscriptEditDialog(existingText);
+          if (!result || result.action !== 'save') {
+            showStatus(t('status.transcriptEditDiscarded'), 'info');
+            return;
+          }
+          try {
+            const response = await request(`/api/lectures/${lectureId}/assets/transcript`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ text: result.text || '' }),
+            });
+            showStatus(response?.created ? t('status.transcriptCreated') : t('status.transcriptUpdated'), 'success');
+            await refreshData();
+            await selectLecture(lectureId);
+          } catch (error) {
+            showStatus(error.message, 'error');
           }
         }
 

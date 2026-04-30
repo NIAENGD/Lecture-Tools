@@ -230,6 +230,7 @@ class TaskQueue:
                 await worker
         return cancelled
 
+
 from fastapi import (
     FastAPI,
     HTTPException,
@@ -1869,6 +1870,10 @@ class LectureReorderEntry(BaseModel):
 
 class LectureReorderPayload(BaseModel):
     modules: List[LectureReorderEntry] = Field(default_factory=list)
+
+
+class TranscriptUpdateRequest(BaseModel):
+    text: str = Field(default="")
 
 
 class TranscriptionRequest(BaseModel):
@@ -4856,6 +4861,61 @@ def create_app(
             path=relative,
         )
         return response
+
+    @app.put("/api/lectures/{lecture_id}/assets/transcript")
+    async def upsert_transcript_text(
+        lecture_id: int,
+        payload: TranscriptUpdateRequest,
+    ) -> Dict[str, Any]:
+        _log_event("Saving transcript text", lecture_id=lecture_id)
+        lecture = repository.get_lecture(lecture_id)
+        if lecture is None:
+            raise HTTPException(status_code=404, detail="Lecture not found")
+
+        class_record, module = _require_hierarchy(lecture)
+        storage_root = _require_storage_root()
+        lecture_paths = LecturePaths.build(
+            storage_root,
+            class_record.name,
+            module.name,
+            lecture.name,
+        )
+        lecture_paths.ensure()
+        lecture_paths.transcript_dir.mkdir(parents=True, exist_ok=True)
+
+        text_value = payload.text if isinstance(payload.text, str) else ""
+        transcript_relative = lecture.transcript_path
+        target: Optional[Path] = None
+        existed_before = False
+
+        if transcript_relative:
+            existing = _resolve_asset_path(transcript_relative)
+            if existing is not None:
+                target = existing
+                existed_before = existing.exists()
+            else:
+                transcript_relative = None
+
+        if target is None:
+            stem = build_asset_stem(class_record.name, module.name, lecture.name, "transcript")
+            filename = build_timestamped_name(stem, extension=".txt")
+            target = lecture_paths.transcript_dir / filename
+            transcript_relative = target.relative_to(storage_root).as_posix()
+
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(text_value, encoding="utf-8")
+
+        repository.update_lecture_assets(lecture_id, transcript_path=transcript_relative)
+        updated = repository.get_lecture(lecture_id)
+        if updated is None:
+            raise HTTPException(status_code=500, detail="Lecture update failed")
+        lecture_payload = _serialize_lecture(updated)
+
+        return {
+            "lecture": lecture_payload,
+            "transcript_path": transcript_relative,
+            "created": not existed_before,
+        }
 
     @app.delete("/api/lectures/{lecture_id}/assets/{asset_type}")
     async def delete_asset(lecture_id: int, asset_type: str) -> Dict[str, Any]:
