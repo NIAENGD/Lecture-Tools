@@ -1587,6 +1587,10 @@ def _normalize_storage_relative_path(value: str) -> str:
     cleaned = cleaned.replace("\\", "/")
     while cleaned.startswith("/"):
         cleaned = cleaned[1:]
+    if cleaned == "storage":
+        return ""
+    if cleaned.startswith("storage/"):
+        cleaned = cleaned[len("storage/") :]
     return cleaned
 
 
