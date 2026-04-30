@@ -6323,6 +6323,7 @@
                 edit: 'Edit',
                 processSlides: 'Process slides',
                 view: 'View',
+                create: 'Create',
                 download: 'Download',
                 remove: 'Remove',
               },
@@ -7055,6 +7056,7 @@
                 upload: '上传',
                 processSlides: '处理课件',
                 view: '查看',
+                create: '创建',
                 download: '下载',
                 remove: '移除',
               },
@@ -7758,6 +7760,7 @@
                 upload: 'Subir',
                 processSlides: 'Procesar diapositivas',
                 view: 'Ver',
+                create: 'Crear',
                 download: 'Descargar',
                 remove: 'Eliminar',
               },
@@ -8481,6 +8484,7 @@
                 upload: 'Importer',
                 processSlides: 'Traiter les diapositives',
                 view: 'Voir',
+                create: 'Créer',
                 download: 'Télécharger',
                 remove: 'Supprimer',
               },
@@ -21733,16 +21737,6 @@
               });
               actions.appendChild(uploadButton);
             }
-            if (definition.type === 'transcript') {
-              const editButton = document.createElement('button');
-              editButton.type = 'button';
-              editButton.className = 'secondary';
-              editButton.textContent = t('assets.actions.edit');
-              editButton.addEventListener('click', () => {
-                handleTranscriptEdit(definition);
-              });
-              actions.appendChild(editButton);
-            }
 
             if (definition.type === 'audio') {
               transcribeButton = document.createElement('button');
@@ -21785,7 +21779,19 @@
 
             const viewTarget = effectiveValue;
             const viewable = Boolean(viewTarget && isAssetViewable(definition, viewTarget));
-            if (viewable) {
+            if (definition.type === 'transcript') {
+              const hasTranscript = Boolean(value);
+              const transcriptButton = document.createElement('button');
+              transcriptButton.type = 'button';
+              transcriptButton.className = 'secondary';
+              transcriptButton.textContent = hasTranscript
+                ? t('assets.actions.view')
+                : t('assets.actions.create');
+              transcriptButton.addEventListener('click', () => {
+                handleTranscriptEdit(definition);
+              });
+              actions.appendChild(transcriptButton);
+            } else if (viewable) {
               const viewButton = document.createElement('button');
               viewButton.type = 'button';
               viewButton.className = 'secondary';
