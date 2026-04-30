@@ -18451,7 +18451,14 @@
           if (!path) {
             return '#';
           }
-          const encodedPath = path
+          const normalizedPath = String(path)
+            .trim()
+            .replace(/^\/+/, '')
+            .replace(/^storage\/+/i, '');
+          if (!normalizedPath) {
+            return '#';
+          }
+          const encodedPath = normalizedPath
             .split('/')
             .map((segment) => encodeURIComponent(segment))
             .join('/');
