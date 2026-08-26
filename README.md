@@ -68,6 +68,12 @@
        python run.py serve --root-path /lecture
        ```
      or set `LECTURE_TOOLS_ROOT_PATH=/lecture` in the environment.
+   - A public hostname works at either the origin (for example,
+     `https://lectures.example.com`) or below a path (for example,
+     `https://example.com/lecture`). For path hosting, configure the same root
+     path in Lecture Tools and in the reverse proxy. The bundled installer does
+     this automatically and configures Nginx to accept uploads up to 1 GiB,
+     stream request bodies, and allow long-running media requests.
 5. **Classic terminal vibes still included**
  ```bash
   python run.py overview --style modern

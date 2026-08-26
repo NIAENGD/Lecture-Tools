@@ -194,6 +194,30 @@ def test_index_injects_empty_root_path(temp_config):
     )
 
 
+def test_index_preserves_hostname_base_path_for_cloud_requests(temp_config):
+    repository, _lecture_id, _module_id = _create_sample_data(temp_config)
+    app = create_app(repository, config=temp_config)
+    client = TestClient(app)
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert "const relativeTarget = target.replace(/^\\/+/, '');" in response.text
+    assert "`${base.replace(/\\/+$/, '')}/`" in response.text
+    assert "xhr.responseType = 'text';" in response.text
+
+
+def test_installer_nginx_proxy_supports_large_streaming_uploads():
+    installer = Path(__file__).resolve().parents[1] / "scripts" / "install_server.sh"
+    script = installer.read_text(encoding="utf-8")
+
+    # The function occurs once in the installer and once in the generated
+    # lecturetool helper; both paths must produce an upload-capable proxy.
+    assert script.count("client_max_body_size 1g") == 2
+    assert script.count("proxy_request_buffering off") == 2
+    assert script.count("proxy_read_timeout 3600s") == 2
+
+
 def test_api_honors_forwarded_prefix_header(temp_config):
     repository, _lecture_id, _module_id = _create_sample_data(temp_config)
     app = create_app(repository, config=temp_config)
