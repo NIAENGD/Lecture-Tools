@@ -14015,8 +14015,12 @@
           }
           const base = normalizeCloudServerUrl(state.cloudConnection.url);
           try {
-            const normalized = target.startsWith('/') ? target : `/${target}`;
-            return new URL(normalized, `${base}/`).toString();
+            // Treat the configured URL as the application's base, not merely as
+            // an origin.  A leading slash passed to URL() discards a hostname
+            // deployment's path (for example /lecture), sending every request
+            // to the wrong endpoint on the proxy.
+            const relativeTarget = target.replace(/^\/+/, '');
+            return new URL(relativeTarget, `${base.replace(/\/+$/, '')}/`).toString();
           } catch (error) {
             return target;
           }
@@ -18496,7 +18500,10 @@
           return new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
             xhr.open(method, resolvedUrl);
-            xhr.responseType = 'json';
+            // Keep the raw response available. Reverse proxies commonly return
+            // HTML for errors such as 413; responseType=json makes responseText
+            // inaccessible and used to hide the actual upload failure.
+            xhr.responseType = 'text';
 
             Object.entries(headers).forEach(([key, value]) => {
               if (typeof key === 'string' && typeof value === 'string') {
@@ -18517,24 +18524,25 @@
               if (onProgress) {
                 onProgress(1);
               }
+              const responseText = typeof xhr.responseText === 'string' ? xhr.responseText : '';
+              let responseBody = null;
+              if (responseText) {
+                try {
+                  responseBody = JSON.parse(responseText);
+                } catch (error) {
+                  // An upstream proxy may return a plain-text or HTML error.
+                }
+              }
               if (xhr.status >= 200 && xhr.status < 300) {
-                const responseBody = xhr.response ?? null;
                 resolve(responseBody);
                 return;
               }
               let detail = `${xhr.status} ${xhr.statusText || ''}`.trim();
-              const responseBody = xhr.response ?? null;
               if (responseBody && typeof responseBody === 'object' && responseBody.detail) {
                 detail = responseBody.detail;
-              } else if (!responseBody && xhr.responseText) {
-                try {
-                  const parsed = JSON.parse(xhr.responseText);
-                  if (parsed && parsed.detail) {
-                    detail = parsed.detail;
-                  }
-                } catch (error) {
-                  // Ignore parse errors.
-                }
+              } else if (xhr.status === 413) {
+                detail =
+                  'Upload rejected because the file exceeds the server or reverse-proxy limit.';
               }
               if (!detail) {
                 detail = 'Upload failed.';

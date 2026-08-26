@@ -754,6 +754,14 @@ render_nginx_location_block() {
   printf '        proxy_set_header X-Forwarded-Host %s;\n' '$host'
   printf '        proxy_set_header X-Forwarded-Port %s;\n' '$server_port'
   printf '        proxy_http_version 1.1;\n'
+  # Nginx defaults client_max_body_size to just 1 MiB. Lecture recordings and
+  # slide decks routinely exceed that, so match the application's 1 GiB
+  # default and stream request bodies instead of buffering them to proxy disk.
+  printf '        client_max_body_size 1g;\n'
+  printf '        proxy_request_buffering off;\n'
+  printf '        proxy_connect_timeout 60s;\n'
+  printf '        proxy_send_timeout 3600s;\n'
+  printf '        proxy_read_timeout 3600s;\n'
   printf '        proxy_set_header Upgrade %s;\n' '$http_upgrade'
   printf '        proxy_set_header Connection "upgrade";\n'
   printf '        proxy_redirect off;\n'
@@ -1684,6 +1692,12 @@ render_nginx_location_block() {
   printf '        proxy_set_header X-Forwarded-Host %s;\n' '$host'
   printf '        proxy_set_header X-Forwarded-Port %s;\n' '$server_port'
   printf '        proxy_http_version 1.1;\n'
+  # Keep generated helper configurations aligned with the installer proxy.
+  printf '        client_max_body_size 1g;\n'
+  printf '        proxy_request_buffering off;\n'
+  printf '        proxy_connect_timeout 60s;\n'
+  printf '        proxy_send_timeout 3600s;\n'
+  printf '        proxy_read_timeout 3600s;\n'
   printf '        proxy_set_header Upgrade %s;\n' '$http_upgrade'
   printf '        proxy_set_header Connection "upgrade";\n'
   printf '        proxy_redirect off;\n'
